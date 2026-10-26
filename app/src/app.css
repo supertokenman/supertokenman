@@ -1986,7 +1986,19 @@ textarea { resize: none; }
 .composer { min-width: 0; }
 .composer textarea { min-width: 0; width: 100%; }
 .panel-bar { min-width: 0; overflow: hidden; }
-.panel-bar .segmented { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+/* the tabs and the close button always show whole; when the bar is short of room, the chips between
+   the folder and the tabs give it up first, then the least used ones leave */
+.panel-bar .segmented, .panel-bar > .icon, .panel-bar > .status, .panel-bar > .sm-mark { flex: none; }
+.panel-bar > :not(.segmented):not(.icon):not(.status):not(.sm-mark):not(.path) { flex: 0 4 auto; min-width: 0; overflow: hidden; white-space: nowrap; }
+.panel-bar > .path { flex: 0 0 auto; max-width: 40%; text-overflow: ellipsis; }
+@container panel (max-width: 820px) { .panel-bar > .pid, .panel-bar > .badge, .panel-bar > .meter-chip, .panel-bar > .wb-rate, .panel-bar .path-parent { display: none; } }
+@container panel (max-width: 560px) { .panel-bar > .remember, .panel-bar > .goal-chip { display: none; } }
+@container panel (max-width: 460px) {
+  .panel-bar { gap: 6px; padding: 0 6px 0 10px; }
+  .panel-bar .segmented button { padding: 0 6px; font-size: 11.5px; }
+  /* room only for the state, the folder, the tabs and close: the folder's own name, not its parent */
+  .panel-bar > :not(.sm-mark):not(.status):not(.path):not(.segmented):not(.icon), .panel-bar .path-parent { display: none; }
+}
 .hud { min-width: 0; overflow: hidden; }
 /* a button beside a text field in a form takes the field's height and corners, wherever it is */
 form:has(> input:not([type='checkbox']):not([type='radio'])) > button,
