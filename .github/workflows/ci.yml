@@ -1,0 +1,104 @@
+# Checks on every pull request and on main: the tests, and the audit tools from docs/security, so each
+# change carries its own proof. No secrets are used here, so pull requests from forks run it as is.
+# Actions are pinned to commits and the scanner binaries to their published SHA-256.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: App
+        working-directory: app
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+      - name: token-kit
+        working-directory: token-kit
+        run: |
+          npm ci
+          npm test
+      - name: Site builds
+        working-directory: site
+        run: |
+          npm ci
+          npm run build
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scanners
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP/bin"
+          curl -fsSLo gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+          echo "5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba  gitleaks.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks
+          curl -fsSLo osv-scanner https://github.com/google/osv-scanner/releases/download/v1.9.2/osv-scanner_linux_amd64
+          echo "d6af4b67fa5de658598bd2d445efb99e90d1734b3146962418719c4350ecb74b  osv-scanner" | sha256sum -c -
+          chmod +x gitleaks osv-scanner
+          pipx install semgrep==1.182.1
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Secrets in the code and the history (gitleaks)
+        run: gitleaks git . --log-opts="--all" --redact --exit-code 1
+      - name: Known vulnerabilities in shipped packages (OSV-Scanner)
+        # dev-only advisories are known and listed in docs/security; this fails on any advisory in the
+        # app's production dependencies
+        run: |
+          cd app && npm ci --omit=dev --ignore-scripts && npm ls --omit=dev --all --json > "$RUNNER_TEMP/prod.json" || true
+          osv-scanner scan --lockfile package-lock.json --format json > "$RUNNER_TEMP/osv.json" || true
+          node -e '
+            const prod = new Set(); const walk = (d) => { for (const [n, v] of Object.entries(d.dependencies || {})) { prod.add(n + "@" + v.version); walk(v) } }
+            walk(require(process.argv[1]))
+            const hits = (require(process.argv[2]).results || []).flatMap((r) => r.packages)
+              .filter((p) => prod.has(p.package.name + "@" + p.package.version))
+            for (const p of hits) console.log(p.package.name, p.package.version, p.vulnerabilities.map((v) => v.id).join(" "))
+            process.exit(hits.length ? 1 : 0)' "$RUNNER_TEMP/prod.json" "$RUNNER_TEMP/osv.json"
+      - name: Code patterns (Semgrep)
+        run: |
+          semgrep scan --config p/javascript --config p/typescript --config p/nodejsscan --config p/secrets \
+            --metrics=off --exclude node_modules --exclude dist --exclude dist-electron --exclude '*.test.ts' \
+            --exclude engines --json -o semgrep.json app/electron app/src app/shared site
+          echo "Semgrep hits: $(node -p 'require("./semgrep.json").results.length') (reviewed list in docs/security)"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: audit
+          path: semgrep.json
+          retention-days: 30
+
+  network:
+    # the app opened with a clean profile for 60 seconds, nothing clicked: fails on any reach for the
+    # network outside the list on the Security page
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Build and watch
+        working-directory: app
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgtk-3-0 libnss3 libgbm1 libasound2t64 >/dev/null
+          npm ci
+          npm run build
+          npm run netwatch:check
