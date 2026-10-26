@@ -528,7 +528,10 @@ export class Session {
 
   /** A different model from the next turn on, at the person's click (the router only suggests). */
   async setModel(model: string) {
-    if (!this.q) throw new Error('This panel has not started yet.')
+    // kept for the next process too: a panel that has not started, or is asleep (its process ended to
+    // free memory), starts or wakes with it, and a live one is told now
+    this.opts.model = model
+    if (!this.q || this.asleep) return
     await this.q.setModel(model)
   }
   async interrupt() {
