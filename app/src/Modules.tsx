@@ -1,4 +1,5 @@
 import { CORE, MODULES } from '../shared/modules'
+import { count } from '../shared/plural'
 import { IconCheck, IconClose } from './icons'
 
 /**
@@ -27,7 +28,7 @@ export function ModulesSheet(props: { off: string[]; onChange: (off: string[]) =
                 <label key={m.id} className={`md-mod ${on ? 'on' : ''}`}>
                   <span className="md-head"><b>{m.name}</b><input type="checkbox" checked={on} onChange={(e) => props.onChange(e.target.checked ? props.off.filter((x) => x !== m.id) : [...props.off, m.id])} aria-label={`${m.name} on`} /></span>
                   <span className="faint">{m.what}</span>
-                  <span className="md-cmds">{m.commands.length} screens</span>
+                  <span className="md-cmds">{count(m.commands.length, 'screen')}</span>
                 </label>
               )
             })}

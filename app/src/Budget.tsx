@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { Chart } from './Chart'
 import type { Limits } from '../shared/budget'
+import { count } from '../shared/plural'
 import './bridge'
 
 type Data = Awaited<ReturnType<typeof window.stm.budget.get>>
@@ -122,7 +123,7 @@ function TurnBand(props: { panels: { sid: string; name: string }[] }) {
           {(['cost', 'tokens', 'seconds'] as const).map((m) => <button key={m} role="tab" aria-selected={metric === m} onClick={() => setMetric(m)}>{m === 'cost' ? 'Cost' : m === 'tokens' ? 'Tokens' : 'Time'}</button>)}
         </div>
       </div>
-      {pts.length < 8 ? <div className="faint">{data?.key.split('|')[0]} has {pts.length} turns on this model so far; the usual band needs 8.</div> : (
+      {pts.length < 8 ? <div className="faint">{data?.key.split('|')[0]} has {count(pts.length, 'turn')} on this model so far; the usual band needs 8.</div> : (
         <>
           <Chart kind="line" label={`${metric} per turn`} unit={metric === 'cost' ? 'US$' : metric === 'tokens' ? 'tokens' : 's'} height={150} series={[{ name: 'Turn', points: pts }, { name: 'Usual', points: pts.map(([i]) => [i, b!.median]) }, { name: 'Top of normal', points: pts.map(([i]) => [i, b!.high]) }]} />
           <div className="faint">{over ? `${over} of the last ${pts.length} turns went over the band; each one was pointed out in its panel.` : 'Every recent turn is inside the band.'} Median and spread of this project on this model, last 200 turns.</div>
