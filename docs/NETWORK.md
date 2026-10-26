@@ -14,6 +14,10 @@ The source for the Security & Privacy page. Last reviewed: 2026-10-25.
   fetched spell-check dictionaries from `redirector.gvt1.com` (Google); on macOS Electron uses the system
   spell checker, so this should not happen there (not verified on a Mac).
 - Requests made after a click were read in the code, not each one exercised.
+- On a Mac, `bash app/scripts/proof-mac.sh` checks the released dmg (checksums, attestation, signature,
+  notarization), runs it with its own profile while a person uses it, logs where the app and every
+  process under it connect (`lsof`, twice a second), and looks for a decoy secret put in the vault on disk
+  and, with `--mitm`, in the traffic. Reports go to `docs/security/` once run.
 - Child processes (`claude`, `git`, `docker`, cloud CLIs) are recorded when they start, not where they
   connect: their own traffic is outside what the check proves. Claude Code's is set as described below.
 
