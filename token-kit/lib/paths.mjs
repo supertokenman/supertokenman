@@ -21,9 +21,19 @@ export const logsDir = () => join(dataDir(), 'logs');
 export const stateDir = () => join(dataDir(), 'state');
 export const configPath = () => join(dataDir(), 'config.json');
 
-/** How hooks invoke the condenser. The same string becomes an allow rule at install time. */
+/**
+ * How hooks invoke the condenser. The same string becomes an allow rule at install time, so both use
+ * the real path: a hook runs from its resolved location (Node follows symlinks), and a ~/.claude that is
+ * a symlink, or macOS's /var -> /private/var, would otherwise give two strings for one folder.
+ */
 export function condenseInvocation(kitDir = KIT_DIR) {
-  const script = join(kitDir, 'bin', 'tk-condense.mjs');
+  let dir = kitDir;
+  try {
+    dir = realpathSync(kitDir);
+  } catch {
+    // not installed yet: keep the path as given
+  }
+  const script = join(dir, 'bin', 'tk-condense.mjs');
   return /\s/.test(script) ? `node "${script}"` : `node ${script}`;
 }
 
