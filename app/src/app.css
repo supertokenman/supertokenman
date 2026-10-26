@@ -4070,8 +4070,8 @@ input[type='radio'], input[type='checkbox'], input[type='range'] { accent-color:
 button.primary:disabled { --btn-bg: var(--raised, var(--surface)); --btn-line: var(--border-strong); color: var(--faint); opacity: 1; }
 /* one field style: solid edges everywhere (dashed stays for drop zones and empty slots, not for fields) */
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']) { border-style: solid; }
-/* a button in a grid takes its own width, not the column's; rows that must fill set width themselves */
-button { justify-self: start; }
+/* a button under a field, in a stacked form, takes its own width, not the column's */
+:where(div, label, section):has(> input:not([type='checkbox']):not([type='radio'])) > button:not(.icon) { justify-self: start; }
 /* an error note: a line on the left and the words, not a heavy box */
 .notice.error { background: rgba(var(--red-rgb), 0.06); border: 0; border-left: 2px solid var(--red); border-radius: 0; padding: 7px 12px; }
 /* the panel id: quiet mono text, its meaning in the tooltip */
