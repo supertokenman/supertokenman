@@ -41,7 +41,12 @@ VERSION="$(awk '/^version:/ {print $2}' latest-mac.yml)"
 say "2/5 Checking it"
 shasum -a 256 -c SHA256SUMS --ignore-missing 2>&1 | tee -a checks.log
 if command -v gh >/dev/null; then
-  gh attestation verify "$DMG" --repo "$REPO" 2>&1 | tee -a checks.log || { echo "attestation did not verify" >&2; exit 1; }
+  # gh prints nothing on success, so the result is written out
+  src="$(gh attestation verify "$DMG" --repo "$REPO" --format json 2>>checks.log \
+    | grep -oE '"sourceRepositoryDigest": *"[0-9a-f]+"' | head -1 | cut -d'"' -f4)" \
+    || { note "attestation: did NOT verify"; exit 1; }
+  [ -n "$src" ] || { note "attestation: did NOT verify"; exit 1; }
+  note "attestation: verified, built by $REPO's release workflow from commit $src"
 else
   note "gh not installed: build attestation not checked (brew install gh)"
 fi
@@ -134,9 +139,13 @@ hosts_md="$(
 )"
 on_disk="$(grep -rlF "$DECOY" "$OUT/profile" "$HOME/.claude" 2>/dev/null | grep -v "$OUT/decoy.txt" || true)"
 in_mitm="not checked (run with --mitm)"
+mitm_md="Not recorded: run with \`--mitm\` to see the hosts and requests that went through the proxy."
 if [ -f flows.mitm ]; then
   if grep -qF "$DECOY" flows.mitm; then in_mitm="FOUND in the recorded traffic"; else in_mitm="not found in the recorded traffic"; fi
-  mitmdump -nr flows.mitm --flow-detail 0 2>/dev/null | awk '{print $2, $3}' | sort | uniq -c | sort -rn > mitm-requests.txt || true
+  # one line per request: method and URL without the query string, counted
+  mitmdump -nr flows.mitm --flow-detail 0 2>/dev/null \
+    | grep -oE '(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|CONNECT) https?://[^ ?]+' | sort | uniq -c | sort -rn > mitm-requests.txt || true
+  mitm_md="$(printf '| Requests | Method and address |\n|---|---|\n'; awk '{n=$1; $1=""; sub(/^ /, ""); printf "| %s | %s |\n", n, $0}' mitm-requests.txt)"
 fi
 
 cat > REPORT.md <<EOF
@@ -161,7 +170,17 @@ owner is the first organisation line in \`whois\`.
 |---|---|---|---|---|
 $hosts_md
 
+With \`--mitm\`, everything that went through the proxy shows here only as a connection to 127.0.0.1 (left
+out above), so this table holds what went around it: the app's own requests made from its main process,
+such as the update check.
+
 Raw: \`connections.log\`, \`processes.log\`, \`endpoints.txt\`.
+
+## What went through the proxy
+
+$mitm_md
+
+Raw: \`flows.mitm\` (open it with \`mitmweb -r flows.mitm\`), \`mitm-requests.txt\`.
 
 ## The decoy secret
 
