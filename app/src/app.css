@@ -113,12 +113,18 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 .shell.is-private .top { box-shadow: inset 0 -1px 0 var(--accent); }
 
 /* panels */
-.grid { display: grid; gap: 1px; background: var(--border); min-height: 0; }
+/* panels are cards: a breath of space between them and the brand's 45 degree cut at the top right */
+.grid { display: grid; gap: 6px; padding: 6px; background: var(--sunken); min-height: 0; --card-cut: 12px; }
+.has-scene .grid { background: transparent; }
 .empty { display: grid; place-content: center; gap: 12px; justify-items: center; background: var(--bg); color: var(--muted); }
 .empty-title { font-size: 15px; color: var(--text); }
 .panel { display: grid; grid-template-rows: 40px auto 1fr auto; min-height: 0; min-width: 0; background: var(--bg); position: relative; }
-.panel::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px transparent; transition: box-shadow 160ms var(--ease); }
-.panel.focused::after { box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.5); }
+.grid > .panel, .grid > .empty { clip-path: polygon(0 0, calc(100% - var(--card-cut)) 0, 100% var(--card-cut), 100% 100%, 0 100%); }
+/* the card's edge, the cut's diagonal included (an inset shadow stops where the clip starts) */
+.panel::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3; --edge: var(--border);
+  box-shadow: inset 0 0 0 1px var(--edge); transition: box-shadow 160ms var(--ease);
+  background: linear-gradient(225deg, transparent calc(50% - 0.75px), var(--edge) calc(50% - 0.75px), var(--edge) calc(50% + 0.75px), transparent calc(50% + 0.75px)) right top / calc(var(--card-cut) * 2) calc(var(--card-cut) * 2) no-repeat; }
+.panel.focused::after { --edge: rgba(var(--accent-rgb), 0.55); }
 .panel-bar { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .status { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--faint); }
 .status.idle { background: var(--green); }

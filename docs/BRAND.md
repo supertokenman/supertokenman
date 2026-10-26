@@ -233,6 +233,13 @@ from the brand's own parts (the 45 degree cut, the three bars, the accent), no o
 - The "everything else" grid fills in as a cascade; an accent reading bar runs along the top.
 - Everything is off with prefers-reduced-motion.
 
+## Panels as cards (decided 2026-10-26)
+
+Panels used to touch, split by a 1px line. Now each panel is a card: 6px of space between them on the
+sunken background, the brand's 45 degree cut at the top right (12px), and a 1px edge that follows the cut.
+The focused panel's edge is the accent. Over a scene the space is transparent, so the scene shows
+between the cards. Panels do not resize by hand yet, so there is no handle in the space.
+
 ## Changelog
 
 - Phase 16: top-bar selects follow the button shape (cut corner, drawn border, accent bar on focus, mono uppercase label); the Modules sheet shows modules that are off at reduced opacity and the ones on with an accent top rule.
