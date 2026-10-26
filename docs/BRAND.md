@@ -85,6 +85,10 @@ cannot back. What is not verified is said to be not verified.
   of 0.1.3, without `research_notes/`, `reports/` and `site/index.old.html`. `arimayuji/CLI` stays
   private with the full history. Releases (dmg, zip, `SHA256SUMS`, `latest-mac.yml`) stay in the public
   repo. Signing secrets go only into its Actions secrets, which pull requests from forks never see.
+- Development moved to the public repo on 2026-10-26: pull requests, CI (`.github/workflows/ci.yml`:
+  tests, gitleaks, OSV-Scanner, Semgrep and the network check on every pull request) and releases all
+  happen in `supertokenman/supertokenman`. `arimayuji/CLI` is archived, its secrets deleted and its
+  Actions off; the sync script is gone.
 - Money, for now (decided 2026-10-26): the app is free; GitHub Sponsors on the `supertokenman` org
   (`.github/FUNDING.yml`, site page `/support/`). Company sponsors get a logo on the site and README only.
   Never ads, sponsored suggestions or data inside the app. A paid plan for teams may come later; the app

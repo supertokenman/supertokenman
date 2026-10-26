@@ -52,7 +52,7 @@ What else holds them in:
 - Pull requests from forks never receive secrets. Settings > Actions > General: "Require approval for
   all external contributors", and Workflow permissions "Read repository contents".
 - A ruleset on `main` (Settings > Rules): restrict deletions, block force pushes, require a pull
-  request (0 approvals), with Repository admin on the bypass list so `publish-public.sh` can still push.
+  request (0 approvals), with Repository admin on the bypass list.
   Turn on "Require review from Code Owners" (`.github/CODEOWNERS`: `.github/`, `app/build/`,
   `app/scripts/`) only once there is a second maintainer: nobody can approve their own pull request.
 - Actions are pinned to commits, the checkout keeps no credentials, and the run uses no dependency
