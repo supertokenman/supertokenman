@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # One-time signing setup on your Mac. It checks the Developer ID certificate, puts the five signing
-# secrets into the arimayuji/CLI repository with gh (read from files and prompts, never echoed, never
+# secrets into the release environment of supertokenman/supertokenman with gh (read from files and prompts, never echoed, never
 # written to the repo), and can run a signed build and verify it.
 #
 # Before running it:
 #   1. Xcode > Settings > Accounts > Manage Certificates > + > Developer ID Application.
 #   2. App Store Connect > Users and Access > Integrations > App Store Connect API > + (role Developer).
 #      Download the .p8 (only possible once) and note the Key ID and the Issuer ID.
-#   3. gh auth login (an account that can edit arimayuji/CLI).
+#   3. gh auth login (an account that can edit supertokenman/supertokenman).
 #
 # Usage: cd app && bash scripts/apple-setup.sh
 set -euo pipefail
 
-REPO="arimayuji/CLI"
+REPO="supertokenman/supertokenman"
 say() { printf '\n==> %s\n' "$*"; }
 fail() { printf 'Stopped: %s\n' "$*" >&2; exit 1; }
 
@@ -54,12 +54,12 @@ read -r -p "Issuer ID: " ISSUER
 [[ "$ISSUER" =~ ^[0-9a-f-]{36}$ ]] || fail "the Issuer ID looks like xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx."
 
 say "Secrets in $REPO"
-base64 -i "$P12" | gh secret set MAC_CERT_P12_BASE64 --repo "$REPO"
-printf '%s' "$P12_PASS" | gh secret set MAC_CERT_PASSWORD --repo "$REPO"
-gh secret set APPLE_API_KEY_P8 --repo "$REPO" < "$P8"
-printf '%s' "$KEY_ID" | gh secret set APPLE_API_KEY_ID --repo "$REPO"
-printf '%s' "$ISSUER" | gh secret set APPLE_API_ISSUER --repo "$REPO"
-gh secret list --repo "$REPO" | grep -E 'MAC_CERT|APPLE_API|RELEASES_TOKEN' || true
+base64 -i "$P12" | gh secret set MAC_CERT_P12_BASE64 --env release --repo "$REPO"
+printf '%s' "$P12_PASS" | gh secret set MAC_CERT_PASSWORD --env release --repo "$REPO"
+gh secret set APPLE_API_KEY_P8 --env release --repo "$REPO" < "$P8"
+printf '%s' "$KEY_ID" | gh secret set APPLE_API_KEY_ID --env release --repo "$REPO"
+printf '%s' "$ISSUER" | gh secret set APPLE_API_ISSUER --env release --repo "$REPO"
+gh secret list --env release --repo "$REPO" | grep -E "MAC_CERT|APPLE_API" || true
 unset P12_PASS
 
 read -r -p "Delete the exported .p12 now? It stays in your keychain. [Y/n] " del

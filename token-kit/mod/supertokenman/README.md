@@ -17,7 +17,7 @@ The mascot (`assets/logo.svg`) is an original pixel character in Claude colors: 
 From a shell:
 
 ```
-claude plugin marketplace add arimayuji/CLI
+claude plugin marketplace add supertokenman/supertokenman
 claude plugin install supertokenman@arimayuji
 ```
 
@@ -28,4 +28,4 @@ claude plugin marketplace update arimayuji
 claude plugin update supertokenman@arimayuji
 ```
 
-Then start a new local session. In the desktop app: + next to the prompt box, Plugins, Add marketplace `arimayuji/CLI`, then Add plugin. Mods draw in local sessions only, not in cloud sessions.
+Then start a new local session. In the desktop app: + next to the prompt box, Plugins, Add marketplace `supertokenman/supertokenman`, then Add plugin. Mods draw in local sessions only, not in cloud sessions.
