@@ -1,0 +1,309 @@
+import { useEffect, useRef, useState } from 'react'
+import { youtubeId } from '../shared/video'
+import { unreadOf, WEB_APPS } from '../shared/webapps'
+import { hasSkin, SKINS } from '../shared/skins'
+import { DARKEN_CSS, isLight, PAGE_BG_JS } from '../shared/darken'
+import { IconBadge, IconCalendar, IconCamera, IconCar, IconChat, IconCrew, IconHash, IconPeople, IconFood, IconSpark, IconThreads, IconInbox, IconMail, IconPlay, IconClose } from './icons'
+
+export const APP_ICONS: Record<string, () => JSX.Element> = { slack: IconHash, discord: IconCrew, teams: IconPeople, calendar: IconCalendar, meet: IconCamera, whatsapp: IconChat, gmail: IconMail, outlook: IconInbox, ifood: IconFood, uber: IconCar, linkedin: IconBadge, x: IconSpark, reddit: IconThreads, youtube: IconPlay }
+
+type View = HTMLWebViewElement & { reload(): void; goBack(): void; canGoBack(): boolean; getURL(): string; isCurrentlyAudible(): boolean; executeJavaScript(code: string): Promise<unknown>; insertCSS(css: string): Promise<string>; removeInsertedCSS(key: string): Promise<void> }
+
+/** Apps that stay loaded however long they are hidden; by default the ones that bring messages. */
+const KEEP_KEY = 'stm.keepAwake'
+// only WhatsApp by default: each kept app holds 150 to 350 MB all day (measured); pin the others as needed
+const DEFAULT_KEEP = ['whatsapp']
+const loadKeep = (): string[] => {
+  try {
+    return JSON.parse(localStorage.getItem(KEEP_KEY) || 'null') ?? DEFAULT_KEEP
+  } catch {
+    return DEFAULT_KEEP
+  }
+}
+const IDLE_MS = 10 * 60_000
+
+/** One app's page. Mounted the first time it is picked and kept, so its session and playback go on. */
+function AppView(props: { id: string; url: string; shown: boolean; dark: boolean; skin: boolean; onTitle: (t: string) => void; viewRef: (v: View | null) => void }) {
+  const ref = useRef<View>(null)
+  const onTitle = useRef(props.onTitle)
+  onTitle.current = props.onTitle
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    props.viewRef(el)
+    const on = (e: Event) => onTitle.current((e as Event & { title: string }).title)
+    el.addEventListener('page-title-updated', on)
+    return () => el.removeEventListener('page-title-updated', on)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // our skin on the sites that have one: only style goes in, nothing on the page is read
+  const skinKey = useRef<string | null>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !hasSkin(props.id)) return
+    const apply = async () => {
+      try {
+        if (skinKey.current) await el.removeInsertedCSS(skinKey.current).catch(() => undefined)
+        skinKey.current = props.skin ? await el.insertCSS(SKINS[props.id]!) : null
+      } catch {
+        // still loading: dom-ready applies it
+      }
+    }
+    const reset = () => {
+      skinKey.current = null
+      void apply()
+    }
+    el.addEventListener('dom-ready', reset)
+    void apply()
+    return () => el.removeEventListener('dom-ready', reset)
+  }, [props.skin, props.id])
+  // a light page is darkened to match the app; checked on each load and every 8 s, as pages switch themes
+  const darkKey = useRef<string | null>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let alive = true
+    const check = async () => {
+      try {
+        const want = props.dark && !(props.skin && hasSkin(props.id)) && isLight(String(await el.executeJavaScript(PAGE_BG_JS)))
+        if (!alive) return
+        if (want && !darkKey.current) darkKey.current = await el.insertCSS(DARKEN_CSS)
+        else if (!want && darkKey.current) {
+          await el.removeInsertedCSS(darkKey.current)
+          darkKey.current = null
+        }
+      } catch {
+        // the page is loading or gone: the next check catches up
+      }
+    }
+    const reset = () => {
+      darkKey.current = null
+      void check()
+    }
+    el.addEventListener('dom-ready', reset)
+    el.addEventListener('did-stop-loading', check)
+    const t = setInterval(() => void check(), 8000)
+    void check()
+    return () => {
+      alive = false
+      clearInterval(t)
+      el.removeEventListener('dom-ready', reset)
+      el.removeEventListener('did-stop-loading', check)
+    }
+  }, [props.dark, props.skin, props.id])
+  return <webview ref={ref} className="wa-view" {...({ allowpopups: "true" } as object)} src={props.url} partition={`persist:${props.id}`} style={props.shown ? undefined : { display: 'none' }} />
+}
+
+/**
+ * The user's own web apps in a drawer: WhatsApp, Gmail, Outlook, YouTube. Each keeps its own login
+ * (persist:<id>). Claude does not read or send anything in them.
+ */
+export function WebAppsDrawer(props: { open: boolean; app: string; width: number; onApp: (id: string) => void; onUnread: (byApp: Record<string, number>) => void; onResize: (w: number) => void; onClose: () => void }) {
+  const [mounted, setMounted] = useState<string[]>([props.app])
+  const [unread, setUnread] = useState<Record<string, number>>({})
+  const views = useRef<Record<string, View | null>>({})
+  const [lightApps, setLightApps] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('stm.lightApps') || '[]') as string[]
+    } catch {
+      return []
+    }
+  })
+  // our skin is on by default where there is one; the person can see the site's own look instead
+  const [plainApps, setPlainApps] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('stm.plainApps') || '[]') as string[]
+    } catch {
+      return []
+    }
+  })
+  const toggleSkin = (id: string) => {
+    const next = plainApps.includes(id) ? plainApps.filter((x) => x !== id) : [...plainApps, id]
+    setPlainApps(next)
+    try {
+      localStorage.setItem('stm.plainApps', JSON.stringify(next))
+    } catch {
+      // just this session
+    }
+  }
+  const toggleDark = (id: string) => {
+    const next = lightApps.includes(id) ? lightApps.filter((x) => x !== id) : [...lightApps, id]
+    setLightApps(next)
+    try {
+      localStorage.setItem('stm.lightApps', JSON.stringify(next))
+    } catch {
+      // storage off: the choice lasts this session
+    }
+  }
+  const [keep, setKeep] = useState(loadKeep)
+  const keepRef = useRef(keep)
+  keepRef.current = keep
+  const toggleKeep = (id: string) => {
+    const next = keep.includes(id) ? keep.filter((x) => x !== id) : [...keep, id]
+    setKeep(next)
+    try {
+      localStorage.setItem(KEEP_KEY, JSON.stringify(next))
+    } catch {
+      // storage off: the choice lasts this session
+    }
+  }
+  // each hidden app is a whole browser tab in memory (measured 100 to 320 MB): after 10 minutes unseen, and silent, it sleeps
+  const seen = useRef<Record<string, number>>({})
+  seen.current[props.open ? props.app : ''] = Date.now()
+  useEffect(() => {
+    const t = setInterval(() => {
+      setMounted((m) => {
+        const keep = m.filter((id) => {
+          if (keepRef.current.includes(id) || (id === props.app && props.open)) return true
+          let audible = false
+          try {
+            audible = views.current[id]?.isCurrentlyAudible() ?? false
+          } catch {
+            audible = false
+          }
+          return audible || Date.now() - (seen.current[id] ?? 0) < IDLE_MS
+        })
+        return keep.length === m.length ? m : keep
+      })
+    }, 60_000)
+    return () => clearInterval(t)
+  }, [props.app, props.open])
+  const onUnread = useRef(props.onUnread)
+  onUnread.current = props.onUnread
+  useEffect(() => {
+    if (!mounted.includes(props.app)) setMounted([...mounted, props.app])
+  }, [props.app, mounted])
+  useEffect(() => {
+    onUnread.current(unread)
+  }, [unread])
+  const [pending, setPending] = useState<{ app: string; url: string } | null>(null)
+  useEffect(() => {
+    if (!pending) return
+    const v = views.current[pending.app]
+    if (v) {
+      ;(v as View & { loadURL(u: string): Promise<void> }).loadURL(pending.url).catch(() => undefined)
+      setPending(null)
+    }
+  })
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<{ app: string; url: string }>).detail
+      props.onApp(d.app)
+      setMounted((m) => (m.includes(d.app) ? m : [...m, d.app]))
+      setPending(d)
+    }
+    // Health puts an app to sleep: its page unloads until it is opened again
+    const sleep = (e: Event) => {
+      const app = (e as CustomEvent<{ app: string }>).detail.app
+      setMounted((m) => m.filter((x) => x !== app || (x === props.app && props.open)))
+    }
+    window.addEventListener('stm:webapp', on)
+    window.addEventListener('stm:webapp-sleep', sleep)
+    return () => {
+      window.removeEventListener('stm:webapp', on)
+      window.removeEventListener('stm:webapp-sleep', sleep)
+    }
+  }, [props])
+
+  const drag = (e: React.MouseEvent) => {
+    // resizing follows the pointer at once; the open and close glide stays for those
+    const aside = (e.currentTarget as HTMLElement).parentElement
+    aside?.classList.add('dragging')
+    const start = e.clientX
+    const w0 = props.width
+    const move = (ev: MouseEvent) => props.onResize(Math.max(340, Math.min(1100, w0 + (start - ev.clientX))))
+    const up = () => {
+      aside?.classList.remove('dragging')
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+  const current = WEB_APPS.find((a) => a.id === props.app) ?? WEB_APPS[0]!
+  const view = () => views.current[current.id]
+  // the video on screen in the YouTube drawer, if any, for the mini player
+  const [video, setVideo] = useState<string | null>(null)
+  useEffect(() => {
+    const t = setInterval(() => {
+      const v = views.current.youtube
+      try {
+        setVideo(v ? youtubeId(v.getURL()) : null)
+      } catch {
+        setVideo(null)
+      }
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
+  // the mini player hands the second it stopped at back to the drawer
+  useEffect(
+    () =>
+      window.stm.mini.onClosed(({ id, seconds }) => {
+        const v = views.current.youtube
+        if (v && youtubeId(v.getURL()) === id) void v.executeJavaScript(`(()=>{const m=document.querySelector('video');if(m){m.currentTime=${Number(seconds) || 0}}})()`).catch(() => undefined)
+      }),
+    [],
+  )
+  const float = async () => {
+    const v = views.current.youtube
+    if (!v) return
+    const at = (await v.executeJavaScript(`(()=>{const m=document.querySelector('video');if(!m)return 0;m.pause();return m.currentTime})()`).catch(() => 0)) as number
+    void window.stm.mini.open(v.getURL(), at)
+  }
+
+  return (
+    <aside className={`wa ${props.open ? 'open' : ''}`} style={{ width: props.open ? props.width : 0 }} aria-hidden={!props.open}>
+      <div className="wa-grip" onMouseDown={drag} />
+      <header className="wa-head">
+        <div className="wa-apps" role="tablist" aria-label="Apps">
+          {WEB_APPS.map((a) => {
+            const Ico = APP_ICONS[a.id]!
+            const n = unread[a.id] ?? 0
+            return (
+              <button key={a.id} role="tab" aria-selected={a.id === current.id} className={`wa-app app-${a.id}`} title={a.name} onClick={() => props.onApp(a.id)}>
+                <Ico />
+                <span className="wa-app-name">{a.name}</span>
+                {n > 0 && <span className="count">{n > 99 ? '99+' : n}</span>}
+              </button>
+            )
+          })}
+        </div>
+        <span className="spacer-flex" />
+        {current.id === 'youtube' && video && (
+          <button className="wa-float" title="Keep this video in a small window above every app, even full-screen ones" onClick={() => void float()}>
+            <svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="0.7" y="0.7" width="11.6" height="9.6" rx="1" /><rect x="6.2" y="5" width="5" height="4" fill="currentColor" stroke="none" /></svg>
+            Float
+          </button>
+        )}
+        {hasSkin(current.id) && (
+          <button className={`wa-skin ${plainApps.includes(current.id) ? '' : 'on'}`} title={plainApps.includes(current.id) ? `${current.name} in its own look. Click for the app's look: our colors and font, without the side columns.` : `${current.name} in the app's look. Only style is added; nothing on the page is read. Click for the site's own look.`} aria-pressed={!plainApps.includes(current.id)} onClick={() => toggleSkin(current.id)}>
+            {plainApps.includes(current.id) ? 'Site look' : 'Our look'}
+          </button>
+        )}
+        <button className={`icon keep ${lightApps.includes(current.id) ? '' : 'on'}`} title={lightApps.includes(current.id) ? `${current.name} shows in its own colors. Click to match the app's dark look.` : `${current.name} is darkened to match the app when the page is light. Click for its own colors.`} aria-pressed={!lightApps.includes(current.id)} onClick={() => toggleDark(current.id)}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 7.2A4.25 4.25 0 1 1 4.8 2a3.4 3.4 0 0 0 5.2 5.2z" /></svg>
+        </button>
+        <button className={`icon keep ${keep.includes(current.id) ? 'on' : ''}`} title={keep.includes(current.id) ? `${current.name} stays loaded while hidden (uses memory). Click to let it sleep after 10 minutes.` : `${current.name} sleeps after 10 minutes hidden. Click to keep it loaded.`} aria-pressed={keep.includes(current.id)} onClick={() => toggleKeep(current.id)}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 1.5h4l-.5 3 2 2H2.5l2-2zM6 6.5V11" /></svg>
+        </button>
+        <button className="icon" title="Back" aria-label="Back" onClick={() => view()?.canGoBack() && view()?.goBack()}>‹</button>
+        <button className="icon" title="Reload" aria-label="Reload" onClick={() => view()?.reload()}>↻</button>
+        <button className="icon" title="Open in browser" aria-label="Open in browser" onClick={() => void window.stm.openUrl(view()?.getURL() || current.url)}>
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M5 2H2.5v7.5H10V7M7 1.5h3.5V5M10.5 1.5 5.5 6.5" /></svg>
+        </button>
+        <button className="icon" aria-label="Close drawer" onClick={props.onClose}>
+          <IconClose />
+        </button>
+      </header>
+      <div className="wa-body">
+        {mounted.map((id) => {
+          const a = WEB_APPS.find((x) => x.id === id)!
+          return (
+            <AppView key={id} id={id} url={a.url} shown={id === current.id} dark={!lightApps.includes(id)} skin={!plainApps.includes(id)} viewRef={(v) => (views.current[id] = v)} onTitle={(t) => setUnread((u) => (u[id] === unreadOf(t) ? u : { ...u, [id]: unreadOf(t) }))} />
+          )
+        })}
+        <div className="wa-foot faint">{current.hint} Claude does not read or send anything here.</div>
+      </div>
+    </aside>
+  )
+}

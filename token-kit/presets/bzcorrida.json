@@ -1,0 +1,22 @@
+{
+  "profiles": [
+    {
+      "name": "bz-studio",
+      "match": "^python3?\\s+(?:studio/)?bz/\\w+\\.py\\b",
+      "keep": [
+        "\\bERRO\\b|\\bFALHA\\b|Traceback|Error|Exception",
+        "peças-camada|^casos \\d+ falhas",
+        "\\.(?:mp4|png|jpg)$|_legenda\\.txt$"
+      ],
+      "drop": ["^frame=\\s*\\d+", "^\\s*\\d{1,3}%\\|"],
+      "tail": 12
+    },
+    {
+      "name": "bz-studio-render",
+      "match": "^python3?\\s+(?:studio/)?(?:render|export|export_m|sheets|sheets_m|avatars|duo)\\.py\\b",
+      "keep": ["Traceback|Error|Exception|\\bERRO\\b|\\bFALHA\\b", "\\.(?:mp4|png|jpg|webp)$"],
+      "drop": ["^frame=\\s*\\d+", "^\\s*\\d{1,3}%\\|"],
+      "tail": 12
+    }
+  ]
+}

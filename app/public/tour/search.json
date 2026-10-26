@@ -1,0 +1,25 @@
+{
+  "id": "search",
+  "title": "Find anything",
+  "try": "palette",
+  "steps": [
+    {
+      "title": "Option Space, from any app",
+      "say": "Press Option Space anywhere on your Mac.",
+      "start": 0.7168669700622559,
+      "dur": 3.5920000076293945
+    },
+    {
+      "title": "Type a few letters",
+      "say": "Type a few letters: screens, projects, personas, secrets.",
+      "start": 4.30886697769165,
+      "dur": 4.319000005722046
+    },
+    {
+      "title": "Enter to go",
+      "say": "Press Enter and you are there.",
+      "start": 8.627866983413696,
+      "dur": 3.5
+    }
+  ]
+}

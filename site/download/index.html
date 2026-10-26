@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download SuperTokenMan</title>
+<meta name="description" content="Download SuperTokenMan for Mac: Apple silicon or Intel, signed with Developer ID and notarized by Apple, with SHA-256 checksums.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://supertokenman.com/download/">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/site.css">
+<script>document.documentElement.classList.add('js')</script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>SuperTokenMan</a>
+    <nav class="nav" aria-label="Main">
+      <a class="opt" href="/docs/">Docs</a>
+      <a class="opt" href="/changelog/">Changelog</a>
+      <a href="/security/">Security</a>
+      <a class="btn small" href="/download/" aria-current="page">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <section class="page-head">
+    <div class="wrap">
+      <div class="label">Download</div>
+      <h1 class="display">SuperTokenMan for Mac.</h1>
+      <p class="lead">Signed with a Developer ID and notarized by Apple, so macOS opens it without warnings.</p>
+      <div class="cta-row">
+        <a class="btn" href="https://github.com/supertokenman/supertokenman/releases/latest/download/SuperTokenMan-arm64.dmg">Download for Apple silicon</a>
+        <a class="btn ghost" href="https://github.com/supertokenman/supertokenman/releases/latest/download/SuperTokenMan-x64.dmg">Download for Intel</a>
+      </div>
+      <p class="hint">Not sure which? Apple menu, About This Mac: a chip named Apple M is Apple silicon; a processor named Intel is Intel.</p>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="wrap narrow">
+      <h2>Install</h2>
+      <ol class="steps">
+        <li>Open the downloaded <code>.dmg</code>.</li>
+        <li>Drag SuperTokenMan into Applications.</li>
+        <li>Open it from Applications and start a panel. Claude Code runs with your Claude account or an Anthropic API key.</li>
+      </ol>
+
+      <h2>What you need</h2>
+      <ul class="facts">
+        <li><span class="label">Mac</span><span>Apple silicon or Intel.</span></li>
+        <li><span class="label">Claude</span><span>A Claude plan or an Anthropic API key. Usage is billed by Anthropic on your account, not by us.</span></li>
+        <li><span class="label">Optional</span><span>Docker, to isolate panels. Git, for worktrees and changes.</span></li>
+      </ul>
+
+      <h2>Check the download</h2>
+      <p>Each release lists a <code>SHA256SUMS</code> file. Download it next to the <code>.dmg</code> and run:</p>
+      <pre class="code">cd ~/Downloads
+shasum -a 256 -c SHA256SUMS --ignore-missing</pre>
+      <p>A line ending in <code>OK</code> means the file is the one we published. To check the signature and the notarization:</p>
+      <pre class="code">spctl -a -vv /Applications/SuperTokenMan.app</pre>
+      <p>It should say <code>accepted</code> and <code>source=Notarized Developer ID</code>.</p>
+
+      <h2>Updates</h2>
+      <p>The app checks the <a class="link" href="https://github.com/supertokenman/supertokenman/releases">releases on GitHub</a> at launch and every 6 hours. When there is a new version it shows what changed and installs only when you say so. Turn the check off in Appearance, Check for updates automatically.</p>
+
+      <h2>Older versions</h2>
+      <p>Every version, with its notes and checksums, is on <a class="link" href="https://github.com/supertokenman/supertokenman/releases">GitHub Releases</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    <nav aria-label="Footer">
+      <a href="/download/">Download</a>
+      <a href="/security/">Security and privacy</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/docs/">Docs</a>
+      <a href="/support/">Support</a>
+      <a href="https://github.com/supertokenman/supertokenman">GitHub</a>
+    </nav>
+    <p class="legal">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="58%" r="55%"><stop offset="0" stop-color="#d97757" stop-opacity=".55"/><stop offset=".55" stop-color="#d97757" stop-opacity=".12"/><stop offset="1" stop-color="#d97757" stop-opacity="0"/></radialGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22201d"/><stop offset="1" stop-color="#0f0f0e"/></linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".18"/><stop offset=".5" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+    <clipPath id="sq"><rect x="0" y="0" width="1024" height="1024"/></clipPath>
+  </defs>
+  <g clip-path="url(#sq)">
+    <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
+    <circle cx="512" cy="560" r="430" fill="url(#glow)"/>
+    <g fill="none" stroke="#ffffff" stroke-opacity=".05" stroke-width="3" stroke-dasharray="6 16"><ellipse cx="512" cy="560" rx="330" ry="270"/><ellipse cx="512" cy="560" rx="400" ry="330"/></g>
+    <g transform="translate(109 66) scale(12.6)" shape-rendering="crispEdges">
+  
+  <!-- original pixel mascot: SuperTokenMan, a token hero with a cape and a T emblem, in Claude colors; it bobs and its cape waves -->
+  <g>
+    
+    <!-- cape (behind the body), waving -->
+    <path d="M17 20 H47 L58 58 L48 54 L40 60 L32 55 L24 60 L16 54 L6 58 Z" fill="#141413" stroke="#e8e6dc" stroke-width="1.2" stroke-linejoin="round"/>
+    <!-- body and head: one rounded token shape -->
+    <rect x="18" y="10" width="28" height="38" rx="8" fill="#d97757"/>
+    <!-- hair with a forelock curl -->
+    <rect x="18" y="10" width="28" height="5" rx="3" fill="#141413"/>
+    <rect x="29" y="15" width="3" height="2" fill="#141413"/>
+    <rect x="31" y="17" width="2" height="2" fill="#141413"/>
+    <!-- eyes, blinking -->
+    <rect x="24" y="19" width="5" height="6" fill="#faf9f5"/>
+    <rect x="35" y="19" width="5" height="6" fill="#faf9f5"/>
+    <rect x="26" y="21" width="2" height="3" fill="#141413">
+      
+    </rect>
+    <rect x="37" y="21" width="2" height="3" fill="#141413">
+      
+    </rect>
+    <!-- emblem: hexagon badge with a T -->
+    <path d="M32 28 L40 32 L40 39 L32 43 L24 39 L24 32 Z" fill="#faf9f5" stroke="#141413" stroke-width="1.5"/>
+    <path d="M27.5 32 H36.5 V34.5 H33.3 V40 H30.7 V34.5 H27.5 Z" fill="#c15f3c"/>
+    <!-- belt, arms and boots -->
+    <rect x="18" y="44" width="28" height="3" fill="#141413"/>
+    <rect x="13" y="28" width="5" height="11" rx="2" fill="#d97757"/>
+    <rect x="46" y="28" width="5" height="11" rx="2" fill="#d97757"/>
+    <rect x="22" y="48" width="7" height="6" fill="#141413"/>
+    <rect x="35" y="48" width="7" height="6" fill="#141413"/>
+  </g>
+</g>
+  </g>
+</svg>

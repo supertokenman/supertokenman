@@ -1,0 +1,175 @@
+{
+  "name": "supertokenman-app",
+  "private": true,
+  "license": "FSL-1.1-ALv2",
+  "version": "0.1.3",
+  "description": "A desktop app around Claude Code: streaming chat, tool approvals and the SuperTokenMan HUD",
+  "type": "module",
+  "main": "dist-electron/electron/entry.js",
+  "scripts": {
+    "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV=1 electron .\"",
+    "build": "vite build && npm run build:electron",
+    "guide": "npm run build:electron && node scripts/guide.mjs",
+    "build:electron": "tsc -p tsconfig.electron.json && cp electron/preload.cjs electron/passkey-preload.cjs dist-electron/electron/",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "test": "vitest run",
+    "netwatch": "electron scripts/netwatch.mjs",
+    "netwatch:check": "node scripts/netwatch-check.mjs 60",
+    "dist:mac": "npm run build && electron-builder --mac --arm64",
+    "dist:mac-intel": "npm run build && electron-builder --mac --x64",
+    "dist:linux": "npm run build && electron-builder --linux dir",
+    "install:mac": "bash scripts/install-mac.sh",
+    "tour:record": "node scripts/tour/record.mjs out/tour",
+    "tour:build": "node scripts/tour/build.mjs out/tour",
+    "dist:mac:signed": "npm run build && electron-builder --mac --config build/signed.cjs --publish never",
+    "verify:mac": "bash scripts/verify-mac.sh",
+    "test:e2e": "npm run build && node --test --test-concurrency=1 e2e/*.e2e.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.308",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "electron-updater": "^6.8.11",
+    "eventsource-parser": "^4.1.3",
+    "jsonc-parser": "^3.3.1",
+    "mysql2": "^3.24.6",
+    "node-pty": "^1.1.0",
+    "pg": "^8.23.1",
+    "socket.io-client": "^4.8.4",
+    "yaml": "^2.9.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@electron/fuses": "^1.8.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^44.9.3",
+    "electron-builder": "^26.15.3",
+    "playwright": "1.56.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "dev.arimayuji.supertokenman",
+    "productName": "SuperTokenMan",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "build/icon.png",
+      "cli/**",
+      "package.json",
+      "!node_modules/@anthropic-ai/claude-agent-sdk-*-musl/**"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/@anthropic-ai/**",
+      "node_modules/node-pty/**",
+      "cli/**"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.png",
+      "target": [
+        "dir",
+        "zip"
+      ],
+      "identity": "-",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "For video calls in the Apps drawer (Meet, Teams, Slack, WhatsApp).",
+        "NSMicrophoneUsageDescription": "For calls in the Apps drawer (Meet, Teams, Slack, WhatsApp).",
+        "NSAppleEventsUsageDescription": "To show and control what Spotify is playing.",
+        "LSApplicationCategoryType": "public.app-category.developer-tools"
+      }
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "category": "Development"
+    },
+    "extraResources": [
+      {
+        "from": "engines/revideo",
+        "to": "engines/revideo",
+        "filter": [
+          "**/*",
+          "!node_modules/**",
+          "!package-lock.json"
+        ]
+      },
+      {
+        "from": "engines/skills",
+        "to": "engines/skills"
+      },
+      {
+        "from": "engines/voice",
+        "to": "engines/voice",
+        "filter": [
+          "**/*",
+          "!.venv/**",
+          "!models/**"
+        ]
+      },
+      {
+        "from": "engines/web",
+        "to": "engines/web",
+        "filter": [
+          "**/*",
+          "!.venv/**"
+        ]
+      },
+      {
+        "from": "engines/symbols",
+        "to": "engines/symbols",
+        "filter": [
+          "**/*",
+          "!.venv/**"
+        ]
+      },
+      {
+        "from": "engines/headroom",
+        "to": "engines/headroom",
+        "filter": [
+          "**/*",
+          "!.venv/**"
+        ]
+      }
+    ],
+    "afterPack": "build/fuses.cjs",
+    "protocols": [
+      {
+        "name": "SuperTokenMan",
+        "schemes": [
+          "supertokenman"
+        ]
+      }
+    ]
+  },
+  "productName": "SuperTokenMan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arimayuji/CLI.git"
+  }
+}

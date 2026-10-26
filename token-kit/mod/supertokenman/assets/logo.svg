@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges">
+  <title>SuperTokenMan</title>
+  <!-- original pixel mascot: SuperTokenMan, a token hero with a cape and a T emblem, in Claude colors; it bobs and its cape waves -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0 1;0 -1;0 1" dur="1.6s" repeatCount="indefinite"/>
+    <!-- cape (behind the body), waving -->
+    <path fill="#141413" stroke="#e8e6dc" stroke-width="1.2" stroke-linejoin="round">
+      <animate attributeName="d" dur="0.8s" repeatCount="indefinite"
+        values="M17 20 H47 L58 58 L48 54 L40 60 L32 55 L24 60 L16 54 L6 58 Z;
+                M17 20 H47 L60 54 L50 57 L42 58 L32 57 L22 58 L14 57 L4 54 Z;
+                M17 20 H47 L58 58 L48 54 L40 60 L32 55 L24 60 L16 54 L6 58 Z"/>
+    </path>
+    <!-- body and head: one rounded token shape -->
+    <rect x="18" y="10" width="28" height="38" rx="8" fill="#d97757"/>
+    <!-- hair with a forelock curl -->
+    <rect x="18" y="10" width="28" height="5" rx="3" fill="#141413"/>
+    <rect x="29" y="15" width="3" height="2" fill="#141413"/>
+    <rect x="31" y="17" width="2" height="2" fill="#141413"/>
+    <!-- eyes, blinking -->
+    <rect x="24" y="19" width="5" height="6" fill="#faf9f5"/>
+    <rect x="35" y="19" width="5" height="6" fill="#faf9f5"/>
+    <rect x="26" y="21" width="2" height="3" fill="#141413">
+      <animate attributeName="height" values="3;3;3;0.4;3" keyTimes="0;0.85;0.9;0.95;1" dur="3.2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="37" y="21" width="2" height="3" fill="#141413">
+      <animate attributeName="height" values="3;3;3;0.4;3" keyTimes="0;0.85;0.9;0.95;1" dur="3.2s" repeatCount="indefinite"/>
+    </rect>
+    <!-- emblem: hexagon badge with a T -->
+    <path d="M32 28 L40 32 L40 39 L32 43 L24 39 L24 32 Z" fill="#faf9f5" stroke="#141413" stroke-width="1.5"/>
+    <path d="M27.5 32 H36.5 V34.5 H33.3 V40 H30.7 V34.5 H27.5 Z" fill="#c15f3c"/>
+    <!-- belt, arms and boots -->
+    <rect x="18" y="44" width="28" height="3" fill="#141413"/>
+    <rect x="13" y="28" width="5" height="11" rx="2" fill="#d97757"/>
+    <rect x="46" y="28" width="5" height="11" rx="2" fill="#d97757"/>
+    <rect x="22" y="48" width="7" height="6" fill="#141413"/>
+    <rect x="35" y="48" width="7" height="6" fill="#141413"/>
+  </g>
+</svg>

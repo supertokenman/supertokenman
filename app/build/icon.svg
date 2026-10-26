@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- SuperTokenMan app icon: the three bars on paper, in the macOS icon grid (824 body, 100 margin).
+       The top bar carries the 45 degree cut; the short bar is the accent. See docs/BRAND.md. -->
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f2f0e8"/>
+    </linearGradient>
+    <filter id="drop" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#paper)" filter="url(#drop)"/>
+  <rect x="100.5" y="100.5" width="823" height="823" rx="185" fill="none" stroke="#000" stroke-opacity=".08"/>
+  <path d="M262 318 H704 L762 376 V406 H262 Z" fill="#1d1d1f"/>
+  <rect x="262" y="468" width="340" height="88" fill="#1d1d1f"/>
+  <rect x="262" y="618" width="180" height="88" fill="#c65d3b"/>
+</svg>

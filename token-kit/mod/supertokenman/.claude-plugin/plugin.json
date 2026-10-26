@@ -1,0 +1,11 @@
+{
+  "name": "supertokenman",
+  "version": "0.2.0",
+  "description": "SuperTokenMan: always-on token widget above the prompt, plus a details pane: context, plan windows, prompt cache, session value and token-kit savings in your currency, and what costs most",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "arimayuji"
+  },
+  "license": "MIT",
+  "icon": "./.claude-plugin/icon.png"
+}

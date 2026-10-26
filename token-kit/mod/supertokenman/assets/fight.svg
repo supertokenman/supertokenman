@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 64" width="128" height="64" shape-rendering="crispEdges">
+  <title>SuperTokenMan KO</title>
+  <!-- fight loop (1.2s): the hero lunges and punches, a wasted-token coin flies in, takes the hit and bursts -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" dur="1.2s" repeatCount="indefinite"
+      values="0 0;0 0;8 0;8 0;0 0" keyTimes="0;0.3;0.42;0.6;1"/>
+    <path d="M9 18 H33 L42 54 L33 51 L27 56 L21 52 L15 56 L9 51 L0 54 Z" fill="#141413" stroke="#e8e6dc" stroke-width="1"/>
+    <rect x="9" y="8" width="24" height="34" rx="7" fill="#d97757"/>
+    <rect x="9" y="8" width="24" height="5" rx="3" fill="#141413"/>
+    <rect x="19" y="13" width="3" height="2" fill="#141413"/>
+    <rect x="14" y="17" width="4" height="5" fill="#faf9f5"/>
+    <rect x="24" y="17" width="4" height="5" fill="#faf9f5"/>
+    <rect x="16" y="19" width="2" height="3" fill="#141413"/>
+    <rect x="26" y="19" width="2" height="3" fill="#141413"/>
+    <path d="M21 25 L28 28.5 L28 34.5 L21 38 L14 34.5 L14 28.5 Z" fill="#faf9f5" stroke="#141413" stroke-width="1.2"/>
+    <path d="M17.2 28.6 H24.8 V30.8 H22.1 V35.5 H19.9 V30.8 H17.2 Z" fill="#c15f3c"/>
+    <rect x="13" y="42" width="6" height="5" fill="#141413"/>
+    <rect x="23" y="42" width="6" height="5" fill="#141413"/>
+    <!-- punching arm -->
+    <rect x="33" y="26" height="5" rx="2" fill="#d97757">
+      <animate attributeName="width" dur="1.2s" repeatCount="indefinite" values="5;5;20;20;5" keyTimes="0;0.3;0.42;0.6;1"/>
+    </rect>
+  </g>
+  <!-- the wasted token: flies in, gets hit, bursts -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" dur="1.2s" repeatCount="indefinite"
+      values="30 0;8 0;0 0;0 0;30 0" keyTimes="0;0.35;0.45;0.99;1"/>
+    <g>
+      <animate attributeName="opacity" dur="1.2s" repeatCount="indefinite" values="1;1;0;0;1" keyTimes="0;0.47;0.55;0.99;1"/>
+      <circle cx="74" cy="29" r="11" fill="#b0aea5" stroke="#141413" stroke-width="1.2"/>
+      <path d="M68 24 L72 26 M80 24 L76 26" stroke="#141413" stroke-width="1.5"/>
+      <rect x="70" y="27" width="2" height="2" fill="#141413"/>
+      <rect x="76" y="27" width="2" height="2" fill="#141413"/>
+      <path d="M70 34 Q74 31 78 34" stroke="#141413" stroke-width="1.2" fill="none"/>
+    </g>
+  </g>
+  <!-- burst -->
+  <g fill="#d97757" opacity="0">
+    <animate attributeName="opacity" dur="1.2s" repeatCount="indefinite" values="0;0;1;0;0" keyTimes="0;0.44;0.5;0.8;1"/>
+    <rect x="72" y="27" width="4" height="4"><animateTransform attributeName="transform" type="translate" dur="1.2s" repeatCount="indefinite" values="0 0;0 0;14 -12;14 -12" keyTimes="0;0.45;0.8;1"/></rect>
+    <rect x="72" y="27" width="4" height="4"><animateTransform attributeName="transform" type="translate" dur="1.2s" repeatCount="indefinite" values="0 0;0 0;18 4;18 4" keyTimes="0;0.45;0.8;1"/></rect>
+    <rect x="72" y="27" width="3" height="3" fill="#b0aea5"><animateTransform attributeName="transform" type="translate" dur="1.2s" repeatCount="indefinite" values="0 0;0 0;8 14;8 14" keyTimes="0;0.45;0.8;1"/></rect>
+    <rect x="72" y="27" width="3" height="3" fill="#b0aea5"><animateTransform attributeName="transform" type="translate" dur="1.2s" repeatCount="indefinite" values="0 0;0 0;10 -18;10 -18" keyTimes="0;0.45;0.8;1"/></rect>
+    <rect x="72" y="27" width="3" height="3" fill="#c15f3c"><animateTransform attributeName="transform" type="translate" dur="1.2s" repeatCount="indefinite" values="0 0;0 0;22 -4;22 -4" keyTimes="0;0.45;0.8;1"/></rect>
+  </g>
+  <!-- KO! -->
+  <text x="100" y="20" font-family="Poppins, Arial, sans-serif" font-weight="700" font-size="14" fill="#c15f3c" text-anchor="middle" opacity="0">KO!
+    <animate attributeName="opacity" dur="1.2s" repeatCount="indefinite" values="0;0;1;1;0" keyTimes="0;0.45;0.5;0.85;1"/>
+  </text>
+</svg>

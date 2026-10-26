@@ -1,0 +1,17 @@
+{
+  "name": "supertokenman-revideo-engine",
+  "private": true,
+  "type": "module",
+  "description": "SuperTokenMan's video engine: Revideo templates rendered from JSON",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@revideo/2d": "0.11.0",
+    "@revideo/core": "0.11.0",
+    "@revideo/renderer": "0.11.0",
+    "@revideo/vite-plugin": "0.11.0",
+    "@revideo/ffmpeg": "0.11.0",
+    "@revideo/ui": "0.11.0"
+  }
+}

@@ -1,0 +1,23 @@
+# Test fixtures: fake keys that prove the secret detectors work (reviewed 2026-10-26, docs/security/2026-10-26/REPORT.md)
+1725b897ea3dd60a3b87b77249bc1da32f616e5b:app/shared/settingsfile.test.ts:generic-api-key:22
+1725b897ea3dd60a3b87b77249bc1da32f616e5b:app/shared/settingsfile.test.ts:generic-api-key:26
+1fafa73e7b97d3bdba525f7176ab9bd12278ef3c:app/electron/apiclient.test.ts:generic-api-key:21
+1fafa73e7b97d3bdba525f7176ab9bd12278ef3c:app/electron/apiclient.test.ts:generic-api-key:4
+5db96af734cc42f1536421a7265e3c20279de636:app/shared/secrets.test.ts:curl-auth-header:16
+5db96af734cc42f1536421a7265e3c20279de636:app/shared/secrets.test.ts:generic-api-key:11
+640fa9f0a08dc05a9fe37908a4d6aa106e907a57:app/electron/mail/outlook.test.ts:generic-api-key:36
+a403b370cb349512e32ea479f58cdf98bdf84217:app/electron/envScan.test.ts:stripe-access-token:18
+app/electron/apiclient.test.ts:generic-api-key:21
+app/electron/apiclient.test.ts:generic-api-key:4
+app/electron/envScan.test.ts:stripe-access-token:18
+app/electron/mail/outlook.test.ts:generic-api-key:36
+app/shared/leaks.test.ts:github-pat:6
+app/shared/leaks.test.ts:stripe-access-token:12
+app/shared/leaks.test.ts:stripe-access-token:22
+app/shared/secrets.test.ts:curl-auth-header:16
+app/shared/secrets.test.ts:generic-api-key:11
+app/shared/settingsfile.test.ts:generic-api-key:22
+app/shared/settingsfile.test.ts:generic-api-key:26
+e9f7b233e068687dd4c4fe5128066e209060db43:app/shared/leaks.test.ts:github-pat:6
+e9f7b233e068687dd4c4fe5128066e209060db43:app/shared/leaks.test.ts:stripe-access-token:12
+e9f7b233e068687dd4c4fe5128066e209060db43:app/shared/leaks.test.ts:stripe-access-token:22

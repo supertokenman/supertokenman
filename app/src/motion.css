@@ -1,0 +1,235 @@
+/*
+ * Motion: Constructivism and Swiss style, for movement only.
+ * Blocks enter from the side behind a diagonal cut, like a 1920s Rodchenko poster; type grows to take
+ * its space; timing is the Swiss grid's: short, sharp, never bouncy. Loaded after app.css, so the
+ * keyframes below replace the old names (rise, pop, fade, spin, bounce) everywhere at once.
+ */
+:root {
+  --cut: cubic-bezier(0.77, 0, 0.18, 1); /* the knife: slow start, hard stop */
+  --print: cubic-bezier(0.16, 1, 0.3, 1); /* the press: lands fast, settles */
+  --slant: 14%; /* the poster's diagonal */
+}
+
+/* appear: a block slides in from the left behind a slanted edge, like a printed strip */
+@keyframes rise {
+  from { opacity: 0; transform: translateX(-10px); clip-path: polygon(0 0, 0 0, calc(0% - var(--slant)) 100%, calc(0% - var(--slant)) 100%); }
+  60% { opacity: 1; }
+  to { clip-path: polygon(0 0, calc(100% + var(--slant)) 0, 100% 100%, calc(0% - var(--slant)) 100%); }
+}
+
+/* the backdrop: dark comes down, and one accent slash crosses it, once */
+@keyframes fade { from { opacity: 0; } }
+.overlay { animation: fade 160ms var(--cut); overflow: hidden; }
+.overlay::before {
+  content: '';
+  position: absolute;
+  left: -20%;
+  top: 50%;
+  width: 140%;
+  height: 3px;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: rotate(-11deg) scaleX(0);
+  animation: slash 420ms var(--cut) both;
+  pointer-events: none;
+}
+@keyframes slash {
+  0% { transform: rotate(-11deg) scaleX(0); opacity: 1; }
+  55% { transform: rotate(-11deg) scaleX(1); opacity: 1; transform-origin: left center; }
+  56% { transform-origin: right center; }
+  100% { transform: rotate(-11deg) scaleX(0); opacity: 1; transform-origin: right center; }
+}
+
+/* open a sheet: cut in on the diagonal from the left, landing square */
+@keyframes pop {
+  from { transform: translateX(-28px); clip-path: polygon(0 0, 0 0, calc(0% - var(--slant)) 100%, calc(0% - var(--slant)) 100%); }
+  to { transform: none; clip-path: polygon(0 0, calc(100% + var(--slant)) 0, 100% 100%, calc(0% - var(--slant)) 100%); }
+}
+.sheet { animation: pop 300ms var(--cut) both; }
+.sheet .sheet-title { animation: headline 420ms var(--print) both 120ms; }
+@keyframes headline { from { letter-spacing: 0.24em; opacity: 0; } }
+
+/* close: the scissors cut it away to the right on the same diagonal */
+@keyframes cut-out {
+  to { transform: translateX(24px); clip-path: polygon(calc(100% + var(--slant)) 0, calc(100% + var(--slant)) 0, 100% 100%, 100% 100%); }
+}
+@keyframes fade-out { to { opacity: 0; } }
+.presence[data-leaving] .overlay { animation: fade-out 220ms var(--cut) both; }
+.presence[data-leaving] .overlay::before { animation: none; }
+.presence[data-leaving] .sheet { animation: cut-out 220ms var(--cut) both; }
+
+/* the opening's signature on every sheet: three 45-degree bars sweep across the top as it opens, and
+   again as it closes (accent, ink, accent; the same bars as the window's opening) */
+.sheet { position: relative; }
+.sheet::after {
+  content: '';
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  width: 120px;
+  height: 22px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--accent), var(--accent)) 0 2px / 90px 4px no-repeat,
+    linear-gradient(var(--text), var(--text)) 0 9px / 64px 4px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 0 16px / 40px 4px no-repeat;
+  transform: skewX(-45deg) translateX(-140px);
+  animation: bars-sweep 520ms var(--cut) both 60ms;
+}
+@keyframes bars-sweep {
+  0% { transform: skewX(-45deg) translateX(-140px); opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: skewX(-45deg) translateX(calc(100vw + 160px)); opacity: 0; }
+}
+.presence[data-leaving] .sheet::after { animation: bars-sweep 220ms var(--cut) both; }
+
+/* switch tabs: the picked label grows into its space, and a bar runs under it */
+.segmented button,
+.wa-app { position: relative; }
+.segmented button[aria-selected='true'],
+.wa-app[aria-selected='true'] { animation: stamp 260ms var(--print); }
+@keyframes stamp { from { transform: scale(1.14); letter-spacing: 0.06em; } }
+.segmented button::after,
+.wa-app::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 1px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0) skewX(-30deg);
+  transform-origin: left;
+  transition: transform 220ms var(--cut);
+}
+.segmented button[aria-selected='true']::after,
+.wa-app[aria-selected='true']::after { transform: scaleX(1) skewX(-30deg); }
+
+/* a tab's content: the new page is set in from the left */
+.panel .column > *:first-child,
+.pr-scroll > *,
+.preview,
+.git { animation: rise 240ms var(--cut) both; }
+
+/* loading: three bars stack and unstack, like type being set */
+@keyframes spin {
+  0%, 100% { background-size: 100% 2px, 0% 2px, 0% 2px; }
+  25% { background-size: 100% 2px, 70% 2px, 0% 2px; }
+  50% { background-size: 100% 2px, 70% 2px, 40% 2px; }
+  75% { background-size: 0% 2px, 70% 2px, 40% 2px; }
+}
+.spinner,
+.spin {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  border: 0;
+  border-radius: 0;
+  background-image: linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--text), var(--text)), linear-gradient(var(--muted), var(--muted));
+  background-repeat: no-repeat;
+  background-position: 0 0, 0 4px, 0 8px;
+  animation: spin 1s steps(1) infinite;
+  color: transparent;
+  overflow: hidden;
+}
+.splash-bar span { animation-timing-function: var(--cut); }
+
+/* error: a red band crosses on the diagonal and leaves, then the message holds */
+.notice.error,
+.guard { position: relative; overflow: hidden; animation: jolt 320ms var(--cut) both; }
+.notice.error::before,
+.guard::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  width: 40%;
+  background: rgba(var(--red-rgb), 0.35);
+  transform: translateX(-140%) skewX(-24deg);
+  animation: band 520ms var(--cut) both;
+  pointer-events: none;
+}
+@keyframes band { to { transform: translateX(380%) skewX(-24deg); } }
+@keyframes jolt { 0% { transform: translateX(-8px); opacity: 0; } 50% { transform: translateX(3px); opacity: 1; } 100% { transform: none; } }
+
+/* success: the stamp comes down */
+.notice:not(.error),
+.saved-note { animation: thump 300ms var(--print) both; }
+@keyframes thump { from { transform: scale(1.12) rotate(-2deg); opacity: 0; } 60% { opacity: 1; } }
+
+/* drawers: the page inside is cut in from the right */
+.wa.open .wa-body { animation: wa-in 320ms var(--cut) both; }
+@keyframes wa-in {
+  from { clip-path: polygon(100% 0, 100% 0, 100% 100%, calc(100% + var(--slant)) 100%); transform: translateX(18px); }
+  to { clip-path: polygon(calc(0% - var(--slant)) 0, 100% 0, 100% 100%, 0 100%); transform: none; }
+}
+
+/* a new panel drops in as a block from the top */
+.panel { animation: drop 320ms var(--cut) both; }
+/* for popovers with their own cut corner: pop's slanted clip would replace it */
+@keyframes cut-in { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes drop { from { clip-path: inset(0 0 100% 0); transform: translateY(-12px); } to { clip-path: inset(0); transform: none; } }
+
+/* rows that appear in lists are set one after another */
+.dk-row, .port-row, .pr-item, .git-file, .ci-run {
+  animation: rise 220ms var(--cut) both;
+}
+.dk-row:nth-child(2), .port-row:nth-child(2), .pr-item:nth-child(3), .ci-run:nth-child(2) { animation-delay: 30ms; }
+.dk-row:nth-child(3), .port-row:nth-child(3), .pr-item:nth-child(4), .ci-run:nth-child(3) { animation-delay: 60ms; }
+.dk-row:nth-child(4), .port-row:nth-child(4), .pr-item:nth-child(5), .ci-run:nth-child(4) { animation-delay: 90ms; }
+.dk-row:nth-child(n + 5), .port-row:nth-child(n + 5), .pr-item:nth-child(n + 6), .ci-run:nth-child(n + 5) { animation-delay: 120ms; }
+
+/* press: buttons go down square, no squish */
+button:active:not(:disabled) { transform: translateY(1px); }
+
+/* menus and the search leave the way sheets do */
+.presence[data-leaving] .menu-pop,
+.presence[data-leaving] .palette { animation: cut-out 180ms var(--cut) both; }
+.presence[data-leaving] .palette-overlay { animation: fade-out 180ms var(--cut) both; }
+
+/* reduced motion: nothing travels, spins or bounces, but the app does not freeze: things still fade in
+   and out, and what shows a state (loading, busy, live) breathes in place instead of moving */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes rise { from { opacity: 0; } }
+  @keyframes pop { from { opacity: 0; } }
+  @keyframes bars-sweep { from, to { opacity: 0; } }
+  @keyframes drop { from { opacity: 0; } }
+  @keyframes cut-in { from { opacity: 0; } }
+  @keyframes wa-in { from { opacity: 0; } }
+  @keyframes scene-in { from { opacity: 0; } }
+  @keyframes cut-out { to { opacity: 0; } }
+  @keyframes jolt { from { opacity: 0; } }
+  @keyframes thump { from { opacity: 0; } }
+  @keyframes stamp { from { opacity: 0.6; } }
+  @keyframes headline { from { opacity: 0; } }
+  @keyframes comic-pop { from { opacity: 0; } }
+  @keyframes leap { from { opacity: 0; } }
+  @keyframes charge { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+  @keyframes breathe { 50% { opacity: 0.6; } }
+  @keyframes bob { 50% { opacity: 0.85; } }
+  @keyframes ld-orbit { 50% { opacity: 0.4; } }
+  @keyframes ld-turn { 50% { opacity: 0.5; } }
+  @keyframes ld-scan { 50% { opacity: 0.4; } }
+  @keyframes step-turn { 50% { opacity: 0.45; } }
+  @keyframes lm-ask { 50% { opacity: 0.45; } }
+  @keyframes lm-ring { from { opacity: 0.6; } to { opacity: 0; } }
+  .overlay::before, .notice.error::before, .guard::before { animation: none !important; display: none; }
+  .splash-bar span { width: 100%; animation-duration: 1.6s; }
+  *, *::before, *::after { transition-duration: 1ms !important; }
+}
+
+/* phase 94: three brand moves. A split-flap counter (each changed character drops in from above, cut
+   at its middle), a rubber stamp for a verdict, and a 45° diagonal entry for cards in a grid. */
+.flap { display: inline-flex; font-variant-numeric: tabular-nums; }
+.flap > span { display: inline-block; animation: flap 120ms var(--print) both; }
+@keyframes flap { from { clip-path: inset(0 0 50% 0); transform: translateY(-30%); } }
+.stamp-in { display: inline-block; animation: ink-stamp 420ms var(--print) both; }
+@keyframes ink-stamp { from { transform: scale(1.9) rotate(-9deg); opacity: 0; } 55% { transform: scale(0.94) rotate(-3deg); opacity: 1; } to { transform: rotate(-3deg); } }
+.enter-diag { animation: diag-in 360ms var(--print) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes diag-in { from { transform: translate(-14px, 14px); clip-path: polygon(0 100%, 0 100%, 0 100%); opacity: 0; } 60% { opacity: 1; } to { clip-path: polygon(0 0, 300% 0, 0 300%); } }
+@media (prefers-reduced-motion: reduce) {
+  @keyframes flap { from { opacity: 0.4; } }
+  @keyframes ink-stamp { from { opacity: 0; } to { transform: rotate(-3deg); } }
+  @keyframes diag-in { from { opacity: 0; } }
+}

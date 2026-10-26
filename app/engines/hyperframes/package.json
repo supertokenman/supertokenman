@@ -1,0 +1,13 @@
+{
+  "name": "stm-hyperframes",
+  "private": true,
+  "type": "module",
+  "description": "Tour chapters as HyperFrames HTML compositions: the same track as the Revideo scene, drawn in plain HTML and CSS.",
+  "scripts": {
+    "tour": "node tour.mjs"
+  },
+  "dependencies": {
+    "gsap": "3.13.0",
+    "hyperframes": "0.8.192"
+  }
+}

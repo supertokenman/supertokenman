@@ -1,0 +1,19 @@
+{
+  "id": "personas",
+  "title": "Personas",
+  "try": "personas",
+  "steps": [
+    {
+      "title": "Personas are roles",
+      "say": "Personas give Claude a role: reviewer, frontend, devops, writer.",
+      "start": 0.7165729999542236,
+      "dur": 4.7250001430511475
+    },
+    {
+      "title": "Start from a template",
+      "say": "Start from a template, or write your own.",
+      "start": 5.441573143005371,
+      "dur": 2.8489999771118164
+    }
+  ]
+}

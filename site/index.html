@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SuperTokenMan</title>
+<meta name="description" content="A Mac app for running and controlling Claude Code: parallel panels, approvals, isolation, cost per turn, project memory and your own tools, in one window.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="SuperTokenMan">
+<meta property="og:description" content="Your whole dev day in one window.">
+<meta property="og:image" content="https://supertokenman.com/assets/og.png">
+<link rel="canonical" href="https://supertokenman.com/">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/supertoken-display.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+<script>document.documentElement.classList.add('js')</script>
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>SuperTokenMan</a>
+    <nav class="nav" aria-label="Main">
+      <a class="opt" href="/docs/">Docs</a>
+      <a class="opt" href="/changelog/">Changelog</a>
+      <a href="/security/">Security</a>
+      <a class="btn small" href="/download/">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div class="film" aria-hidden="true"><span>Every token.</span><span>In plain sight.</span></div>
+      <div class="rule" aria-hidden="true"></div>
+      <h1 class="display">Your whole dev day in one window.</h1>
+      <p class="lead">A Mac app for Claude Code. Run it in parallel panels, approve what it touches, see what every turn costs, and keep what it learns about your project.</p>
+      <div class="cta">
+        <a class="btn" href="/download/">Download for Mac</a>
+        <a class="link" href="/docs/">How it works</a>
+      </div>
+      <div class="film-app" id="film" role="img" aria-label="A session in SuperTokenMan: you ask Claude to run the tests and fix what fails, it asks to run npm test, you allow it, the tests pass and the cost of the turn appears at the top">
+        <div class="fa-top"><span class="fa-dot"></span><span class="opt">stmt/</span><b>acme</b><span class="opt">· worktree fix-tests</span>
+          <span class="fa-meter"><span class="label opt">This turn</span><span class="fa-cost" data-cost>US$0.00</span></span></div>
+        <div class="fa-body">
+          <div class="fa-msg fa-you fa-step" data-step="1">Run the tests and fix what fails.</div>
+          <div class="fa-msg fa-claude fa-step" data-step="2">I will run the test suite first.</div>
+          <div class="fa-ask fa-step" data-step="3">
+            <div class="fa-ask-head">Allow <em>Bash · run command</em></div>
+            <pre class="fa-cmd">npm test</pre>
+            <div class="fa-actions"><span class="fa-b">Deny</span><span class="fa-b allow" data-allow>Allow</span></div>
+          </div>
+          <div class="fa-run fa-step" data-step="4">Test Files  12 passed (12)<br>Tests  <b>84 passed</b> (84)</div>
+          <div class="fa-msg fa-claude fa-step" data-step="5">All 84 tests pass. Nothing to fix.</div>
+        </div>
+        <div class="fa-comp"><span>Ask Claude, or type a command</span><span class="label">Cmd Enter</span></div>
+      </div>
+      <p class="fa-caption label">Recreated in code from the app. Numbers are illustrative.</p>
+    </div>
+  </section>
+
+  <section class="pillar" id="agents">
+    <div class="wrap">
+      <div class="text reveal-text">
+        <div class="label">Agents</div>
+        <h2 class="display">Many panels. One budget.</h2>
+        <p>Run Claude Code in parallel panels, each in its own git worktree, so two tasks never write over each other.</p>
+        <p>Group panels under a task with one budget and one timeline. Close it with the decision: merged, dropped, or what was learned.</p>
+        <ul>
+          <li>Worktrees per panel</li>
+          <li>Playbooks with checkpoints</li>
+          <li>Routines that draft while you work</li>
+        </ul>
+      </div>
+      <figure class="shot reveal"><img src="assets/screens/agents.png" width="1280" height="800" loading="lazy" alt="The Tasks sheet: a task called Pix at checkout with a US$ 2 budget, the acme panel linked to it and its timeline"></figure>
+    </div>
+  </section>
+
+  <section class="pillar" id="control">
+    <div class="wrap">
+      <div class="text reveal-text">
+        <div class="label">Control</div>
+        <h2 class="display">Ask first. Then run.</h2>
+        <p>Tool calls wait for your approval, unless you let a persona run the safe ones alone. Isolate a panel in a Docker container with only its folder and no network, or trim the tools it can reach.</p>
+        <p>The cost of each turn sits above the chat. Budgets per project, persona and task are checked before each turn starts.</p>
+        <ul>
+          <li>Approvals per tool call</li>
+          <li>Isolation without network</li>
+          <li>Budgets checked before each turn</li>
+        </ul>
+      </div>
+      <figure class="shot reveal"><img src="assets/screens/control.png" width="1280" height="800" loading="lazy" alt="The Budgets sheet: limits per panel, per project and per persona each day, a limit above which a turn asks first, and the share at which the panel warns"></figure>
+    </div>
+  </section>
+
+  <section class="pillar" id="memory">
+    <div class="wrap">
+      <div class="text reveal-text">
+        <div class="label">Memory</div>
+        <h2 class="display">Remembered. Never overwritten.</h2>
+        <p>Facts and decisions about each project, kept in versions, with who wrote them: you, Claude, or a session.</p>
+        <p>Answers built from your documents show their sources, and say which claims the sources support.</p>
+        <ul>
+          <li>Versioned project memory</li>
+          <li>Sources and citations</li>
+          <li>Documents into memory</li>
+        </ul>
+      </div>
+      <figure class="shot reveal"><img src="assets/screens/memory.png" width="1280" height="800" loading="lazy" alt="The Memory sheet for acme: three facts about the project, two written by you and one by Claude"></figure>
+    </div>
+  </section>
+
+  <section class="more">
+    <div class="wrap">
+      <div class="label">And everything else</div>
+      <h2 class="display">The rest of the day, in the same window.</h2>
+      <div class="grid">
+        <div><b>MCP servers</b><span>Turn integrations on per panel; keys stay in the vault.</span></div>
+        <div><b>Local tools</b><span>Run code on your Mac and send Claude only what it needs.</span></div>
+        <div><b>Terminal and Git</b><span>Shell, changes and history next to the chat.</span></div>
+        <div><b>Pull requests and CI</b><span>Reviews and runs of the repo you are in.</span></div>
+        <div><b>Feeds and briefing</b><span>The sites you follow, summed up on your schedule.</span></div>
+        <div><b>Cloud</b><span>What runs in your accounts, read-only.</span></div>
+        <div><b>Monitors</b><span>Uptime and alerts for what you host.</span></div>
+        <div><b>Documents</b><span>PDFs and Word files, read into the project.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="teams">
+    <div class="wrap">
+      <div>
+        <div class="label">For small teams</div>
+        <h2 class="display">A few people, close enough to see.</h2>
+      </div>
+      <div>
+        <p>One budget and one timeline per task, across the panels that work on it. Playbooks with checkpoints that anyone can run again.</p>
+        <p>Each person runs the app on their own Mac, with their own Claude account.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band dark" id="privacy">
+    <div class="wrap">
+      <div>
+        <div class="label">Security and privacy</div>
+        <h2 class="display">Your keys stay yours.</h2>
+      </div>
+      <div>
+        <p>No telemetry. Nothing leaves your Mac except the calls you turn on, and the update check.</p>
+        <p>Keys live in the app's vault on your Mac and go only to the service they belong to.</p>
+        <a class="link" href="/security/">What talks to the network, and when</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2 class="display">Close the other tabs.</h2>
+      <a class="btn" href="/download/">Download for Mac</a>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    <nav aria-label="Footer">
+      <a href="/download/">Download</a>
+      <a href="/security/">Security and privacy</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/docs/">Docs</a>
+      <a href="/support/">Support</a>
+      <a href="https://github.com/supertokenman/supertokenman">GitHub</a>
+    </nav>
+    <p class="legal">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "id": "panels",
+  "title": "Work in panels",
+  "try": "composer",
+  "steps": [
+    {
+      "title": "One panel per project",
+      "say": "Each panel is Claude working in one of your projects.",
+      "start": 0.7168481349945068,
+      "dur": 3.510999917984009
+    },
+    {
+      "title": "Ask in plain words",
+      "say": "Type what you need, in plain words.",
+      "start": 4.227848052978516,
+      "dur": 4.681999921798706
+    },
+    {
+      "title": "Pick how hard it thinks",
+      "say": "Choose the model and how much effort it puts in.",
+      "start": 8.909847974777222,
+      "dur": 3.2740001678466797
+    },
+    {
+      "title": "See every change",
+      "say": "Every change it makes shows up here, ready to review.",
+      "start": 12.183848142623901,
+      "dur": 3.4670000076293945
+    },
+    {
+      "title": "Ask the whole team",
+      "say": "Or ask the team, and the right persona picks it up.",
+      "start": 15.650848150253296,
+      "dur": 4.210000038146973
+    },
+    {
+      "title": "Mention a persona",
+      "say": "Start with a mention to choose one yourself.",
+      "start": 19.86084818840027,
+      "dur": 4.35099983215332
+    }
+  ]
+}

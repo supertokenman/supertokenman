@@ -1,0 +1,18 @@
+{
+  "name": "token-kit",
+  "version": "0.1.0",
+  "description": "Token savings for Claude Code: condenses noisy output, blocks huge reads, warns about context and cache, analyzes transcripts",
+  "type": "module",
+  "private": true,
+  "license": "FSL-1.1-ALv2",
+  "bin": { "tk": "bin/tk.mjs" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}

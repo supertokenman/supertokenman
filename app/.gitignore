@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-electron/
+release/
+engines/*/node_modules/
+out/
+engines/revideo/public/tour-tmp/
+engines/revideo/output/

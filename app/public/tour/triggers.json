@@ -1,0 +1,19 @@
+{
+  "id": "triggers",
+  "title": "Automate",
+  "try": "triggers",
+  "steps": [
+    {
+      "title": "Triggers run on their own",
+      "say": "Triggers run Claude on a schedule, or when a pull request needs you.",
+      "start": 0.7161140441894531,
+      "dur": 4.5309998989105225
+    },
+    {
+      "title": "Say what to do",
+      "say": "Say what to do each time, and when.",
+      "start": 5.2481138706207275,
+      "dur": 2.5500001907348633
+    }
+  ]
+}

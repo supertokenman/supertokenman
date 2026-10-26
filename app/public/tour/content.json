@@ -1,0 +1,37 @@
+{
+  "id": "content",
+  "title": "Make content",
+  "try": "business",
+  "steps": [
+    {
+      "title": "Your business, one screen",
+      "say": "Business keeps your content and your social accounts on one screen.",
+      "start": 0.7210869789123535,
+      "dur": 4.533999919891357
+    },
+    {
+      "title": "Name the piece",
+      "say": "Name a piece and write the idea.",
+      "start": 5.255086898803711,
+      "dur": 4.52400016784668
+    },
+    {
+      "title": "Write the idea",
+      "say": "Claude writes the script with your plan.",
+      "start": 9.77908706665039,
+      "dur": 6.101999998092651
+    },
+    {
+      "title": "Add it",
+      "say": "The video renders on your Mac, for free.",
+      "start": 15.881087064743042,
+      "dur": 4.503000020980835
+    },
+    {
+      "title": "Nothing posts alone",
+      "say": "Nothing goes out until you approve it in the queue.",
+      "start": 20.384087085723877,
+      "dur": 3.380999803543091
+    }
+  ]
+}

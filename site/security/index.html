@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security and privacy, SuperTokenMan</title>
+<meta name="description" content="What SuperTokenMan sends over the network and when, how keys are kept, and how this was checked.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://supertokenman.com/security/">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/site.css">
+<script>document.documentElement.classList.add('js')</script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>SuperTokenMan</a>
+    <nav class="nav" aria-label="Main">
+      <a class="opt" href="/docs/">Docs</a>
+      <a class="opt" href="/changelog/">Changelog</a>
+      <a href="/security/" aria-current="page">Security</a>
+      <a class="btn small" href="/download/">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <section class="page-head">
+    <div class="wrap">
+      <div class="label">Security and privacy</div>
+      <h1 class="display">Nothing leaves your Mac unless you turn it on.</h1>
+      <p class="lead">No telemetry, no analytics, no crash reports to us, and no server of ours. On its own, the app only runs Claude Code and checks for updates.</p>
+      <p class="hint">Last reviewed: October 26, 2026. Full audit: <a class="link" href="https://github.com/supertokenman/supertokenman">reports and how to reproduce them</a>.</p>
+    </div>
+  </section>
+
+  <section class="doc">
+    <div class="wrap narrow">
+      <h2>With nobody asking</h2>
+      <div class="table"><table><thead><tr><th>What</th><th>Where</th><th>When</th></tr></thead><tbody><tr><td>Claude Code</td><td>Anthropic, through the <code>claude</code> CLI with your own login or key: your messages and Claude's replies, under Anthropic's terms and privacy policy</td><td>When a panel runs</td></tr><tr><td>Claude Code's usage data and error reports</td><td>Anthropic</td><td>Off by default; on with Appearance, Let Claude Code send usage data to Anthropic</td></tr><tr><td>Update check</td><td>GitHub Releases of <code>supertokenman/supertokenman</code></td><td>At launch and every 6 hours; can be turned off</td></tr><tr><td>Local checks</td><td>Nowhere: <code>git</code>, <code>docker ps</code>, <code>docker stats</code> and version checks of local tools, on your Mac</td><td>At launch and on timers</td></tr></tbody></table></div>
+
+      <h2>Only after you turn it on or ask</h2>
+      <div class="table"><table><thead><tr><th>What</th><th>Where</th><th>Turned on by</th></tr></thead><tbody><tr><td>Exchange rate</td><td>api.frankfurter.dev</td><td>Spend, Update rates</td></tr><tr><td>GitHub stars of integrations</td><td>api.github.com</td><td>Connections, Show GitHub stars</td></tr><tr><td>Pull requests, CI, triggers</td><td>api.github.com, with your vault token or <code>gh</code> login</td><td>Turning on the GitHub integration</td></tr><tr><td>Feeds and briefing</td><td>The feeds you add</td><td>Adding a feed; the briefing is off until you schedule it</td></tr><tr><td>Cloud resources</td><td>AWS, Google Cloud, DigitalOcean, Fly.io, Supabase, Neon</td><td>Opening Cloud, Look in the cloud, or Check every 6 hours</td></tr><tr><td>Integrations and MCP servers</td><td>The service each one names</td><td>Turning it on in Connections</td></tr><tr><td>Monitors, Prometheus, PostHog, model servers, storage</td><td>The addresses you enter</td><td>Adding them</td></tr><tr><td>Web pages, videos, web apps</td><td>The page you open</td><td>Opening it</td></tr></tbody></table></div>
+
+      <h2>Your keys</h2>
+      <p>Tokens and API keys you save live in the app's vault, encrypted on disk with a key that macOS keeps in your Keychain. The app shows their names, never the values, and sends each one only to the service it belongs to.</p>
+
+      <h2>Before a tool runs</h2>
+      <p>Claude asks before each tool call, unless you let a persona run safe commands alone. A panel can be isolated in a Docker container with only its folder, no network and none of the app's keys.</p>
+
+      <h2>How this was checked</h2>
+      <p>A test opens the app with a clean profile, nothing clicked, and records every request, every network call and every program it starts. It fails on anything outside the first table. On October 25, 2026 it recorded 17 attempts in 60 seconds, all of them allowed.</p>
+      <ul class="facts">
+        <li><span class="label">Not covered</span><span>That run was on Linux, not on a Mac; Mac-only paths were not exercised there.</span></li>
+        <li><span class="label">Not covered</span><span>Requests made after a click were read in the code, not each one exercised.</span></li>
+        <li><span class="label">Not covered</span><span>The update check of a released build was not part of that run.</span></li>
+        <li><span class="label">Not covered</span><span>Where programs the app starts (Claude Code, git, docker) connect: the test sees them start, not their own traffic.</span></li>
+      </ul>
+
+      <h2>Report a problem</h2>
+      <p>Found a security issue? Report it privately through <a class="link" href="https://github.com/supertokenman/supertokenman/security/advisories/new">GitHub security advisories</a>. Please do not open a public issue for it.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    <nav aria-label="Footer">
+      <a href="/download/">Download</a>
+      <a href="/security/">Security and privacy</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/docs/">Docs</a>
+      <a href="/support/">Support</a>
+      <a href="https://github.com/supertokenman/supertokenman">GitHub</a>
+    </nav>
+    <p class="legal">Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.</p>
+  </div>
+</footer>
+
+</body>
+</html>

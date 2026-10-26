@@ -1,0 +1,4 @@
+# changes to how builds are made and signed need the owner
+/.github/ @arimayuji
+/app/build/ @arimayuji
+/app/scripts/ @arimayuji

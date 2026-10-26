@@ -1,0 +1,12 @@
+{
+  "name": "arimayuji",
+  "owner": { "name": "arimayuji" },
+  "metadata": { "description": "Claude Code mods by arimayuji" },
+  "plugins": [
+    {
+      "name": "supertokenman",
+      "source": "./token-kit/mod/supertokenman",
+      "description": "SuperTokenMan: context, plan windows, prompt cache, cost and token-kit savings on screen, in your currency"
+    }
+  ]
+}

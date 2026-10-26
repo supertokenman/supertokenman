@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: 'SuperToken Display'; src: url('assets/supertoken-display.woff2') format('woff2'); }
+      html, body { margin: 0; background: #141413; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); isolation: isolate; font-family: Inter, -apple-system, system-ui, sans-serif; }
+      /* the app as it was filmed, in a frame; the camera moves the footage inside it */
+      #frame { position: absolute; left: 120px; top: 15px; width: 1680px; height: 1050px; overflow: hidden; border-radius: 10px; background: #000; box-shadow: 0 14px 50px #00000099; }
+      #screen { position: absolute; inset: 0; width: 1680px; height: 1050px; transform-origin: 50% 50%; }
+      #ripple { position: absolute; left: 0; top: 0; width: 1px; height: 1px; border: 5px solid var(--accent); border-radius: 50%; opacity: 0; box-sizing: border-box; }
+      #cursor { position: absolute; left: 0; top: 0; width: 28px; height: 40px; overflow: visible; transform-origin: 0 0; filter: drop-shadow(0 3px 5px #00000088); }
+      /* the caption: which chapter and step, the step's title, and the line as the voice says it */
+      .card { position: absolute; top: 935px; width: 700px; box-sizing: border-box; padding: 24px 30px 28px; background: var(--bg); border-radius: 6px; box-shadow: 0 0 40px #00000088; opacity: 0; display: grid; gap: 10px; }
+      .card .kicker { font: 22px 'SuperToken Display'; letter-spacing: 5px; color: var(--accent); }
+      .card .title { font: 46px/52px 'SuperToken Display'; color: var(--text); text-transform: uppercase; }
+      .card .line { font-size: 28px; line-height: 38px; min-height: 76px; color: var(--text); }
+      #keys { position: absolute; left: 960px; top: 480px; display: flex; gap: 18px; opacity: 0; }
+      #keys b { padding: 22px 36px; border-radius: 12px; background: var(--bg); border: 3px solid var(--accent); box-shadow: 0 0 30px #00000099; font: 400 60px 'SuperToken Display'; color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="tour" data-start="0" data-duration="__DURATION__" data-width="1920" data-height="1080" data-fps="30">
+      <div id="frame">
+        <video id="screen" src="assets/screen.webm" data-start="0" data-duration="__DURATION__" data-track-index="0" muted playsinline></video>
+        <div id="ripple"></div>
+        <svg id="cursor" viewBox="0 0 28 40"><path d="M0 0 L0 30 L8 23 L14 36 L20 33 L14 21 L25 21 Z" fill="#fff" stroke="#141413" stroke-width="2.5" /></svg>
+      </div>
+      <div id="cards"></div>
+      <div id="keys"></div>
+      __AUDIO__
+    </div>
+    <!-- the chapter's track, the shared functions of time, and the drawing -->
+    <script src="assets/track.js"></script>
+    <script src="assets/tourTrack.js"></script>
+    <script src="assets/scene.js"></script>
+  </body>
+</html>
