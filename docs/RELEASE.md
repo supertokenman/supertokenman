@@ -51,9 +51,10 @@ read them and each run waits for an approval:
 What else holds them in:
 - Pull requests from forks never receive secrets. Settings > Actions > General: "Require approval for
   all external contributors", and Workflow permissions "Read repository contents".
-- Branch protection on `main` (Settings > Rules): changes through a pull request only, no force push,
-  and the code owners in `.github/CODEOWNERS` must approve a change to `.github/`, `app/build/` or
-  `app/scripts/`.
+- A ruleset on `main` (Settings > Rules): restrict deletions, block force pushes, require a pull
+  request (0 approvals), with Repository admin on the bypass list so `publish-public.sh` can still push.
+  Turn on "Require review from Code Owners" (`.github/CODEOWNERS`: `.github/`, `app/build/`,
+  `app/scripts/`) only once there is a second maintainer: nobody can approve their own pull request.
 - Actions are pinned to commits, the checkout keeps no credentials, and the run uses no dependency
   cache.
 - The App Store Connect key needs only the Developer role. Store the .p12 and the .p8 in a password
