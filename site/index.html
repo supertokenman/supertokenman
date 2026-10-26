@@ -18,6 +18,7 @@
 </head>
 <body>
 
+<div class="progress" aria-hidden="true"></div>
 <header class="top">
   <div class="wrap">
     <a class="brand" href="/"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>SuperTokenMan</a>
@@ -32,10 +33,11 @@
 
 <main>
   <section class="hero">
+    <canvas class="field" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="film" aria-hidden="true"><span>Every token.</span><span>In plain sight.</span></div>
       <div class="rule" aria-hidden="true"></div>
-      <h1 class="display">Your whole dev day in one window.</h1>
+      <h1 class="display split">Your whole dev day in one window.</h1>
       <p class="lead">A Mac app for Claude Code. Run it in parallel panels, approve what it touches, see what every turn costs, and keep what it learns about your project.</p>
       <div class="cta">
         <a class="btn" href="/download/">Download for Mac</a>
@@ -61,9 +63,10 @@
     </div>
   </section>
 
-  <section class="pillar" id="agents">
+  <section class="story" id="story">
     <div class="wrap">
-      <div class="text reveal-text">
+      <div class="story-steps">
+      <article class="step" id="agents" data-scene="0">
         <div class="label">Agents</div>
         <h2 class="display">Many panels. One budget.</h2>
         <p>Run Claude Code in parallel panels, each in its own git worktree, so two tasks never write over each other.</p>
@@ -73,14 +76,8 @@
           <li>Playbooks with checkpoints</li>
           <li>Routines that draft while you work</li>
         </ul>
-      </div>
-      <figure class="shot reveal"><img src="assets/screens/agents.png" width="1280" height="800" loading="lazy" alt="The Tasks sheet: a task called Pix at checkout with a US$ 2 budget, the acme panel linked to it and its timeline"></figure>
-    </div>
-  </section>
-
-  <section class="pillar" id="control">
-    <div class="wrap">
-      <div class="text reveal-text">
+      </article>
+      <article class="step" id="control" data-scene="1">
         <div class="label">Control</div>
         <h2 class="display">Ask first. Then run.</h2>
         <p>Tool calls wait for your approval, unless you let a persona run the safe ones alone. Isolate a panel in a Docker container with only its folder and no network, or trim the tools it can reach.</p>
@@ -90,14 +87,8 @@
           <li>Isolation without network</li>
           <li>Budgets checked before each turn</li>
         </ul>
-      </div>
-      <figure class="shot reveal"><img src="assets/screens/control.png" width="1280" height="800" loading="lazy" alt="The Budgets sheet: limits per panel, per project and per persona each day, a limit above which a turn asks first, and the share at which the panel warns"></figure>
-    </div>
-  </section>
-
-  <section class="pillar" id="memory">
-    <div class="wrap">
-      <div class="text reveal-text">
+      </article>
+      <article class="step" id="memory" data-scene="2">
         <div class="label">Memory</div>
         <h2 class="display">Remembered. Never overwritten.</h2>
         <p>Facts and decisions about each project, kept in versions, with who wrote them: you, Claude, or a session.</p>
@@ -107,8 +98,16 @@
           <li>Sources and citations</li>
           <li>Documents into memory</li>
         </ul>
+      </article>
       </div>
-      <figure class="shot reveal"><img src="assets/screens/memory.png" width="1280" height="800" loading="lazy" alt="The Memory sheet for acme: three facts about the project, two written by you and one by Claude"></figure>
+      <div class="story-stage">
+        <div class="story-rail" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="story-shots">
+          <figure class="shot on" data-shot="0"><img src="assets/screens/agents.png" width="1280" height="800" loading="lazy" alt="The Tasks sheet: a task called Pix at checkout with a US$ 2 budget, the acme panel linked to it and its timeline"></figure>
+          <figure class="shot" data-shot="1"><img src="assets/screens/control.png" width="1280" height="800" loading="lazy" alt="The Budgets sheet: limits per panel, per project and per persona each day, a limit above which a turn asks first, and the share at which the panel warns"></figure>
+          <figure class="shot" data-shot="2"><img src="assets/screens/memory.png" width="1280" height="800" loading="lazy" alt="The Memory sheet for acme: three facts about the project, two written by you and one by Claude"></figure>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -116,7 +115,7 @@
     <div class="wrap">
       <div class="label">And everything else</div>
       <h2 class="display">The rest of the day, in the same window.</h2>
-      <div class="grid">
+      <div class="grid cascade">
         <div><b>MCP servers</b><span>Turn integrations on per panel; keys stay in the vault.</span></div>
         <div><b>Local tools</b><span>Run code on your Mac and send Claude only what it needs.</span></div>
         <div><b>Terminal and Git</b><span>Shell, changes and history next to the chat.</span></div>
@@ -158,7 +157,7 @@
 
   <section class="final">
     <div class="wrap">
-      <h2 class="display">Close the other tabs.</h2>
+      <h2 class="display split">Close the other tabs.</h2>
       <a class="btn" href="/download/">Download for Mac</a>
     </div>
   </section>

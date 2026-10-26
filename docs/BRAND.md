@@ -217,6 +217,18 @@ Metrics, Ask your data, the design system.
 Its sixteen colours are the brand's (warm on dark, printer's ink on paper), the cursor is the accent and
 the frame has the cut corner. See `TermView.tsx`.
 
+## Motion on the site (decided 2026-10-26)
+
+The first motion pass was too quiet for a page that has to sell. Direction C: scroll-linked, built only
+from the brand's own parts (the 45 degree cut, the three bars, the accent), no outside libraries.
+- The headline rises word by word; the film starts within a second, at a faster pace, and comes in
+  tilted, lying flat as the page scrolls.
+- Agents, Control and Memory are one pinned story: the text scrolls, the screen stays and changes along
+  the 45 degree line, and a three-bar rail fills as each part is read. On a phone the screen follows
+  each part instead.
+- The "everything else" grid fills in as a cascade; an accent reading bar runs along the top.
+- Everything is off with prefers-reduced-motion.
+
 ## Changelog
 
 - Phase 16: top-bar selects follow the button shape (cut corner, drawn border, accent bar on focus, mono uppercase label); the Modules sheet shows modules that are off at reduced opacity and the ones on with an accent top rule.
