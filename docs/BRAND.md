@@ -89,7 +89,7 @@ cannot back. What is not verified is said to be not verified.
   tests, gitleaks, OSV-Scanner, Semgrep and the network check on every pull request) and releases all
   happen in `supertokenman/supertokenman`. `arimayuji/CLI` is archived, its secrets deleted and its
   Actions off; the sync script is gone.
-- Money, for now (decided 2026-10-26): the app is free; GitHub Sponsors on the `supertokenman` org
+- Money, for now (decided 2026-10-26): the app is free; GitHub Sponsors on the personal account `arimayuji` (no company yet; moves to the org once there is one)
   (`.github/FUNDING.yml`, site page `/support/`). Company sponsors get a logo on the site and README only.
   Never ads, sponsored suggestions or data inside the app. A paid plan for teams may come later; the app
   for one person stays free.
