@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npm run build:electron && concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV=1 electron .\"",
     "build": "vite build && npm run build:electron",
+    "build:demo": "vite build --mode demo",
     "guide": "npm run build:electron && node scripts/guide.mjs",
     "build:electron": "tsc -p tsconfig.electron.json && cp electron/preload.cjs electron/passkey-preload.cjs dist-electron/electron/",
     "start": "npm run build && electron .",

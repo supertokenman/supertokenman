@@ -14,6 +14,15 @@ the new one ships. Decisions behind the design and the copy are in `docs/BRAND.m
   output directory `dist`. A new top-level page or folder has to be added to that `cp` list in the
   Pages settings. `404.html` is served for any path that does not exist.
 
+## Live demo
+
+`/docs/demo/` is the real app interface in the browser with a fake `window.stm`: three sample panels,
+a scripted turn, a `npm test` approval to Allow, a diff and the cost moving. Sample data only; it makes
+no network request (its CSP has `connect-src 'none'`). Source: `app/demo.html` and `app/src/demo/`,
+never part of the Electron build. Rebuild it after UI changes with `cd app && npm run build:demo`,
+which writes `site/demo/` (committed); `npm run build` here copies it to `docs/demo/`, a folder the
+Pages build command already copies, so the Pages settings do not change.
+
 ## Before the first deploy
 
 The pages say things that are true only once a release exists. Do not deploy until:

@@ -1,0 +1,13 @@
+/* demo only: the banner over the app (brand: mono label, one accent, the 45 degree cut corner) */
+.demo-banner {
+  position: fixed; left: 12px; bottom: 12px; z-index: 9000; max-width: min(560px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: var(--raised, #1f1f1f); color: var(--text, #eee); border: 1px solid var(--border-strong, #555);
+  font: 12px/1.35 var(--ui-font, system-ui, sans-serif);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+.demo-tag { font: 600 10.5px var(--mono, ui-monospace, monospace); letter-spacing: 0.08em; color: var(--accent, #d97757); white-space: nowrap; }
+.demo-text { color: var(--muted, #aaa); }
+.demo-link { color: var(--accent, #d97757); font-weight: 600; white-space: nowrap; }
+@media (max-width: 600px) { .demo-banner { left: 8px; right: 8px; bottom: 8px; max-width: none; } .demo-text { font-size: 11px; } }
+.demo-close { background: none; border: 0; color: var(--muted, #aaa); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }

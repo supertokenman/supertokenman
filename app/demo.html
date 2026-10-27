@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- The demo build (npm run build:demo): the real UI with a fake window.stm, sample data only. -->
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; frame-src 'none'; connect-src 'none'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>SuperTokenMan live demo</title>
+    <style>
+      /* Before any script: plain white, so the window opens straight into the white film (Splash.tsx).
+         The closing is the same white coming back over the app with the name (boot.ts). */
+      #boot { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: #fff; color: #1d1d1f; pointer-events: none; font-family: -apple-system, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif; }
+      #boot .boot-name { font-size: clamp(28px, 3.6vw, 48px); font-weight: 600; letter-spacing: -0.03em; opacity: 0; }
+      #boot .boot-rule { display: block; height: 2px; width: 72px; margin: 14px auto 0; background: #c65d3b; transform: scaleX(0); }
+      #boot.out { transition: opacity 240ms ease; opacity: 0; }
+      #boot.bye { opacity: 0; animation: boot-bye 320ms cubic-bezier(.4,0,.2,1) forwards; }
+      #boot.bye .boot-name { animation: boot-name 300ms cubic-bezier(.2,.7,.2,1) 80ms forwards; }
+      #boot.bye .boot-rule { animation: boot-rule 260ms cubic-bezier(.2,.7,.2,1) 140ms forwards; }
+      @keyframes boot-bye { to { opacity: 1; } }
+      @keyframes boot-name { from { filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
+      @keyframes boot-rule { to { transform: scaleX(1); } }
+      @media (prefers-reduced-motion: reduce) { #boot, #boot * { animation-duration: 1ms !important; animation-delay: 0s !important; } }
+    </style>
+  </head>
+  <body>
+    <div id="boot" aria-hidden="true"></div>
+    <div id="root"></div>
+    <script type="module" src="/src/demo/main.tsx"></script>
+  </body>
+</html>
