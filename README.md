@@ -51,3 +51,5 @@ Reporting a security problem: [SECURITY.md](SECURITY.md).
 [FSL-1.1-ALv2](LICENSE.md), © 2026 Yuji Miguel Arima. You may read, audit, build, change and use the
 code for anything except a competing commercial product. Each version becomes Apache 2.0 two years after
 its release.
+
+Not affiliated with Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.
