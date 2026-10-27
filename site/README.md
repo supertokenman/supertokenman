@@ -9,10 +9,10 @@ the new one ships. Decisions behind the design and the copy are in `docs/BRAND.m
 - Preview: `cd site && python3 -m http.server 8765`, then http://localhost:8765 (the inner pages use
   root links, so open them through a server, not as files). Run `npm run build` first for docs and
   changelog.
-- Deploy to Cloudflare Pages from Git: build command `cd site && npm ci && npm run build`, output
-  directory `site`. Or by hand: `cd site && npm run build && npx wrangler pages deploy . --project-name
-  supertokenman` (first time: `npx wrangler login`), then add supertokenman.com in Custom domains and a redirect from
-  supertokenman.com.br.
+- Deploy: Cloudflare Pages from Git. Build command `cd site && npm ci && npm run build && mkdir -p
+  ../dist && cp -r index.html 404.html assets changelog docs download security support ../dist/`,
+  output directory `dist`. A new top-level page or folder has to be added to that `cp` list in the
+  Pages settings. `404.html` is served for any path that does not exist.
 
 ## Before the first deploy
 
