@@ -1,0 +1,118 @@
+# The Mac proof with nobody at the keyboard: after each published release, and by hand. Downloads the
+# released dmg (the signed file people get, not a build from source), checks it like proof-mac.sh does
+# (SHA256SUMS, the build attestation, the signature, the notarization), runs it with its own profile
+# through mitmproxy in --names mode, drives it (decoy in the vault, a panel, `echo hello`, the command
+# allowed) and writes REPORT.md. Fails when the decoy shows up anywhere, or when the app's own processes
+# reach a host not written in docs/NETWORK.md. ANTHROPIC_API_KEY comes from the "proof" environment;
+# without it the Claude turn is skipped and the report says so. Actions are pinned to commits.
+name: proof-mac
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to check (empty for the latest)
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  proof:
+    runs-on: macos-latest
+    environment: proof
+    permissions:
+      contents: read
+      attestations: read
+    outputs:
+      version: ${{ steps.report.outputs.version }}
+    env:
+      RUN_DIR: ${{ github.workspace }}/proof-run
+      TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
+    steps:
+      # the proof scripts of the default branch, so an older tag is checked with today's checks
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Playwright for the driver (no browser download, no Electron)
+        working-directory: app
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --ignore-scripts
+      - name: mitmproxy
+        run: |
+          python3 -m venv "$RUNNER_TEMP/mitm"
+          "$RUNNER_TEMP/mitm/bin/pip" install --quiet 'mitmproxy==12.3.1'
+          echo "$RUNNER_TEMP/mitm/bin" >> "$GITHUB_PATH"
+      - name: Download, check, run and drive the app
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: bash scripts/proof-ci.sh "$TAG" "$RUN_DIR"
+      - name: Report
+        id: report
+        if: always()
+        working-directory: app
+        run: |
+          [ -f "$RUN_DIR/version.txt" ] && echo "version=$(cat "$RUN_DIR/version.txt")" >> "$GITHUB_OUTPUT"
+          node scripts/proof-report.mjs "$RUN_DIR" ../docs/NETWORK.md
+      - name: Summary
+        if: always()
+        run: '[ -f "$RUN_DIR/REPORT.md" ] && cat "$RUN_DIR/REPORT.md" >> "$GITHUB_STEP_SUMMARY" || true'
+      # the key went to the app only; make sure no log of the run carries it before anything is uploaded
+      - name: Keep the key out of the artifact
+        if: always()
+        env:
+          K: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          [ -n "$K" ] && [ -d "$RUN_DIR" ] || exit 0
+          grep -rlF -- "$K" "$RUN_DIR" 2>/dev/null | while read -r f; do
+            echo "::warning::the API key was in $(basename "$f"); removed from it before upload"
+            perl -pi -e 's/\Q$ENV{K}\E/[key removed]/g' "$f"
+          done
+          # the decoy file and the profile hold no key; the vault file is encrypted with the runner's keychain
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: proof-mac
+          path: |
+            proof-run/REPORT.md
+            proof-run/checks.log
+            proof-run/drive.json
+            proof-run/drive.log
+            proof-run/app.log
+            proof-run/connections.log
+            proof-run/processes.log
+            proof-run/mitm.log
+            proof-run/netlog.json
+            proof-run/decoy.txt
+          retention-days: 30
+          if-no-files-found: warn
+
+  attach:
+    # the report next to the files it is about, as proof-mac-<version>.md
+    needs: proof
+    if: always() && github.event_name == 'release' && needs.proof.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: proof-mac
+          path: proof-run
+      - name: Attach REPORT.md to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ needs.proof.outputs.version }}
+        run: |
+          cp proof-run/REPORT.md "proof-mac-$VERSION.md"
+          gh release upload "$TAG" "proof-mac-$VERSION.md" --repo "$REPO" --clobber

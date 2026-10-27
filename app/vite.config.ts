@@ -12,5 +12,5 @@ export default defineConfig({
   plugins: [react(), prodCsp],
   base: './',
   server: { port: 5173, strictPort: true, fs: { allow: ['..'] } },
-  test: { include: ['build/**/*.test.ts', 'electron/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx', 'shared/**/*.test.ts', 'engines/revideo/src/**/*.test.ts'] },
+  test: { include: ['build/**/*.test.ts', 'scripts/**/*.test.ts', 'electron/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx', 'shared/**/*.test.ts', 'engines/revideo/src/**/*.test.ts'] },
 })

@@ -18,6 +18,8 @@ The source for the Security & Privacy page. Last reviewed: 2026-10-25.
   notarization), runs it with its own profile while a person uses it, logs where the app and every
   process under it connect (`lsof`, twice a second), and looks for a decoy secret put in the vault on disk
   and, with `--mitm`, in the traffic. Reports go to `docs/security/` once run.
+- The `proof-mac` workflow does the same with nobody at the keyboard after each release, and fails when
+  the app's own processes reach a host name that is not written on this page (see docs/RELEASE.md).
 - Child processes (`claude`, `git`, `docker`, cloud CLIs) are recorded when they start, not where they
   connect: their own traffic is outside what the check proves. Claude Code's is set as described below.
 
@@ -28,7 +30,7 @@ The source for the Security & Privacy page. Last reviewed: 2026-10-25.
 | Claude Code | Anthropic, through the `claude` CLI and your own login or key: your messages and Claude's replies, under Anthropic's terms and privacy policy | when a panel runs |
 | Claude Code's own usage data and error reports | Anthropic | off: the app sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` for its panels; on with Appearance > Let Claude Code send usage data to Anthropic, or with your own value of that variable |
 | Local checks | none (git, `docker ps`, `docker stats`, `openshell --version`, `officecli --version` on this Mac) | at launch and on timers |
-| Update check (released builds) | GitHub Releases of `supertokenman/supertokenman` (`latest-mac.yml`) | at launch and every 6 hours; off with Appearance > Check for updates automatically; downloads only when you say Install |
+| Update check (released builds) | GitHub Releases of `supertokenman/supertokenman` (`latest-mac.yml`): github.com, release-assets.githubusercontent.com, objects.githubusercontent.com | at launch and every 6 hours; off with Appearance > Check for updates automatically; downloads only when you say Install |
 | Source update check | your git remote (`git fetch`) | every 6 hours, only in an app installed from a source checkout |
 
 No telemetry, analytics or crash reports are sent to us; there is no server of ours.
