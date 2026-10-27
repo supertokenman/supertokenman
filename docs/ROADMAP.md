@@ -52,6 +52,11 @@ References to read before choosing (what they did, not claims about us):
 
 - Isolated commands.
 - Remote panel: the rest.
+- GitHub inside the app, in our own screens (not the github.com page in a web view): pull requests,
+  issues, CI status with the failing log, review comments. Signed in with the `gh` login already on
+  the Mac. Tied to panels: open the PR of a panel's branch, send a failed check or a review comment
+  to the panel, reply from the app. "Open on GitHub" for anything not covered. Every endpoint goes in
+  `docs/NETWORK.md`, and nothing is called until the user turns it on.
 - Issue to panel for GitLab, Linear and Jira, with a comment back.
 - MCP: OAuth, per-persona servers, health check interval.
 - Check after edits on the touched files; fan-out lint and typecheck.
