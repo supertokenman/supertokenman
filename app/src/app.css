@@ -428,26 +428,28 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 .top .ghost:hover .ico { color: var(--accent); }
 .private.on .ico { color: var(--accent); }
 
-/* opening screen: a white product film (Splash.tsx); deliberately white in both themes */
-.splash.film { pointer-events: none; --f-bg: #ffffff; --f-ink: #1d1d1f; --f-faint: #86868b; --f-acc: #c65d3b; background: var(--f-bg); color: var(--f-ink); font-family: -apple-system, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif; transition: opacity 600ms cubic-bezier(.4,0,.2,1), filter 600ms cubic-bezier(.4,0,.2,1); }
+/* opening screen (Splash.tsx): the window's own dark (#0f0f0e, as electron/main.ts backgroundColor), fixed in
+   every theme so the launch never flashes. A token counter climbs with its cost, then resolves into the name. */
+.splash.film { pointer-events: none; --f-bg: #0f0f0e; --f-ink: #ecebe6; --f-faint: #8f8d86; --f-acc: #d97757; background: var(--f-bg); color: var(--f-ink); font-family: -apple-system, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif; transition: opacity 500ms cubic-bezier(.4,0,.2,1), filter 500ms cubic-bezier(.4,0,.2,1); }
 .splash.film.leaving { opacity: 0; filter: blur(6px); transform: none; }
-.film-lines { position: absolute; inset: 0; display: grid; place-items: center; }
-.film-line { grid-area: 1 / 1; font-size: clamp(34px, 5.4vw, 72px); font-weight: 600; letter-spacing: -0.035em; opacity: 0; filter: blur(14px); transform: translateY(18px); }
-.film.full .l1 { animation: film-line 1100ms cubic-bezier(.2,.7,.2,1) 150ms both; }
-.film.full .l2 { animation: film-line 1100ms cubic-bezier(.2,.7,.2,1) 1100ms both; }
-@keyframes film-line {
-  0% { opacity: 0; filter: blur(14px); transform: translateY(18px); }
-  35%, 70% { opacity: 1; filter: blur(0); transform: none; }
-  100% { opacity: 0; filter: blur(10px); transform: translateY(-10px); }
+.film-count { position: absolute; inset: 0; display: flex; align-items: baseline; justify-content: center; gap: 22px; font-variant-numeric: tabular-nums; animation: film-count 1500ms cubic-bezier(.4,0,.2,1) both; }
+.film-num { font-size: clamp(30px, 4.6vw, 60px); font-weight: 600; letter-spacing: -0.03em; align-self: center; }
+.film-num small { font-size: 0.32em; font-weight: 500; letter-spacing: 0.02em; color: var(--f-faint); margin-left: 10px; }
+.film-num.cost { color: var(--f-acc); }
+.film-dot { align-self: center; width: 5px; height: 5px; border-radius: 50%; background: var(--f-faint); opacity: 0.6; }
+@keyframes film-count {
+  0% { opacity: 0; filter: blur(10px); transform: translateY(10px); }
+  14%, 78% { opacity: 1; filter: blur(0); transform: none; }
+  100% { opacity: 0; filter: blur(12px); transform: scale(0.96); }
 }
-.film-mark { display: grid; justify-items: center; gap: 14px; opacity: 0; animation: film-mark 900ms cubic-bezier(.2,.7,.2,1) both; }
-.film.full .film-mark { animation-delay: 2050ms; }
-.film.short .film-mark { animation-delay: 80ms; }
+.film-mark { display: grid; justify-items: center; gap: 14px; opacity: 0; animation: film-mark 600ms cubic-bezier(.2,.7,.2,1) both; }
+.film.full .film-mark { animation-delay: 1300ms; }
+.film.short .film-mark { animation-delay: 0ms; animation-duration: 380ms; }
 @keyframes film-mark { from { opacity: 0; letter-spacing: 0.06em; filter: blur(8px); } to { opacity: 1; filter: blur(0); } }
 .film-name { font-size: clamp(28px, 3.6vw, 48px); font-weight: 600; letter-spacing: -0.03em; }
-.film-rule { display: block; height: 2px; width: 72px; background: var(--f-acc); transform: scaleX(0); animation: film-rule 700ms cubic-bezier(.2,.7,.2,1) both; animation-delay: inherit; }
-.film.full .film-rule { animation-delay: 2350ms; }
-.film.short .film-rule { animation-delay: 300ms; }
+.film-rule { display: block; height: 2px; width: 72px; background: var(--f-acc); transform: scaleX(0); animation: film-rule 500ms cubic-bezier(.2,.7,.2,1) both; }
+.film.full .film-rule { animation-delay: 1500ms; }
+.film.short .film-rule { animation-delay: 120ms; }
 @keyframes film-rule { to { transform: scaleX(1); } }
 .film-sub { font-size: 13px; color: var(--f-faint); letter-spacing: 0.01em; }
 @media (prefers-reduced-motion: reduce) { .splash.film *, .splash.film { animation-duration: 1ms !important; animation-delay: 0s !important; transition-duration: 1ms !important; } }

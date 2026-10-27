@@ -390,3 +390,19 @@ Taken from how Halo pairs a free community edition with paid editions.
 - README languages: Portuguese (Brazil) and Spanish first (`README.pt-BR.md`, `README.es.md`), because
   Brazil and Latin America are a natural audience. They translate README.md and add nothing; a change
   to README.md is carried to both.
+
+## Opening screen: dark, product in motion (decided 2026-10-27)
+
+- **Why dark.** The window paints `#0f0f0e` before anything loads (`electron/main.ts` backgroundColor). The
+  old white film made every launch flash dark, white, dark. The opening (`#boot` in `app/index.html`, the
+  splash in `app/src/Splash.tsx` and the closing in `app/src/boot.ts`) now uses that exact dark in every
+  theme, so there is no flash anywhere between the window appearing and the app. The white also read as
+  generic; the dark is the app's own tone.
+- **Why product in motion.** Instead of a slogan, the centre shows what the app does: a token counter
+  climbing with its cost beside it (reais on *-BR locales, US dollars elsewhere, via `currency.ts`), which
+  then resolves into the name over the accent rule and dissolves into the app. The numbers are
+  illustrative motion, not a stat claim: they are fixed, never labelled as the person's usage, and never
+  read from real data.
+- **Timings.** Full version about 2 s (count ~1.15 s, name from 1.3 s), once a day. Every other launch a
+  short version of about 0.6 s with the name only. Hard cap 6 s whatever happens. Fade out 0.5 s.
+- **Reduced motion** (or motion turned off): a still frame with the name, nothing counts.

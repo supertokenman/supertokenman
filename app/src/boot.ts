@@ -17,16 +17,16 @@ export const setBootOn = (on: boolean) => {
   }
 }
 
-/** After the first render: the plain white cover gives way to the film. */
+/** After the first render: the plain dark cover gives way to the opening. */
 export function handOver() {
   const el = document.getElementById('boot')
   if (!el) return
-  // the white film (Splash) is on screen by now; the plain white cover steps aside
+  // the dark opening (Splash) is on screen by now, in the same colour; the plain cover steps aside
   el.classList.add('out')
   setTimeout(() => el.remove(), 300)
 }
 
-/** The closing: the bars wipe back over the app; the main process waits for it, never more than a moment. */
+/** The closing: the window's dark fades back over the app with the name; the main process waits for it, never more than a moment. */
 export function playClosing(done: () => void) {
   if (!bootOn()) return done()
   const tpl = document.createElement('div')
