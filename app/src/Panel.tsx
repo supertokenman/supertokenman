@@ -1,4 +1,5 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Windowed } from './windowed'
 import { pickAttachments } from './FilePicker'
 import { StateMark } from './StateMark'
 import { cacheLeft, coldExtraUsd } from '../shared/cache'
@@ -124,10 +125,9 @@ function StepMark({ name }: { name: string }) {
 }
 
 /** One step: a quiet line with a dot; a click shows the whole argument when it was cut. */
-function StepLine({ t, live }: { t: Tool; live: boolean }) {
-  const [open, setOpen] = useState(false)
+function StepLine({ t, live, open, onToggle }: { t: Tool; live: boolean; open: boolean; onToggle: () => void }) {
   return (
-    <button className={`step ${open ? 'open' : ''} ${live ? 'live' : ''}`} onClick={() => setOpen((o) => !o)} title={open ? undefined : t.summary}>
+    <button className={`step ${open ? 'open' : ''} ${live ? 'live' : ''}`} onClick={onToggle} title={open ? undefined : t.summary}>
       <StepMark name={t.name} />
       <span className="step-tool">{verb(t.name)}</span>
       <span className="step-arg">{t.summary}</span>
@@ -135,20 +135,23 @@ function StepLine({ t, live }: { t: Tool; live: boolean }) {
   )
 }
 
-/** Steps in a row: up to three shown as they are, more folded under one line that opens them. */
-const StepRun = memo(function StepRun({ tools, live }: { tools: Tool[]; live: boolean }) {
-  const [open, setOpen] = useState(false)
-  if (tools.length <= 3) return <div className="steps-run">{tools.map((t, i) => <StepLine key={i} t={t} live={live && i === tools.length - 1} />)}</div>
+/** Steps in a row: up to three shown as they are, more folded under one line that opens them. What is
+ * open lives in the panel (`opened`, by `at`), so a run drawn again after scrolling away keeps it. */
+const StepRun = memo(function StepRun({ at, tools, live, opened, onToggle }: { at: number; tools: Tool[]; live: boolean; opened: ReadonlySet<string>; onToggle: (k: string) => void }) {
+  const open = opened.has(`${at}`)
+  const setOpen = () => onToggle(`${at}`)
+  const line = (t: Tool, i: number, live: boolean) => <StepLine key={i} t={t} live={live} open={opened.has(`${at}:${i}`)} onToggle={() => onToggle(`${at}:${i}`)} />
+  if (tools.length <= 3) return <div className="steps-run">{tools.map((t, i) => line(t, i, live && i === tools.length - 1))}</div>
   const last = tools[tools.length - 1]!
   return (
     <div className={`steps-run ${open ? 'open' : ''}`}>
-      <button className={`step step-fold ${live ? 'live' : ''}`} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <button className={`step step-fold ${live ? 'live' : ''}`} onClick={setOpen} aria-expanded={open}>
         <span className="step-stack">{tools.slice(-3).map((t, i) => <StepMark key={i} name={t.name} />)}</span>
         <span className="step-tool">{tools.length} steps</span>
         <span className="step-arg">{open ? 'Hide' : `${verb(last.name)} ${last.summary}`}</span>
         <span className="step-chev">{open ? '−' : '+'}</span>
       </button>
-      {open && <div className="steps-list">{tools.map((t, i) => <StepLine key={i} t={t} live={false} />)}</div>}
+      {open && <div className="steps-list">{tools.map((t, i) => line(t, i, false))}</div>}
     </div>
   )
 })
@@ -490,6 +493,12 @@ export function Panel(props: {
   const tips = coach(s, Date.now(), props.coachExtra).filter((t) => !dismissed.has(t.id))
   const [shown, setShown] = useState(WINDOW)
   const hidden = Math.max(0, s.lines.length - shown)
+  // the drawn transcript, keyed by place in s.lines (stable when earlier lines are shown)
+  const items = useMemo(() => runs(s.lines.slice(hidden)).map((r) => ({ ...r, at: hidden + r.at })), [s.lines, hidden])
+  const itemKeys = useMemo(() => items.map((r) => String(r.at)), [items])
+  const scroller = useRef<HTMLElement>(null)
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
+  const toggleOpen = useCallback((k: string) => setOpened((o) => { const n = new Set(o); if (!n.delete(k)) n.add(k); return n }), [])
   const stopShell = useCallback((id: string) => void window.stm.stopShell(sid, id), [sid])
   const [dropping, setDropping] = useState(false)
   const submitRef = useRef(submit)
@@ -628,7 +637,7 @@ export function Panel(props: {
       {/* stays mounted once opened, so switching tabs keeps the page and its state */}
       {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><Suspense fallback={null}><PreviewView servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></Suspense></section>}
       {(tab === 'terminal' || termed) && <section className="preview-host" hidden={tab !== 'terminal'}><Suspense fallback={null}><TermView sid={sid} active={tab === 'terminal'} onAttach={(note) => attachFromBrowser([], note)} /></Suspense></section>}
-      <main className="scroll" hidden={tab === 'preview' || tab === 'terminal'}>
+      <main ref={scroller} className="scroll" hidden={tab === 'preview' || tab === 'terminal'}>
         <div className="column">
           {tab === 'changes' && <Changes changes={s.changes} cwd={s.cwd} onSend={(text) => { setTab('chat'); dispatch({ kind: 'sent', text, at: Date.now() }); void window.stm.send(sid, text) }} />}
           {tab === 'git' && <GitView sid={sid} active={tab === 'git'} />}
@@ -648,17 +657,21 @@ export function Panel(props: {
               Show {Math.min(hidden, WINDOW)} earlier of {hidden}
             </button>
           )}
-          {tab === 'chat' &&
-            runs(s.lines.slice(hidden)).map((r, i, all) =>
-              'tools' in r ? (
-                <StepRun key={hidden + r.at} tools={r.tools} live={s.busy && !s.streaming && i === all.length - 1} />
-              ) : (
-                <LineView key={hidden + r.at} l={r.l} onStop={stopShell} onSend={sendShell} />
-              ),
-            )}
+          {tab === 'chat' && (
+            <Windowed scroller={scroller} keys={itemKeys}>
+              {(i) => {
+                const r = items[i]!
+                return 'tools' in r ? (
+                  <StepRun key={r.at} at={r.at} tools={r.tools} live={s.busy && !s.streaming && i === items.length - 1} opened={opened} onToggle={toggleOpen} />
+                ) : (
+                  <LineView key={r.at} l={r.l} onStop={stopShell} onSend={sendShell} />
+                )
+              }}
+            </Windowed>
+          )}
           {tab === 'chat' && s.streaming && (
             <div className="msg assistant">
-              <Markdown text={s.streaming} />
+              <Markdown text={s.streaming} live />
               <span className="caret" />
             </div>
           )}

@@ -2,7 +2,7 @@
 // Covers what replies use: headings, paragraphs, lists, quotes, fenced code, tables, rules,
 // and inline code, bold, italic, strikethrough and links.
 import { MemCite } from './MemCite'
-import { Fragment, useState, type MouseEvent, type ReactNode } from 'react'
+import { Fragment, memo, useState, type MouseEvent, type ReactNode } from 'react'
 import { fenceInfo, highlight } from './highlight'
 
 export type Block =
@@ -148,10 +148,24 @@ const lines = (text: string, key: string) =>
     </Fragment>
   ))
 
-export function Markdown({ text }: { text: string }) {
+// parsed replies, newest last: a line drawn again after the windowed transcript scrolled it away is not
+// parsed again. The streaming reply changes on every token, so it is left out (it would only churn).
+const parsed = new Map<string, Block[]>()
+function blocksOf(text: string, live: boolean): Block[] {
+  if (live) return parseBlocks(text)
+  const hit = parsed.get(text)
+  if (hit) return hit
+  const b = parseBlocks(text)
+  if (text.length > 80) { parsed.set(text, b); if (parsed.size > 600) parsed.delete(parsed.keys().next().value!) }
+  return b
+}
+
+/** Memoized on the text: a panel redraw (a key in the composer, a HUD tick) does not parse the
+ * streaming reply again; only a new token does. */
+export const Markdown = memo(function Markdown({ text, live = false }: { text: string; live?: boolean }) {
   return (
     <div className="md">
-      {parseBlocks(text).map((b, i) => {
+      {blocksOf(text, live).map((b, i) => {
         const k = `b${i}`
         switch (b.kind) {
           case 'h': {
@@ -189,4 +203,4 @@ export function Markdown({ text }: { text: string }) {
       })}
     </div>
   )
-}
+})
