@@ -4051,3 +4051,42 @@ button.remote-chip { cursor: pointer; }
 .rm-note { font-size: 11px; }
 .rm-fwd { display: flex; gap: 6px; align-items: center; }
 .rm-fwd input { width: 72px; font-family: var(--mono, monospace); font-size: 12px; }
+
+/* ---- foundations (UI pass, 2026-10-26): one look for what the browser would otherwise draw itself */
+/* tooltips (tips.ts): the system ones do not show over the top bar and look foreign */
+.tip { position: fixed; z-index: 10000; max-width: 300px; padding: 6px 9px; font: 12px/1.4 var(--ui); color: var(--text);
+  background: var(--raised, var(--surface)); border: 1px solid var(--border-strong); pointer-events: none; opacity: 0;
+  transform: translateY(-3px); transition: opacity 120ms var(--ease), transform 120ms var(--ease);
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
+.tip[data-side='above'] { transform: translateY(3px); }
+.tip.on { opacity: 1; transform: none; }
+/* fields: an accent edge on focus, never the system's blue ring */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):focus-visible,
+textarea:focus-visible, select:focus-visible { outline: none; border-color: rgba(var(--accent-rgb), 0.7) !important; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16); }
+:focus:not(:focus-visible) { outline: none; }
+/* radios and checkboxes in the accent */
+input[type='radio'], input[type='checkbox'], input[type='range'] { accent-color: var(--accent); }
+/* a disabled main button reads as not ready, not as a muddy accent */
+button.primary:disabled { --btn-bg: var(--raised, var(--surface)); --btn-line: var(--border-strong); color: var(--faint); opacity: 1; }
+/* one field style: solid edges everywhere (dashed stays for drop zones and empty slots, not for fields) */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']) { border-style: solid; }
+/* a button under a field, in a stacked form, takes its own width, not the column's */
+:where(div, label, section):has(> input:not([type='checkbox']):not([type='radio'])) > button:not(.icon) { justify-self: start; }
+/* an error note: a line on the left and the words, not a heavy box */
+.notice.error { background: rgba(var(--red-rgb), 0.06); border: 0; border-left: 2px solid var(--red); border-radius: 0; padding: 7px 12px; }
+/* the panel id: quiet mono text, its meaning in the tooltip */
+.pid { border: 0; padding: 0; color: var(--faint); opacity: 0.8; }
+/* selects outside the .select wrapper: the app's caret, not the system's */
+select:not(.select select) { appearance: none; padding-right: 26px !important; background-repeat: no-repeat; background-position: right 9px center; background-size: 9px 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Cpath d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23999' stroke-width='1.4'/%3E%3C/svg%3E"); }
+/* date, time and file inputs: dark controls and a button that matches ours */
+input[type='date']::-webkit-calendar-picker-indicator, input[type='time']::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
+input[type='file'] { font: 12px var(--ui); color: var(--muted); }
+input[type='file']::file-selector-button { height: 26px; margin-right: 10px; padding: 0 12px; border: 1px solid var(--border-strong); background: var(--raised, var(--surface)); color: var(--text); font: 12px var(--ui); cursor: pointer; }
+input[type='file']::file-selector-button:hover { background: var(--hover); }
+/* a resize grip on text areas only where people need it, and drawn quietly */
+textarea { resize: vertical; }
+textarea::-webkit-resizer { background: transparent; border-right: 2px solid var(--border-strong); border-bottom: 2px solid var(--border-strong); }
+/* a secondary action inside a sheet reads as a button, not as loose text */
+.sheet button.ghost:not(.icon):not([role='tab']):not(.segmented button) { box-shadow: inset 0 0 0 1px rgba(var(--overlay-rgb), 0.12); }
+.sheet button.ghost:not(.icon):not([role='tab']):hover { box-shadow: inset 0 0 0 1px rgba(var(--overlay-rgb), 0.22); }

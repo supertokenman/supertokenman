@@ -528,6 +528,7 @@ export function Panel(props: {
   return (
     <section
       ref={root}
+      data-sid={props.sid}
       className={`panel ${props.focused ? 'focused' : ''} ${narrow ? 'narrow' : ''} ${props.dim ? 'dim' : ''} ${dropping ? 'dropping' : ''}`}
       onMouseDown={props.onFocus}
       onDragOver={(e) => {

@@ -113,10 +113,14 @@ export function FocusSheet(props: {
             {sum.rows.length === 0 && <div className="faint">Nothing yet. Time is counted while panels are open.</div>}
             {sum.rows.map((r) => (
               <div key={r.project} className="time-row">
-                <span className="time-name">{r.project}</span>
+                <span className="time-name" title={r.project}>
+                  {/* a worktree panel's folder ends in -panel-<id>: the project is the part before it */}
+                  {r.project.replace(/-panel-[a-z0-9]+$/i, '')}
+                  {/-panel-[a-z0-9]+$/i.test(r.project) && <span className="faint"> worktree</span>}
+                </span>
                 <span className="time-bars">
-                  <span className="you" style={{ width: `${(r.you / max) * 100}%` }} />
-                  <span className="claude" style={{ width: `${(r.claude / max) * 100}%` }} />
+                  {r.you > 0 && <span className="you" style={{ width: `max(3px, ${(r.you / max) * 100}%)` }} />}
+                  {r.claude > 0 && <span className="claude" style={{ width: `max(3px, ${(r.claude / max) * 100}%)` }} />}
                 </span>
                 <span className="faint">{hm(r.you + r.claude)}</span>
               </div>

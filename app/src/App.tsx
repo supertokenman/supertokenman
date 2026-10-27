@@ -660,6 +660,7 @@ export function App() {
   }
   const spotify = useSpotify(music)
   const [p, dispatch] = useReducer((st: Panels, a: PanelAction) => reducePanels(st, a), noPanels)
+  const { gridRef, leave } = usePanelMotion(p.order)
   // the team room: what the room sees of you is the focused panel's folder and whether it is working
   const team = useTeam(() => {
     const st = p.focus ? p.byId[p.focus] : undefined
@@ -1721,7 +1722,7 @@ export function App() {
       <Splash done={p.order.some((sid) => Boolean(p.byId[sid]?.model))} />
 
       <div className="body">
-      <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
+      <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
         {p.order.map((sid) => (
           <Panel
             key={sid}
@@ -1734,10 +1735,12 @@ export function App() {
             money={money}
             dispatch={(action) => dispatch({ kind: 'event', sid, action })}
             onFocus={() => p.focus !== sid && dispatch({ kind: 'focus', sid })}
-            onClose={() => {
-              void window.stm.closeSession(sid)
-              dispatch({ kind: 'close', sid })
-            }}
+            onClose={() =>
+              leave(sid, () => {
+                void window.stm.closeSession(sid)
+                dispatch({ kind: 'close', sid })
+              })
+            }
           />
         ))}
         {p.order.length === 0 && (
@@ -1751,6 +1754,43 @@ export function App() {
       </div>
     </div>
   )
+}
+
+/**
+ * Panels move instead of jumping: a new one grows in, the others glide to their new places (FLIP), and
+ * a closing one shrinks away before it is removed. Off with reduced motion.
+ */
+function usePanelMotion(order: string[]) {
+  const gridRef = useRef<HTMLDivElement>(null)
+  const last = useRef(new Map<string, DOMRect>())
+  const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+  useLayoutEffect(() => {
+    const grid = gridRef.current
+    if (!grid) return
+    const now = new Map<string, DOMRect>()
+    for (const el of Array.from(grid.querySelectorAll<HTMLElement>(':scope > .panel[data-sid]'))) now.set(el.dataset.sid!, el.getBoundingClientRect())
+    if (!still) {
+      for (const el of Array.from(grid.querySelectorAll<HTMLElement>(':scope > .panel[data-sid]'))) {
+        const was = last.current.get(el.dataset.sid!)
+        const is = now.get(el.dataset.sid!)!
+        if (!was) {
+          if (last.current.size) el.animate([{ opacity: 0, transform: 'scale(0.96)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2,.7,.2,1)' })
+          continue
+        }
+        const dx = was.left - is.left, dy = was.top - is.top, sx = was.width / is.width, sy = was.height / is.height
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01) continue
+        el.animate([{ transformOrigin: '0 0', transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` }, { transformOrigin: '0 0', transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2,.7,.2,1)' })
+      }
+    }
+    last.current = now
+  }, [order.join('|'), still])
+  const leave = (sid: string, done: () => void) => {
+    const el = gridRef.current?.querySelector<HTMLElement>(`:scope > .panel[data-sid="${CSS.escape(sid)}"]`)
+    if (!el || still) return done()
+    el.style.pointerEvents = 'none'
+    el.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(0.96)' }], { duration: 170, easing: 'ease-in', fill: 'forwards' }).finished.then(done, done)
+  }
+  return { gridRef, leave }
 }
 
 /** The window's size, for layouts that change on big and turned monitors. */

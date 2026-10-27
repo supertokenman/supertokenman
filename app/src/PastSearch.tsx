@@ -4,6 +4,7 @@ import type { PastHit } from '../electron/pastsearch'
 import type { PastTurn } from '../shared/pastsearch'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
+import { count } from '../shared/plural'
 import './bridge'
 
 const close = (
@@ -84,7 +85,7 @@ export function PastSearchSheet(props: { cwd?: string; onClose: () => void; onOp
       <div className="sheet config observe ps" role="dialog" aria-label="Search past sessions">
         <header className="sheet-head">
           <div className="sheet-title">Past sessions</div>
-          <span className="faint">{res ? `${res.turns.toLocaleString()} turns in ${res.files.toLocaleString()} sessions` : ''}</span>
+          <span className="faint">{res ? `${count(res.turns, 'turn')} in ${count(res.files, 'session')}` : ''}</span>
           <span className="spacer-flex" />
           <button className="icon" aria-label="Close" onClick={props.onClose}>{close}</button>
         </header>

@@ -3,6 +3,7 @@ import type { BackendMap, Service } from '../shared/backendmap'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconClose, IconDatabase, IconRefresh } from './icons'
+import { count } from '../shared/plural'
 import './bridge'
 
 type Scan = Awaited<ReturnType<typeof window.stm.bmap.scan>>
@@ -84,7 +85,7 @@ export function BackendMapSheet(props: { cwd?: string; onClose: () => void; onAt
       <div className="sheet config observe bm" role="dialog" aria-label="Backend map">
         <header className="sheet-head">
           <div className="sheet-title">Backend map</div>
-          <span className="faint">{scan ? `${scan.map.services.length} services · ${total} routes · ${scan.map.stores.length} data stores · ${scan.map.scanned} files read${scan.cut ? ' (stopped at 4,000)' : ''}` : ''}</span>
+          <span className="faint">{scan ? `${count(scan.map.services.length, 'service')} · ${count(total, 'route')} · ${count(scan.map.stores.length, 'data store')} · ${count(scan.map.scanned, 'file')} read${scan.cut ? ' (stopped at 4,000)' : ''}` : ''}</span>
           <span className="spacer-flex" />
           <button className="ghost small" disabled={busy || !props.cwd} onClick={run}><IconRefresh />Read again</button>
           <button className="icon" aria-label="Close" onClick={props.onClose}><IconClose /></button>
@@ -99,7 +100,7 @@ export function BackendMapSheet(props: { cwd?: string; onClose: () => void; onAt
                 {scan.gateway && (
                   <section className="bm-gw">
                     <div className="sp-label">Gateway · Kong · {scan.gateway.file}</div>
-                    <div className="faint">{scan.gateway.services} services, {scan.gateway.routes.length} routes{scan.gateway.global.length ? `; on every route: ${scan.gateway.global.join(', ')}` : ''}. Read from the file only; the running gateway is not asked.</div>
+                    <div className="faint">{count(scan.gateway.services, 'service')}, {count(scan.gateway.routes.length, 'route')}{scan.gateway.global.length ? `; on every route: ${scan.gateway.global.join(', ')}` : ''}. Read from the file only; the running gateway is not asked.</div>
                     <table className="vb-table">
                       <thead><tr><th>Route</th><th>Methods</th><th>Paths</th><th>Upstream</th><th>Plugins</th></tr></thead>
                       <tbody>{scan.gateway.routes.map((r) => <tr key={r.route}><td><code>{r.route}</code></td><td>{r.methods.join(' ') || 'any'}</td><td><code>{r.paths.join(', ') || '/'}</code></td><td className="faint">{r.upstream}</td><td>{r.plugins.map((p) => <span key={p} className="pt-kind bm-plugin">{p}</span>)}</td></tr>)}</tbody>

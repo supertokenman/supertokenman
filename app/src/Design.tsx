@@ -3,6 +3,7 @@ import { IconClose } from './icons'
 import type { Inventory } from '../electron/inventory'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
+import { count } from '../shared/plural'
 import './bridge'
 
 type Extracted = Awaited<ReturnType<typeof window.stm.design.extract>>
@@ -119,7 +120,7 @@ function Components(props: { cwd?: string; onSend: (text: string) => void }) {
   if (!inv) return <div className="dsg-body faint">Reading the project…</div>
   return (
     <div className="dsg-body">
-      <div className="sp-label">{inv.components.length} components in {inv.files} files · {inv.lookalikes.length} look-alike groups · {inv.unused.length} unused</div>
+      <div className="sp-label">{count(inv.components.length, 'component')} in {count(inv.files, 'file')} · {inv.lookalikes.length} look-alike groups · {inv.unused.length} unused</div>
       {inv.lookalikes.length > 0 && (
         <div className="dsg-alike">
           {inv.lookalikes.map((g) => (
