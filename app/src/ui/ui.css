@@ -30,7 +30,7 @@
 
 /* number: the field with our stepper; the system's spin buttons are hidden */
 .ui-num { position: relative; display: inline-flex; align-items: stretch; max-width: 100%; }
-.ui-num > input { padding-right: 22px !important; -moz-appearance: textfield; }
+.ui-num > input { flex: 1 1 auto; min-width: 0; padding-right: 22px !important; -moz-appearance: textfield; }
 .ui-num > input::-webkit-inner-spin-button, .ui-num > input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .ui-num-steps { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 18px; display: grid; grid-template-rows: 1fr 1fr; border-left: 1px solid var(--border); }
 .ui-num-steps button, .ui-num-steps button:hover, .ui-num-steps button:active, .ui-num-steps button:focus-visible { all: unset; display: grid; place-items: center; color: var(--muted); cursor: pointer; }
@@ -62,7 +62,7 @@ button.ui-color-cell[aria-pressed='true'], button.ui-color-cell:focus-visible { 
 .ui-color-hex { width: 100%; height: 26px; font: 12px var(--mono); }
 
 /* dialogs: confirm, alert, prompt */
-.ui-dialog-overlay { z-index: 9000; }
+.ui-dialog-overlay { z-index: 9990; }
 .ui-dialog { width: min(420px, calc(100vw - 32px)); padding: 18px 18px 14px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5); animation: mm-in 140ms var(--ease) both; display: grid; gap: 12px; }
 .ui-dialog-title { font-weight: 650; font-size: 14px; }
 .ui-dialog-msg { color: var(--muted); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow-y: auto; }
