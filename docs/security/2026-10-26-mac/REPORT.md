@@ -58,8 +58,29 @@ A value made for this run was put in the vault as DECOY_KEY.
 - A sample twice a second can miss a connection that opens and closes in between.
 - Traffic that refuses the proxy would show in `lsof` by address only; none did here.
 
+## Second run: 0.1.5, 2026-10-27 11:17 UTC
+
+Same script with `--mitm`, five minutes. DECOY_KEY was added in Connections > Vault with "Commands
+can read it" ticked, and a panel was asked "run echo hello and tell me the date".
+
+- Download: SHA256SUMS OK, codesign valid, notarization accepted (same Developer ID).
+- Connections outside loopback (lsof): **none**. Every connection of the app and its processes went
+  to the local proxy; nothing went around it.
+- Requests read through mitmproxy: the update check only (four GETs to github.com releases, one to
+  release-assets.githubusercontent.com).
+- The Claude turn **failed**: the panel showed "SSL certificate verification failed
+  (UNABLE_TO_VERIFY_LEAF_SIGNATURE)". The bundled Claude Code refused the proxy's certificate,
+  although the script passed it in `NODE_EXTRA_CA_CERTS`. Its request was sent to the proxy and
+  went no further, so no message reached Anthropic and the command never ran.
+- Decoy: not found on disk, not found in the recorded traffic.
+
+So the vault path for commands is still not exercised. Why the bundled Claude Code does not take the
+extra certificate is open: being checked by running it alone through the proxy.
+
 ## Next run
 
-`bash app/scripts/proof-mac.sh --mitm --minutes 5` on 0.1.5, and in the app, in this order: add
+Once the certificate question is answered: `bash app/scripts/proof-mac.sh --mitm --minutes 5`. Or, to
+exercise a real turn now, without reading its content: the same without `--mitm` (destinations from
+lsof only). The script now also lists the hosts that refused the proxy's certificate. In the app, in this order: add
 DECOY_KEY in Connections > Vault with "Commands can read it" ticked, open a panel, send "run echo hello and tell me the date", approve
 the command. The report should then list api.anthropic.com, and the decoy check covers a real turn.

@@ -77,7 +77,7 @@ MITM_PID=""
 EXTRA=()
 if [ "$MITM" = 1 ]; then
   command -v mitmdump >/dev/null || { echo "--mitm needs mitmproxy: brew install mitmproxy" >&2; exit 1; }
-  mitmdump -q --listen-port 8899 -w "$OUT/flows.mitm" &
+  mitmdump --listen-port 8899 -w "$OUT/flows.mitm" > "$OUT/mitm.log" 2>&1 &
   MITM_PID=$!
   sleep 2
   CA="$HOME/.mitmproxy/mitmproxy-ca-cert.pem"
@@ -137,8 +137,10 @@ on_disk="$(grep -rlF "$DECOY" "$OUT/profile" "$HOME/.claude" 2>/dev/null | grep 
 in_mitm="not checked (run with --mitm)"
 if [ -f flows.mitm ]; then
   if grep -qF "$DECOY" flows.mitm; then in_mitm="FOUND in the recorded traffic"; else in_mitm="not found in the recorded traffic"; fi
-  mitmdump -nr flows.mitm --flow-detail 0 2>/dev/null | awk '{print $2, $3}' | sort | uniq -c | sort -rn > mitm-requests.txt || true
+  mitmdump -nr flows.mitm 2>/dev/null | grep -oE '^[0-9.:]+: [A-Z]+ https?://[^/ ]+' | cut -d' ' -f2- | sort | uniq -c | sort -rn > mitm-requests.txt || true
 fi
+# hosts whose client refused the proxy's certificate: their traffic was not read, only its destination
+refused="$(grep -oE "does not trust the proxy's certificate for [^ ]+" mitm.log 2>/dev/null | awk '{print $NF}' | sort | uniq -c | sort -rn || true)"
 
 cat > REPORT.md <<EOF
 # Mac proof: SuperTokenMan $VERSION
@@ -163,6 +165,18 @@ owner is the first organisation line in \`whois\`.
 $hosts_md
 
 Raw: \`connections.log\`, \`processes.log\`, \`endpoints.txt\`.
+
+## Requests read through mitmproxy
+
+\`\`\`
+$( [ -s mitm-requests.txt ] && cat mitm-requests.txt || echo "none (or not run with --mitm)")
+\`\`\`
+
+Refused the proxy's certificate (sent, but not readable here):
+
+\`\`\`
+$( [ -n "$refused" ] && echo "$refused" || echo "none")
+\`\`\`
 
 ## The decoy secret
 
