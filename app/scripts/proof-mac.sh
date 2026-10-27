@@ -6,6 +6,8 @@
 #   bash app/scripts/proof-mac.sh --minutes 5
 #   bash app/scripts/proof-mac.sh --mitm          # also read the traffic through mitmproxy
 #                                                 # (brew install mitmproxy), to search it for the decoy
+#   bash app/scripts/proof-mac.sh --names         # route through mitmproxy without opening TLS: every
+#                                                 # host name is logged, and Claude Code keeps working
 #
 # It downloads the latest release, checks it (SHA256SUMS, the GitHub build attestation when gh is there,
 # the signature and the notarization), runs it from a work folder with its own profile, and writes
@@ -15,10 +17,12 @@ set -euo pipefail
 
 MINUTES=10
 MITM=0
+NAMES=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --minutes) MINUTES="$2"; shift 2 ;;
     --mitm) MITM=1; shift ;;
+    --names) MITM=1; NAMES=1; shift ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -61,9 +65,10 @@ say "3/5 What to do in the app"
 cat <<EOF
 The app opens from $OUT with its own profile. While it runs for up to $MINUTES minutes:
 
-  1. Vault: add a secret named DECOY_KEY with this value (it is already in decoy.txt):
+  1. Cmd+K, "Connections", then the Vault tab: add a secret named DECOY_KEY with this value
+     (it is already in decoy.txt):
        $DECOY
-     Turn on "for commands" for it.
+     Tick "Commands can read it", then Save.
   2. Open a panel and ask Claude: "run echo hello and tell me the date".
      Approve the command.
   3. Use the app as you would: Memory, Tasks, a second panel. Do not paste the decoy anywhere else.
@@ -76,7 +81,9 @@ MITM_PID=""
 EXTRA=()
 if [ "$MITM" = 1 ]; then
   command -v mitmdump >/dev/null || { echo "--mitm needs mitmproxy: brew install mitmproxy" >&2; exit 1; }
-  mitmdump -q --listen-port 8899 -w "$OUT/flows.mitm" &
+  PASS=()
+  [ "$NAMES" = 1 ] && PASS=(--ignore-hosts '.*')
+  mitmdump --listen-port 8899 "${PASS[@]}" -w "$OUT/flows.mitm" > "$OUT/mitm.log" 2>&1 &
   MITM_PID=$!
   sleep 2
   CA="$HOME/.mitmproxy/mitmproxy-ca-cert.pem"
@@ -136,8 +143,12 @@ on_disk="$(grep -rlF "$DECOY" "$OUT/profile" "$HOME/.claude" 2>/dev/null | grep 
 in_mitm="not checked (run with --mitm)"
 if [ -f flows.mitm ]; then
   if grep -qF "$DECOY" flows.mitm; then in_mitm="FOUND in the recorded traffic"; else in_mitm="not found in the recorded traffic"; fi
-  mitmdump -nr flows.mitm --flow-detail 0 2>/dev/null | awk '{print $2, $3}' | sort | uniq -c | sort -rn > mitm-requests.txt || true
+  [ "$NAMES" = 1 ] && in_mitm="not readable (--names passes TLS through unopened)"
+  mitmdump -nr flows.mitm 2>/dev/null | grep -oE '^[0-9.:]+: [A-Z]+ https?://[^/ ]+' | cut -d' ' -f2- | sort | uniq -c | sort -rn > mitm-requests.txt || true
 fi
+# hosts whose client refused the proxy's certificate: their traffic was not read, only its destination
+names="$(grep -oE 'server connect [^ ]+' mitm.log 2>/dev/null | awk '{print $3}' | sort | uniq -c | sort -rn || true)"
+refused="$(grep -oE "does not trust the proxy's certificate for [^ ]+" mitm.log 2>/dev/null | awk '{print $NF}' | sort | uniq -c | sort -rn || true)"
 
 cat > REPORT.md <<EOF
 # Mac proof: SuperTokenMan $VERSION
@@ -162,6 +173,24 @@ owner is the first organisation line in \`whois\`.
 $hosts_md
 
 Raw: \`connections.log\`, \`processes.log\`, \`endpoints.txt\`.
+
+## Requests read through mitmproxy
+
+\`\`\`
+$( [ -s mitm-requests.txt ] && cat mitm-requests.txt || echo "none (or not run with --mitm)")
+\`\`\`
+
+Host names the app and its processes connected to through the proxy:
+
+\`\`\`
+$( [ -n "$names" ] && echo "$names" || echo "none (or not run with --mitm or --names)")
+\`\`\`
+
+Refused the proxy's certificate (sent, but not readable here):
+
+\`\`\`
+$( [ -n "$refused" ] && echo "$refused" || echo "none")
+\`\`\`
 
 ## The decoy secret
 
