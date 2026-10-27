@@ -140,7 +140,7 @@ import { WebAppsDrawer } from './WebApps'
 import { noPanels, reducePanels, type PanelAction, type Panels } from './state'
 
 import './bridge'
-import { useRates } from './rates'
+import { useMoney } from './currency'
 
 // sheets load when first opened: the start-up bundle stays small
 const BudgetSheet = lazy(() => import('./Budget').then((m) => ({ default: m.BudgetSheet })))
@@ -693,7 +693,7 @@ export function App() {
   const [sheet, setSheet] = useState(false)
   const [catalog, setCatalog] = useState(false)
   const [memory, setMemory] = useState(false)
-  const rate = useRates().USD
+  const { code: currency, rate } = useMoney()
   const [focus, setFocusState] = useState<Focus | null>(loadFocus)
   const [focusSheet, setFocusSheet] = useState(false)
   const [doneRound, setDoneRound] = useState<{ f: Focus; turns: number; cost: string } | null>(null)
@@ -924,9 +924,9 @@ export function App() {
   }, [open, p, setPriv])
 
   const money = useMemo(() => {
-    const f = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BRL' })
+    const f = new Intl.NumberFormat(currency === 'BRL' ? 'pt-BR' : 'en-US', { style: 'currency', currency })
     return (usd: number) => f.format(usd * rate)
-  }, [rate])
+  }, [rate, currency])
   const exposures = p.order.flatMap((sid) => (p.byId[sid]?.exposures ?? []).map((x) => ({ ...x, panel: sid })))
   const total = p.order.reduce((n, sid) => n + (p.byId[sid]?.costUsd ?? 0), 0)
   // a portrait monitor stacks panels: one column for two, two columns from three on

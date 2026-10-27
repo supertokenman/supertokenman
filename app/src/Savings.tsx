@@ -1,4 +1,5 @@
 import { SplitFlap } from './SplitFlap'
+import { displayCurrency, symbolOf } from './currency'
 import type { Stage } from '../shared/compact'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
@@ -169,7 +170,7 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
   const [busy, setBusy] = useState('')
   const [err, setErr] = useState('')
   const [hover, setHover] = useState<string | null>(null)
-  const money = (usd: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'BRL', maximumFractionDigits: usd * props.usdToBrl >= 100 ? 0 : 2 }).format(usd * props.usdToBrl)
+  const money = (usd: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: displayCurrency(), maximumFractionDigits: usd * props.usdToBrl >= 100 ? 0 : 2 }).format(usd * props.usdToBrl)
   useEffect(() => {
     void window.stm.savings.get(range).then(setData)
     void window.stm.headroom.get().then(setHr)
