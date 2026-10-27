@@ -103,6 +103,8 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgtk-3-0 libnss3 libgbm1 libasound2t64 >/dev/null
           npm ci
           npm run build
+          # the files the first screen loads, gzipped: a heavy import added there fails here (raise with a reason)
+          node scripts/startup-size.mjs --max-js-kb 215
           npm run netwatch:check
           # typing in the composer must not lay out the window more than once per key (a count, not a time)
           xvfb-run -a node scripts/perf-typing.mjs --max-layouts-per-key 1.5

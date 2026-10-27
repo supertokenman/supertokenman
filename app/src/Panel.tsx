@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { pickAttachments } from './FilePicker'
 import { StateMark } from './StateMark'
 import { cacheLeft, coldExtraUsd } from '../shared/cache'
@@ -8,8 +8,6 @@ import { hudView, KO_MS, type Action, type Line, type State } from './state'
 import { Changes, Diff } from './Diff'
 import { CiView } from './CiView'
 import { GitView } from './GitView'
-import { PreviewView } from './PreviewView'
-import { TermView } from './TermView'
 import { AccessMark } from './Personas'
 import { SandboxChip } from './Sandbox'
 import { RemoteChip } from './RemoteChip'
@@ -52,6 +50,10 @@ export const toolName = (n: string) =>
   n === 'mcp__panels__message_panel' ? 'Message panel' : n === 'mcp__panels__list_panels' ? 'List panels' : n.startsWith('mcp__') ? n.slice(5).replace('__', ' · ').replace(/_/g, ' ') : n
 
 // first words that are almost always a command, not a question
+// the terminal (xterm, a third of the start-up bundle) and Preview load the first time their tab opens
+const PreviewView = lazy(() => import('./PreviewView').then((m) => ({ default: m.PreviewView })))
+const TermView = lazy(() => import('./TermView').then((m) => ({ default: m.TermView })))
+
 const COMMANDS = /^(git|npm|npx|pnpm|yarn|bun|node|deno|python3?|pip3?|uv|ls|cd|cat|grep|rg|find|make|cargo|go|docker|kubectl|wrangler|supabase|neonctl|gh|curl|brew|tsc|vitest|jest|pytest|ruby|bundle|rails|php|composer|mvn|gradle|terraform|aws|gcloud|ssh|scp|rm|mv|cp|mkdir|touch|echo|export|source|chmod|tail|head|ps|kill|open|code)(\s|$)/
 export const looksLikeCommand = (t: string) => COMMANDS.test(t.trim()) && !t.includes('\n')
 
@@ -621,8 +623,8 @@ export function Panel(props: {
       <div className="hud" title={WHY[mood]} dangerouslySetInnerHTML={{ __html: themed(hudMini(hudView(s, money, Date.now()))) }} />
 
       {/* stays mounted once opened, so switching tabs keeps the page and its state */}
-      {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><PreviewView servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></section>}
-      {(tab === 'terminal' || termed) && <section className="preview-host" hidden={tab !== 'terminal'}><TermView sid={sid} active={tab === 'terminal'} onAttach={(note) => attachFromBrowser([], note)} /></section>}
+      {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><Suspense fallback={null}><PreviewView servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></Suspense></section>}
+      {(tab === 'terminal' || termed) && <section className="preview-host" hidden={tab !== 'terminal'}><Suspense fallback={null}><TermView sid={sid} active={tab === 'terminal'} onAttach={(note) => attachFromBrowser([], note)} /></Suspense></section>}
       <main className="scroll" hidden={tab === 'preview' || tab === 'terminal'}>
         <div className="column">
           {tab === 'changes' && <Changes changes={s.changes} cwd={s.cwd} onSend={(text) => { setTab('chat'); dispatch({ kind: 'sent', text, at: Date.now() }); void window.stm.send(sid, text) }} />}

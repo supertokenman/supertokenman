@@ -7,7 +7,7 @@ import { badge, contextMenu, keepBounds, menuTemplate, savedBounds, windowStateF
 import { crashReporter, app, BrowserWindow, Menu, nativeImage, Tray, globalShortcut, net, Notification, protocol, dialog, ipcMain, nativeTheme, powerMonitor, safeStorage, systemPreferences, session as electronSession, shell as desktop, webContents as allWebContents } from 'electron'
 import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, symlinkSync, unlinkSync, watch, writeFileSync } from 'node:fs'
 import { listSessions, query as sdkQuery } from '@anthropic-ai/claude-agent-sdk'
-import { claudeBinary, shellPath } from './packaged.js'
+import { claudeBinary, mergePath, shellPathAsync } from './packaged.js'
 import { homedir } from 'node:os'
 import { findRepos, repoRoots } from './repos.js'
 import { createServer as netServer } from 'node:net'
@@ -265,8 +265,12 @@ process.on('unhandledRejection', (err) => void logs().error('main:promise', err)
 app.on('render-process-gone', (_e, wc, d) => void logs().error('renderer', `${wc.getURL().slice(0, 120)} gone: ${d.reason} (exit ${d.exitCode})`))
 app.on('child-process-gone', (_e, d) => void logs().error(`process:${d.type}`, `${d.name ?? d.type} gone: ${d.reason} (exit ${d.exitCode})`))
 crashReporter.start({ uploadToServer: false })
-// a packaged app gets the user's shell PATH, and runs Claude Code from outside the asar archive
-if (app.isPackaged && process.platform !== 'win32') process.env.PATH = shellPath()
+// a packaged app gets the user's shell PATH, and runs Claude Code from outside the asar archive. The
+// shell is read in the background (it held the window for up to seconds); until then PATH has the usual
+// places, and the first panel, the OfficeCLI check and Headroom wait for it
+const pathReady: Promise<void> = app.isPackaged && process.platform !== 'win32'
+  ? ((process.env.PATH = mergePath('', process.env.PATH ?? '')), shellPathAsync().then((p) => void (process.env.PATH = p)))
+  : Promise.resolve()
 const CLAUDE_BIN = app.isPackaged ? claudeBinary(process.resourcesPath) : undefined
 const query: typeof sdkQuery = (args) => sdkQuery(CLAUDE_BIN ? { ...args, options: { ...args.options, pathToClaudeCodeExecutable: CLAUDE_BIN } } : args)
 // a content piece's media, streamed to the window (registered before the app is ready)
@@ -1581,7 +1585,10 @@ ipcMain.handle('content:check', (_e, id: string) => C().check(String(id)))
 ipcMain.handle('content:reveal', (_e, path: string) => C().allowed(String(path)) && desktop.showItemInFolder(String(path)))
 
 ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => {
+  perfMark('panel asked')
+  await pathReady
   await officeReady
+  perfMark('panel path and office checked')
   const sid = `s${++nextId}`
   // a panel on another machine: its folder (or a fresh worktree) there, and an empty stand-in folder here
   let remote: Remote | null = null
@@ -1793,6 +1800,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
   s.start()
   void pollCi(sid, true)
   if (remote) remoteOf.set(sid, remote)
+  perfMark('panel ready')
   return { sid, cwd, missing, persona: persona ? { id: persona.id, name: persona.name, color: persona.color, model: persona.model, access: persona.access ?? 'ask' } : undefined, sandbox: boxed || undefined, remote: remote ?? undefined, worktree: wt ? { branch: wt.branch, base: wt.base, repo: wt.repo, group: worktreeOf.get(sid)?.group, attempt: worktreeOf.get(sid)?.attempt, of: worktreeOf.get(sid)?.of } : undefined }
 })
 // a panel in a sandbox: what OpenShell has, getting one ready, and its changes back
@@ -2702,7 +2710,7 @@ const checkHeadroom = async () => {
   headroomSeen = { tokens: st.tokensSaved, usd: st.savedUsd }
 }
 setInterval(() => void checkHeadroom(), 30_000).unref()
-app.whenReady().then(() => void checkHeadroom())
+app.whenReady().then(() => pathReady).then(() => void checkHeadroom())
 app.on('will-quit', () => stopHeadroom())
 // Phase 87: pruning MCP tools for a task; the base list (lean tools, persona) is kept and never shrunk
 const prunedOf = new Map<string, { base: string[]; off: string[] }>()
@@ -2775,7 +2783,7 @@ let officeFound: import('./office.js').Found | null = null
 const officeBuilt: (import('./office.js').Built & { sid: string; panel: string })[] = []
 const officeCheck = async () => (officeFound = await (await import('./office.js')).detect(process.env.STM_OFFICECLI || 'officecli', process.env.STM_OFFICECLI ? (await import('./office.js')).fakeAware : undefined))
 // started at load, awaited by the first panel so its tools know whether OfficeCLI is there
-const officeReady = officeCheck().catch(() => null)
+const officeReady = pathReady.then(officeCheck).catch(() => null)
 function officeBuiltBy(sid: string, b: import('./office.js').Built) {
   officeBuilt.push({ ...b, sid, panel: placeOf(sid) })
   if (officeBuilt.length > 300) officeBuilt.shift()

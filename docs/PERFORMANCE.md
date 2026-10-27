@@ -68,6 +68,47 @@ Held in CI: the `network` job types 200 characters into the built app and fails 
 key (`perf-typing.mjs --max-layouts-per-key 1.5`). It counts layouts, not time, so a slow runner does
 not fail it; on the old code it reads 3.02 and fails.
 
+## Launch (2026-10-27)
+
+0.1.9 on the signed app (`perf-mac`): window shown 1397 ms, composer usable 2385 ms, start-up chunks
+438 KB gzip. Where the time went, from `STM_PERF=1` marks (now also "entry started", "panel asked",
+"panel path and office checked" and "panel ready") and `node app/scripts/perf-launch.mjs`:
+
+- About 300 ms is Electron itself, before any of the app's code runs. Not ours to cut.
+- **The packaged app read the shell's PATH by starting a login shell (`zsh -ilc`) synchronously while
+  the main module loaded**, before the window existed. With a real profile (nvm, oh-my-zsh) that takes
+  from a few hundred milliseconds to seconds, up to its 4 s timeout. It only runs in a packaged build,
+  which is why the Linux numbers below never showed it. Now the shell is read in the background
+  (`shellPathAsync` in `electron/packaged.ts`); PATH has the usual places meanwhile, and the first
+  panel, the OfficeCLI check and Headroom wait for the shell's PATH, so what they find is unchanged.
+- The main process was about 250 files loaded one by one through Node's ESM loader. It is now one file,
+  `dist-electron/electron/app.mjs`, joined by esbuild after tsc (`app/scripts/bundle-main.mjs`);
+  packages in node_modules load as before.
+- The renderer's start-up script was 1.2 MB (371 KB gzip): a third of it was xterm and its add-ons, for
+  a terminal that opens only on its tab. The terminal, Preview and 20 sheets that open only on a click
+  now load when first opened. 619 KB, 197 KB gzip (the CSS, 64 KB gzip, is apart).
+- The window already shows at once on a dark background, with no white flash; nothing on the path to
+  the composer waits for the network, and the composer does not wait for Claude Code to start.
+
+Before and after on the same Linux machine under xvfb, unpackaged, fresh profile, median of 7 launches,
+run twice each, `xvfb-run -a node app/scripts/perf-launch.mjs --runs 7`:
+
+| | Window shown | Composer usable | Start-up JS, gzip |
+|---|---|---|---|
+| Before | 760 ms, 804 ms | 1070 ms, 1119 ms | 371 KB |
+| After | 739 ms, 766 ms | 1021 ms, 1027 ms | 197 KB |
+
+The shell PATH change cannot show here (it is packaged only); the next `perf-mac` run shows it.
+
+With four panels, `perf-mac` counted 10 processes on 0.1.9 against 9 on 0.1.8. On Linux the tree is the
+main process, Chromium's zygotes, GPU, network service and renderer, one Claude Code per panel, and an
+audio service that Chromium starts about a second in: the fresh profile opens the Tour, whose video is the
+only media element at start. That process is one per app and does not grow per panel, so it is not a
+leak; which process differs between the two Mac runs is not proven here.
+
+Held in CI: the `network` job checks the start-up JS (`app/scripts/startup-size.mjs --max-js-kb 215`)
+and fails over it; raise it in `ci.yml` with the reason when a change needs more.
+
 ## Measured on each release
 
 `.github/workflows/perf-mac.yml` runs after each published release, and by hand from the Actions tab

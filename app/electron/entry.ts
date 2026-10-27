@@ -2,6 +2,9 @@
 // window), so the packaged app can turn off the RunAsNode fuse; otherwise it starts the app.
 import { pathToFileURL } from 'node:url'
 
+// STM_PERF=1: how long Electron took before any of the app's code ran
+if (process.env.STM_PERF) console.log(`[perf] entry started ${process.uptime().toFixed(3)}s`)
+
 const i = process.argv.indexOf('--stm-cli')
 if (i >= 0) {
   const script = process.argv[i + 1] ?? ''
