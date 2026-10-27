@@ -8,33 +8,19 @@ import { PastSearchSheet } from './PastSearch'
 
 import { IssuesSheet } from './Issues'
 
-import { OfficeFiles } from './OfficeFiles'
 
-import { MdImages } from './MdImages'
 
-import { DesignHandoff } from './DesignHandoff'
 
-import { VaultBoard } from './VaultBoard'
 
-import { PdfTools } from './PdfTools'
 
-import { AppContainers } from './AppContainers'
 
-import { TopicRadar } from './TopicRadar'
 
-import { RunCi } from './RunCi'
 
-import { ImageXray } from './ImageXray'
 
-import { ComposeStacks } from './ComposeStacks'
 
-import { DiagCheck } from './DiagCheck'
 
-import { Reflect } from './Reflect'
 
-import { ProjectGraph } from './ProjectGraph'
 
-import { ShortTerm } from './ShortTerm'
 
 import { askText, type Link } from '../shared/deeplink'
 
@@ -54,7 +40,6 @@ import { ownerOf } from '../shared/sametask'
 
 import { SpecSheet } from './Spec'
 
-import { DiagramsSheet } from './Diagrams'
 
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 
@@ -72,6 +57,28 @@ import { LockScreen, useAppLock } from './Lock'
 import { RouterBox } from './Router'
 
 import type { Persona } from '../shared/personas'
+// sheets that open only on a click load then, not at start
+const OfficeFiles = lazy(() => import('./OfficeFiles').then((x) => ({ default: x.OfficeFiles })))
+const MdImages = lazy(() => import('./MdImages').then((x) => ({ default: x.MdImages })))
+const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ default: x.DesignHandoff })))
+const VaultBoard = lazy(() => import('./VaultBoard').then((x) => ({ default: x.VaultBoard })))
+const PdfTools = lazy(() => import('./PdfTools').then((x) => ({ default: x.PdfTools })))
+const AppContainers = lazy(() => import('./AppContainers').then((x) => ({ default: x.AppContainers })))
+const TopicRadar = lazy(() => import('./TopicRadar').then((x) => ({ default: x.TopicRadar })))
+const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
+const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
+const ComposeStacks = lazy(() => import('./ComposeStacks').then((x) => ({ default: x.ComposeStacks })))
+const DiagCheck = lazy(() => import('./DiagCheck').then((x) => ({ default: x.DiagCheck })))
+const Reflect = lazy(() => import('./Reflect').then((x) => ({ default: x.Reflect })))
+const ProjectGraph = lazy(() => import('./ProjectGraph').then((x) => ({ default: x.ProjectGraph })))
+const ShortTerm = lazy(() => import('./ShortTerm').then((x) => ({ default: x.ShortTerm })))
+const Ports = lazy(() => import('./Ports').then((x) => ({ default: x.Ports })))
+const PullRequests = lazy(() => import('./PullRequests').then((x) => ({ default: x.PullRequests })))
+const Publish = lazy(() => import('./Publish').then((x) => ({ default: x.Publish })))
+const Validate = lazy(() => import('./Validate').then((x) => ({ default: x.Validate })))
+const Spend = lazy(() => import('./Spend').then((x) => ({ default: x.Spend })))
+const Appearance = lazy(() => import('./Appearance').then((x) => ({ default: x.Appearance })))
+const DiagramsSheet = lazy(() => import('./Diagrams').then((x) => ({ default: x.DiagramsSheet })))
 const Business = lazy(() => import('./Business').then((m) => ({ default: m.Business })))
 const Studio = lazy(() => import('./Studio').then((m) => ({ default: m.Studio })))
 const Triggers = lazy(() => import('./Triggers').then((m) => ({ default: m.Triggers })))
@@ -87,7 +94,6 @@ import { applyTypo, DEFAULT_TYPO, type Typo } from './typography'
 
 import { sceneFor, sceneSvg } from './landscapes'
 
-import { Ports } from './Ports'
 
 import { Menu } from './Menu'
 
@@ -95,15 +101,11 @@ import { Presence } from './Presence'
 
 import { Docker } from './Docker'
 
-import { PullRequests } from './PullRequests'
 
-import { Publish } from './Publish'
 
 import { TeamSheet, useTeam } from './Team'
 
-import { Validate } from './Validate'
 
-import { Spend } from './Spend'
 
 import { DevicesButton } from './Devices'
 
@@ -130,7 +132,6 @@ import { WEB_APPS } from '../shared/webapps'
 
 import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
-import { Appearance } from './Appearance'
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
