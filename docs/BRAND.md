@@ -390,3 +390,24 @@ Taken from how Halo pairs a free community edition with paid editions.
 - README languages: Portuguese (Brazil) and Spanish first (`README.pt-BR.md`, `README.es.md`), because
   Brazil and Latin America are a natural audience. They translate README.md and add nothing; a change
   to README.md is carried to both.
+
+## Opening screen: dark, product in motion (decided 2026-10-27)
+
+- **Why dark.** The window paints `#0f0f0e` before anything loads (`electron/main.ts` backgroundColor). The
+  old white film made every launch flash dark, white, dark. The opening (`#boot` in `app/index.html`, the
+  splash in `app/src/Splash.tsx` and the closing in `app/src/boot.ts`) uses that exact dark in every theme,
+  so nothing flashes between the window appearing and the app. The dark is the app's own tone.
+- **Why product in motion, built from the mark.** The opening is the mark (`app/build/icon.svg`) doing what
+  the product does: the three bars fill like meters while a token counter and its cost climb in step (reais
+  on *-BR locales, US dollars elsewhere, via `currency.ts`). Then the top bar takes the 45 degree cut (the
+  signature), the short bar lights in the accent `#d97757`, the mark settles, and the name is revealed
+  through a clip where the counter was, before everything dissolves into the app. Code-driven SVG + CSS, no
+  video, no dependency.
+- **Numbers are illustrative.** Fixed constants, labelled only "tokens" and a cost; never read from real
+  data and never presented as the person's usage.
+- **Timings.** Full, about 2 s, once a day: fill and count 0.1 to 1.0 s (staggered bars), cut and accent
+  1.0 to 1.4 s, name reveal 1.25 to 1.8 s, dissolve 0.5 s once the app is ready. Every other launch, about
+  0.6 s: the assembled mark, a quick accent sweep and the name. Hard cap 6 s whatever happens.
+- **Compositor only.** Only transform, opacity and clip-path animate; the counter writes text into two
+  fixed spans with no React render per frame.
+- **Reduced motion** (or motion turned off): the still mark and name, nothing counts.

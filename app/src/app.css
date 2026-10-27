@@ -428,28 +428,52 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 .top .ghost:hover .ico { color: var(--accent); }
 .private.on .ico { color: var(--accent); }
 
-/* opening screen: a white product film (Splash.tsx); deliberately white in both themes */
-.splash.film { pointer-events: none; --f-bg: #ffffff; --f-ink: #1d1d1f; --f-faint: #86868b; --f-acc: #c65d3b; background: var(--f-bg); color: var(--f-ink); font-family: -apple-system, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif; transition: opacity 600ms cubic-bezier(.4,0,.2,1), filter 600ms cubic-bezier(.4,0,.2,1); }
-.splash.film.leaving { opacity: 0; filter: blur(6px); transform: none; }
-.film-lines { position: absolute; inset: 0; display: grid; place-items: center; }
-.film-line { grid-area: 1 / 1; font-size: clamp(34px, 5.4vw, 72px); font-weight: 600; letter-spacing: -0.035em; opacity: 0; filter: blur(14px); transform: translateY(18px); }
-.film.full .l1 { animation: film-line 1100ms cubic-bezier(.2,.7,.2,1) 150ms both; }
-.film.full .l2 { animation: film-line 1100ms cubic-bezier(.2,.7,.2,1) 1100ms both; }
-@keyframes film-line {
-  0% { opacity: 0; filter: blur(14px); transform: translateY(18px); }
-  35%, 70% { opacity: 1; filter: blur(0); transform: none; }
-  100% { opacity: 0; filter: blur(10px); transform: translateY(-10px); }
+/* opening screen (Splash.tsx): the window's own dark (#0f0f0e, as electron/main.ts backgroundColor), fixed in
+   every theme so the launch never flashes. The mark's bars fill like meters with the token counter, the top bar
+   takes the cut, the short bar lights, the name is revealed. Only transform, opacity and clip-path animate. */
+.splash.film { pointer-events: none; gap: 26px; --f-bg: #0f0f0e; --f-ink: #ecebe6; --f-faint: #8f8d86; --f-acc: #d97757; --e: cubic-bezier(.2,.7,.2,1); background: var(--f-bg); color: var(--f-ink); font-family: -apple-system, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif; transition: opacity 500ms cubic-bezier(.4,0,.2,1), filter 500ms cubic-bezier(.4,0,.2,1); }
+.splash.film.leaving { opacity: 0; filter: blur(6px); transform: scale(1.015); }
+.film-logo { overflow: visible; }
+.film-logo .bar { fill: var(--f-ink); transform-box: fill-box; transform-origin: left center; }
+.film-logo .corner { fill: var(--f-ink); opacity: 0; }
+.film-logo .b3 rect:first-child { fill-opacity: 0.22; }
+.film-logo .lit { fill: var(--f-acc); }
+.film-logo .sweep { fill: var(--f-ink); opacity: 0; transform-box: fill-box; mix-blend-mode: soft-light; }
+/* full: meters fill (in step with the counter), the cut appears, the accent lights */
+.film.full .bar { animation: film-fill 900ms var(--e) both; }
+.film.full .b1 { animation-delay: 100ms; }
+.film.full .b2 { animation-delay: 220ms; animation-duration: 780ms; }
+.film.full .b3 { animation-delay: 340ms; animation-duration: 660ms; }
+.film.full .corner { opacity: 1; animation: film-cut 260ms var(--e) 1020ms both; }
+.film.full .lit { animation: film-lit 320ms var(--e) 1100ms both; }
+.film.full .sweep { animation: film-sweep 520ms var(--e) 1180ms both; }
+.film.full .film-logo { animation: film-settle 380ms var(--e) 1000ms both; }
+@keyframes film-fill { from { transform: scaleX(0.02); opacity: 0.35; } 12% { opacity: 1; } to { transform: scaleX(1); opacity: 1; } }
+@keyframes film-cut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translate(6px, -6px); } }
+@keyframes film-lit { from { opacity: 0; } to { opacity: 1; } }
+@keyframes film-sweep { 0% { opacity: 0; transform: translateX(0); } 15% { opacity: 0.9; } 100% { opacity: 0; transform: translateX(350%); } }
+@keyframes film-settle { 0% { transform: none; } 40% { transform: scale(1.04); } 100% { transform: none; } }
+/* the slot holds the counter, then the name revealed through a clip */
+.film-slot { display: grid; place-items: center; min-height: 64px; }
+.film-slot > * { grid-area: 1 / 1; }
+.film-count { display: flex; align-items: baseline; gap: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; animation: film-count 1300ms var(--e) both; }
+.film-num { font-size: clamp(26px, 3.6vw, 46px); font-weight: 600; letter-spacing: -0.03em; align-self: center; }
+.film-num small { font-size: 0.34em; font-weight: 500; letter-spacing: 0.02em; color: var(--f-faint); margin-left: 9px; }
+.film-num.cost { color: var(--f-acc); }
+.film-dot { align-self: center; width: 5px; height: 5px; border-radius: 50%; background: var(--f-faint); opacity: 0.6; }
+@keyframes film-count {
+  0% { opacity: 0; transform: translateY(8px); }
+  10%, 82% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-14px); }
 }
-.film-mark { display: grid; justify-items: center; gap: 14px; opacity: 0; animation: film-mark 900ms cubic-bezier(.2,.7,.2,1) both; }
-.film.full .film-mark { animation-delay: 2050ms; }
-.film.short .film-mark { animation-delay: 80ms; }
-@keyframes film-mark { from { opacity: 0; letter-spacing: 0.06em; filter: blur(8px); } to { opacity: 1; filter: blur(0); } }
-.film-name { font-size: clamp(28px, 3.6vw, 48px); font-weight: 600; letter-spacing: -0.03em; }
-.film-rule { display: block; height: 2px; width: 72px; background: var(--f-acc); transform: scaleX(0); animation: film-rule 700ms cubic-bezier(.2,.7,.2,1) both; animation-delay: inherit; }
-.film.full .film-rule { animation-delay: 2350ms; }
-.film.short .film-rule { animation-delay: 300ms; }
-@keyframes film-rule { to { transform: scaleX(1); } }
-.film-sub { font-size: 13px; color: var(--f-faint); letter-spacing: 0.01em; }
+.film-name { font-size: clamp(30px, 3.8vw, 50px); font-weight: 600; letter-spacing: -0.03em; clip-path: inset(0 100% 0 0); animation: film-reveal 560ms cubic-bezier(.7,0,.2,1) both; }
+.film.full .film-name { animation-delay: 1250ms; }
+.film.short .film-name { animation-delay: 60ms; animation-duration: 420ms; }
+.film.short .sweep { animation: film-sweep 460ms var(--e) 40ms both; }
+@keyframes film-reveal { from { clip-path: inset(0 100% 0 0); transform: translateY(6px); } to { clip-path: inset(0 0 0 0); transform: none; } }
+.film-sub { font-size: 13px; color: var(--f-faint); letter-spacing: 0.01em; opacity: 0; animation: film-lit 400ms var(--e) both; }
+.film.full .film-sub { animation-delay: 1500ms; }
+.film.short .film-sub { animation-delay: 200ms; }
 @media (prefers-reduced-motion: reduce) { .splash.film *, .splash.film { animation-duration: 1ms !important; animation-delay: 0s !important; transition-duration: 1ms !important; } }
 
 /* opening screen */
