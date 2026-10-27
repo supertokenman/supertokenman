@@ -1,4 +1,5 @@
 import { Steps } from './Steps'
+import { displayCurrency, symbolOf } from './currency'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { paramsOf, READ_MIN_PARAMS } from '../shared/params'
@@ -89,7 +90,7 @@ export function LocalModelSheet(props: { onClose: () => void; usdToBrl: number }
     }
   }, [props])
 
-  const money = (usd: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'BRL', maximumFractionDigits: 2 }).format(usd * props.usdToBrl)
+  const money = (usd: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: displayCurrency(), maximumFractionDigits: 2 }).format(usd * props.usdToBrl)
   const pick = async (m: string | null) => {
     await window.stm.small.set(m)
     setTest(null)

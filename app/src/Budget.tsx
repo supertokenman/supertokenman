@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { displayCurrency, symbolOf } from './currency'
 import { IconClose } from './icons'
 import { Chart } from './Chart'
 import type { Limits } from '../shared/budget'
@@ -24,7 +25,7 @@ export function BudgetSheet(props: { onClose: () => void; usdToBrl: number; pane
   const [warnAt, setWarnAt] = useState('80')
   const [saved, setSaved] = useState('')
   const rate = props.usdToBrl || 1
-  const money = (usd: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: 'BRL', maximumFractionDigits: 2 }).format(usd * rate)
+  const money = (usd: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: displayCurrency(), maximumFractionDigits: 2 }).format(usd * rate)
 
   useEffect(() => {
     void window.stm.budget.get().then((d) => {
@@ -61,7 +62,7 @@ export function BudgetSheet(props: { onClose: () => void; usdToBrl: number; pane
         </header>
         <div className="bg-body">
           <section className="bg-limits">
-            <div className="sp-label">Limits (R$, empty means none)</div>
+            <div className="sp-label">Limits ({symbolOf(displayCurrency())}, empty means none)</div>
             {FIELDS.map((f) => (
               <label key={f.key} className="bg-field">
                 <span className="bg-name">{f.label}</span>

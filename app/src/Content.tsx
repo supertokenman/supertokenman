@@ -1,4 +1,5 @@
 import { pickProjectFolder } from './FolderPicker'
+import { displayCurrency, formatMoney } from './currency'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LANGS } from '../shared/voices'
 import { STAGES, windowShare, type Piece, type Stage } from '../electron/content/pieces'
@@ -110,7 +111,7 @@ export function Content(props: { project: string; onProject: (dir: string) => vo
             <div><strong>{k(p.usage.cacheRead)}</strong><span>from cache</span></div>
             <div><strong>{p.usage.turns}</strong><span>turns</span></div>
             <div><strong>{windowShare(p.usage) != null ? `${windowShare(p.usage)!.toFixed(1)}%` : '–'}</strong><span>of the 5h window</span></div>
-            <div><strong>R$ {(p.usage.costUsd * props.usdToBrl).toFixed(2)}</strong><span>at API prices</span></div>
+            <div><strong>{formatMoney(p.usage.costUsd, displayCurrency(), props.usdToBrl)}</strong><span>at API prices</span></div>
             {p.voiceChars != null && <div><strong>{k(p.voiceChars)}</strong><span>ElevenLabs chars</span></div>}
           </div>
 
