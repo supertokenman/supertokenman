@@ -223,7 +223,9 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 .tip-body { color: var(--muted); font-size: 12px; }
 .composer { display: flex; align-items: flex-end; gap: 8px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 8px 8px 8px 14px; transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease); }
 .composer:focus-within { border-color: rgba(var(--accent-rgb), 0.6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12); }
-.composer textarea { flex: 1; resize: none; background: transparent; border: 0; outline: none; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.5; padding: 4px 0; max-height: 220px; }
+.composer textarea { flex: 1; resize: none; background: transparent; border: 0; outline: none; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.5; padding: 4px 0; max-height: 220px; field-sizing: content; overflow-y: auto; }
+/* grows with the text, not with a long placeholder in a narrow panel */
+.composer textarea:placeholder-shown { height: calc(1lh + 8px); overflow-y: hidden; }
 .composer textarea::placeholder { color: var(--faint); }
 .send { width: 28px; height: 28px; padding: 0; justify-content: center; border-radius: 8px; background: var(--accent); border-color: var(--accent); color: var(--on-accent); flex: none; }
 .send:hover { background: var(--accent-hover); border-color: var(--accent-hover); }

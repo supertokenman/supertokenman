@@ -133,7 +133,7 @@ Object.assign(results.launch, { windowMs: L.median(w), composerMs: L.median(c), 
   await l.win.keyboard.type('the quick brown fox jumps over the lazy dog, '.repeat(5).slice(0, 200), { delay: 30 })
   await sleep(500)
   const t = await l.win.evaluate(() => { const s = window.__perf; s.stop = true; return { frames: s.frames.slice(1), events: s.events } })
-  results.typing = { chars: 200, longestFrameMs: Math.max(0, ...t.frames), framesOver16: t.frames.filter((x) => x > 16.7).length, frames: t.frames.length, longestInputMs: Math.max(0, ...t.events) }
+  results.typing = { chars: 200, longestFrameMs: Math.max(0, ...t.frames), framesOver16: t.frames.filter((x) => x > 16.7).length, framesOver33: t.frames.filter((x) => x > 33.4).length, frames: t.frames.length, longestInputMs: Math.max(0, ...t.events) }
   say(`typing: ${JSON.stringify(results.typing)}`)
   await quit(l)
 }

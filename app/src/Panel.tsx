@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { StateMark } from './StateMark'
 import { cacheLeft, coldExtraUsd } from '../shared/cache'
 import { Thinking } from './Thinking'
@@ -284,15 +284,8 @@ export function Panel(props: {
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })
   }, [s.lines.length, s.streaming, s.asks.length, tab])
-  // the composer grows with its text, up to a third of the panel
-  useLayoutEffect(() => {
-    const el = box.current
-    if (!el) return
-    el.style.height = '0px'
-    el.style.height = `${Math.min(el.scrollHeight, 220)}px`
-    // a scrollbar only once the text outgrows the box
-    el.style.overflowY = el.scrollHeight > 220 ? 'auto' : 'hidden'
-  }, [draft])
+  // the composer grows with its text, up to a third of the panel: done in CSS (field-sizing), because
+  // measuring scrollHeight here forced three layouts of the whole window on every key
   useEffect(() => {
     if (props.focused) box.current?.focus()
   }, [props.focused])

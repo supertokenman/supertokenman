@@ -79,6 +79,7 @@ export function render(p, cmp, prevVersion) {
     ['Memory per added panel', `${f(r.idle.perPanelMb, 0)} MB`],
     ['Typing 200 characters: longest frame', `${f(r.typing.longestFrameMs, 0)} ms`],
     ['Typing: frames over 16 ms', `${r.typing.framesOver16 ?? '-'}`],
+    ['Typing: frames over 33 ms (a frame or more dropped)', `${r.typing.framesOver33 ?? '-'}`],
     ['Typing: longest input to paint', `${f(r.typing.longestInputMs, 0)} ms`],
     ['Renderer JS and CSS in the app (dist)', `${f(r.size.distKb, 0)} KB`],
     ['Start-up chunks, gzip', `${f(r.size.startupGzipKb, 0)} KB`],
@@ -114,6 +115,7 @@ ${cmp.map((c) => `| ${c.marked ? '**' + c.key + '**' : c.key} | ${f(c.before, 2)
   CPU and memory are \`ps\` samples of the app and every process under it, once a second, averaged.
 - Typing: 200 characters typed into the composer, 30 ms apart. Frames are gaps between
   \`requestAnimationFrame\` callbacks; input to paint is the Event Timing API's longest event duration.
+  On a 60 Hz screen a frame of 16.8 ms is jitter, not a dropped frame: read "over 33 ms" for those.
 - Sizes: \`app.asar\` listing (dist only), gzip of the files index.html loads at start, \`du\` of the .app.
 `
   return md

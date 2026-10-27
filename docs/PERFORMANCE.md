@@ -36,6 +36,38 @@ on a Mac with a GPU will be lower; the before and after are on the same machine.
 - `STM_IPC_COUNT=1`: logs, every 10 s, how often each IPC channel ran in both directions.
 - In DevTools, Performance > idle for 5 s: the Layout and Recalculate Style counts should stay near zero.
 
+## Typing in the composer (2026-10-27)
+
+The first release numbers (0.1.8, `perf-mac`) had typing 200 characters at 238 frames over 16 ms, a
+longest frame of 133 ms and a longest input to paint of 184 ms.
+
+What was wrong: the composer grew with its text by setting its height to 0, reading `scrollHeight`, and
+setting it again, in a layout effect on every change of the draft. Each read forced a synchronous layout
+of the whole window, all panels included: three layouts per key. The composer now grows in CSS
+(`field-sizing: content`, still capped at 220 px, one line while the placeholder shows), and the effect
+is gone.
+
+Before and after on the same Linux machine under xvfb, CPU throttled 4x over CDP to come closer to a
+shared runner, `node app/scripts/perf-typing.mjs --throttle 4` (per key, over 200 keys):
+
+| | Layouts | Layout time | Task time | Longest frame | Longest input to paint |
+|---|---|---|---|---|---|
+| 1 panel, before | 3.02 | 3.81 ms | 24.0 ms | 50 ms | 136 to 144 ms |
+| 1 panel, after | 1.02 | 1.84 ms | 19.8 ms | 33 ms | 136 ms |
+| 4 panels, before | 3.03 | 3.70 ms | 24.5 ms | 33 to 50 ms | 64 to 72 ms |
+| 4 panels, after | 1.02 | 1.91 ms | 21.9 ms | 33 ms | 56 ms |
+
+The forced layouts are gone; the rest of the time per key is the panel's React render (about 1 ms per
+key unthrottled) and painting. The longest input to paint with one panel did not move: it is one slow
+event, not the typing itself. Not yet measured on a Mac: the next `perf-mac` run shows it.
+
+"Frames over 16 ms" counts jitter on a 60 Hz screen (a 16.8 ms frame is not a dropped one), so
+`perf-mac` now also records frames over 33 ms.
+
+Held in CI: the `network` job types 200 characters into the built app and fails above 1.5 layouts per
+key (`perf-typing.mjs --max-layouts-per-key 1.5`). It counts layouts, not time, so a slow runner does
+not fail it; on the old code it reads 3.02 and fails.
+
 ## Measured on each release
 
 `.github/workflows/perf-mac.yml` runs after each published release, and by hand from the Actions tab
