@@ -18,6 +18,6 @@ export const cacheLeft = (lastTurnAt: number, ttl: number, now = Date.now()) => 
 
 /** What re-sending a context of this size costs beyond reading it warm. */
 export function coldExtraUsd(tokens: number, model = '') {
-  const [, input, cached] = priceOf(model)
+  const [, input, cached] = priceOf(model, tokens)
   return (tokens * (input * 1.25 - cached)) / 1e6
 }

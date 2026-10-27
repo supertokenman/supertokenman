@@ -1,5 +1,7 @@
 import { SandboxButton } from './Sandbox'
 
+import { effortsOf, MODEL_LIST, type Effort } from '../shared/models'
+import { ModelMenu } from './ModelMenu'
 import { BranchMark, TryWaysSheet } from './Worktree'
 
 import { FanoutSheet } from './Fanout'
@@ -203,12 +205,7 @@ const HealthSheet = lazy(() => import('./Health').then((m) => ({ default: m.Heal
 const SecretsSheet = lazy(() => import('./Secrets').then((m) => ({ default: m.SecretsSheet })))
 const CloudSheet = lazy(() => import('./Cloud').then((m) => ({ default: m.CloudSheet })))
 
-const MODELS = [
-  { id: '', label: 'Default model' },
-  { id: 'claude-opus-5-5', label: 'Opus 5.5' },
-  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
-  { id: 'claude-haiku-5-5', label: 'Haiku 5.5' },
-]
+const MODELS = [{ id: '', label: 'Default model' }, ...MODEL_LIST.map(({ id, label }) => ({ id, label }))]
 
 
 /** The time, refreshed every second while a round runs and every 30 s otherwise; frozen while hidden. */
@@ -771,7 +768,7 @@ export function App() {
   const openedCwd = useRef<Record<string, string>>({})
   const open = useCallback(async (cwd?: string, resume?: string, persona?: string, sandbox?: boolean, extra?: { worktree?: { label: string; group?: string; attempt?: number; of?: number }; model?: string; resumeAt?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string } }) => {
     const m = extra?.model ?? model
-    const r = await window.stm.newSession({ cwd, model: m, resume, resumeAt: extra?.resumeAt, remote: extra?.remote, persona, effort: effort || undefined, sandbox, worktree: extra?.worktree })
+    const r = await window.stm.newSession({ cwd, model: m, resume, resumeAt: extra?.resumeAt, remote: extra?.remote, persona, effort: effortsOf(m).includes(effort as Effort) ? effort : undefined, sandbox, worktree: extra?.worktree })
     openedCwd.current[r.sid] = r.cwd
     dispatch({ kind: 'open', sid: r.sid, cwd: r.cwd, model: r.persona?.model || m, persona: r.persona, sandbox: r.sandbox, remote: r.remote, worktree: r.worktree })
     // an integration turned on without its credential: say so in the new panel
@@ -1238,24 +1235,7 @@ export function App() {
           <span className="brand-name">SuperTokenMan</span>
         </div>
         <div className="top-actions">
-          <label className="select">
-            <span className="select-label">New panels</span>
-            <select value={model} onChange={(e) => setModel(e.target.value)}>
-              {MODELS.map((m) => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="select" title="How hard new panels think. Lower spends less of your plan on simple work; higher for hard problems.">
-            <select value={effort} onChange={(e) => setEffort(e.target.value)} aria-label="Effort for new panels">
-              <option value="">Effort: default</option>
-              <option value="low">Effort: low</option>
-              <option value="medium">Effort: medium</option>
-              <option value="high">Effort: high</option>
-              <option value="xhigh">Effort: extra high</option>
-              <option value="max">Effort: max</option>
-            </select>
-          </label>
+          <ModelMenu model={model} effort={effort} onModel={setModel} onEffort={setEffort} />
           <button className="ghost" onClick={() => void open(p.focus ? p.byId[p.focus]?.cwd : undefined)} title="New panel in the same folder (Cmd+T)">
             <IconPanel />
           </button>

@@ -7,15 +7,10 @@ import { STYLE_IDS, STYLES, type StyleId } from '../shared/styles'
 import { AUTONOMY, type Autonomy } from '../shared/autonomy'
 import type { IntegrationInfo } from './bridge'
 import { clean } from './errors'
+import { MAIN_MODELS, MORE_MODELS, modelLabel as sharedLabel } from '../shared/models'
 import { IntegrationMark } from './IntegrationMark'
 
-const MODEL_OPTIONS = [
-  { id: '', label: 'App default' },
-  { id: 'claude-opus-5-5', label: 'Opus 5.5' },
-  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
-  { id: 'claude-haiku-5-5', label: 'Haiku 5.5' },
-]
-const modelLabel = (id: string) => MODEL_OPTIONS.find((m) => m.id === id)?.label ?? id
+const modelLabel = (id: string) => (id ? sharedLabel(id) : 'App default')
 
 const blank = (): Persona => ({ id: '', name: '', color: COLORS[Math.floor(Math.random() * COLORS.length)]!, model: '', integrations: [], instructions: '' })
 
@@ -137,9 +132,15 @@ function Editor(props: { p: Persona; ints: IntegrationInfo[]; onSave: (p: Person
           ))}
         </div>
         <select value={p.model} onChange={(e) => set({ model: e.target.value })}>
-          {MODEL_OPTIONS.map((m) => (
+          <option value="">App default</option>
+          {MAIN_MODELS.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
+          <optgroup label="More models">
+            {MORE_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </optgroup>
         </select>
       </div>
       <div className="group">What it may do</div>

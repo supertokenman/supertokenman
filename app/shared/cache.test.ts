@@ -14,6 +14,6 @@ describe('prompt cache', () => {
   })
   it('prices a cold turn as a write at 1.25x input minus the warm read', () => {
     expect(coldExtraUsd(1_000_000, 'claude-haiku-4-5')).toBeCloseTo(1.15)
-    expect(coldExtraUsd(100_000, 'claude-opus-5-5')).toBeCloseTo(0.575)
+    expect(coldExtraUsd(100_000, 'claude-opus-5-5')).toBeCloseTo(0.48)
   })
 })
