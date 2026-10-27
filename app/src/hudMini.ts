@@ -28,10 +28,10 @@ export function hudMini(v: HudView) {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">` +
     `<path d="M.5 .5 H${W - cut - 0.5} L${W - 0.5} ${cut + 0.5} V${H - 0.5} H.5 Z" fill="${C.ink}" stroke="${C.line}"/>` +
-    `<text x="12" y="13" font-size="6.5" fill="${C.gray}" ${MONO}>CONTEXT</text>` +
-    bar(56, 8, 186, 5, left == null ? 1 : left / 100, C.orange) +
+    `<text x="12" y="13" font-size="6.5" fill="${C.gray}" ${MONO}>CONTEXT LEFT</text>` +
+    bar(78, 8, 164, 5, left == null ? 1 : left / 100, C.orange) +
     `<text x="250" y="13.5" font-size="8.5" fill="${left != null && left < 25 ? C.deep : C.cream}" ${NUM}>${left == null ? '--' : `${Math.round(left)}%`}</text>` +
-    `<text x="250" y="30" font-size="6.5" fill="${C.gray}" ${MONO}>${esc(v.ctxTokens)}</text>` +
+    `<text x="250" y="30" font-size="6.5" fill="${C.gray}" ${MONO}>${esc(v.ctxUsed != null ? `${v.ctxTokens} of ${v.ctxWindow}` : v.ctxTokens)}</text>` +
     win(12, '5H', v.five) +
     win(96, '7D', v.seven) +
     `<text x="186" y="30" font-size="6.5" fill="${C.gray}" ${MONO}>CACHE</text>` +
