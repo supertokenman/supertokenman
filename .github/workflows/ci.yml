@@ -113,3 +113,6 @@ jobs:
           xvfb-run -a node scripts/perf-scroll.mjs --max-drawn 300 --max-over-33 1000
           # an idle window with four panels must not lay out (a count per second, not a time)
           xvfb-run -a node scripts/perf-idle.mjs --panels 4 --seconds 20 --max-layouts-per-s 0.5
+          # each panel opened costs memory (its Claude Code process, about 270 MB, plus about 8 MB of the
+          # app's own); loose so a shared runner passes, it catches a panel that holds much more
+          xvfb-run -a node scripts/perf-memory.mjs --max-mb-per-panel 450

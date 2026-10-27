@@ -215,6 +215,59 @@ count, not a time; anything that animates or polls into the DOM shows up at 1 pe
 
     cd app && npm run build && xvfb-run -a node scripts/perf-idle.mjs [--panels 4] [--seconds 20]
 
+## Size and memory (2026-10-27)
+
+### Size
+
+Every package in `dependencies` was checked against what the builds load: the main process bundle
+(`dist-electron/electron/app.mjs`, built by esbuild with `packages: 'external'`, so its imports are
+the packages the packaged app needs at run time), the preloads, and `cli/`. All of them are imported
+from main except the three xterm addons (`@xterm/addon-search`, `-web-links`, `-webgl`): only
+`src/TermView.tsx` imports them, so Vite bundles them into the renderer and the copies in
+`node_modules` were shipped in the asar for nothing. They moved to `devDependencies` next to
+`@xterm/xterm`. Nothing was unused, so nothing was dropped.
+
+electron-builder now ships only the Chromium locales `en-US`, `en-GB`, `pt-BR`, `pt-PT`, `es` and
+`es-419` (`electronLanguages`; the UI is English, Chromium falls back to `en-US`), and leaves out of
+the asar, under `node_modules` only, source maps, Markdown, `.d.ts` files and `test`/`tests`/
+`__tests__`/`example(s)` folders.
+
+`electron-builder --linux dir`, `release/linux-unpacked`:
+
+| | Before | After |
+|---|---|---|
+| Whole directory | 633.4 MB | 614.2 MB |
+| `app.asar` | 37.9 MB (4755 entries) | 27.1 MB (3677 entries) |
+| `locales/` | 9.0 MB (55 files) | 0.7 MB (6 files) |
+| `app.asar.unpacked` | 298.7 MB | 298.6 MB |
+
+Most of what is left is the Claude Code binary (`claude-agent-sdk-linux-x64`, 292 MB unpacked),
+which the app runs, and Electron itself. The packaged directory still launches under xvfb to a
+usable composer. The Mac dmg size is measured per release by `perf-mac`.
+
+### Memory
+
+`app/scripts/perf-memory.mjs` opens the built app with 1 panel, settles 10 s, forces a GC and
+measures; opens 3 more (Cmd+T), settles and measures again. Resident memory is the sum of `VmRSS`
+over the whole process tree under Electron's main (read from `/proc`; `app.getAppMetrics()` on other
+systems), the JS heap is the renderer's `Runtime.getHeapUsage` after a GC. Linux container, xvfb,
+three runs:
+
+| | 1 panel | 4 panels | Per panel |
+|---|---|---|---|
+| Process tree RSS | 1099 to 1131 MB | 1885 to 1964 MB | 262 to 278 MB |
+| of which Claude Code (`claude`) | 272 MB | 1082 MB | 270 MB |
+| of which the app's own processes | 859 MB | 883 MB | 8 MB |
+| Renderer JS heap | 5.4 to 6.0 MB | 6.6 MB | 0.2 to 0.4 MB |
+
+A panel is cheap for the app; nearly all of its cost is the Claude Code process its session runs.
+No leak showed up: the heap stays flat after a GC. The fixed part (about 860 MB with one panel) is
+Electron's main, GPU, utility and zygote processes and the window's renderer.
+
+Held in CI: the `network` job runs `perf-memory.mjs --max-mb-per-panel 450`.
+
+    cd app && npm run build && xvfb-run -a node scripts/perf-memory.mjs [--settle 10] [--max-mb-per-panel 450]
+
 ## Measured on each release
 
 `.github/workflows/perf-mac.yml` runs after each published release, and by hand from the Actions tab
