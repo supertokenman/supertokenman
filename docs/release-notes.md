@@ -1,13 +1,11 @@
-Fixes that were promised in 0.1.4 and missed, and clearer meters.
+No integration is on until you turn it on.
 
-- Switching the model of a panel that was asleep no longer fails with "Query closed before response
-  received"; the panel wakes with the new model. (Listed in 0.1.4, but it had not shipped.)
-- In a narrow panel the tabs and the close button always show whole. (Also listed in 0.1.4.)
-- The update notice no longer covers the composer: a small card under the top bar, with the version
-  and a progress bar.
-- The panel meter says "CONTEXT LEFT" and shows tokens of the window ("34k of 1.0M").
-- A CI job on a Mac now checks each release: download, signature, a decoy secret and every host the
-  app reaches. This is its first release; its report is attached here once it passes.
+- Up to 0.1.6, a new profile started with two integrations on, Context7 and Cloudflare docs, so
+  Claude Code reached mcp.context7.com and docs.mcp.cloudflare.com without being asked. The Security
+  page said integrations reach the network only once turned on. Now none is on by default. If you
+  never chose them, turn them off in Connections; a profile that already has them keeps its choice.
+- Found by the Mac proof that CI now runs on every release. Its report for this release is attached
+  here once it passes.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
