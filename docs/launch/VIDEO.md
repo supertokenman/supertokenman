@@ -16,11 +16,11 @@ speed it up with a visible "2x" in the corner.
 
 | Time | On screen | Caption (bottom, plain text) |
 |---|---|---|
-| 0-3 s | The app opens to an empty window; Cmd+N three times; three panels fan out as cards. | Three Claude Code sessions, side by side. |
-| 3-9 s | Each panel gets a short task: fix the failing test / update the README / explain a file. Each opens in its own worktree (the folder name shows it). | Each one in its own git worktree. |
+| 0-3 s | Cmd+K, "New panel in a worktree", three times; three panels fan out as cards. | Three Claude Code sessions, side by side. |
+| 3-9 s | Each panel gets a short task: fix the failing test / update the README / explain a file. The folder name in each panel bar shows its worktree. | Each one in its own git worktree. |
 | 9-15 s | Panel 1 asks to run `npm test`. The approval appears; the pointer clicks Allow. | Commands wait for you. |
-| 15-21 s | The meter in the top bar ticks while the panels work; hover shows the cost of the last turn. | The cost of every turn, as it happens. |
-| 21-26 s | Panel 1 finishes: the test passes; the diff opens in the review sheet. | Review the diff before it lands. |
+| 15-21 s | The total cost in the top bar ticks up while the panels work. | What it costs, as it happens. |
+| 21-26 s | Panel 1 finishes: the test passes; its diff shows in the panel, and one line gets a review comment. | Review the diff before it lands. |
 | 26-30 s | End card: the bars mark, "SuperTokenMan", "Free and open source. supertokenman.com", "Not affiliated with Anthropic." | |
 
 ## Rules for the captions
