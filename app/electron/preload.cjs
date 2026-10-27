@@ -1047,6 +1047,7 @@ contextBridge.exposeInMainWorld('stm', {
   killProcess: (pid, force) => ipcRenderer.invoke('ports:kill', pid, force),
   git: (op, sid, ...args) => ipcRenderer.invoke(`git:${op}`, sid, ...args),
   pickFolder: () => ipcRenderer.invoke('session:pick'),
+  findRepos: () => ipcRenderer.invoke('folders:repos'),
   setPrivate: (on) => ipcRenderer.invoke('privacy:set', on),
   runShell: (sid, command) => ipcRenderer.invoke('shell:run', sid, command),
   stopShell: (sid, id) => ipcRenderer.invoke('shell:stop', sid, id),

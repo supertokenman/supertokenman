@@ -1,3 +1,4 @@
+import { pickProjectFolder } from './FolderPicker'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LANGS } from '../shared/voices'
 import { STAGES, windowShare, type Piece, type Stage } from '../electron/content/pieces'
@@ -58,7 +59,7 @@ export function Content(props: { project: string; onProject: (dir: string) => vo
           <span className="faint">Project</span>
           <code title={props.project}>{folder || 'no folder'}</code>
           {engine && <span className={`pill ${engine.ready ? '' : 'warn'}`} title={engine.note}>{engine.label}</span>}
-          <button className="ghost small" onClick={() => void window.stm.pickFolder().then((d) => d && props.onProject(d))}>Change</button>
+          <button className="ghost small" onClick={() => void pickProjectFolder('Project for this content').then((d) => d && props.onProject(d))}>Change</button>
         </div>
         {engine && !engine.ready && (
           <div className="ct-engine">

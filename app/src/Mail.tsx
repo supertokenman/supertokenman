@@ -1,3 +1,4 @@
+import { Steps } from './Steps'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { IconClose } from './icons'
 import type { Folder, MailItem, MailMessage } from '../electron/mail/outlook'
@@ -153,40 +154,51 @@ export function MailSheet(props: { onClose: () => void; onUnread?: (n: number) =
           <div className="mail-setup">
             {acct === 'outlook' ? (
             <div className="mail-setup-card">
-              <div className="mail-setup-title">Connect Outlook</div>
-              <p className="faint">Your mail and calendar stay with Microsoft; this app reads them through Microsoft Graph, with Microsoft’s own sign-in. Once, you register a free app entry so the sign-in knows this app:</p>
-              <ol className="steps">
-                <li><span>Open App registrations and choose <b>New registration</b>. A personal account may be asked to create a free Azure account first.</span><button className="ghost small" onClick={() => void window.stm.setupOpen('https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade')}>Open</button></li>
-                <li><span>Name it <b>SuperTokenMan</b>. Account types: <b>any organizational directory and personal Microsoft accounts</b>.</span></li>
-                <li><span>Redirect URI: platform <b>Public client/native (mobile and desktop)</b>, value</span><code>{st.redirect}</code><button className="ghost small" onClick={() => void navigator.clipboard.writeText(st.redirect)}>Copy</button></li>
-                <li><span>Register, then copy the <b>Application (client) ID</b> here.</span></li>
-              </ol>
-              <div className="biz-row">
-                <input placeholder="Application (client) ID" value={clientId} onChange={(e) => setClientId(e.target.value)} spellCheck={false} />
-                <button className="primary small" disabled={!clientId.trim() || Boolean(busy)} onClick={() => void act('connect', async () => (await window.stm.mail.connect('outlook', clientId), setSt(await window.stm.mail.status())))}>
-                  {busy === 'connect' ? <span className="spinner" /> : 'Sign in with Microsoft'}
-                </button>
-              </div>
-              <p className="faint mail-small">Tokens are saved encrypted in this Mac’s keychain and used only by the app’s own process; the window and Claude never see them. Permissions asked: read and send your mail, read your calendar, your name and address.</p>
+              <Steps
+                title="Connect Outlook"
+                steps={[
+                  { id: 'open', text: <>Open App registrations, choose <b>New registration</b>.</>, why: 'Your mail and calendar stay with Microsoft; this app reads them through Microsoft Graph, with Microsoft’s own sign-in. This one free app entry lets that sign-in know this app. A personal account may be asked to create a free Azure account first.', open: { url: 'https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade' } },
+                  { id: 'name', text: <>Name it <b>SuperTokenMan</b>. Accounts: <b>any organizational directory and personal Microsoft accounts</b>.</> },
+                  { id: 'redirect', text: <>Redirect URI, platform <b>Public client/native (mobile and desktop)</b>:</>, copy: st.redirect },
+                  { id: 'id', text: <>Register, then paste the <b>Application (client) ID</b>.</>, fields: [{ value: clientId, set: setClientId, placeholder: 'Application (client) ID' }] },
+                  {
+                    id: 'sign',
+                    text: 'Sign in with Microsoft.',
+                    why: 'Permissions asked: read and send your mail, read your calendar, your name and address.',
+                    done: false,
+                    action: (
+                      <button className="primary small" disabled={!clientId.trim() || Boolean(busy)} onClick={() => void act('connect', async () => (await window.stm.mail.connect('outlook', clientId), setSt(await window.stm.mail.status())))}>
+                        {busy === 'connect' ? <span className="spinner" /> : 'Sign in with Microsoft'}
+                      </button>
+                    ),
+                  },
+                ]}
+                footer={<span>Tokens stay encrypted in this Mac’s keychain. The window and Claude never see them.</span>}
+              />
             </div>
             ) : (
             <div className="mail-setup-card">
-              <div className="mail-setup-title">Connect Gmail</div>
-              <p className="faint">Your mail and calendar stay with Google; this app reads them through Google’s APIs, with Google’s own sign-in. Once, you create a free OAuth client so the sign-in knows this app:</p>
-              <ol className="steps">
-                <li><span>In Google Cloud, create a project and enable the <b>Gmail API</b> and the <b>Google Calendar API</b>.</span><button className="ghost small" onClick={() => void window.stm.setupOpen('https://console.cloud.google.com/apis/library/gmail.googleapis.com')}>Open</button></li>
-                <li><span>OAuth consent screen: <b>External</b>, add yourself under <b>Test users</b>. While the app is in testing, Google asks you to sign in again every 7 days.</span><button className="ghost small" onClick={() => void window.stm.setupOpen('https://console.cloud.google.com/auth/overview')}>Open</button></li>
-                <li><span>Credentials, <b>Create OAuth client ID</b>, type <b>Desktop app</b>. Its redirect is this Mac:</span><code>{st.googleRedirect}</code><button className="ghost small" onClick={() => void window.stm.setupOpen('https://console.cloud.google.com/apis/credentials')}>Open</button></li>
-                <li><span>Copy the <b>client ID</b> and <b>client secret</b> here.</span></li>
-              </ol>
-              <div className="biz-row">
-                <input placeholder="Client ID (…apps.googleusercontent.com)" value={clientId} onChange={(e) => setClientId(e.target.value)} spellCheck={false} />
-                <input placeholder="Client secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} spellCheck={false} />
-                <button className="primary small" disabled={!clientId.trim() || !secret.trim() || Boolean(busy)} onClick={() => void act('connect', async () => (await window.stm.mail.connect('gmail', clientId, secret), setSecret(''), setSt(await window.stm.mail.status())))}>
-                  {busy === 'connect' ? <span className="spinner" /> : 'Sign in with Google'}
-                </button>
-              </div>
-              <p className="faint mail-small">Tokens are saved encrypted in this Mac’s keychain and used only by the app’s own process; the window and Claude never see them. Permissions asked: read, label and send your mail, read your calendar, your address.</p>
+              <Steps
+                title="Connect Gmail"
+                steps={[
+                  { id: 'apis', text: <>Create a Google Cloud project, enable the <b>Gmail API</b> and <b>Google Calendar API</b>.</>, why: 'Your mail and calendar stay with Google; this app reads them through Google’s APIs, with Google’s own sign-in. This one free OAuth client lets that sign-in know this app.', open: { url: 'https://console.cloud.google.com/apis/library/gmail.googleapis.com' } },
+                  { id: 'consent', text: <>Consent screen: <b>External</b>, add yourself under <b>Test users</b>.</>, why: 'While the app is in testing, Google asks you to sign in again every 7 days.', open: { url: 'https://console.cloud.google.com/auth/overview' } },
+                  { id: 'client', text: <><b>Create OAuth client ID</b>, type <b>Desktop app</b>. Its redirect is this Mac:</>, copy: st.googleRedirect, open: { url: 'https://console.cloud.google.com/apis/credentials' } },
+                  { id: 'keys', text: <>Paste the <b>client ID</b> and <b>client secret</b>.</>, fields: [{ value: clientId, set: setClientId, placeholder: 'Client ID (…apps.googleusercontent.com)' }, { value: secret, set: setSecret, placeholder: 'Client secret', secret: true }] },
+                  {
+                    id: 'sign',
+                    text: 'Sign in with Google.',
+                    why: 'Permissions asked: read, label and send your mail, read your calendar, your address.',
+                    done: false,
+                    action: (
+                      <button className="primary small" disabled={!clientId.trim() || !secret.trim() || Boolean(busy)} onClick={() => void act('connect', async () => (await window.stm.mail.connect('gmail', clientId, secret), setSecret(''), setSt(await window.stm.mail.status())))}>
+                        {busy === 'connect' ? <span className="spinner" /> : 'Sign in with Google'}
+                      </button>
+                    ),
+                  },
+                ]}
+                footer={<span>Tokens stay encrypted in this Mac’s keychain. The window and Claude never see them.</span>}
+              />
             </div>
             )}
           </div>

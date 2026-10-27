@@ -1,3 +1,4 @@
+import { Steps } from './Steps'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { IconClose } from './icons'
 import type { Comment, NetworkId, Post, Profile } from '../electron/social/core'
@@ -351,27 +352,35 @@ function Accounts(props: { nets: SocialStatus[]; onChange: () => void; onErr: (e
           {x.can.note && <div className="biz-note">{x.can.note}</div>}
           {open === x.id && (
             <div className="biz-setup">
-              <ol className="steps">
-                {x.steps.map((s, i) => (
-                  <li key={i}><span>{s.label}</span><button className="ghost small" onClick={() => void window.stm.setupOpen(s.url)}>Open</button></li>
-                ))}
-              </ol>
-              {x.oauth && (
-                <>
-                  <div className="biz-redirect"><span className="faint">Redirect URL</span><code>{x.redirect}</code><button className="ghost small" onClick={() => void navigator.clipboard.writeText(x.redirect ?? '')}>Copy</button></div>
-                  <div className="biz-row">
-                    <input placeholder={x.id === 'tiktok' ? 'Client key' : 'Client ID'} value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} />
-                    <input placeholder="Client secret" type="password" value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} />
-                    <button className="primary small" disabled={!form.id || busy} onClick={() => void connect(x, 'oauth')}>{busy ? <span className="spinner" /> : 'Sign in'}</button>
-                  </div>
-                  <div className="faint biz-or">or paste an access token</div>
-                </>
-              )}
-              <div className="biz-row">
+              <Steps
+                steps={[
+                  ...x.steps.map((s, i) => ({ id: `s${i}`, text: s.label, open: { url: s.url } })),
+                  ...(x.oauth
+                    ? [
+                        { id: 'redirect', text: 'Redirect URL for the app entry:', copy: x.redirect ?? '' },
+                        { id: 'keys', text: 'Paste its keys, then sign in.', fields: [{ value: form.id, set: (v: string) => setForm({ ...form, id: v }), placeholder: x.id === 'tiktok' ? 'Client key' : 'Client ID' }, { value: form.secret, set: (v: string) => setForm({ ...form, secret: v }), placeholder: 'Client secret', secret: true }] },
+                        { id: 'sign', text: <>Sign in with {x.name}.</>, done: false, action: <button className="primary small" disabled={!form.id || busy} onClick={() => void connect(x, 'oauth')}>{busy ? <span className="spinner" /> : 'Sign in'}</button> },
+                      ]
+                    : [
+                        {
+                          id: 'token',
+                          text: x.id === 'bluesky' ? 'Paste your handle and an app password.' : x.id === 'mastodon' ? 'Paste your server and an access token.' : 'Paste the access token.',
+                          done: false,
+                          fields: [
+                            ...(x.id === 'bluesky' || x.id === 'mastodon' ? [{ value: form.id, set: (v: string) => setForm({ ...form, id: v }), placeholder: x.id === 'bluesky' ? 'Handle, like you.bsky.social' : 'Server, like mastodon.social' }] : []),
+                            { value: form.token, set: (v: string) => setForm({ ...form, token: v }), placeholder: x.id === 'bluesky' ? 'App password (xxxx-xxxx-xxxx-xxxx)' : 'Access token', secret: true },
+                          ],
+                          action: <button className="primary small" disabled={!form.token || ((x.id === 'bluesky' || x.id === 'mastodon') && !form.id) || busy} onClick={() => void connect(x, 'token')}>{busy ? <span className="spinner" /> : 'Save token'}</button>,
+                        },
+                      ]),
+                ]}
+              />
+              {x.oauth && <div className="faint biz-or">or paste an access token</div>}
+              {x.oauth && <div className="biz-row">
                 {(x.id === 'bluesky' || x.id === 'mastodon') && <input placeholder={x.id === 'bluesky' ? 'Handle, like you.bsky.social' : 'Server, like mastodon.social'} value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} spellCheck={false} />}
                 <input placeholder={x.id === 'bluesky' ? 'App password (xxxx-xxxx-xxxx-xxxx)' : 'Access token'} type="password" value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })} />
                 <button className={x.oauth ? 'ghost small' : 'primary small'} disabled={!form.token || ((x.id === 'bluesky' || x.id === 'mastodon') && !form.id) || busy} onClick={() => void connect(x, 'token')}>{busy ? <span className="spinner" /> : 'Save token'}</button>
-              </div>
+              </div>}
               <div className="faint biz-note">Saved encrypted in this Mac’s keychain. Only the app’s main process uses it; the window and Claude never see it.</div>
             </div>
           )}

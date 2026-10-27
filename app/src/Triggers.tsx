@@ -1,3 +1,4 @@
+import { pickProjectFolder } from './FolderPicker'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import type { Persona } from '../shared/personas'
@@ -134,7 +135,7 @@ function Editor(props: { t: Trigger; personas: Persona[]; onSave: (t: Trigger) =
       <div className="trig-folder">
         <span className="faint">Folder</span>
         <code>{t.cwd || 'the focused panel’s folder'}</code>
-        <button className="ghost small" onClick={() => void window.stm.pickFolder().then((f) => f && set({ cwd: f }))}>Change</button>
+        <button className="ghost small" onClick={() => void pickProjectFolder('Folder the trigger runs in').then((f) => f && set({ cwd: f }))}>Change</button>
       </div>
       <label className="trig-gate">
         <input type="checkbox" checked={t.gate === true} onChange={(e) => set({ gate: e.target.checked })} />
