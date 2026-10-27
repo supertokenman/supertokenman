@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { IconClose } from './icons'
 import { toHtml, toMarkdown, turnsOf, type ExLine } from '../shared/sessionexport'
+import { Checkbox, NumberField } from './ui'
 
 /** Export the conversation for a pull request or an issue: credentials masked, paths shortened, nothing sent. */
 export function ExportSessionSheet(props: { lines: ExLine[]; cwd: string; home: string; onClose: () => void }) {
@@ -23,9 +24,9 @@ export function ExportSessionSheet(props: { lines: ExLine[]; cwd: string; home: 
         </header>
         <div className="ar-pad">
           <div className="ob-row">
-            <label className="se-num">From turn <input type="number" min={1} max={n} value={from} onChange={(e) => setFrom(Math.min(Number(e.target.value) || 1, to))} /></label>
-            <label className="se-num">to <input type="number" min={1} max={n} value={to} onChange={(e) => setTo(Math.max(Math.min(Number(e.target.value) || n, n), from))} /></label>
-            <label className="ca-toggle"><input type="checkbox" checked={tools} onChange={(e) => setTools(e.target.checked)} />Tools and commands</label>
+            <label className="se-num">From turn <NumberField min={1} max={n} value={from} onChange={(e) => setFrom(Math.min(Number(e.target.value) || 1, to))} /></label>
+            <label className="se-num">to <NumberField min={1} max={n} value={to} onChange={(e) => setTo(Math.max(Math.min(Number(e.target.value) || n, n), from))} /></label>
+            <label className="ca-toggle"><Checkbox checked={tools} onChange={(e) => setTools(e.target.checked)} />Tools and commands</label>
             <span className="spacer-flex" />
             <div className="segmented" role="tablist">
               <button role="tab" aria-selected={fmt === 'md'} onClick={() => setFmt('md')}>Markdown</button>

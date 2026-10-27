@@ -3,6 +3,7 @@ import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import type { Template } from '../shared/mdimages'
+import { Checkbox, Select } from './ui'
 
 type Scan = Awaited<ReturnType<typeof window.stm.mdImages.scan>>
 type Result = Awaited<ReturnType<typeof window.stm.mdImages.publish>>
@@ -45,18 +46,18 @@ export function MdImages(props: { onClose: () => void }) {
                   {scan.images.map((i) => (
                     <label key={i.ref} className={`mi-card ${pick.has(i.ref) ? 'on' : ''} ${i.bytes < 0 ? 'missing' : ''}`}>
                       {i.preview ? <img src={i.preview} alt={i.alt || i.ref} /> : <div className="mi-none">{i.bytes < 0 ? 'File not found' : 'No preview'}</div>}
-                      <span className="mi-meta"><input type="checkbox" disabled={i.bytes < 0} checked={pick.has(i.ref)} onChange={(e) => setPick((p) => { const n = new Set(p); if (e.target.checked) n.add(i.ref); else n.delete(i.ref); return n })} /><code>{i.ref}</code></span>
+                      <span className="mi-meta"><Checkbox disabled={i.bytes < 0} checked={pick.has(i.ref)} onChange={(e) => setPick((p) => { const n = new Set(p); if (e.target.checked) n.add(i.ref); else n.delete(i.ref); return n })} /><code>{i.ref}</code></span>
                       <span className="faint">line {i.line} · {kb(i.bytes)}</span>
                     </label>
                   ))}
                 </div>
                 <div className="ob-row">
                   <label className="chart-name" htmlFor="mi-tpl">Links as</label>
-                  <select id="mi-tpl" value={tpl} onChange={(e) => setTpl(e.target.value as Template)}>
+                  <Select id="mi-tpl" value={tpl} onChange={(e) => setTpl(e.target.value as Template)}>
                     <option value="markdown">Markdown image</option>
                     <option value="html">HTML img</option>
                     <option value="url">Bare URL</option>
-                  </select>
+                  </Select>
                   <span className="spacer-flex" />
                   {confirm ? (
                     <>

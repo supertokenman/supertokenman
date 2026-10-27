@@ -47,7 +47,7 @@ export function DictateButton(props: { onText: (text: string) => void; onNote: (
   return (
     <button
       className={`dictate ${state}`}
-      title={state === 'rec' ? 'Stop and turn into text' : state === 'busy' ? 'Turning into text...' : 'Dictate (local, never sent by itself)'}
+      data-tip={state === 'rec' ? 'Stop and turn into text' : state === 'busy' ? 'Turning into text...' : 'Dictate (local, never sent by itself)'}
       aria-label={state === 'rec' ? 'Stop dictation' : 'Dictate'}
       aria-pressed={state === 'rec'}
       disabled={state === 'busy'}
@@ -81,7 +81,7 @@ export function ReadAloud(props: { text: string; onNote: (note: string) => void 
     }
   }
   return (
-    <button className="ghost small read-aloud" title="Read the reply aloud (local voice)" aria-label={state === 'play' ? 'Stop reading' : 'Read aloud'} disabled={state === 'busy'} onClick={() => (state === 'play' ? (audio.current?.pause(), setState('idle')) : void play())}>
+    <button className="ghost small read-aloud" data-tip="Read the reply aloud (local voice)" aria-label={state === 'play' ? 'Stop reading' : 'Read aloud'} disabled={state === 'busy'} onClick={() => (state === 'play' ? (audio.current?.pause(), setState('idle')) : void play())}>
       {state === 'play' ? <IconStop /> : <IconSpeaker />}{state === 'busy' ? 'Reading...' : state === 'play' ? 'Stop' : 'Read'}
     </button>
   )

@@ -5,6 +5,7 @@ import { tilde } from '../shared/folderpick'
 import { fuzzyRank } from '../shared/fuzzy'
 import type { PickEntry, PickError } from '../electron/filepick'
 import { IconFolder, IconSearch } from './icons'
+import { Checkbox } from './ui'
 
 /**
  * Choosing files inside the app, on the folder picker's frame: the panel's project (its .gitignore
@@ -254,7 +255,7 @@ function FilePicker({ opts, onDone }: { opts: Ask; onDone: (r: Result) => void }
           <span><kbd>Esc</kbd> cancel</span>
           <span className="spacer-flex" />
           <label className="fip-hidden">
-            <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> Hidden files
+            <Checkbox checked={hidden} onChange={(e) => setHidden(e.target.checked)} /> Hidden files
           </label>
           <button className="ghost small" onClick={finder}>Use Finder...</button>
           {picked.length > 0 && <button className="primary small" onClick={() => onDone(picked)}>{action} {picked.length}</button>}

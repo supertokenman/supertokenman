@@ -25,7 +25,7 @@ export function ShellBlock({ r, onStop, onSend }: { r: Run; onStop: () => void; 
         {r.running ? (
           <button className="ghost small" onClick={onStop}>Stop</button>
         ) : (
-          <button className="ghost small" onClick={onSend} title="Send the command and its output to Claude">Send to Claude</button>
+          <button className="ghost small" onClick={onSend} data-tip="Send the command and its output to Claude">Send to Claude</button>
         )}
       </div>
       {r.out && <pre className="shell-out">{r.out}</pre>}

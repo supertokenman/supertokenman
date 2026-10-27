@@ -25,7 +25,7 @@ export function MemCite({ id }: { id: string }) {
     <>
       <button
         className="mem-cite"
-        title="From this project's memory: open the entry"
+        data-tip="From this project's memory: open the entry"
         onClick={(e) => {
           const r = e.currentTarget.getBoundingClientRect()
           setAt({ x: Math.max(8, Math.min(r.left, window.innerWidth - 436)), y: Math.min(r.bottom + 6, window.innerHeight - 260) })

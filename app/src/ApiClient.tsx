@@ -4,6 +4,7 @@ import type { ApiRequest, ApiResponse } from '../electron/apiclient'
 import { highlight } from './highlight'
 import { StateMark } from './StateMark'
 import { ApiLive } from './ApiLive'
+import { Checkbox, Select } from './ui'
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 const blank = (): ApiRequest => ({ id: `r${Date.now().toString(36)}`, name: '', method: 'GET', url: '', headers: [{ key: 'Accept', value: 'application/json', on: true }], body: '' })
@@ -84,7 +85,7 @@ export function ApiClientSheet(props: { onClose: () => void; onAttach: (note: { 
             {list.length === 0 && <div className="faint api-empty">Save a request to keep it here.</div>}
             {list.map((r) => (
               <div key={r.id} className={`api-item ${r.id === req.id ? 'on' : ''}`}>
-                <button className="api-pick" onClick={() => (setReq(r), setRes(null))} title={r.url}>
+                <button className="api-pick" onClick={() => (setReq(r), setRes(null))} data-tip={r.url}>
                   <span className={`api-m m-${r.method.toLowerCase()}`}>{r.method}</span>
                   <span className="api-name">{r.name}</span>
                 </button>
@@ -93,7 +94,7 @@ export function ApiClientSheet(props: { onClose: () => void; onAttach: (note: { 
             ))}
             {history.length > 0 && <div className="sp-label">Recent</div>}
             {history.slice(0, 8).map((h) => (
-              <button key={h.at} className="api-hist" title={h.url} onClick={() => setReq((r) => ({ ...r, method: h.method, url: h.url }))}>
+              <button key={h.at} className="api-hist" data-tip={h.url} onClick={() => setReq((r) => ({ ...r, method: h.method, url: h.url }))}>
                 <StateMark state={h.status === 0 || h.status >= 500 ? 'down' : h.status >= 400 ? 'warn' : 'up'} label={String(h.status || 'failed')} />
                 <span className="api-m">{h.method}</span>
                 <span className="api-name">{h.url.replace(/^https?:\/\//, '')}</span>
@@ -102,9 +103,9 @@ export function ApiClientSheet(props: { onClose: () => void; onAttach: (note: { 
           </aside>
           <section className="api-main">
             <form className="api-line" onSubmit={(e) => (e.preventDefault(), void send())}>
-              <select className={`api-method m-${req.method.toLowerCase()}`} value={req.method} onChange={(e) => setReq({ ...req, method: e.target.value })} aria-label="Method">
+              <Select className={`api-method m-${req.method.toLowerCase()}`} value={req.method} onChange={(e) => setReq({ ...req, method: e.target.value })} aria-label="Method">
                 {METHODS.map((m) => <option key={m}>{m}</option>)}
-              </select>
+              </Select>
               <input className="api-url" value={req.url} placeholder="https://api.example.com/v1/items?token={{API_KEY}}" spellCheck={false} onChange={(e) => setReq({ ...req, url: e.target.value })} aria-label="Address" />
               <button className="primary" type="submit" disabled={!req.url.trim() || busy}>{busy ? 'Sending' : 'Send'}</button>
             </form>
@@ -120,7 +121,7 @@ export function ApiClientSheet(props: { onClose: () => void; onAttach: (note: { 
               <div className="api-headers">
                 {req.headers.map((h, i) => (
                   <div key={i} className="api-header">
-                    <input type="checkbox" checked={h.on} onChange={(e) => setHeader(i, { on: e.target.checked })} aria-label="Use this header" />
+                    <Checkbox checked={h.on} onChange={(e) => setHeader(i, { on: e.target.checked })} aria-label="Use this header" />
                     <input value={h.key} placeholder="Header" onChange={(e) => setHeader(i, { key: e.target.value })} />
                     <input value={h.value} placeholder="Value or {{SECRET}}" onChange={(e) => setHeader(i, { value: e.target.value })} />
                     <button className="att-x" aria-label="Remove header" onClick={() => setReq((r) => ({ ...r, headers: r.headers.filter((_, k) => k !== i) }))}>×</button>
@@ -130,7 +131,7 @@ export function ApiClientSheet(props: { onClose: () => void; onAttach: (note: { 
                   <button className="ghost small" onClick={() => setReq((r) => ({ ...r, headers: [...r.headers, { key: '', value: '', on: true }] }))}>Add header</button>
                   <button className="ghost small" onClick={() => setReq((r) => ({ ...r, headers: [...r.headers, { key: 'Authorization', value: 'Bearer {{API_KEY}}', on: true }] }))}>Add bearer token</button>
                   <span className="spacer-flex" />
-                  {secrets.length > 0 && <span className="faint api-secrets" title={secrets.join(', ')}>In the vault: {secrets.slice(0, 4).map((n) => `{{${n}}}`).join(' ')}{secrets.length > 4 ? ' …' : ''}</span>}
+                  {secrets.length > 0 && <span className="faint api-secrets" data-tip={secrets.join(', ')}>In the vault: {secrets.slice(0, 4).map((n) => `{{${n}}}`).join(' ')}{secrets.length > 4 ? ' …' : ''}</span>}
                 </div>
               </div>
             ) : (

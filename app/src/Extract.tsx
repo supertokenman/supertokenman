@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { asJson, estimate, type Extracted, type FieldSpec } from '../shared/extract'
+import { Checkbox } from './ui'
 
 const KEY = 'stm.extract.fields'
 const load = (): FieldSpec[] => {
@@ -73,7 +74,7 @@ export function ExtractSheet(props: { project?: string; onClose: () => void }) {
               <div key={i} className="ex-field">
                 <input value={f.name} placeholder="name" aria-label="Field name" onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} />
                 <input value={f.description} placeholder="what it is" aria-label="Field description" onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, description: e.target.value } : x)))} />
-                <label className="ex-many" title="Can appear many times"><input type="checkbox" checked={Boolean(f.many)} onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, many: e.target.checked } : x)))} />many</label>
+                <label className="ex-many" data-tip="Can appear many times"><Checkbox checked={Boolean(f.many)} onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, many: e.target.checked } : x)))} />many</label>
                 <button className="icon" aria-label={`Remove ${f.name || 'field'}`} onClick={() => setFields(fields.filter((_, k) => k !== i))}><IconClose /></button>
               </div>
             ))}

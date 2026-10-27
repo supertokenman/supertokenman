@@ -124,7 +124,7 @@ export function Catalog(props: { cwd: string; onClose: () => void }) {
                     <span className="faint">No package listed</span>
                   )
                 ) : (
-                  <button className="small" title="Add it as a plugin marketplace (it needs a .claude-plugin/marketplace.json)" onClick={() => void act(it, 'Adding', () => window.stm.addMarketplace(it.id), `${it.id} added as a marketplace. Its plugins now show up here.`)}>Add marketplace</button>
+                  <button className="small" data-tip="Add it as a plugin marketplace (it needs a .claude-plugin/marketplace.json)" onClick={() => void act(it, 'Adding', () => window.stm.addMarketplace(it.id), `${it.id} added as a marketplace. Its plugins now show up here.`)}>Add marketplace</button>
                 )}
     </>
   )

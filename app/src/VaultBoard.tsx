@@ -61,7 +61,7 @@ export function VaultBoard(props: { onClose: () => void }) {
               <section key={c.column} className={`vb-col ${drag ? 'drop' : ''}`} onDragOver={(e) => c.column !== '(none)' && e.preventDefault()} onDrop={(e) => (e.preventDefault(), drag && move(drag, c.column), setDrag(null))}>
                 <div className="vb-col-head"><span>{c.column}</span><span className="faint">{c.notes.length}</span></div>
                 {c.notes.map((n) => (
-                  <div key={n.file} className="vb-card" draggable onDragStart={() => setDrag(n.file)} onDragEnd={() => setDrag(null)} title={n.file}>
+                  <div key={n.file} className="vb-card" draggable onDragStart={() => setDrag(n.file)} onDragEnd={() => setDrag(null)} data-tip={n.file}>
                     <b>{n.title}</b>
                     <span className="faint">{fields.filter((f) => f !== opts.by && n.data[f]).slice(0, 3).map((f) => `${f}: ${show(n.data[f])}`).join(' · ')}</span>
                   </div>
@@ -73,7 +73,7 @@ export function VaultBoard(props: { onClose: () => void }) {
           <div className="vb-table-wrap">
             <table className="tbl vb-table">
               <thead><tr><th>Note</th>{fields.map((f) => <th key={f}>{f}</th>)}</tr></thead>
-              <tbody>{shown.map((n) => <tr key={n.file}><td title={n.file}>{n.title}</td>{fields.map((f) => <td key={f}>{show(n.data[f])}</td>)}</tr>)}</tbody>
+              <tbody>{shown.map((n) => <tr key={n.file}><td data-tip={n.file}>{n.title}</td>{fields.map((f) => <td key={f}>{show(n.data[f])}</td>)}</tr>)}</tbody>
             </table>
           </div>
         )}

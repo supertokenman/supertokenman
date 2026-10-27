@@ -3,6 +3,7 @@ import { IconClose } from './icons'
 import { clean } from './errors'
 import { Meter } from './Chart'
 import { byPanel, type WorkTask } from '../shared/worktasks'
+import { Checkbox, NumberField } from './ui'
 
 type PanelRef = { sid: string; label: string }
 
@@ -35,7 +36,7 @@ export function WorkTasksSheet(props: { panels: PanelRef[]; focus?: string; onCl
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Pix at checkout" aria-label="Task title" />
             <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="What done looks like" aria-label="Task goal" />
             <div className="ob-row">
-              <label className="se-num">Budget US$ <input type="number" min={0} step={0.5} value={budget} onChange={(e) => setBudget(e.target.value)} /></label>
+              <label className="se-num">Budget US$ <NumberField min={0} step={0.5} value={budget} onChange={(e) => setBudget(e.target.value)} /></label>
               <span className="spacer-flex" />
               <button className="primary" disabled={!title.trim()} onClick={() => act(window.stm.wt.create(title, goal, Number(budget), props.focus).then((x) => (setPick(x.id), setTitle(''), setGoal(''))))}>Open{props.focus ? ' with this panel' : ''}</button>
             </div>
@@ -54,14 +55,14 @@ export function WorkTasksSheet(props: { panels: PanelRef[]; focus?: string; onCl
               {t.goal && <div className="faint">{t.goal}</div>}
               {t.budgetUsd > 0 ? <Meter label="Budget" value={t.spent} max={t.budgetUsd} unit="US$" /> : <div className="faint">No budget: spend is counted, nothing holds.</div>}
               <div className="ob-row">
-                <label className="se-num">Budget US$ <input type="number" min={0} step={0.5} defaultValue={t.budgetUsd} key={t.id + t.budgetUsd} onBlur={(e) => Number(e.target.value) !== t.budgetUsd && act(window.stm.wt.budget(t.id, Number(e.target.value)))} /></label>
+                <label className="se-num">Budget US$ <NumberField min={0} step={0.5} defaultValue={t.budgetUsd} key={t.id + t.budgetUsd} onBlur={(e) => Number(e.target.value) !== t.budgetUsd && act(window.stm.wt.budget(t.id, Number(e.target.value)))} /></label>
               </div>
               <span className="chart-name">Panels</span>
               {props.panels.map((p) => {
                 const on = t.sids.includes(p.sid)
                 return (
                   <label key={p.sid} className="ca-toggle">
-                    <input type="checkbox" checked={on} disabled={t.status === 'done'} onChange={(e) => act(window.stm.wt.link(t.id, p.sid, e.target.checked))} />
+                    <Checkbox checked={on} disabled={t.status === 'done'} onChange={(e) => act(window.stm.wt.link(t.id, p.sid, e.target.checked))} />
                     {p.label}{spentBy[p.sid] ? <span className="faint"> · US$ {spentBy[p.sid]!.toFixed(2)}</span> : null}
                   </label>
                 )

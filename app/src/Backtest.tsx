@@ -4,6 +4,7 @@ import { Chart, Stat } from './Chart'
 import { clean } from './errors'
 import { IconClose, IconTest } from './icons'
 import './bridge'
+import { NumberField, Select } from './ui'
 
 const pct = (x: number) => Number((x * 100).toFixed(1))
 
@@ -40,7 +41,7 @@ export function BacktestSheet(props: { cwd?: string; onClose: () => void }) {
       setErr(clean(e))
     }
   }
-  const num = (k: string, v: number, on: (n: number) => void) => <label className="fld"><span className="fld-label">{k}</span><input type="number" min={1} value={v} onChange={(e) => on(Number(e.target.value) || 1)} /></label>
+  const num = (k: string, v: number, on: (n: number) => void) => <label className="fld"><span className="fld-label">{k}</span><NumberField min={1} value={v} onChange={(e) => on(Number(e.target.value) || 1)} /></label>
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
       <div className="sheet config observe btl" role="dialog" aria-label="Backtest lab">
@@ -54,13 +55,13 @@ export function BacktestSheet(props: { cwd?: string; onClose: () => void }) {
           <div className="fld-grid">
             <label className="fld wide"><span className="fld-label">Prices (CSV with date, open, high, low, close)</span><input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && load(e.target.files[0])} /><span className="fld-help">{bars ? `${file}: ${bars.length} bars, ${new Date(bars[0]!.t).toISOString().slice(0, 10)} to ${new Date(bars[bars.length - 1]!.t).toISOString().slice(0, 10)}` : 'Export daily bars from your data source; nothing is fetched from the internet.'}</span></label>
             <label className="fld"><span className="fld-label">Strategy</span>
-              <select value={s.kind} onChange={(e) => setS(e.target.value === 'rsi' ? { kind: 'rsi', period: 14, buyBelow: 30, sellAbove: 55 } : e.target.value === 'hold' ? { kind: 'hold' } : { kind: 'sma-cross', fast: 20, slow: 50 })}>
+              <Select value={s.kind} onChange={(e) => setS(e.target.value === 'rsi' ? { kind: 'rsi', period: 14, buyBelow: 30, sellAbove: 55 } : e.target.value === 'hold' ? { kind: 'hold' } : { kind: 'sma-cross', fast: 20, slow: 50 })}>
                 <option value="sma-cross">Moving average cross</option><option value="rsi">RSI mean reversion</option><option value="hold">Buy and hold</option>
-              </select>
+              </Select>
             </label>
             {s.kind === 'sma-cross' && <>{num('Fast average', s.fast, (n) => setS({ ...s, fast: n }))}{num('Slow average', s.slow, (n) => setS({ ...s, slow: n }))}</>}
             {s.kind === 'rsi' && <>{num('RSI period', s.period, (n) => setS({ ...s, period: n }))}{num('Buy below', s.buyBelow, (n) => setS({ ...s, buyBelow: n }))}{num('Sell above', s.sellAbove, (n) => setS({ ...s, sellAbove: n }))}</>}
-            <label className="fld"><span className="fld-label">Fee per side (bps)</span><input type="number" min={0} value={fee} onChange={(e) => setFee(Number(e.target.value) || 0)} /></label>
+            <label className="fld"><span className="fld-label">Fee per side (bps)</span><NumberField min={0} value={fee} onChange={(e) => setFee(Number(e.target.value) || 0)} /></label>
           </div>
           <div className="ob-row">
             {props.cwd && <button className="ghost small" onClick={() => void window.stm.backtest.saveScript(props.cwd!, s.kind, nautilusScript(s, file || 'prices.csv')).then((f) => setMsg(`Saved ${f}: run it in your own Python environment.`), (e) => setErr(clean(e)))}>Save a NautilusTrader script</button>}

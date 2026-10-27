@@ -4,6 +4,7 @@ import type { Stage } from '../shared/compact'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import type { Source, Summary } from '../electron/ledger'
+import { Select, Switch } from './ui'
 
 type Info = { id: Source; name: string; what: string; method: 'measured' | 'from the tool' | 'estimated' }
 const RANGES = [
@@ -30,10 +31,7 @@ function LeanTools() {
           <div className="sv-over-sub">Leave out tools panels do not use</div>
           <div className="faint sv-small">{l.off.join(', ')}. About {kTok(l.saves)} tokens less on every turn; coding, web and task tools stay. Applies to panels opened after.</div>
         </div>
-        <label className="switch">
-          <input type="checkbox" checked={l.on} onChange={async (e) => setL({ ...l, on: await window.stm.lean.set(e.target.checked) })} />
-          <span />
-        </label>
+        <Switch checked={l.on} onChange={async (e) => setL({ ...l, on: await window.stm.lean.set(e.target.checked) })} />
       </div>
     </div>
   )
@@ -61,7 +59,7 @@ function Compactor() {
       {ROWS.map(([id, name, what]) => (
         <div className="sv-lean" key={id}>
           <div><div>{name}</div><div className="faint sv-small">{what}</div></div>
-          <label className="switch"><input type="checkbox" checked={st.includes(id)} onChange={(e) => flip(id, e.target.checked)} aria-label={name} /><span /></label>
+          <Switch checked={st.includes(id)} onChange={(e) => flip(id, e.target.checked)} aria-label={name} />
         </div>
       ))}
     </div>
@@ -96,9 +94,9 @@ function Overhead(props: { money: (usd: number) => string }) {
         </div>
         <span className="spacer-flex" />
         {panels.length > 1 && (
-          <select value={sid} onChange={(e) => setSid(e.target.value)} aria-label="Panel">
+          <Select value={sid} onChange={(e) => setSid(e.target.value)} aria-label="Panel">
             {panels.map((p) => <option key={p.sid} value={p.sid}>{name(p)}</option>)}
-          </select>
+          </Select>
         )}
       </div>
       {o === undefined ? (
@@ -142,7 +140,7 @@ function Overhead(props: { money: (usd: number) => string }) {
               <div className="sv-over-sub">Memory files</div>
               {o.memory.map((m) => (
                 <div key={m.path} className="sv-over-item">
-                  <span className="mono sv-path" title={m.path}>{m.path.replace(/^\/(Users|home)\/[^/]+/, '~')}</span>
+                  <span className="mono sv-path" data-tip={m.path}>{m.path.replace(/^\/(Users|home)\/[^/]+/, '~')}</span>
                   <span />
                   <span className="num">{kTok(m.tokens)}</span>
                 </div>
@@ -291,7 +289,7 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
                     const i = info(b.id)
                     return (
                       <tr key={b.id}>
-                        <td className="tbl-name" title={i?.name}><span className="sv-key" style={{ background: COLOR[b.id] }} />{i?.name}</td>
+                        <td className="tbl-name" data-tip={i?.name}><span className="sv-key" style={{ background: COLOR[b.id] }} />{i?.name}</td>
                         <td className="faint">{i?.what}</td>
                         <td className="num">{kTok(b.tokens)}</td>
                         <td className="num">{money(b.usd)}</td>
@@ -300,14 +298,14 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
                     )
                   })}
                   <tr className="sv-unmeasured">
-                    <td className="tbl-name" title="caveman"><span className="sv-key off" />caveman</td>
+                    <td className="tbl-name" data-tip="caveman"><span className="sv-key off" />caveman</td>
                     <td className="faint">Terse answers, from the Catalog. Our test: replies two thirds shorter, total cost unchanged on a code task, one answer in three incomplete.</td>
                     <td className="num faint">–</td>
                     <td className="num faint">–</td>
                     <td><span className="status off">no saving found</span></td>
                   </tr>
                   <tr className="sv-unmeasured">
-                    <td className="tbl-name" title="superpowers"><span className="sv-key off" />superpowers</td>
+                    <td className="tbl-name" data-tip="superpowers"><span className="sv-key off" />superpowers</td>
                     <td className="faint">Planning and review habits that aim for fewer wasted turns, from the Catalog.</td>
                     <td className="num faint">–</td>
                     <td className="num faint">–</td>
@@ -335,14 +333,11 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
                     setBusy('')
                   }}>{busy === 'install' ? <span className="spinner" /> : 'Install, about 200 MB'}</button>
                 ) : (
-                  <label className="switch">
-                    <input type="checkbox" checked={hr.on} disabled={Boolean(busy)} onChange={async (e) => {
+                  <Switch checked={hr.on} disabled={Boolean(busy)} onChange={async (e) => {
                       setBusy('toggle'); setErr('')
                       try { await window.stm.headroom.set(e.target.checked) } catch (x) { setErr(x instanceof Error ? x.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(x)) }
                       setHr(await window.stm.headroom.get()); setBusy('')
                     }} />
-                    <span />
-                  </label>
                 )}
               </div>
               {hr.stats && hr.stats.requests > 0 && <div className="faint sv-small">{hr.stats.requests} requests · {kTok(hr.stats.tokensSaved)} tokens kept out · its own estimate {money(hr.stats.savedUsd)}</div>}
@@ -352,14 +347,11 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
                     <b>Shorter answers</b>
                     <div className="faint sv-small">Headroom steers replies to fewer words. It needs its token mode, which can rewrite earlier turns and read the prompt cache less, so 1 conversation in 10 runs without it and the reduction below is measured against those.</div>
                   </div>
-                  <label className="switch">
-                    <input id="hr-shorter" type="checkbox" checked={hr.shorter} disabled={Boolean(busy)} onChange={async (e) => {
+                  <Switch id="hr-shorter" checked={hr.shorter} disabled={Boolean(busy)} onChange={async (e) => {
                       setBusy('shorter'); setErr('')
                       try { await window.stm.headroom.shorter(e.target.checked) } catch (x) { setErr(x instanceof Error ? x.message : String(x)) }
                       setHr(await window.stm.headroom.get()); setBusy('')
                     }} />
-                    <span />
-                  </label>
                 </div>
               )}
               {hr.stats?.output?.active && (
@@ -392,10 +384,7 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
                     setBusy('')
                   }}>{busy === 'symbols' ? <span className="spinner" /> : 'Install, about 70 MB'}</button>
                 ) : (
-                  <label className="switch">
-                    <input type="checkbox" checked={sym.on} disabled={Boolean(busy)} onChange={async (e) => setSym({ ...sym, on: await window.stm.symbols.set(e.target.checked) })} />
-                    <span />
-                  </label>
+                  <Switch checked={sym.on} disabled={Boolean(busy)} onChange={async (e) => setSym({ ...sym, on: await window.stm.symbols.set(e.target.checked) })} />
                 )}
               </div>
               <div className="faint sv-small">Token Savior (MIT) indexes each panel’s folder on this Mac; a large repository takes a couple of minutes the first time. In our tests (Haiku, our app and VS Code) it did not lower the cost, and twice its search missed one of six callers that grep found: off by default, not in the chart.</div>
@@ -420,8 +409,7 @@ function HeadroomQuality(props: { onErr: (e: string) => void }) {
           <b>Check what compression kept</b>
           <div className="faint sv-small">The proxy keeps its last requests before and after compression, in its own memory on this Mac, so each can be compared: how much of the text survived, whether error lines did, and whether what was cut can be fetched back.</div>
         </div>
-        <label className="switch">
-          <input id="hr-inspect" type="checkbox" checked={q.on} disabled={busy} onChange={async (e) => {
+        <Switch id="hr-inspect" checked={q.on} disabled={busy} onChange={async (e) => {
             setBusy(true)
             try {
               await window.stm.headroom.inspect(e.target.checked)
@@ -431,8 +419,6 @@ function HeadroomQuality(props: { onErr: (e: string) => void }) {
             setQ(await window.stm.headroom.quality())
             setBusy(false)
           }} />
-          <span />
-        </label>
       </div>
       {q.on && (
         <div className="hrq">

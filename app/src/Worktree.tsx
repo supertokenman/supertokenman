@@ -72,7 +72,7 @@ export function WorktreeChip(props: { sid: string; wt: PanelWorktree; hasPreview
           setOpen(!open)
         }}
         aria-expanded={open}
-        title={`${attempt ? `${attempt}, in its` : 'Its'} own worktree on ${wt.branch}, from ${wt.base}`}
+        data-tip={`${attempt ? `${attempt}, in its` : 'Its'} own worktree on ${wt.branch}, from ${wt.base}`}
       >
         <BranchMark size={12} />
         {wt.group && wt.attempt ? `${wt.attempt}/${wt.of}` : wt.branch.replace(/^stm\//, '')}
@@ -93,7 +93,7 @@ export function WorktreeChip(props: { sid: string; wt: PanelWorktree; hasPreview
                   <div key={f.path} className="sbx-row changed">
                     <span />
                     <b>M</b>
-                    <span title={f.path}>{f.path}</span>
+                    <span data-tip={f.path}>{f.path}</span>
                   </div>
                 ))}
               </div>

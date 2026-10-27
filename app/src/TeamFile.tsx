@@ -5,6 +5,7 @@ import { DiffBlock } from './Lab'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox } from './ui'
 
 const STATUS: Record<Change['status'], string> = { new: 'New', changed: 'Changed', same: 'Same' }
 
@@ -66,7 +67,7 @@ export function TeamFileSheet(props: { onClose: () => void }) {
                 {incoming.changes.map((c) => (
                   <div key={c.key} className={`team-item ${c.status}`}>
                     <label className="team-row">
-                      <input type="checkbox" disabled={c.status === 'same'} checked={picked.includes(c.key)} onChange={(e) => setPicked(e.target.checked ? [...picked, c.key] : picked.filter((k) => k !== c.key))} />
+                      <Checkbox disabled={c.status === 'same'} checked={picked.includes(c.key)} onChange={(e) => setPicked(e.target.checked ? [...picked, c.key] : picked.filter((k) => k !== c.key))} />
                       <span className={`team-st ${c.status}`}>{STATUS[c.status]}</span>
                       <b>{c.name}</b>
                       <span className="faint">{c.kind}</span>

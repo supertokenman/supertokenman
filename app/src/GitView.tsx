@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { clean, friendly } from './errors'
 import type { FileChange, Laid, Status } from '../electron/git'
+import { Checkbox, Select } from './ui'
 
 const LANE = 14
 const ROW = 30
@@ -103,9 +104,9 @@ export function GitView({ sid, active }: { sid: string; active: boolean }) {
     const letter = f.untracked ? '?' : staged ? f.staged : f.unstaged
     return (
       <div key={`${staged}-${f.path}`} className={`git-file ${picked?.f.path === f.path && picked.staged === staged ? 'on' : ''}`}>
-        <input type="checkbox" checked={staged} onChange={() => void act('stage', () => window.stm.git(staged ? 'unstage' : 'stage', sid, [f.path]))} aria-label={staged ? 'Unstage' : 'Stage'} />
+        <Checkbox checked={staged} onChange={() => void act('stage', () => window.stm.git(staged ? 'unstage' : 'stage', sid, [f.path]))} aria-label={staged ? 'Unstage' : 'Stage'} />
         <button className="git-path" onClick={() => void open(f, staged)}>
-          <span className={`git-letter l-${letter}`} title={LETTER[letter] ?? letter}>{letter === '?' ? 'N' : letter}</span>
+          <span className={`git-letter l-${letter}`} data-tip={LETTER[letter] ?? letter}>{letter === '?' ? 'N' : letter}</span>
           <span className="git-dir">{f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/') + 1) : ''}</span>
           {f.path.split('/').pop()}
         </button>
@@ -118,14 +119,14 @@ export function GitView({ sid, active }: { sid: string; active: boolean }) {
       <div className="git-bar">
         <label className="select">
           <span className="select-label">Branch</span>
-          <select value={st.branch} onChange={(e) => void act('switch', () => window.stm.git('checkout', sid, e.target.value), `Switched to ${e.target.value}`)}>
+          <Select value={st.branch} onChange={(e) => void act('switch', () => window.stm.git('checkout', sid, e.target.value), `Switched to ${e.target.value}`)}>
             {branches.map((b) => (
               <option key={b.name} value={b.name}>{b.name}</option>
             ))}
-          </select>
+          </Select>
         </label>
         {st.upstream ? (
-          <span className="git-sync" title={`Tracking ${st.upstream}`}>
+          <span className="git-sync" data-tip={`Tracking ${st.upstream}`}>
             <span className={st.behind ? 'warn' : ''}>↓{st.behind}</span>
             <span className={st.ahead ? 'up' : ''}>↑{st.ahead}</span>
           </span>
@@ -164,7 +165,7 @@ export function GitView({ sid, active }: { sid: string; active: boolean }) {
           }}
         />
         <div className="git-commit-actions">
-          <button className="ghost small" disabled={!stagedFiles.length || !!busy} title="Ask Haiku for a message from the staged diff" onClick={async () => {
+          <button className="ghost small" disabled={!stagedFiles.length || !!busy} data-tip="Ask Haiku for a message from the staged diff" onClick={async () => {
             const m = await act('suggest', () => window.stm.git('suggest', sid))
             if (typeof m === 'string' && m) setMsg(m)
           }}>

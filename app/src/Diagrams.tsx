@@ -191,7 +191,7 @@ export function DiagramsSheet(props: { cwd?: string; onClose: () => void; open?:
                 <div className="sp-label">Or start from a template</div>
                 <div className="dg-templates">
                   {TEMPLATES.map((t, i) => (
-                    <button key={t.id} style={{ '--i': i } as React.CSSProperties} className="dg-tpl enter-diag" disabled={!!busy || !cwd} title={t.what} onClick={() => void run('Creating', () => window.stm.diagram.template(cwd, name, t.id).then((p) => (setName(''), p)))}>
+                    <button key={t.id} style={{ '--i': i } as React.CSSProperties} className="dg-tpl enter-diag" disabled={!!busy || !cwd} data-tip={t.what} onClick={() => void run('Creating', () => window.stm.diagram.template(cwd, name, t.id).then((p) => (setName(''), p)))}>
                       <b>{t.name}</b><span className="faint">{t.what}</span>
                     </button>
                   ))}

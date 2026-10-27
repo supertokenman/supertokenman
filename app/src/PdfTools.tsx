@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
+import { Checkbox, Slider } from './ui'
 
 type Cfg = Awaited<ReturnType<typeof window.stm.pdfTools.config>>
 type Op = Cfg['ops'][number]['id']
@@ -62,13 +63,13 @@ export function PdfTools(props: { onClose: () => void }) {
             {!many && files.length > 1 && <div className="faint">{cfg?.ops.find((o) => o.id === op)?.name} works on the first file.</div>}
           </div>
           {(op === 'split' || op === 'remove') && <div className="pt-row"><label className="chart-name" htmlFor="pt-pages">Pages</label><input id="pt-pages" value={pages} placeholder="1,3,5-7" onChange={(e) => setPages(e.target.value)} /></div>}
-          {op === 'compress' && <div className="pt-row"><label className="chart-name" htmlFor="pt-level">Level {level}</label><input id="pt-level" type="range" min={1} max={9} value={level} onChange={(e) => setLevel(Number(e.target.value))} /></div>}
+          {op === 'compress' && <div className="pt-row"><label className="chart-name" htmlFor="pt-level">Level {level}</label><Slider id="pt-level" min={1} max={9} value={level} onChange={(e) => setLevel(Number(e.target.value))} /></div>}
           {op === 'ocr' && <div className="pt-row"><label className="chart-name" htmlFor="pt-langs">Languages</label><input id="pt-langs" value={langs} onChange={(e) => setLangs(e.target.value)} /></div>}
           {op === 'redact' && (
             <div className="pt-redact">
               <div className="faint">Personal data found in the first file, to cover before it goes to Claude or anyone else. Each page becomes an image so the text cannot be copied back.</div>
               {busy === 'Reading' ? <div className="faint">Reading…</div> : found && !found.length ? <div className="faint">Nothing found. Read it anyway: a scan finds patterns, not every name.</div> : found?.map((f) => (
-                <label key={f.i} className="ca-toggle"><input type="checkbox" checked={pick.has(f.i)} onChange={(e) => setPick((p) => { const n = new Set(p); if (e.target.checked) n.add(f.i); else n.delete(f.i); return n })} /><span className="pt-kind">{KIND[f.kind] ?? f.kind}</span><code>{f.shown}</code></label>
+                <label key={f.i} className="ca-toggle"><Checkbox checked={pick.has(f.i)} onChange={(e) => setPick((p) => { const n = new Set(p); if (e.target.checked) n.add(f.i); else n.delete(f.i); return n })} /><span className="pt-kind">{KIND[f.kind] ?? f.kind}</span><code>{f.shown}</code></label>
               ))}
             </div>
           )}

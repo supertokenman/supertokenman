@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import type { Clash, Item } from '../shared/reflect'
+import { Checkbox } from './ui'
 
 type Pending = Awaited<ReturnType<typeof window.stm.reflect.list>>['pending'][number]
 type Draft = Awaited<ReturnType<typeof window.stm.reflect.draft>>
@@ -59,7 +60,7 @@ export function Reflect(props: { onClose: () => void }) {
                   <span className="rf-proj">{p.project}</span>
                   <span className="faint">{p.turns} request{p.turns === 1 ? '' : 's'} · {ago(p.at)}</span>
                 </button>
-                <button className="att-x" aria-label={`Skip ${p.project}`} title="Skip this one" onClick={() => dismiss(p.id)}>×</button>
+                <button className="att-x" aria-label={`Skip ${p.project}`} data-tip="Skip this one" onClick={() => dismiss(p.id)}>×</button>
               </div>
             ))}
           </nav>
@@ -101,7 +102,7 @@ function Row(props: { item: Item; clashes: Clash[]; pick: Pick; onPick: (p: Part
   return (
     <div className={`rf-row ${pick.on ? 'on' : ''} ${clashes.length ? 'clash' : ''}`}>
       <label className="rf-line">
-        <input type="checkbox" checked={pick.on} onChange={(e) => props.onPick({ on: e.target.checked })} />
+        <Checkbox checked={pick.on} onChange={(e) => props.onPick({ on: e.target.checked })} />
         <span className={`rf-kind ${item.kind}`}>{item.kind}</span>
         <span className="rf-text">{item.text}</span>
         <span className={`rf-conf ${item.confidence}`}>{item.confidence}</span>
@@ -114,7 +115,7 @@ function Row(props: { item: Item; clashes: Clash[]; pick: Pick; onPick: (p: Part
             <div><span className="rf-side">BEFORE · {c.old.date}</span><span>{c.old.title}</span></div>
             <div><span className="rf-side">NOW</span><span>{item.text}</span></div>
           </div>
-          <label className="rf-replace"><input type="checkbox" checked={pick.replace} disabled={!pick.on} onChange={(e) => props.onPick({ replace: e.target.checked })} /> Mark it as replacing the old one</label>
+          <label className="rf-replace"><Checkbox checked={pick.replace} disabled={!pick.on} onChange={(e) => props.onPick({ replace: e.target.checked })} /> Mark it as replacing the old one</label>
         </div>
       ))}
     </div>

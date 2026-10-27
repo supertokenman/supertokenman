@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { DbConn } from '../electron/db'
 import { buildUrl, fieldsFor, parseUrl, PRESETS, presetFor, type Fields, type Preset } from '../shared/dbconn'
+import { Checkbox, Combobox } from './ui'
 
 /** An engine's drawn mark: a cut tile with its monogram, the driver family as a rule under it. */
 export function EngineMark({ p }: { p: Preset }) {
@@ -108,7 +109,7 @@ export function DbConnect(props: { editing: DbConn; isNew: boolean; secrets: str
           <div className="dbc-grid">
             <label className="fld"><span className="fld-label">Account id</span><input value={f.account} spellCheck={false} placeholder="0123456789abcdef…" onChange={set('account')} /></label>
             <label className="fld"><span className="fld-label">Database id</span><input value={f.dbId} spellCheck={false} placeholder="xxxxxxxx-xxxx-…" onChange={set('dbId')} /></label>
-            <label className="fld wide"><span className="fld-label">API token, from the vault</span><input value={f.secret} list="dbc-vault" spellCheck={false} placeholder="CLOUDFLARE_API_TOKEN" onChange={set('secret')} /></label>
+            <label className="fld wide"><span className="fld-label">API token, from the vault</span><Combobox options={vaultNames} value={f.secret} spellCheck={false} placeholder="CLOUDFLARE_API_TOKEN" onChange={set('secret')} /></label>
           </div>
         ) : (
           <div className="dbc-grid">
@@ -118,12 +119,11 @@ export function DbConnect(props: { editing: DbConn; isNew: boolean; secrets: str
             <label className="fld"><span className="fld-label">User</span><input value={f.user} spellCheck={false} placeholder={h.user ?? ''} onChange={set('user')} /></label>
             <label className="fld">
               <span className="fld-label">Password, from the vault <span className="fld-kind">{f.secret && !vaultNames.includes(f.secret) ? 'not in the vault yet' : ''}</span></span>
-              <input value={f.secret} list="dbc-vault" spellCheck={false} placeholder="DB_PASSWORD" onChange={set('secret')} />
+              <Combobox options={vaultNames} value={f.secret} spellCheck={false} placeholder="DB_PASSWORD" onChange={set('secret')} />
             </label>
-            <label className="check dbc-ssl"><input type="checkbox" checked={f.ssl} onChange={set('ssl')} /><span>TLS, with the certificate checked</span></label>
+            <label className="check dbc-ssl"><Checkbox checked={f.ssl} onChange={set('ssl')} /><span>TLS, with the certificate checked</span></label>
           </div>
         )}
-        <datalist id="dbc-vault">{vaultNames.map((n) => <option key={n} value={n} />)}</datalist>
 
         {!paste && preset.kind !== 'sqlite' && (
           <div className="dbc-url">
@@ -140,7 +140,7 @@ export function DbConnect(props: { editing: DbConn; isNew: boolean; secrets: str
           </label>
         )}
         <label className="check dbc-writes">
-          <input type="checkbox" checked={editing.writes} onChange={(e) => props.onChange({ ...editing, writes: e.target.checked })} />
+          <Checkbox checked={editing.writes} onChange={(e) => props.onChange({ ...editing, writes: e.target.checked })} />
           <span>Allow writes (insert, update, delete). Off, the database refuses any change.</span>
         </label>
         <div className="dbv-row">

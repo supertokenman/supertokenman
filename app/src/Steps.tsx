@@ -31,7 +31,7 @@ export function CopyValue({ text, onCopy }: { text: string; onCopy?: () => void 
   const [done, setDone] = useState(false)
   return (
     <span className="gs-copy">
-      <code title={text}>{text}</code>
+      <code data-tip={text}>{text}</code>
       <button
         className="ghost small"
         onClick={() => {

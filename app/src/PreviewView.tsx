@@ -208,12 +208,12 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
   return (
     <div className="preview">
       <div className="preview-bar">
-        <button className="icon" title="Back" aria-label="Back" disabled={!url} onClick={() => ref.current?.goBack()}>‹</button>
-        <button className="icon" title="Reload (Cmd+R)" aria-label="Reload" disabled={!url} onClick={() => ref.current?.reloadIgnoringCache()}>
+        <button className="icon" data-tip="Back" aria-label="Back" disabled={!url} onClick={() => ref.current?.goBack()}>‹</button>
+        <button className="icon" data-tip="Reload (Cmd+R)" aria-label="Reload" disabled={!url} onClick={() => ref.current?.reloadIgnoringCache()}>
           <span className={state.loading ? 'spin' : ''}>↻</span>
         </button>
         <form className="preview-url" onSubmit={(e) => { e.preventDefault(); go(typed) }}>
-          <span className={`preview-dot ${live ? 'live' : local ? '' : 'web'}`} title={live ? 'Its command is running' : local ? 'This machine' : 'A site on the web, in its own session'} />
+          <span className={`preview-dot ${live ? 'live' : local ? '' : 'web'}`} data-tip={live ? 'Its command is running' : local ? 'This machine' : 'A site on the web, in its own session'} role="img" aria-label={live ? 'Its command is running' : local ? 'This machine' : 'A site on the web, in its own session'} />
           <input value={typed} placeholder="localhost:3000 or any site" spellCheck={false} onChange={(e) => setTyped(e.target.value)} aria-label="Address" />
         </form>
         <div className="segmented small" role="tablist" aria-label="Width">
@@ -221,23 +221,23 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
             <button key={k} role="tab" aria-selected={size === k} onClick={() => setWidth(k)}>{k[0]!.toUpperCase() + k.slice(1)}</button>
           ))}
         </div>
-        <button className="ghost small" disabled={!url} title="Open in your browser" onClick={() => void window.stm.openUrl(typed || url)}>Open</button>
+        <button className="ghost small" disabled={!url} data-tip="Open in your browser" onClick={() => void window.stm.openUrl(typed || url)}>Open</button>
       </div>
       {url && (
         <div className="br-tools" role="toolbar" aria-label="Developer tools">
-          <button className={`br-tool ${picking ? 'on' : ''}`} onClick={() => void pick()} title="Click an element on the page to send it to Claude (Esc cancels)">
+          <button className={`br-tool ${picking ? 'on' : ''}`} onClick={() => void pick()} data-tip="Click an element on the page to send it to Claude (Esc cancels)">
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 2h6M2 2v6M14 14H8M14 14V8" /><path d="M6 6l6 2.5-2.6 1-1 2.6z" className="fill" /></svg>
             {picking ? 'Click an element' : 'Pick'}
           </button>
-          <button className="br-tool" onClick={() => void capture()} title="Screenshot to mark up and send">
+          <button className="br-tool" onClick={() => void capture()} data-tip="Screenshot to mark up and send">
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 4h3l1.5-2h3L11 4h3v9H2z" /><circle cx="8" cy="8.5" r="2.5" /></svg>
             Mark up
           </button>
-          <button className="br-tool" onClick={() => void startCompare()} title={refs[url] ? 'Compare the page now with its reference' : 'Keep the page as it is now as the reference to compare with later'}>
+          <button className="br-tool" onClick={() => void startCompare()} data-tip={refs[url] ? 'Compare the page now with its reference' : 'Keep the page as it is now as the reference to compare with later'}>
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h5v10H2zM9 3h5v10H9z" /><path d="M10.5 6.5h2M10.5 9.5h2" /></svg>
             {refs[url] ? 'Compare' : 'Set reference'}
           </button>
-          <button className="br-tool" onClick={() => refFile.current?.click()} title="Use an image (a mock or a design) as this page's reference">
+          <button className="br-tool" onClick={() => refFile.current?.click()} data-tip="Use an image (a mock or a design) as this page's reference">
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h12v10H2z" /><path d="M2 11l4-4 3 3 2-2 3 3" /></svg>
             Reference image
           </button>
@@ -250,11 +250,11 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
             r.readAsDataURL(f)
           }} />
           <span className="spacer-flex" />
-          <button className={`br-tool ${drawer === 'console' ? 'on' : ''}`} onClick={() => setDrawer(drawer === 'console' ? null : 'console')} title="Console">
+          <button className={`br-tool ${drawer === 'console' ? 'on' : ''}`} onClick={() => setDrawer(drawer === 'console' ? null : 'console')} data-tip="Console">
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h12v10H2zM4.5 6.5 6.5 8l-2 1.5M8 10h3" /></svg>
             Console{errors ? <span className="br-count err">{errors}</span> : null}
           </button>
-          <button className={`br-tool ${drawer === 'network' ? 'on' : ''}`} onClick={() => setDrawer(drawer === 'network' ? null : 'network')} title="Failed requests">
+          <button className={`br-tool ${drawer === 'network' ? 'on' : ''}`} onClick={() => setDrawer(drawer === 'network' ? null : 'network')} data-tip="Failed requests">
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 5h9M8 2l3 3-3 3M14 11H5M8 8l-3 3 3 3" /></svg>
             Network{failed ? <span className="br-count err">{failed}</span> : null}
           </button>
@@ -274,7 +274,7 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
             <span className="sp-label">{drawer === 'console' ? 'Console' : 'Failed requests'}</span>
             <span className="spacer-flex" />
             <button className="ghost small" onClick={() => (drawer === 'console' ? setLogs([]) : setNet([]))}>Clear</button>
-            <button className="ghost small" disabled={drawer === 'console' ? !logs.some((l) => l.level !== 'log') : !net.length} title="The local model explains it; free, nothing leaves the Mac" onClick={() => setExplain(drawer === 'console' ? logs.filter((l) => l.level !== 'log').slice(-30).map((l) => `[${l.level}] ${l.text} (${l.where})`).join('\n') : net.slice(-30).map((n) => `${n.method} ${n.url} ${n.status ?? n.error}`).join('\n'))}>Explain</button>
+            <button className="ghost small" disabled={drawer === 'console' ? !logs.some((l) => l.level !== 'log') : !net.length} data-tip="The local model explains it; free, nothing leaves the Mac" onClick={() => setExplain(drawer === 'console' ? logs.filter((l) => l.level !== 'log').slice(-30).map((l) => `[${l.level}] ${l.text} (${l.where})`).join('\n') : net.slice(-30).map((n) => `${n.method} ${n.url} ${n.status ?? n.error}`).join('\n'))}>Explain</button>
             <button className="small" disabled={drawer === 'console' ? !logs.some((l) => l.level !== 'log') : !net.length} onClick={drawer === 'console' ? sendConsole : sendNet}>Send to Claude</button>
           </div>
           <ul className="br-lines">
@@ -292,7 +292,7 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
                 : net.slice(-80).map((n) => (
                     <li key={n.at + n.url} className="error">
                       <span className="br-status">{n.status ?? 'ERR'}</span>
-                      <span className="br-msg" title={n.url}>{n.method} {n.url}</span>
+                      <span className="br-msg" data-tip={n.url}>{n.method} {n.url}</span>
                       <span className="br-where">{n.error ?? ''}</span>
                     </li>
                   ))}
@@ -405,7 +405,7 @@ function PreviewEmpty(props: { onOpen: (url: string) => void }) {
           <div className="pv-sub">Already running on this Mac</div>
           <div className="pv-ports">
             {found.map((l) => (
-              <button key={`${l.pid}:${l.port}`} className="pv-port" onClick={() => props.onOpen(`localhost:${l.port}`)} title={l.command}>
+              <button key={`${l.pid}:${l.port}`} className="pv-port" onClick={() => props.onOpen(`localhost:${l.port}`)} data-tip={l.command}>
                 <span className="pv-num">:{l.port}</span>
                 <span className="pv-name">{l.name}</span>
                 <span className="pv-where">{l.cwd ? l.cwd.split('/').filter(Boolean).pop() : ''}</span>

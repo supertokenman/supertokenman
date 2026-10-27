@@ -3,6 +3,7 @@ import { IconClose } from './icons'
 import { epModel, fit, parseEpModel, type Endpoint, type PresetId, type ServerKind, type ServerStats, type VllmArgs } from '../shared/modelserver'
 import { clean } from './errors'
 import './bridge'
+import { NumberField, Select } from './ui'
 
 const close = (
   <IconClose />
@@ -92,10 +93,10 @@ function Endpoints(props: { st: St; reload: () => void }) {
             <div className="ob-label">{form.id ? 'Edit endpoint' : 'New endpoint'}</div>
             <div className="mn-form">
               <label>Name<input value={form.name ?? ''} onChange={(x) => set('name', x.target.value)} /></label>
-              <label>Server<select value={form.kind} onChange={(x) => setForm((f) => ({ ...f, kind: x.target.value as ServerKind, baseUrl: KINDS[x.target.value as ServerKind].url }))}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></label>
+              <label>Server<Select value={form.kind} onChange={(x) => setForm((f) => ({ ...f, kind: x.target.value as ServerKind, baseUrl: KINDS[x.target.value as ServerKind].url }))}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select></label>
               <label className="wide">Base URL<input value={form.baseUrl ?? ''} onChange={(x) => set('baseUrl', x.target.value)} /></label>
               <label>API key name in the vault<input placeholder="none" value={form.keyName ?? ''} onChange={(x) => set('keyName', x.target.value.toUpperCase())} /></label>
-              <label>Sampling preset<select value={form.preset ?? 'precise'} onChange={(x) => set('preset', x.target.value as PresetId)}>{Object.entries(st.presets).map(([k, v]) => <option key={k} value={k}>{v.label}, temp {v.temperature}</option>)}</select></label>
+              <label>Sampling preset<Select value={form.preset ?? 'precise'} onChange={(x) => set('preset', x.target.value as PresetId)}>{Object.entries(st.presets).map(([k, v]) => <option key={k} value={k}>{v.label}, temp {v.temperature}</option>)}</Select></label>
             </div>
             <div className="ob-row">
               <button className="primary" onClick={() => void window.stm.models.save(form).then((l) => (setForm(null), setPick(form.id ?? l[l.length - 1]?.id ?? null), props.reload()), (x) => setErr(clean(x)))}>Save</button>
@@ -114,7 +115,7 @@ function Endpoints(props: { st: St; reload: () => void }) {
             </div>
             <div className="ob-label">Model</div>
             <div className="ob-row">
-              <select className="ob-grow" value={model} onChange={(x) => setModel(x.target.value)} disabled={!models?.length}>{(models ?? []).map((m) => <option key={m} value={m}>{m}</option>)}</select>
+              <Select className="ob-grow" value={model} onChange={(x) => setModel(x.target.value)} disabled={!models?.length}>{(models ?? []).map((m) => <option key={m} value={m}>{m}</option>)}</Select>
               <button disabled={!model} className={small?.id === e.id && small.model === model ? 'primary' : ''} onClick={() => void window.stm.small.set(epModel(e.id, model)).then(() => (setMsg(`${model} now does the small tasks, the arena and the local panels.`), props.reload()))}>{small?.id === e.id && small.model === model ? 'Used for small tasks' : 'Use for small tasks'}</button>
             </div>
             {models && !models.length && <div className="faint">The server lists no models.</div>}
@@ -179,12 +180,12 @@ function Gpu(props: { st: St; reload: () => void }) {
       <div className="cf-col">
         <div className="faint">Starts vLLM's OpenAI-compatible server on a Linux machine with a GPU, bound to its localhost, and reaches it through an SSH tunnel. Nothing runs without your click and a confirm.</div>
         <div className="mn-form">
-          <label>Host<select value={host} onChange={(x) => setHost(x.target.value)}>{st.hosts.map((h) => <option key={h}>{h}</option>)}</select></label>
-          <label>Port on the box<input type="number" value={a.port} onChange={(x) => set('port', Number(x.target.value))} /></label>
+          <label>Host<Select value={host} onChange={(x) => setHost(x.target.value)}>{st.hosts.map((h) => <option key={h}>{h}</option>)}</Select></label>
+          <label>Port on the box<NumberField value={a.port} onChange={(x) => set('port', Number(x.target.value))} /></label>
           <label className="wide">Model (Hugging Face id)<input value={a.model} onChange={(x) => set('model', x.target.value)} /></label>
-          <label>Max context<input type="number" value={a.maxModelLen ?? ''} onChange={(x) => set('maxModelLen', Number(x.target.value) || undefined)} /></label>
-          <label>GPU memory share<input type="number" step="0.05" value={a.gpuMemory ?? ''} onChange={(x) => set('gpuMemory', Number(x.target.value) || undefined)} /></label>
-          <label>GPUs (tensor parallel)<input type="number" min={1} value={a.tensorParallel ?? 1} onChange={(x) => set('tensorParallel', Number(x.target.value))} /></label>
+          <label>Max context<NumberField value={a.maxModelLen ?? ''} onChange={(x) => set('maxModelLen', Number(x.target.value) || undefined)} /></label>
+          <label>GPU memory share<NumberField step="0.05" value={a.gpuMemory ?? ''} onChange={(x) => set('gpuMemory', Number(x.target.value) || undefined)} /></label>
+          <label>GPUs (tensor parallel)<NumberField min={1} value={a.tensorParallel ?? 1} onChange={(x) => set('tensorParallel', Number(x.target.value))} /></label>
           <label>Quantization<input placeholder="none, awq, gptq, fp8" value={a.quantization ?? ''} onChange={(x) => set('quantization', x.target.value || undefined)} /></label>
           <label className="wide">API key name in the vault<input placeholder="none" value={a.keyName ?? ''} onChange={(x) => set('keyName', x.target.value.toUpperCase() || undefined)} /></label>
         </div>
@@ -210,7 +211,7 @@ function Gpu(props: { st: St; reload: () => void }) {
         <div className="ob-label">Tunnel</div>
         <div className="ob-row">
           <span className="faint">127.0.0.1:</span>
-          <input className="mn-hours" type="number" value={local} onChange={(x) => setLocal(Number(x.target.value))} aria-label="Local port" />
+          <NumberField className="mn-hours" value={local} onChange={(x) => setLocal(Number(x.target.value))} aria-label="Local port" />
           <span className="faint">to {host}:{a.port}</span>
           <button onClick={() => void window.stm.models.tunnel(host, local, a.port, !open).then(setTunnels, (x) => setErr(clean(x)))}>{open ? 'Close tunnel' : 'Open tunnel'}</button>
         </div>
@@ -246,12 +247,12 @@ function Fit(props: { st: St }) {
       <div className="cf-col">
         <div className="faint">Before you load a model: its weights at the chosen precision, the KV cache for the context and parallel requests, and runtime overhead, against the GPU or unified memory you have.</div>
         <div className="mn-form">
-          <label className="wide">Model<select value={shape} onChange={(x) => setShape(x.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</select></label>
-          <label>Weights precision<select value={bits} onChange={(x) => setBits(Number(x.target.value))}><option value={16}>16-bit (BF16)</option><option value={8}>8-bit (FP8, Q8)</option><option value={4.5}>4-bit (Q4_K_M, AWQ)</option></select></label>
-          <label>KV cache precision<select value={kvBits} onChange={(x) => setKvBits(Number(x.target.value))}><option value={16}>16-bit</option><option value={8}>8-bit (FP8)</option></select></label>
-          <label>Context (tokens)<input type="number" value={context} onChange={(x) => setContext(Number(x.target.value))} /></label>
-          <label>Parallel requests<input type="number" min={1} value={batch} onChange={(x) => setBatch(Math.max(1, Number(x.target.value)))} /></label>
-          <label className="wide">Memory you have (GB)<input type="number" value={memoryGb} onChange={(x) => setMemoryGb(Number(x.target.value))} /></label>
+          <label className="wide">Model<Select value={shape} onChange={(x) => setShape(x.target.value)}>{names.map((n) => <option key={n}>{n}</option>)}</Select></label>
+          <label>Weights precision<Select value={bits} onChange={(x) => setBits(Number(x.target.value))}><option value={16}>16-bit (BF16)</option><option value={8}>8-bit (FP8, Q8)</option><option value={4.5}>4-bit (Q4_K_M, AWQ)</option></Select></label>
+          <label>KV cache precision<Select value={kvBits} onChange={(x) => setKvBits(Number(x.target.value))}><option value={16}>16-bit</option><option value={8}>8-bit (FP8)</option></Select></label>
+          <label>Context (tokens)<NumberField value={context} onChange={(x) => setContext(Number(x.target.value))} /></label>
+          <label>Parallel requests<NumberField min={1} value={batch} onChange={(x) => setBatch(Math.max(1, Number(x.target.value)))} /></label>
+          <label className="wide">Memory you have (GB)<NumberField value={memoryGb} onChange={(x) => setMemoryGb(Number(x.target.value))} /></label>
         </div>
       </div>
       <div className="cf-col">

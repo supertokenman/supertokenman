@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { LockPrefs } from '../electron/lock'
+import { Select, Switch } from './ui'
 
 const KeyHole = () => (
   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -111,21 +112,21 @@ export function TouchIdSettings() {
       </div>
       <div className="tid-row">
         <span>Ask when the app opens</span>
-        <label className="switch"><input type="checkbox" disabled={!s.available} checked={s.prefs.onOpen} onChange={(e) => void set({ onOpen: e.target.checked })} /><span /></label>
+        <Switch disabled={!s.available} checked={s.prefs.onOpen} onChange={(e) => void set({ onOpen: e.target.checked })} />
       </div>
       <div className="tid-row">
         <span>Ask before changing secrets</span>
-        <label className="switch"><input type="checkbox" disabled={!s.available} checked={s.prefs.secrets} onChange={(e) => void set({ secrets: e.target.checked })} /><span /></label>
+        <Switch disabled={!s.available} checked={s.prefs.secrets} onChange={(e) => void set({ secrets: e.target.checked })} />
       </div>
       <div className="tid-row">
         <span>Lock after time away</span>
-        <select disabled={!s.available} value={s.prefs.idleMin} onChange={(e) => void set({ idleMin: Number(e.target.value) })}>
+        <Select disabled={!s.available} value={s.prefs.idleMin} onChange={(e) => void set({ idleMin: Number(e.target.value) })}>
           <option value={0}>Never</option>
           <option value={5}>5 min</option>
           <option value={15}>15 min</option>
           <option value={30}>30 min</option>
           <option value={60}>1 hour</option>
-        </select>
+        </Select>
       </div>
       {err && <div className="notice error">{err}</div>}
     </>

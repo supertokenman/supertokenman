@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
+import { Checkbox } from './ui'
 
 const TOOLS: [string, string][] = [
   ['stm_status', 'Version, open panels, how many are working, spend today'],
@@ -33,7 +34,7 @@ export function ConnectAgentsSheet(props: { onClose: () => void }) {
           <span className="chart-name">Tools it gets</span>
           <ul className="ca-tools">{TOOLS.map(([n, w]) => <li key={n}><code>{n}</code> <span className="faint">{w}</span></li>)}</ul>
           <label className="ca-toggle">
-            <input type="checkbox" checked={Boolean(info?.send)} disabled={!info} onChange={(e) => void window.stm.mcpsrv.setSend(e.target.checked).then((send: boolean) => setInfo((i) => i && { ...i, send }))} />
+            <Checkbox checked={Boolean(info?.send)} disabled={!info} onChange={(e) => void window.stm.mcpsrv.setSend(e.target.checked).then((send: boolean) => setInfo((i) => i && { ...i, send }))} />
             Let other agents send to panels
           </label>
           <div className="faint">Off by default. When on, messages arrive marked as coming from another agent and go through the budget brake. Reads never include credentials. The app must be open; the stm command talks to it locally.</div>

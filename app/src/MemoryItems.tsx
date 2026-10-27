@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { IconClose, IconEdit, IconArchive } from './icons'
 import { RowAct, RowActs } from './RowActs'
 import type { Hit, MemItem, Origin } from '../shared/memitems'
+import { Checkbox } from './ui'
 
 const ORIGINS: [Origin, string][] = [['you', 'You'], ['agent', 'Claude'], ['session', 'A session']]
 
@@ -39,7 +40,7 @@ export function MemoryItemsSheet(props: { project: string; onClose: () => void }
               <button role="tab" aria-selected={mode === 'history'} onClick={() => setMode('history')}>History</button>
             </div>
             <input className="ob-grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by words, meaning, files or packages" aria-label="Search memory" />
-            {ORIGINS.map(([o, label]) => <label key={o} className="rt-day"><input type="checkbox" checked={origins.includes(o)} onChange={(e) => setOrigins(e.target.checked ? [...origins, o] : origins.filter((x) => x !== o))} />{label}</label>)}
+            {ORIGINS.map(([o, label]) => <label key={o} className="rt-day"><Checkbox checked={origins.includes(o)} onChange={(e) => setOrigins(e.target.checked ? [...origins, o] : origins.filter((x) => x !== o))} />{label}</label>)}
           </div>
           <div className="ob-row">
             <input className="ob-grow" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add a fact or decision (e.g. Tests run with vitest; slow ones are tagged)" aria-label="New memory item" />

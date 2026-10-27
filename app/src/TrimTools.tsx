@@ -19,7 +19,7 @@ export function TrimTools(props: { sid: string; task: string; onNote: (t: string
   const suggest = (t: string) => run(window.stm.prune.suggest(props.sid, t), (v) => (setPlan(v), setPruned(v.pruned)))
   return (
     <span className="iso-wrap">
-      <button className={`ghost small iso-chip ${pruned ? 'on' : ''}`} title="Leave out MCP tools this task does not need" onClick={(e) => {
+      <button className={`ghost small iso-chip ${pruned ? 'on' : ''}`} data-tip="Leave out MCP tools this task does not need" onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect()
         setAt({ top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 336) })
         if (!open) { setTask(props.task); setPlan(null) }

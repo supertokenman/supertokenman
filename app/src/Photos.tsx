@@ -4,6 +4,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconClose, IconFolder, IconRefresh } from './icons'
 import './bridge'
+import { DateField } from './ui'
 
 const kb = (n: number) => (n >= 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`)
 
@@ -23,7 +24,7 @@ function Thumb(props: { p: Photo; onOpen: () => void }) {
     return () => io.disconnect()
   }, [el])
   return (
-    <button ref={setEl} className="ph-cell" onClick={props.onOpen} title={`${props.p.name} · ${props.p.taken.replace('T', ' ')}${props.p.camera ? ` · ${props.p.camera}` : ''}`}>
+    <button ref={setEl} className="ph-cell" onClick={props.onOpen} data-tip={`${props.p.name} · ${props.p.taken.replace('T', ' ')}${props.p.camera ? ` · ${props.p.camera}` : ''}`}>
       {src ? <img src={src} alt={props.p.name} /> : <i />}
       <span>{props.p.taken.slice(0, 10)}</span>
     </button>
@@ -84,8 +85,8 @@ export function PhotosSheet(props: { onClose: () => void }) {
             <input className="ob-grow" value={q} placeholder={src === 'immich' ? 'Describe what is in the photo (Immich smart search, on your server)' : 'Name, folder, camera or month (2026-10)'} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && src === 'immich' && immichSearch()} />
             {src === 'folder' ? (
               <>
-                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="From" />
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="To" />
+                <DateField value={from} onChange={(e) => setFrom(e.target.value)} aria-label="From" />
+                <DateField value={to} onChange={(e) => setTo(e.target.value)} aria-label="To" />
               </>
             ) : <button className="primary small" disabled={busy || !cfg?.immich} onClick={immichSearch}>Search</button>}
           </div>

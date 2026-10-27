@@ -5,6 +5,7 @@ import { StateMark } from './StateMark'
 import { IntegrationMark } from './IntegrationMark'
 import { friendly } from './errors'
 import type { Exposure, IntegrationInfo, SecretInfo } from './bridge'
+import { Checkbox, Switch } from './ui'
 
 type Tab = 'integrations' | 'vault' | 'exposures'
 
@@ -76,7 +77,7 @@ export function Connections(props: { onClose: () => void; exposures: (Exposure &
           </div>
           <span className="spacer-flex" />
           {tab === 'integrations' && (
-            <button className="ghost small" disabled={starsBusy} title="Reads star counts from the public GitHub API" onClick={loadStars}>
+            <button className="ghost small" disabled={starsBusy} data-tip="Reads star counts from the public GitHub API" onClick={loadStars}>
               {starsBusy ? 'Reading stars' : 'Show GitHub stars'}
             </button>
           )}
@@ -111,27 +112,20 @@ export function Connections(props: { onClose: () => void; exposures: (Exposure &
               <div className="group">{g}</div>
               <div className="cards">
                 {list.map((it) => (
-                  <div key={it.id} className={`card ${it.enabled ? 'on' : ''}`} title={it.what}>
+                  <div key={it.id} className={`card ${it.enabled ? 'on' : ''}`} data-tip={it.what}>
                     <div className="card-top">
                       <StateMark state={it.enabled ? (it.ready ? 'up' : 'warn') : 'off'} label={it.enabled ? (it.ready ? 'On' : 'On, needs a token') : 'Off'} />
                       <IntegrationMark id={it.id} name={it.name} group={it.group} size={26} />
-                      <span className="card-name" title={it.name}>{it.name}</span>
-                      <span className={`auth-mark ${it.auth.kind}`} title={it.auth.kind === 'token' ? 'Token: signs in with a token you save in the vault' : it.auth.kind === 'oauth' ? 'Login: signs in through a browser login' : it.auth.kind === 'cli' ? 'CLI: uses the sign-in of its command-line tool on this Mac' : 'Free: no account needed'} aria-label={it.auth.kind}><AuthGlyph kind={it.auth.kind} /></span>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={it.enabled}
-                          onChange={async (e) => {
+                      <span className="card-name" data-tip={it.name}>{it.name}</span>
+                      <span className={`auth-mark ${it.auth.kind}`} data-tip={it.auth.kind === 'token' ? 'Token: signs in with a token you save in the vault' : it.auth.kind === 'oauth' ? 'Login: signs in through a browser login' : it.auth.kind === 'cli' ? 'CLI: uses the sign-in of its command-line tool on this Mac' : 'Free: no account needed'} aria-label={it.auth.kind}><AuthGlyph kind={it.auth.kind} /></span>
+                      <Switch checked={it.enabled} onChange={async (e) => {
                             await window.stm.setIntegration(it.id, e.target.checked)
                             await load()
-                          }}
-                        />
-                        <span />
-                      </label>
+                          }} />
                     </div>
                     <div className="card-meta">
                       <span className="card-tag">{it.tag}</span>
-                      {stars[it.id] ? <span className="card-stars" title={`${stars[it.id]!.toLocaleString()} stars on GitHub (${it.repo})`}>★ {kStars(stars[it.id]!)}</span> : null}
+                      {stars[it.id] ? <span className="card-stars" data-tip={`${stars[it.id]!.toLocaleString()} stars on GitHub (${it.repo})`}>★ {kStars(stars[it.id]!)}</span> : null}
                     </div>
                     {it.engine && !it.engineReady && (
                       <div className="card-foot">
@@ -165,7 +159,7 @@ export function Connections(props: { onClose: () => void; exposures: (Exposure &
                           <span className="ok">{it.auth.secret} saved</span>
                         ) : (
                           <>
-                            <button className="small" title={`Add ${it.auth.secret}`} onClick={() => startAdding((it.auth as { secret: string }).secret)}>Add token</button>
+                            <button className="small" data-tip={`Add ${it.auth.secret}`} onClick={() => startAdding((it.auth as { secret: string }).secret)}>Add token</button>
                             {it.steps ? (
                               <button className="ghost small" onClick={() => setGuide(guide === it.id ? null : it.id)}>{guide === it.id ? 'Hide steps' : 'Set up'}</button>
                             ) : (
@@ -208,7 +202,7 @@ export function Connections(props: { onClose: () => void; exposures: (Exposure &
                 <input placeholder="NAME_LIKE_THIS" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_') })} spellCheck={false} />
                 <input placeholder="Value" type="password" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} autoComplete="off" />
                 <label className="check">
-                  <input type="checkbox" checked={form.forCommands} onChange={(e) => setForm({ ...form, forCommands: e.target.checked })} />
+                  <Checkbox checked={form.forCommands} onChange={(e) => setForm({ ...form, forCommands: e.target.checked })} />
                   Commands can read it
                 </label>
                 <button className="primary" disabled={!form.name || !form.value} onClick={() => void save()}>Save</button>
@@ -221,9 +215,8 @@ export function Connections(props: { onClose: () => void; exposures: (Exposure &
                     <span className="row-name">{s.name}</span>
                     <span className="faint">{'•'.repeat(10)}</span>
                     <span className="faint">{new Date(s.savedAt).toLocaleDateString()}</span>
-                    <label className="check" title="Expose it as an environment variable to commands and to Claude's Bash">
-                      <input
-                        type="checkbox"
+                    <label className="check" data-tip="Expose it as an environment variable to commands and to Claude's Bash">
+                      <Checkbox
                         checked={s.forCommands}
                         onChange={async (e) => {
                           await window.stm.vaultForCommands(s.name, e.target.checked)
@@ -283,7 +276,7 @@ function CliFoot(props: { cli: 'aws' | 'gcloud' | 'az' | 'railway'; guard?: stri
       ) : !st ? null : !st.installed ? (
         <span className="faint">Not installed: <code>{st.install}</code></span>
       ) : st.account ? (
-        <span className="ok" title={st.detail}>{st.account}{st.detail ? <span className="faint"> · {st.detail}</span> : null}</span>
+        <span className="ok" data-tip={st.detail}>{st.account}{st.detail ? <span className="faint"> · {st.detail}</span> : null}</span>
       ) : (
         <>
           <span className="faint">Not signed in</span>

@@ -9,6 +9,7 @@ import type { IntegrationInfo } from './bridge'
 import { clean } from './errors'
 import { MAIN_MODELS, MORE_MODELS, modelLabel as sharedLabel } from '../shared/models'
 import { IntegrationMark } from './IntegrationMark'
+import { Checkbox, Select } from './ui'
 
 const modelLabel = (id: string) => (id ? sharedLabel(id) : 'App default')
 
@@ -90,7 +91,7 @@ export function Personas(props: { onClose: () => void; onOpen: (id: string) => v
                     <RoleHero p={p} size={40} />
                     <div className="pcard-name">{p.name}</div>
                     <span className="pill">{modelLabel(p.model)}</span>
-                    {(p.access ?? 'ask') !== 'ask' && <span className={`acc-badge acc-${p.access}`} role="img" aria-label={ACCESS[p.access!].label} title={`${ACCESS[p.access!].label}: ${ACCESS[p.access!].what}`}><AccessMark access={p.access!} /></span>}
+                    {(p.access ?? 'ask') !== 'ask' && <span className={`acc-badge acc-${p.access}`} role="img" aria-label={ACCESS[p.access!].label} data-tip={`${ACCESS[p.access!].label}: ${ACCESS[p.access!].what}`}><AccessMark access={p.access!} /></span>}
                   </div>
                   <div className="pcard-text">{p.instructions || 'No instructions yet.'}</div>
                   <div className="pcard-ints">
@@ -131,7 +132,7 @@ function Editor(props: { p: Persona; ints: IntegrationInfo[]; onSave: (p: Person
             <button key={c} className={`pe-color ${p.color === c ? 'on' : ''}`} style={{ background: c }} aria-label={c} aria-checked={p.color === c} role="radio" onClick={() => set({ color: c })} />
           ))}
         </div>
-        <select value={p.model} onChange={(e) => set({ model: e.target.value })}>
+        <Select value={p.model} onChange={(e) => set({ model: e.target.value })}>
           <option value="">App default</option>
           {MAIN_MODELS.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>
@@ -141,7 +142,7 @@ function Editor(props: { p: Persona; ints: IntegrationInfo[]; onSave: (p: Person
               <option key={m.id} value={m.id}>{m.label}</option>
             ))}
           </optgroup>
-        </select>
+        </Select>
       </div>
       <div className="group">What it may do</div>
       <div className="pe-access" role="radiogroup" aria-label="What it may do">
@@ -173,7 +174,7 @@ function Editor(props: { p: Persona; ints: IntegrationInfo[]; onSave: (p: Person
       <div className="pe-ints">
         {props.ints.map((i) => (
           <label key={i.id} className={`pe-int ${p.integrations.includes(i.id) ? 'on' : ''}`}>
-            <input type="checkbox" checked={p.integrations.includes(i.id)} onChange={() => toggle(i.id)} />
+            <Checkbox checked={p.integrations.includes(i.id)} onChange={() => toggle(i.id)} />
             <IntegrationMark id={i.id} name={i.name} group={i.group} size={16} />
             {i.name}
           </label>

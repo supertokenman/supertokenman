@@ -27,7 +27,7 @@ export function Diff({ edit, cwd, comments, onComment }: { edit: FileEdit; cwd?:
               <div
                 className={`${l.op === '+' ? 'add' : l.op === '-' ? 'del' : fold ? 'fold' : ''} ${onComment && !fold ? 'commentable' : ''} ${c ? 'has-comment' : ''}`}
                 onClick={onComment && !fold ? () => setEditing(editing === key ? null : key) : undefined}
-                title={onComment && !fold ? 'Comment on this line' : undefined}
+                data-tip={onComment && !fold ? 'Comment on this line' : undefined}
               >
                 <span className="op">{l.op}</span>
                 {l.text || ' '}

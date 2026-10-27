@@ -7,6 +7,7 @@ import { STAGES, windowShare, type Piece, type Stage } from '../electron/content
 import type { SocialStatus } from './bridge'
 import { clean } from './errors'
 import { IntegrationMark } from './IntegrationMark'
+import { Checkbox, Select } from './ui'
 
 const STAGE_LABEL: Record<Stage, string> = { idea: 'Idea', script: 'Script', render: 'Render', check: 'Check', review: 'Review', queued: 'Queued' }
 const k = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n))
@@ -60,8 +61,8 @@ export function Content(props: { seed?: { title: string; idea: string } | null; 
       <div className="ct-side">
         <div className="ct-proj">
           <span className="faint">Project</span>
-          <code title={props.project}>{folder || 'no folder'}</code>
-          {engine && <span className={`pill ${engine.ready ? '' : 'warn'}`} title={engine.note}>{engine.label}</span>}
+          <code data-tip={props.project}>{folder || 'no folder'}</code>
+          {engine && <span className={`pill ${engine.ready ? '' : 'warn'}`} data-tip={engine.note}>{engine.label}</span>}
           <button className="ghost small" onClick={() => void pickProjectFolder('Project for this content').then((d) => d && props.onProject(d))}>Change</button>
         </div>
         {engine && !engine.ready && (
@@ -141,7 +142,7 @@ export function Content(props: { seed?: { title: string; idea: string } | null; 
             <div className="ct-music">
               <span className="faint">Voice</span>
               {voiceOk && (
-                <select value={p.voice?.startsWith('eleven:') ? '' : (p.voice ?? 'pf_dora')} onChange={(e) => e.target.value && void act('voice', () => window.stm.content.update(p.id, { voice: e.target.value }))}>
+                <Select value={p.voice?.startsWith('eleven:') ? '' : (p.voice ?? 'pf_dora')} onChange={(e) => e.target.value && void act('voice', () => window.stm.content.update(p.id, { voice: e.target.value }))}>
                   {p.voice?.startsWith('eleven:') && <option value="">Local voice...</option>}
                   <option value="none">No narration</option>
                   {LANGS.map((l) => (
@@ -149,18 +150,18 @@ export function Content(props: { seed?: { title: string; idea: string } | null; 
                       {l.voices.map(([v, name]) => <option key={v} value={v}>{name} · {l.name}</option>)}
                     </optgroup>
                   ))}
-                </select>
+                </Select>
               )}
               {eleven.voices?.length ? (
-                <select className={p.voice?.startsWith('eleven:') ? 'on' : ''} value={p.voice?.startsWith('eleven:') ? p.voice : ''} onChange={(e) => e.target.value && void act('voice', () => window.stm.content.update(p.id, { voice: e.target.value }))}>
+                <Select className={p.voice?.startsWith('eleven:') ? 'on' : ''} value={p.voice?.startsWith('eleven:') ? p.voice : ''} onChange={(e) => e.target.value && void act('voice', () => window.stm.content.update(p.id, { voice: e.target.value }))}>
                   <option value="">ElevenLabs voice...</option>
                   {eleven.voices.map((v) => <option key={v.id} value={`eleven:${v.id}`}>{v.name}{v.labels ? ` (${v.labels})` : ''}</option>)}
-                </select>
+                </Select>
               ) : null}
               {(voiceOk || p.voice?.startsWith('eleven:')) && (
-                <select value={String(p.voiceSpeed ?? 1.05)} onChange={(e) => void act('voice', () => window.stm.content.update(p.id, { voiceSpeed: Number(e.target.value) }))}>
+                <Select value={String(p.voiceSpeed ?? 1.05)} onChange={(e) => void act('voice', () => window.stm.content.update(p.id, { voiceSpeed: Number(e.target.value) }))}>
                   {[0.95, 1, 1.05, 1.1, 1.15, 1.2].map((x) => <option key={x} value={String(x)}>{x}×</option>)}
-                </select>
+                </Select>
               )}
               <span className="faint">
                 {p.voice?.startsWith('eleven:')
@@ -182,7 +183,7 @@ export function Content(props: { seed?: { title: string; idea: string } | null; 
           {p.engine === 'revideo' && p.stage !== 'idea' && (
             <div className="ct-music">
               <span className="faint">Music</span>
-              {p.music ? <code title={p.music}>{p.music.split('/').pop()}</code> : <span className="faint">none: the video goes out silent</span>}
+              {p.music ? <code data-tip={p.music}>{p.music.split('/').pop()}</code> : <span className="faint">none: the video goes out silent</span>}
               <button className="ghost small" onClick={() => void act('music', () => pickPaths({ title: 'Choose a music track', accept: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'], action: 'Use' }).then((r) => (r === 'finder' ? window.stm.content.pickMusic(p.id) : r ? window.stm.content.pickMusic(p.id, r) : null)))}>{p.music ? 'Change' : 'Add a track'}</button>
               {p.music && <button className="ghost small" onClick={() => void act('music', () => window.stm.content.update(p.id, { music: undefined, musicLicense: undefined }))}>Remove</button>}
               {p.music && (
@@ -231,7 +232,7 @@ export function Content(props: { seed?: { title: string; idea: string } | null; 
               <div className="biz-row">
                 {props.nets.filter((x) => x.connected && x.can.publish).map((x) => (
                   <label key={x.id} className={`pe-int ${pub.nets.includes(x.id) ? 'on' : ''}`}>
-                    <input type="checkbox" checked={pub.nets.includes(x.id)} onChange={() => setPub({ ...pub, nets: pub.nets.includes(x.id) ? pub.nets.filter((y) => y !== x.id) : [...pub.nets, x.id] })} />
+                    <Checkbox checked={pub.nets.includes(x.id)} onChange={() => setPub({ ...pub, nets: pub.nets.includes(x.id) ? pub.nets.filter((y) => y !== x.id) : [...pub.nets, x.id] })} />
                     <IntegrationMark id={x.id} name={x.name} size={16} />
                     {x.name}
                   </label>

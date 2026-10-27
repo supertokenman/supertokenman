@@ -7,6 +7,7 @@ import type { Rule } from '../shared/docrules'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Select } from './ui'
 
 // what the inbox reads (electron/docstore.ts ACCEPTED); the main process checks again
 const DOC_EXTS = ['txt', 'md', 'csv', 'json', 'eml', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp', 'pdf', 'docx', 'pptx', 'xlsx', 'html', 'epub']
@@ -71,8 +72,8 @@ export function DocumentsSheet(props: { onClose: () => void; onSend: (text: stri
                   <li key={j.id} className={j.status}>
                     <StateMark state={JOB[j.status].state} label={JOB[j.status].label} />
                     <span className="dc-st">{JOB[j.status].label}</span>
-                    <span className="dc-file" title={j.file}>{name(j.file)}</span>
-                    <span className="faint dc-err" title={j.error}>{j.error}{j.tries > 1 ? ` · try ${j.tries}` : ''}</span>
+                    <span className="dc-file" data-tip={j.file}>{name(j.file)}</span>
+                    <span className="faint dc-err" data-tip={j.error}>{j.error}{j.tries > 1 ? ` · try ${j.tries}` : ''}</span>
                     {j.status === 'failed' && <button className="ghost small" onClick={() => act(window.stm.docs.retry(j.id))}>Retry</button>}
                     {(j.status === 'done' || j.status === 'duplicate') && j.doc && <button className="ghost small" onClick={() => (setOpen(j.doc), setTab('docs'))}>Open</button>}
                   </li>
@@ -135,7 +136,7 @@ function DocView(props: { id: number; onBack: () => void; onSend: (t: string) =>
       <code className="dc-path faint">{doc.path}</code>
       <div className="dc-tags">
         <span className="sp-label">Tags</span>
-        {doc.tags.map((t) => <button key={t} className="dc-tag on" title="Remove" onClick={() => tags(doc.tags.filter((x) => x !== t))}>{t} ×</button>)}
+        {doc.tags.map((t) => <button key={t} className="dc-tag on" data-tip="Remove" onClick={() => tags(doc.tags.filter((x) => x !== t))}>{t} ×</button>)}
         {doc.suggested.map((t) => (
           <span key={t} className="dc-sug">
             <span className="dc-tag sug">{t}</span>
@@ -164,11 +165,11 @@ function DocView(props: { id: number; onBack: () => void; onSend: (t: string) =>
       <div className="dc-chunks">
         {d.chunks.map((c, i) => (
           <div key={c.id} className={`dc-chunk ${c.edited ? 'edited' : ''}`}>
-            <span className="dc-ord">{c.ord + 1}{c.edited ? ' · edited' : ''}<span className={`dc-vec ${c.embedded ? 'on' : ''}`} title={c.embedded ? 'Has a vector: found by meaning' : 'No vector yet: found by words only'}>{c.embedded ? 'vector' : 'words only'}</span></span>
+            <span className="dc-ord">{c.ord + 1}{c.edited ? ' · edited' : ''}<span className={`dc-vec ${c.embedded ? 'on' : ''}`} data-tip={c.embedded ? 'Has a vector: found by meaning' : 'No vector yet: found by words only'}>{c.embedded ? 'vector' : 'words only'}</span></span>
             <textarea value={edit[c.id] ?? c.text} spellCheck={false} onChange={(e) => setEdit({ ...edit, [c.id]: e.target.value })} onSelect={(e) => setCursor({ id: c.id, at: e.currentTarget.selectionStart })} rows={rowsFor(edit[c.id] ?? c.text)} />
             <span className="dc-chunk-acts">
-              <button className="ghost small" disabled={!(cursor?.id === c.id && cursor.at > 0 && cursor.at < c.text.length) || edit[c.id] !== undefined} title="Cut this chunk in two where the cursor is" onClick={() => void window.stm.docs.split(c.id, cursor!.at).then(load)}>Split here</button>
-              {i < d.chunks.length - 1 && <button className="ghost small" title="Join with the next chunk" onClick={() => void window.stm.docs.merge(c.id).then(load)}>Join with next</button>}
+              <button className="ghost small" disabled={!(cursor?.id === c.id && cursor.at > 0 && cursor.at < c.text.length) || edit[c.id] !== undefined} data-tip="Cut this chunk in two where the cursor is" onClick={() => void window.stm.docs.split(c.id, cursor!.at).then(load)}>Split here</button>
+              {i < d.chunks.length - 1 && <button className="ghost small" data-tip="Join with the next chunk" onClick={() => void window.stm.docs.merge(c.id).then(load)}>Join with next</button>}
             </span>
             {edit[c.id] !== undefined && edit[c.id] !== c.text && <button className="primary small" onClick={() => void window.stm.docs.chunk(c.id, edit[c.id]!).then(() => (setEdit({ ...edit, [c.id]: undefined as unknown as string }), load()))}>{edit[c.id]!.trim() ? 'Save' : 'Delete'}</button>}
           </div>
@@ -203,7 +204,7 @@ function Search(props: { tags: string[]; models: { small: string; embed: string 
     <>
       <div className="dep-row">
         <input id="dc-q" value={q} placeholder="What are you looking for? e.g. how much was the October power bill" onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && q.trim() && void go()} />
-        <select className="dc-select" value={tag} onChange={(e) => setTag(e.target.value)} aria-label="Tag"><option value="">All tags</option>{props.tags.map((t) => <option key={t}>{t}</option>)}</select>
+        <Select className="dc-select" value={tag} onChange={(e) => setTag(e.target.value)} aria-label="Tag"><option value="">All tags</option>{props.tags.map((t) => <option key={t}>{t}</option>)}</Select>
         <button className="primary small" disabled={busy || !q.trim()} onClick={() => void go()}>Search</button>
       </div>
       <div className="faint">Words (BM25), then meaning ({props.models.embed || 'no embedding model picked'}), fused by rank, then a rerank by {props.models.small || 'the local model, when one is picked'}.</div>

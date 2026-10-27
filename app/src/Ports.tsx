@@ -63,8 +63,8 @@ export function Ports(props: { onClose: () => void }) {
             <div key={`${l.pid}-${l.port}`} className="port-row">
               <span className="port-num">{l.port}</span>
               <span className="port-main">
-                <span className="port-cmd" title={l.command}>{l.command}</span>
-                <span className="faint port-meta" title={`${l.name} · pid ${l.pid}${l.cwd ? ` · ${l.cwd}` : ''}${l.shared?.length ? ` · also held by pid ${l.shared.join(', ')}` : ''}`}>
+                <span className="port-cmd" data-tip={l.command}>{l.command}</span>
+                <span className="faint port-meta" data-tip={`${l.name} · pid ${l.pid}${l.cwd ? ` · ${l.cwd}` : ''}${l.shared?.length ? ` · also held by pid ${l.shared.join(', ')}` : ''}`}>
                   {l.name} · pid {l.pid}{l.cwd ? ` · ${short(l.cwd)}` : ''}{l.shared?.length ? ` (+${l.shared.length} sharing)` : ''}{l.uptime ? ` · up ${l.uptime}` : ''} · {l.memMb} MB{l.cpu >= 1 ? ` · ${l.cpu}% CPU` : ''}
                   {l.host !== '*' && l.host !== '127.0.0.1' && l.host !== '::1' ? ` · on ${l.host}` : l.host === '*' ? ' · all interfaces' : ''}
                 </span>
@@ -74,7 +74,7 @@ export function Ports(props: { onClose: () => void }) {
                 {l.mine ? (
                   <span className="faint">this app</span>
                 ) : (
-                  <button className={`small ${stopping[l.pid] === 'term' ? 'danger' : 'ghost'}`} onClick={() => void stop(l)} title={stopping[l.pid] === 'term' ? 'Still running: send SIGKILL' : 'Send SIGTERM'}>
+                  <button className={`small ${stopping[l.pid] === 'term' ? 'danger' : 'ghost'}`} onClick={() => void stop(l)} data-tip={stopping[l.pid] === 'term' ? 'Still running: send SIGKILL' : 'Send SIGTERM'}>
                     {stopping[l.pid] === 'term' ? 'Force quit' : 'Stop'}
                   </button>
                 )}

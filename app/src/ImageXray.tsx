@@ -3,6 +3,7 @@ import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import type { Report } from '../electron/imagexray'
+import { Combobox } from './ui'
 
 const mb = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} kB` : `${n} B`)
 
@@ -34,8 +35,7 @@ export function ImageXray(props: { sid?: string; onClose: () => void }) {
         <div className="pt-body">
           <div className="pt-row">
             <label className="chart-name" htmlFor="xr-img">Image</label>
-            <input id="xr-img" list="xr-list" value={image} spellCheck={false} onChange={(e) => setImage(e.target.value)} />
-            <datalist id="xr-list">{images.map((i) => <option key={i.name} value={i.name}>{i.size}</option>)}</datalist>
+            <Combobox id="xr-img" options={images.map((i) => ({ value: i.name, hint: String(i.size) }))} value={image} spellCheck={false} onChange={(e) => setImage(e.target.value)} />
             <button className="primary" disabled={!image || busy} onClick={run}>{busy ? 'Reading layers…' : 'X-ray it'}</button>
           </div>
           {err && <div className="bg-err">{err}</div>}
@@ -58,7 +58,7 @@ export function ImageXray(props: { sid?: string; onClose: () => void }) {
                       <td className="xr-barcell"><span className="xr-bar"><i style={{ width: `${(l.size / max) * 100}%` }} /><b style={{ width: `${(l.wasted / max) * 100}%` }} /></span></td>
                       <td className={`num ${l.wasted ? 'xr-bad' : 'faint'}`}>{l.wasted ? mb(l.wasted) : '-'}</td>
                       <td className="num">{l.files}</td>
-                      <td><code className="xr-cmd" title={l.createdBy}>{l.createdBy || '(base)'}</code></td>
+                      <td><code className="xr-cmd" data-tip={l.createdBy}>{l.createdBy || '(base)'}</code></td>
                     </tr>
                   ))}
                 </tbody>

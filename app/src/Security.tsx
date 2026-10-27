@@ -6,6 +6,7 @@ import type { LeakScan, SecScan } from './bridge'
 import type { Leak } from '../shared/leaks'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, NumberField, Select } from './ui'
 
 const close = (
   <IconClose />
@@ -69,7 +70,7 @@ function Deps(props: { cwd?: string; sid?: string; onClose: () => void; tabs: Re
             <div className="faint">{st?.trivy ? `trivy at ${st.trivy}. Only your own projects and images.` : 'Checking for trivy…'}</div>
           )}
           <div className="ob-row">
-            <select value={kind} onChange={(e) => setKind(e.target.value as Kind)}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            <Select value={kind} onChange={(e) => setKind(e.target.value as Kind)}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
             {kind === 'image' && <input className="ob-grow" placeholder="name:tag" value={image} onChange={(e) => setImage(e.target.value)} />}
             <button className="primary" disabled={busy || !st?.trivy || (kind === 'image' && !image)} onClick={run}>{busy ? 'Scanning…' : 'Scan'}</button>
           </div>
@@ -129,7 +130,7 @@ function Deps(props: { cwd?: string; sid?: string; onClose: () => void; tabs: Re
               ) : (
                 <div className="ob-row">
                   <input className="ob-grow" placeholder="Why it is acceptable (required)" value={why} onChange={(e) => setWhy(e.target.value)} />
-                  <input className="mn-hours" type="number" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Days" />
+                  <NumberField className="mn-hours" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Days" />
                   <span className="faint">days</span>
                   <button disabled={!why.trim()} onClick={() => void window.stm.sec.accept(project, pick.key, why, days).then(() => (setWhy(''), load()), (e) => setErr(clean(e)))}>Accept</button>
                 </div>
@@ -143,7 +144,7 @@ function Deps(props: { cwd?: string; sid?: string; onClose: () => void; tabs: Re
           {apps.length ? (
             <div className="sec-gates">
               {apps.map((a) => (
-                <label key={a.uuid} className="check"><input type="checkbox" checked={linked.includes(a.uuid)} onChange={(e) => void window.stm.sec.setGate(a.uuid, e.target.checked ? project : null).then(load)} /> {a.name}</label>
+                <label key={a.uuid} className="check"><Checkbox checked={linked.includes(a.uuid)} onChange={(e) => void window.stm.sec.setGate(a.uuid, e.target.checked ? project : null).then(load)} /> {a.name}</label>
               ))}
             </div>
           ) : <div className="faint">No apps found; connect Coolify or Dokploy in Deploys to use the gate.</div>}
@@ -216,7 +217,7 @@ function Secrets(props: { project: string; sid?: string }) {
             <button onClick={() => setConfirmVerify(false)}>Cancel</button>
           </div>
         ) : (
-          <label className="check"><input type="checkbox" checked={st.verify} onChange={(e) => (e.target.checked ? setConfirmVerify(true) : void window.stm.leak.verify(false).then(load))} /> Check whether found keys still work (calls each provider)</label>
+          <label className="check"><Checkbox checked={st.verify} onChange={(e) => (e.target.checked ? setConfirmVerify(true) : void window.stm.leak.verify(false).then(load))} /> Check whether found keys still work (calls each provider)</label>
         )}
         {scan && <div className="faint">{scan.source === 'git' ? 'History' : 'Files'} scanned {when(scan.at)} in {(scan.ms / 1000).toFixed(1)} s, {scan.leaks.length} found{scan.verified ? ', checked live' : ''}.</div>}
         {scan?.leaks.map((l) => (
@@ -256,7 +257,7 @@ function Secrets(props: { project: string; sid?: string }) {
         <div className="ob-label">Before each push</div>
         {st.git ? (
           st.hook === 'other' ? <div className="faint">This repo has its own pre-push hook; add the trufflehog check to it by hand.</div> : (
-            <label className="check"><input type="checkbox" checked={st.hook === 'ours'} disabled={!st.trufflehog} onChange={(e) => void window.stm.leak.hook(project, e.target.checked).then(load, (x) => setErr(clean(x)))} /> Stop a push that carries a secret (a pre-push hook in this repo)</label>
+            <label className="check"><Checkbox checked={st.hook === 'ours'} disabled={!st.trufflehog} onChange={(e) => void window.stm.leak.hook(project, e.target.checked).then(load, (x) => setErr(clean(x)))} /> Stop a push that carries a secret (a pre-push hook in this repo)</label>
           )
         ) : <div className="faint">Not a git repository.</div>}
         {msg && <div className="notice">{msg}</div>}

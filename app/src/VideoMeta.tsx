@@ -4,6 +4,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconCheck, IconClose, IconExternal } from './icons'
 import './bridge'
+import { Checkbox } from './ui'
 
 /**
  * Video metadata: paste YouTube links, get title, channel, duration, chapters and license. Metadata only;
@@ -47,7 +48,7 @@ export function VideoMetaSheet(props: { cwd?: string; onClose: () => void }) {
               <div className="ob-row">
                 <b>{v.title}</b>
                 <span className="spacer-flex" />
-                <label className="check"><input type="checkbox" checked={v.revisado} onChange={(e) => setList(list.map((x) => (x.id === v.id ? { ...x, revisado: e.target.checked } : x)))} /> Reviewed (revisado)</label>
+                <label className="check"><Checkbox checked={v.revisado} onChange={(e) => setList(list.map((x) => (x.id === v.id ? { ...x, revisado: e.target.checked } : x)))} /> Reviewed (revisado)</label>
               </div>
               <div className="vm-meta">
                 <span>{v.channel}</span><span>{clock(v.seconds)}</span><span>{v.published.slice(0, 10)}</span>
