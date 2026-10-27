@@ -2,7 +2,7 @@
 // published releases of supertokenman/supertokenman. Header and footer are taken from index.html so
 // every page shares them. Run: npm run build (Cloudflare Pages: build command "cd site && npm ci &&
 // npm run build", output directory "site").
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, cpSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { marked } from 'marked'
@@ -106,5 +106,9 @@ page({ path: 'changelog/', title: 'Changelog, SuperTokenMan', desc: 'What change
       ${entries}
     </div>
   </section>` })
+
+// ---- the live demo: built from the app (cd app && npm run build:demo, into site/demo/, committed) and
+// served at /docs/demo/, inside a folder the Pages build already copies
+if (existsSync(join(root, 'demo/index.html'))) cpSync(join(root, 'demo'), join(root, 'docs/demo'), { recursive: true })
 
 console.log(`built ${docs.length} docs pages and the changelog (${releases?.length ?? 'no'} releases)`)
