@@ -1,3 +1,4 @@
+import { pickPaths } from './FilePicker'
 import { pickProjectFolder } from './FolderPicker'
 import { displayCurrency, formatMoney } from './currency'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -182,7 +183,7 @@ export function Content(props: { seed?: { title: string; idea: string } | null; 
             <div className="ct-music">
               <span className="faint">Music</span>
               {p.music ? <code title={p.music}>{p.music.split('/').pop()}</code> : <span className="faint">none: the video goes out silent</span>}
-              <button className="ghost small" onClick={() => void act('music', () => window.stm.content.pickMusic(p.id))}>{p.music ? 'Change' : 'Add a track'}</button>
+              <button className="ghost small" onClick={() => void act('music', () => pickPaths({ title: 'Choose a music track', accept: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'], action: 'Use' }).then((r) => (r === 'finder' ? window.stm.content.pickMusic(p.id) : r ? window.stm.content.pickMusic(p.id, r) : null)))}>{p.music ? 'Change' : 'Add a track'}</button>
               {p.music && <button className="ghost small" onClick={() => void act('music', () => window.stm.content.update(p.id, { music: undefined, musicLicense: undefined }))}>Remove</button>}
               {p.music && (
                 <input placeholder="Where the license is (link or note): required to post commercially" value={p.musicLicense ?? ''} onChange={(e) => setList(list.map((x) => (x.id === p.id ? { ...x, musicLicense: e.target.value } : x)))} onBlur={(e) => void window.stm.content.update(p.id, { musicLicense: e.target.value })} />

@@ -133,6 +133,7 @@ import { WEB_APPS } from '../shared/webapps'
 import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
+import { FilePickerHost } from './FilePicker'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
 
@@ -1230,6 +1231,7 @@ export function App() {
     <div className={`shell ${priv ? 'is-private' : ''} ${sceneFor(scene.id) ? 'has-scene' : ''}`}>
       <Backdrop id={scene.id} strength={scene.strength} theme={theme} />
       <FolderPickerHost recents={recentDirs} />
+      <FilePickerHost />
       <header className={`top ${topFit === 'tightest' ? 'tight tighter tightest' : topFit === 'tighter' ? 'tight tighter' : topFit}`} ref={topRef}>
         <div className="brand">
           <BrandMark />
