@@ -2580,6 +2580,13 @@ const savePick = (dir: unknown, name: string): { canceled: boolean; filePath?: s
   return { canceled: false, filePath }
 }
 ipcMain.handle('files:attach', (_e, paths: unknown) => attachmentsOf(pickPaths(paths)))
+// one file the in-app picker chose, read for the window (a CSV, a log, a reference image): up to 20 MB
+ipcMain.handle('files:read', (_e, path: unknown) => {
+  const p = pickPaths([path])[0]
+  if (!p || !statSync(p).isFile()) throw new Error('Not a file.')
+  if (statSync(p).size > 20 * 1024 * 1024) throw new Error('Files up to 20 MB.')
+  return { name: basename(p), data: readFileSync(p).toString('base64') }
+})
 ipcMain.handle('filepick:list', (_e, dir: unknown, hidden?: boolean) => listDir(dir, { hidden: !!hidden }))
 ipcMain.handle('filepick:project', (_e, dir: unknown, hidden?: boolean) => projectFiles(dir, { hidden: !!hidden }))
 ipcMain.handle('filepick:recent', (_e, attached: unknown, hidden?: boolean) => recentFiles(attached, ['Downloads', 'Desktop', 'Documents'].map((d) => join(homedir(), d)), { hidden: !!hidden }).then((r) => ({ ...r, home: homedir() })))

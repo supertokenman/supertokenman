@@ -1077,6 +1077,7 @@ contextBridge.exposeInMainWorld('stm', {
   send: (sid, text, attachments, why) => ipcRenderer.invoke('chat:send', sid, text, attachments, why),
   pickFiles: () => ipcRenderer.invoke('files:pick'),
   attachPaths: (paths) => ipcRenderer.invoke('files:attach', paths),
+  readPicked: (path) => ipcRenderer.invoke('files:read', path),
   filePick: {
     list: (dir, hidden) => ipcRenderer.invoke('filepick:list', dir, hidden),
     project: (dir, hidden) => ipcRenderer.invoke('filepick:project', dir, hidden),

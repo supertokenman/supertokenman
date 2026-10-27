@@ -5,6 +5,7 @@ import type { Job, RoundView } from '../electron/shot2code'
 import { clean } from './errors'
 import './bridge'
 import { Checkbox, NumberField, Select } from './ui'
+import { pickFile } from './FilePicker'
 
 const close = (
   <IconClose />
@@ -70,11 +71,10 @@ export function ShotToCodeSheet(props: { cwd?: string; onClose: () => void }) {
         </header>
         <div className="cf-body s2c-body">
           <div className="cf-col ob-list">
-            <label className="s2c-drop" onDragOver={(e) => e.preventDefault()} onDrop={(e) => (e.preventDefault(), void drop(e.dataTransfer.files[0]))}>
-              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void drop(e.target.files?.[0])} />
+            <div role="button" tabIndex={0} className="s2c-drop" onClick={() => void pickFile({ title: 'A screenshot, sketch or mockup', accept: ['png', 'jpg', 'jpeg', 'webp'], action: 'Use' }).then((f) => f && drop(f))} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), e.currentTarget.click())} onDragOver={(e) => e.preventDefault()} onDrop={(e) => (e.preventDefault(), void drop(e.dataTransfer.files[0]))}>
               <b>Drop a screenshot, sketch or mockup</b>
               <span className="faint">or click to pick one. Your own designs; someone else's site only as a layout reference.</span>
-            </label>
+            </div>
             {!props.cwd && <div className="notice error">Open a panel on a project first: files go there when you apply.</div>}
             {jobs.map((j) => (
               <div key={j.id} className="s2c-item">

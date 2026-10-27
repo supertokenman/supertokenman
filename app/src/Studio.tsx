@@ -6,6 +6,7 @@ import type { Theme } from './themes'
 import { KITS, kitCss, kitPrompt, searchKits } from './designKits'
 import { KitPreview } from './KitPreview'
 import { ColorField } from './ui'
+import { pickFile } from './FilePicker'
 
 type Tab = 'kits' | 'generate' | 'library' | 'image' | 'systems'
 const TABS: [Tab, string][] = [
@@ -29,7 +30,6 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
   const [q, setQ] = useState('')
   const [copied, setCopied] = useState('')
   const [imgErr, setImgErr] = useState('')
-  const file = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (tab === 'generate') setPalette(harmony(/^#[0-9a-f]{6}$/i.test(seed) ? seed : '#d97757', mode))
@@ -169,12 +169,11 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
                 const f = e.dataTransfer.files[0]
                 if (f) fromImage(f)
               }}
-              onClick={() => file.current?.click()}
+              onClick={() => void pickFile({ title: 'An image', accept: ['png', 'jpg', 'jpeg', 'webp', 'gif'], action: 'Use' }).then((f) => f && fromImage(f))}
             >
               <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="8" width="36" height="28" rx="3" className="se-b" /><circle cx="15" cy="18" r="4" className="se-a" /><path d="M8 32l10-9 7 6 5-4 10 7" className="se-line" /></svg>
               <div className="se-title">Drop a screenshot, a photo or a logo</div>
               <div className="se-text">Its main colors become the palette. The image stays on this Mac.</div>
-              <input ref={file} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && fromImage(e.target.files[0])} />
               {imgErr && <div className="notice error">{imgErr}</div>}
             </div>
           )}

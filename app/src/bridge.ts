@@ -967,6 +967,8 @@ export type Bridge = {
   pickFiles: () => Promise<import('../shared/attach').Attachment[]>
   /** Attachments for paths chosen in the in-app file picker. */
   attachPaths: (paths: string[]) => Promise<import('../shared/attach').Attachment[]>
+  /** One file the in-app picker chose, read whole (up to 20 MB). */
+  readPicked?: (path: string) => Promise<{ name: string; data: string }>
   filePick: {
     list: (dir: string, hidden?: boolean) => Promise<import('../electron/filepick').Listing>
     project: (dir: string, hidden?: boolean) => Promise<import('../electron/filepick').Listing>

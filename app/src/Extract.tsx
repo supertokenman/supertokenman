@@ -3,6 +3,7 @@ import { IconClose } from './icons'
 import { clean } from './errors'
 import { asJson, estimate, type Extracted, type FieldSpec } from '../shared/extract'
 import { Checkbox } from './ui'
+import { pickFile } from './FilePicker'
 
 const KEY = 'stm.extract.fields'
 const load = (): FieldSpec[] => {
@@ -83,7 +84,7 @@ export function ExtractSheet(props: { project?: string; onClose: () => void }) {
             <span className="chart-name">Text</span>
             <textarea className="ex-text" rows={10} value={text} onChange={(e) => (setText(e.target.value), setItems(null))} placeholder="Paste a log, a spec or an issue, or open a file" aria-label="Text" spellCheck={false} />
             <div className="ob-row">
-              <label className="btn ex-file">Open a file<input type="file" accept=".txt,.log,.md,.json,.csv,.yaml,.yml,.xml,.html" onChange={(e) => void e.target.files?.[0]?.text().then((t) => (setText(t), setItems(null)))} hidden /></label>
+              <button type="button" className="btn ex-file" onClick={() => void pickFile({ title: 'Open a file', accept: ['txt', 'log', 'md', 'json', 'csv', 'yaml', 'yml', 'xml', 'html'], action: 'Open' }).then((f) => f?.text().then((t) => (setText(t), setItems(null))))}>Open a file</button>
               {est && <span className="faint">{est.chunks} part{est.chunks === 1 ? '' : 's'} · about {(est.tokensIn / 1000).toFixed(1)}k tokens in</span>}
               <span className="spacer-flex" />
               {busy ? <button onClick={() => void window.stm.extract.stop()}>Stop ({busy.done}/{busy.of})</button> : <button className="primary" disabled={!text.trim() || !fields.some((f) => f.name.trim())} onClick={run}>Extract</button>}

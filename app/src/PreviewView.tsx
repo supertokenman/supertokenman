@@ -4,6 +4,7 @@ import type { Attachment } from '../shared/attach'
 import { friendly } from './errors'
 import { isLocalUrl } from './preview'
 import { ExplainBox } from './Explain'
+import { pickFile } from './FilePicker'
 
 type Server = { url: string; id: string; command: string }
 /** The webview's own methods, which the DOM types leave out. */
@@ -188,7 +189,6 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
   // a reference picture per page: a mock, a design or the page before a change, compared with it now
   const [refs, setRefs] = useState<Record<string, string>>({})
   const [compare, setCompare] = useState<{ reference: string; now: string } | null>(null)
-  const refFile = useRef<HTMLInputElement>(null)
   const snapshot = async () => (await ref.current?.capturePage().catch(() => null))?.toDataURL() ?? null
   const startCompare = async () => {
     const now = await snapshot()
@@ -237,18 +237,15 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h5v10H2zM9 3h5v10H9z" /><path d="M10.5 6.5h2M10.5 9.5h2" /></svg>
             {refs[url] ? 'Compare' : 'Set reference'}
           </button>
-          <button className="br-tool" onClick={() => refFile.current?.click()} data-tip="Use an image (a mock or a design) as this page's reference">
-            <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h12v10H2z" /><path d="M2 11l4-4 3 3 2-2 3 3" /></svg>
-            Reference image
-          </button>
-          <input ref={refFile} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => {
-            const f = e.target.files?.[0]
-            e.target.value = ''
+          <button className="br-tool" onClick={() => void pickFile({ title: 'A reference image', accept: ['png', 'jpg', 'jpeg', 'webp'], action: 'Use' }).then((f) => {
             if (!f) return
             const r = new FileReader()
             r.onload = () => setRefs((x) => ({ ...x, [url]: String(r.result) }))
             r.readAsDataURL(f)
-          }} />
+          })} data-tip="Use an image (a mock or a design) as this page's reference">
+            <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h12v10H2z" /><path d="M2 11l4-4 3 3 2-2 3 3" /></svg>
+            Reference image
+          </button>
           <span className="spacer-flex" />
           <button className={`br-tool ${drawer === 'console' ? 'on' : ''}`} onClick={() => setDrawer(drawer === 'console' ? null : 'console')} data-tip="Console">
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h12v10H2zM4.5 6.5 6.5 8l-2 1.5M8 10h3" /></svg>

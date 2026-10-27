@@ -5,6 +5,7 @@ import { clean } from './errors'
 import { IconClose, IconTest } from './icons'
 import './bridge'
 import { NumberField, Select } from './ui'
+import { pickFile } from './FilePicker'
 
 const pct = (x: number) => Number((x * 100).toFixed(1))
 
@@ -53,7 +54,7 @@ export function BacktestSheet(props: { cwd?: string; onClose: () => void }) {
         </header>
         <div className="ar-pad">
           <div className="fld-grid">
-            <label className="fld wide"><span className="fld-label">Prices (CSV with date, open, high, low, close)</span><input type="file" accept=".csv,text/csv" onChange={(e) => e.target.files?.[0] && load(e.target.files[0])} /><span className="fld-help">{bars ? `${file}: ${bars.length} bars, ${new Date(bars[0]!.t).toISOString().slice(0, 10)} to ${new Date(bars[bars.length - 1]!.t).toISOString().slice(0, 10)}` : 'Export daily bars from your data source; nothing is fetched from the internet.'}</span></label>
+            <label className="fld wide"><span className="fld-label">Prices (CSV with date, open, high, low, close)</span><button type="button" className="small" onClick={() => void pickFile({ title: 'Prices (CSV)', accept: ['csv'], action: 'Open' }).then((f) => f && load(f))}>Choose a CSV…</button><span className="fld-help">{bars ? `${file}: ${bars.length} bars, ${new Date(bars[0]!.t).toISOString().slice(0, 10)} to ${new Date(bars[bars.length - 1]!.t).toISOString().slice(0, 10)}` : 'Export daily bars from your data source; nothing is fetched from the internet.'}</span></label>
             <label className="fld"><span className="fld-label">Strategy</span>
               <Select value={s.kind} onChange={(e) => setS(e.target.value === 'rsi' ? { kind: 'rsi', period: 14, buyBelow: 30, sellAbove: 55 } : e.target.value === 'hold' ? { kind: 'hold' } : { kind: 'sma-cross', fast: 20, slow: 50 })}>
                 <option value="sma-cross">Moving average cross</option><option value="rsi">RSI mean reversion</option><option value="hold">Buy and hold</option>

@@ -39,6 +39,32 @@ export async function chooseFiles(opts: PickOptions): Promise<string[] | undefin
   return r === 'finder' ? undefined : r ?? []
 }
 
+const MIME: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', csv: 'text/csv', json: 'application/json', html: 'text/html', md: 'text/markdown' }
+
+/**
+ * One file for the window to read (in place of <input type="file">): chosen in the in-app picker and
+ * read by the main process. "Use Finder..." falls back to the system chooser. null when cancelled.
+ */
+export async function pickFile(opts: PickOptions): Promise<File | null> {
+  const r = await pickPaths({ ...opts, multiple: false })
+  if (r === 'finder' || !window.stm.readPicked) {
+    // the person asked for the system's chooser: the one place it is used
+    return new Promise((resolve) => {
+      const i = document.createElement('input')
+      i.type = 'file'
+      if (opts.accept) i.accept = opts.accept.map((e) => `.${e}`).join(',')
+      i.onchange = () => resolve(i.files?.[0] ?? null)
+      i.oncancel = () => resolve(null)
+      i.click()
+    })
+  }
+  if (!r?.[0]) return null
+  const f = await window.stm.readPicked(r[0])
+  const bytes = Uint8Array.from(atob(f.data), (c) => c.charCodeAt(0))
+  const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+  return new File([bytes], f.name, { type: MIME[ext] ?? 'text/plain' })
+}
+
 /** The composer's attach button: files and folders, as attachments. */
 export async function pickAttachments(cwd?: string): Promise<Attachment[]> {
   const r = await pickPaths({ title: 'Attach files', cwd, multiple: true, folders: true, action: 'Attach' })
