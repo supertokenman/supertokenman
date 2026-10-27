@@ -569,7 +569,7 @@ export type Bridge = {
   updateAuto: (on?: boolean) => Promise<boolean>
   claudeUsageData: (on?: boolean) => Promise<boolean>
   updateRun: () => Promise<string>
-  onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; tail?: string }) => void) => () => void
+  onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => void) => () => void
   health: () => Promise<import('../electron/health').Part[]>
   sleepPanel: (sid: string) => Promise<boolean>
   searchSymbols: (q: string) => Promise<import('../shared/symbols').Sym[]>

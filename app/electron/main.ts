@@ -4020,9 +4020,9 @@ ipcMain.handle('update:check', async (_e, auto?: boolean) => {
 })
 ipcMain.handle('update:run', async (e) => {
   if (fromRelease()) {
-    const tell = (m: { state: 'busy' | 'down'; step: string; tail?: string }) => !e.sender.isDestroyed() && e.sender.send('update:progress', m)
+    const tell = (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => !e.sender.isDestroyed() && e.sender.send('update:progress', m)
     const u = await updaterOf()
-    const onProgress = (p: { percent: number }) => tell({ state: 'busy', step: `Downloading ${Math.round(p.percent)}%` })
+    const onProgress = (p: { percent: number }) => tell({ state: 'busy', step: 'Downloading', pct: Math.round(p.percent) })
     u.on('download-progress', onProgress)
     try {
       tell({ state: 'busy', step: 'Downloading' })
