@@ -38,6 +38,8 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | What | Where | Turned on by |
 |---|---|---|
 | Exchange rate | api.frankfurter.dev | Spend > Update rates |
+| Market quotes and predictions | query1.finance.yahoo.com, brapi.dev, api.coingecko.com, gamma-api.polymarket.com | opening Markets (every minute while it is open) |
+| Symbol lookup | query1.finance.yahoo.com (`/v1/finance/search`, what you typed) | typing in Markets > Add, after a pause, only when the built-in list has fewer than five matches |
 | GitHub stars of integrations | api.github.com | Connections > Show GitHub stars |
 | Pull requests, CI, triggers, repo secrets (names) | api.github.com | the GitHub integration in Connections; signs in with the vault token or your `gh` login |
 | Feeds and briefing | the feeds you add | adding a feed; the briefing schedule is off by default |

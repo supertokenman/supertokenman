@@ -159,7 +159,9 @@ button sets those, not `background`, so the cut corner keeps its border.
 
 Inputs, selects and textareas in sheets (`.sheet.observe`): cut corner with the drawn border, a 3px
 accent bar on focus, a select arrow made of gradients, labels above in the mono label style
-(`.fld`, `.fld-label`, `.fld-help`, `.fld-grid`).
+(`.fld`, `.fld-label`, `.fld-help`, `.fld-grid`). A container with `.cutfields` gives the same field style outside an `.observe` sheet (Markets add field,
+News add field, Database new connection). Monogram tiles (feeds, database engines) are drawn as cut squares
+with two mono letters: our own marks, never a service's logo.
 
 ## Icons
 

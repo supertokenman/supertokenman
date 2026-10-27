@@ -3941,6 +3941,7 @@ ipcMain.handle('calendar:events', async (_e, fromIso: string, toIso: string) => 
 
 // quotes from free public endpoints, fetched here so the page keeps no network rights
 ipcMain.handle('markets:quotes', (_e, symbols: string[]) => Mkt.quotes(symbols.slice(0, 40)))
+ipcMain.handle('markets:search', (_e, q: string) => Mkt.searchSymbols(String(q ?? '')))
 ipcMain.handle('markets:predictions', (_e, filter: string) => Mkt.predictions(filter))
 
 // health: what each part costs now, from Electron's metrics and the process table

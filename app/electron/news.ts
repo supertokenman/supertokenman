@@ -1,17 +1,17 @@
 // News from RSS and Atom: open, free, no account. Feeds are parsed here with no dependency; a site
 // address is enough, its feed is found from the page. Articles open in a plain reader made from the page.
 
-export type Feed = { url: string; title: string }
+export type Feed = { url: string; title: string; /** what it covers, for the suggestions */ about?: string }
 export type Item = { id: string; feed: string; source: string; title: string; link: string; date: string; summary: string; image?: string }
 
 // offered in the reader with one click each; none is read until the person adds it
 export const SUGGESTED_FEEDS: Feed[] = [
-  { url: 'https://hnrss.org/frontpage', title: 'Hacker News' },
-  { url: 'https://simonwillison.net/atom/everything/', title: 'Simon Willison' },
-  { url: 'https://github.blog/feed/', title: 'GitHub Blog' },
-  { url: 'https://blog.cloudflare.com/rss/', title: 'Cloudflare' },
-  { url: 'https://dev.to/feed', title: 'DEV' },
-  { url: 'https://tecnoblog.net/feed/', title: 'Tecnoblog' },
+  { url: 'https://hnrss.org/frontpage', title: 'Hacker News', about: 'Tech links voted up by readers' },
+  { url: 'https://simonwillison.net/atom/everything/', title: 'Simon Willison', about: 'AI tools and LLMs, hands-on' },
+  { url: 'https://github.blog/feed/', title: 'GitHub Blog', about: 'GitHub releases and engineering' },
+  { url: 'https://blog.cloudflare.com/rss/', title: 'Cloudflare', about: 'Networking, security, the edge' },
+  { url: 'https://dev.to/feed', title: 'DEV', about: 'Developer posts from the community' },
+  { url: 'https://tecnoblog.net/feed/', title: 'Tecnoblog', about: 'Tech news from Brazil, in Portuguese' },
 ]
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', hellip: '…', mdash: '—', ndash: '–', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“' }

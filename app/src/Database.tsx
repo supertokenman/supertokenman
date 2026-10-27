@@ -3,6 +3,7 @@ import { IconClose } from './icons'
 import type { DbConn, DbKind, DbResult, DbSchema, DbTable, PlanNode } from '../electron/db'
 import { StateMark } from './StateMark'
 import { DataGrid } from './DataGrid'
+import { DbConnect } from './DbConnect'
 import { ErDiagram, PlanView, SqlEditor } from './DbTools'
 import { clean as cleanErr } from './errors'
 import { vectorColumns, vectorSql } from '../shared/tidb'
@@ -10,12 +11,12 @@ import { browseSql, countSql, firstView, type View } from '../shared/gridsql'
 
 const fresh = (): DbConn => ({ id: `d${Date.now().toString(36)}`, name: '', kind: 'postgres', target: '', writes: false })
 const qi = (s: string, k?: DbKind) => (k === 'mysql' || k === 'tidb' ? `\`${s.replace(/`/g, '``')}\`` : `"${s.replace(/"/g, '""')}"`)
-const KINDS: { k: DbKind; label: string; short: string; hint: string }[] = [
-  { k: 'postgres', label: 'Postgres', short: 'PG', hint: 'postgres://user:{{DB_PASSWORD}}@host:5432/db  or  {{DATABASE_URL}}' },
-  { k: 'mysql', label: 'MySQL', short: 'MY', hint: 'mysql://user:{{DB_PASSWORD}}@host:3306/db' },
-  { k: 'tidb', label: 'TiDB', short: 'TIDB', hint: 'mysql://2abc.root:{{TIDB_PASSWORD}}@gateway01.….tidbcloud.com:4000/db  or  mysql://root@127.0.0.1:4000/test' },
-  { k: 'sqlite', label: 'SQLite', short: 'SQLITE', hint: '/Users/you/project/dev.db' },
-  { k: 'd1', label: 'D1', short: 'D1', hint: 'd1://ACCOUNT_ID/DATABASE_ID?token={{CLOUDFLARE_API_TOKEN}}' },
+const KINDS: { k: DbKind; label: string; short: string }[] = [
+  { k: 'postgres', label: 'Postgres', short: 'PG' },
+  { k: 'mysql', label: 'MySQL', short: 'MY' },
+  { k: 'tidb', label: 'TiDB', short: 'TIDB' },
+  { k: 'sqlite', label: 'SQLite', short: 'SQLITE' },
+  { k: 'd1', label: 'D1', short: 'D1' },
 ]
 const kRows = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(n))
 const show = (v: unknown) => (v === null || v === undefined ? null : typeof v === 'string' ? v : String(v))
@@ -116,9 +117,9 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
     setSql(q)
     void run(q).then(() => setGridOf(null))
   }
-  const save = async () => {
-    if (!editing || !editing.target.trim()) return
-    const c = { ...editing, name: editing.name.trim() || (editing.kind === 'sqlite' ? editing.target.split('/').pop() ?? 'SQLite' : KINDS.find((x) => x.k === editing.kind)!.label) }
+  const save = async (e: DbConn) => {
+    if (!e.target.trim()) return
+    const c = { ...e, name: e.kind === 'sqlite' && e.name === 'SQLite' ? e.target.split('/').pop() ?? 'SQLite' : e.name }
     setConns(await window.stm.db.save(c))
     void open(c)
   }
@@ -134,7 +135,6 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
   }
   const max = useMemo(() => Math.max(1, ...(list ?? []).map((t) => t.rows ?? 0)), [list])
   const shown = (list ?? []).filter((t) => !filter || `${t.schema}.${t.name}`.toLowerCase().includes(filter.toLowerCase()))
-  const urls = secrets.filter((n) => /DATABASE|DB_|_DB|POSTGRES|SUPABASE|NEON/i.test(n))
 
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
@@ -178,37 +178,7 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
           </aside>
           <section className="dbv-main">
             {editing ? (
-              <div className="dbv-form">
-                <div className="sp-label">New connection</div>
-                <div className="segmented small" role="tablist">
-                  {KINDS.map((x) => <button key={x.k} role="tab" aria-selected={editing.kind === x.k} onClick={() => setEditing({ ...editing, kind: x.k })}>{x.label}</button>)}
-                </div>
-                <input value={editing.name} placeholder="Name (Production, Local, Supabase…)" onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
-                <input className="mono" value={editing.target} spellCheck={false} placeholder={KINDS.find((x) => x.k === editing.kind)!.hint} onChange={(e) => setEditing({ ...editing, target: e.target.value })} />
-                {editing.kind === 'postgres' && urls.length > 0 && (
-                  <div className="dbv-hint">
-                    From the vault:{' '}
-                    {urls.map((n) => (
-                      <button key={n} className="chip" onClick={() => setEditing({ ...editing, target: `{{${n}}}` })}>{`{{${n}}}`}</button>
-                    ))}
-                  </div>
-                )}
-                {editing.kind === 'postgres' && <div className="faint dbv-note">Supabase: Project settings, Database, the Session pooler string (port 5432), with the password as {'{{SUPABASE_DB_PASSWORD}}'}.</div>}
-                {editing.kind === 'd1' && <div className="faint dbv-note">An API token with D1 read (and edit, for writes) in the vault; the account and database ids are in the Cloudflare dashboard. Writes are refused before they reach D1 while they are off.</div>}
-                {editing.kind === 'tidb' && <div className="faint dbv-note">TiDB Cloud: TLS is turned on and the certificate checked; the user name carries its prefix (2abc.root), as in the Connect dialog. Self-hosted: add ?ssl=true to require TLS. TiDB has no read-only session, so while writes are off the app refuses any statement that does not only read.</div>}
-                {(editing.kind === 'postgres' || editing.kind === 'mysql' || editing.kind === 'tidb') && (
-                  <input className="mono" value={editing.ssh ?? ''} spellCheck={false} placeholder="Through SSH (optional): user@bastion.example.com:22, with your own keys" onChange={(e) => setEditing({ ...editing, ssh: e.target.value })} />
-                )}
-                <label className="dbv-writes">
-                  <input type="checkbox" checked={editing.writes} onChange={(e) => setEditing({ ...editing, writes: e.target.checked })} />
-                  <span>Allow writes (insert, update, delete). Off, the database refuses any change.</span>
-                </label>
-                <div className="dbv-row">
-                  <button className="primary" disabled={!editing.target.trim()} onClick={() => void save()}>Save and connect</button>
-                  {conns.some((c) => c.id === editing.id) && <button className="ghost" onClick={async () => (setConns(await window.stm.db.delete(editing.id)), setEditing(null))}>Delete</button>}
-                </div>
-                <div className="faint dbv-note">Put the password in the vault (Connections, Vault) and write it here as {'{{NAME}}'}: it is filled in only when connecting and never shows in this window.</div>
-              </div>
+              <DbConnect key={editing.id} editing={editing} isNew={!conns.some((c) => c.id === editing.id)} secrets={secrets} onChange={setEditing} onSave={(c) => void save(c)} onDelete={conns.some((c) => c.id === editing.id) ? async () => (setConns(await window.stm.db.delete(editing.id)), setEditing(null)) : undefined} />
             ) : !cur ? (
               <div className="faint dbv-note">Pick a connection.</div>
             ) : (

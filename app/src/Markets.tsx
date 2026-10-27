@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { friendly } from './errors'
+import { SymbolSearch } from './SymbolSearch'
 import { DEFAULT_WATCH, normalize, type Prediction, type Quote } from '../electron/markets'
 
 const KEY = 'stm.watch'
@@ -106,7 +107,6 @@ function Predictions() {
 
 export function MarketsSheet({ onClose }: { onClose: () => void }) {
   const m = useQuotes(true)
-  const [add, setAdd] = useState('')
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -123,9 +123,7 @@ export function MarketsSheet({ onClose }: { onClose: () => void }) {
           <div className="sheet-title">Markets</div>
           {m.at > 0 && <span className="faint">updated {new Date(m.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>}
           <span className="spacer-flex" />
-          <form onSubmit={(e) => { e.preventDefault(); if (add.trim()) { m.save([...m.watch, add.trim().toUpperCase()]); setAdd('') } }}>
-            <input className="mk-add" value={add} onChange={(e) => setAdd(e.target.value)} placeholder="Add: WEGE3, AAPL, SOL" spellCheck={false} />
-          </form>
+          <div className="cutfields"><SymbolSearch watch={m.watch} onAdd={(a) => !m.watch.some((w) => normalize(w).label === normalize(a).label) && m.save([...m.watch, a])} /></div>
           <button className="icon" aria-label="Close" onClick={onClose}>
             <IconClose />
           </button>
