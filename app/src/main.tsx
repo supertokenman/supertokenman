@@ -2,9 +2,10 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { Crash } from './Crash'
 import { handOver, playClosing } from './boot'
-import { installTips } from './tips'
+import { installTooltips } from './ui/Tooltip'
 import './app.css'
 import './motion.css'
+import './ui/ui.css'
 
 createRoot(document.getElementById('root')!).render(
   <Crash>
@@ -12,7 +13,7 @@ createRoot(document.getElementById('root')!).render(
   </Crash>,
 )
 requestAnimationFrame(() => handOver())
-installTips()
+installTooltips()
 // the window out of focus: steady-state ornaments (a running container's breathing dot) hold still,
 // so a window left open beside other work does no style work at all. Busy marks keep moving.
 const blurred = () => document.documentElement.toggleAttribute('data-blurred', !document.hasFocus())

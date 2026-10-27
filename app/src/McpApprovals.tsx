@@ -3,6 +3,7 @@ import { IconClose } from './icons'
 import { MODES, type Mode, type Policy, type ToolRule } from '../shared/mcppolicy'
 import { clean } from './errors'
 import './bridge'
+import { Select } from './ui'
 
 const close = (
   <IconClose />
@@ -25,10 +26,10 @@ export function McpApprovalsSheet(props: { cwd?: string; onClose: () => void }) 
   const p = data.policy
   const save = (next: Policy) => void window.stm.mpol.set(next).then((policy) => setData({ ...data, policy }), (e) => setErr(clean(e)))
   const mode = (m: Mode | '', set: (m: Mode | '') => void, inherit?: string) => (
-    <select value={m} onChange={(e) => set(e.target.value as Mode | '')}>
+    <Select value={m} onChange={(e) => set(e.target.value as Mode | '')}>
       {inherit != null && <option value="">{inherit}</option>}
       {Object.entries(MODES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-    </select>
+    </Select>
   )
   const learned = p.learned[server] ?? {}
   return (
@@ -53,7 +54,7 @@ export function McpApprovalsSheet(props: { cwd?: string; onClose: () => void }) 
             ))}
             <div className="ob-label">By persona</div>
             <label className="fld"><span className="fld-label">Persona</span>
-              <select value={persona} onChange={(e) => setPersona(e.target.value)}><option value="">Pick one</option>{data.personas.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+              <Select value={persona} onChange={(e) => setPersona(e.target.value)}><option value="">Pick one</option>{data.personas.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</Select>
             </label>
             {persona && data.servers.map((s) => (
               <div key={s} className="ap-row">
@@ -70,20 +71,20 @@ export function McpApprovalsSheet(props: { cwd?: string; onClose: () => void }) 
           <div className="cf-col">
             <div className="ob-label">By tool</div>
             <label className="fld"><span className="fld-label">Server</span>
-              <select value={server} onChange={(e) => setServer(e.target.value)}>{data.servers.map((s) => <option key={s}>{s}</option>)}</select>
+              <Select value={server} onChange={(e) => setServer(e.target.value)}>{data.servers.map((s) => <option key={s}>{s}</option>)}</Select>
             </label>
             {server && !Object.keys(learned).length && <div className="faint">The app has not read {server}'s tools yet. Open it once in the MCP inspector; its tools and their classes show here.</div>}
             {Object.entries(learned).map(([t, cls]) => (
               <div key={t} className="ap-row ap-tool">
                 <span className="in-name">{t}</span>
                 <span className={`in-cls ${cls}`}>{cls === 'read' ? 'Read' : 'Write'}</span>
-                <select value={p.tools[`${server}/${t}`] ?? ''} onChange={(e) => {
+                <Select value={p.tools[`${server}/${t}`] ?? ''} onChange={(e) => {
                   const k = `${server}/${t}`
                   const tools = { ...p.tools }
                   if (e.target.value) tools[k] = e.target.value as ToolRule
                   else delete tools[k]
                   save({ ...p, tools })
-                }}>{Object.entries(RULES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+                }}>{Object.entries(RULES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
               </div>
             ))}
             {err && <div className="notice error">{err}</div>}

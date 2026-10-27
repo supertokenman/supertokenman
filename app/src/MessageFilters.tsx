@@ -3,6 +3,7 @@ import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { EXAMPLE, headerOf, type MsgFilter, type Stage } from '../shared/msgfilters'
+import { Checkbox, Select } from './ui'
 
 type Draft = { id?: string; code: string; valves: string; projects: string; on: boolean; order: number }
 const toDraft = (f: MsgFilter): Draft => ({ id: f.id, code: f.code, valves: JSON.stringify(f.valves, null, 2), projects: f.projects.join('\n'), on: f.on, order: f.order })
@@ -72,7 +73,7 @@ export function MessageFiltersSheet(props: { project?: string; onClose: () => vo
               const st = headerOf(f.code).stages
               return (
                 <div key={f.id} className={`mf-row ${d?.id === f.id ? 'on' : ''}`}>
-                  <input type="checkbox" checked={f.on} onChange={() => toggle(f)} aria-label={`${f.name} on`} />
+                  <Checkbox checked={f.on} onChange={() => toggle(f)} aria-label={`${f.name} on`} />
                   <button className="mf-name" onClick={() => (setD(toDraft(f)), setOut(null))}>{f.name}</button>
                   <span className="faint mf-st">{st.join(' + ')}{f.projects.length ? ` · ${f.projects.length} project${f.projects.length > 1 ? 's' : ''}` : ''}</span>
                   <button className="icon" disabled={i === 0} aria-label="Earlier" onClick={() => move(f, -1)}>↑</button>
@@ -93,7 +94,7 @@ export function MessageFiltersSheet(props: { project?: string; onClose: () => vo
               <span className="chart-name">Only in these projects (one folder a line, empty for all)</span>
               <textarea className="ex-text" rows={2} value={d.projects} placeholder={props.project ?? '/path/to/project'} onChange={(e) => setD({ ...d, projects: e.target.value })} aria-label="Projects" />
               <div className="ob-row">
-                <label className="ca-toggle"><input type="checkbox" checked={d.on} onChange={(e) => setD({ ...d, on: e.target.checked })} />On</label>
+                <label className="ca-toggle"><Checkbox checked={d.on} onChange={(e) => setD({ ...d, on: e.target.checked })} />On</label>
                 <span className="spacer-flex" />
                 {d.id && <button className="danger" onClick={() => void window.stm.msgf.remove(d.id!).then((l) => (setList(l), setD(null)))}>Delete</button>}
                 <button className="primary" disabled={Boolean(h?.error)} onClick={() => save()}>Save</button>
@@ -102,7 +103,7 @@ export function MessageFiltersSheet(props: { project?: string; onClose: () => vo
               <span className="chart-name">Try it</span>
               <textarea className="ex-text" rows={4} value={sample} onChange={(e) => setSample(e.target.value)} placeholder="Sample text" aria-label="Sample text" />
               <div className="ob-row">
-                <select className="select" value={stage} onChange={(e) => setStage(e.target.value as Stage)} aria-label="Stage"><option value="inlet">inlet</option><option value="outlet">outlet</option></select>
+                <Select className="select" value={stage} onChange={(e) => setStage(e.target.value as Stage)} aria-label="Stage"><option value="inlet">inlet</option><option value="outlet">outlet</option></Select>
                 <button onClick={test}>Run on the sample</button>
               </div>
               {out && <pre className={`ex-src ${out.ok ? '' : 'in-err'}`}>{out.text}</pre>}

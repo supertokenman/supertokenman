@@ -5,6 +5,7 @@ import { Chart } from './Chart'
 import type { Limits } from '../shared/budget'
 import { count } from '../shared/plural'
 import './bridge'
+import { Checkbox, Select } from './ui'
 
 type Data = Awaited<ReturnType<typeof window.stm.budget.get>>
 
@@ -119,7 +120,7 @@ function TurnBand(props: { panels: { sid: string; name: string }[] }) {
     <section className="bg-section">
       <div className="sp-label">Turns against the usual</div>
       <div className="ob-row">
-        <select value={sid} onChange={(e) => setSid(e.target.value)} aria-label="Panel">{props.panels.map((p) => <option key={p.sid} value={p.sid}>{p.name}</option>)}</select>
+        <Select value={sid} onChange={(e) => setSid(e.target.value)} aria-label="Panel">{props.panels.map((p) => <option key={p.sid} value={p.sid}>{p.name}</option>)}</Select>
         <div className="segmented" role="tablist">
           {(['cost', 'tokens', 'seconds'] as const).map((m) => <button key={m} role="tab" aria-selected={metric === m} onClick={() => setMetric(m)}>{m === 'cost' ? 'Cost' : m === 'tokens' ? 'Tokens' : 'Time'}</button>)}
         </div>
@@ -146,7 +147,7 @@ function CustomEndpoint() {
       <div className="sp-label">Custom endpoint</div>
       <div className="faint">For a gateway you run yourself. Prompts, replies and keys pass through it. Off by default; a panel uses it only when you pick it there and confirm twice.</div>
       <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="http://localhost:20128" spellCheck={false} aria-label="Custom endpoint address" />
-      <label className="ca-toggle"><input type="checkbox" checked={on} onChange={(e) => save(e.target.checked)} />Allow panels to pick this endpoint</label>
+      <label className="ca-toggle"><Checkbox checked={on} onChange={(e) => save(e.target.checked)} />Allow panels to pick this endpoint</label>
       {err && <div className="bg-err">{err}</div>}
     </section>
   )
@@ -156,7 +157,7 @@ function Row(props: { name: string; usd: number; limit?: number; money: (usd: nu
   const share = props.limit ? Math.min(1, props.usd / props.limit) : 0
   return (
     <div className={`bg-row ${share >= 1 ? 'over' : share >= 0.8 ? 'near' : ''}`}>
-      <span className="bg-row-name" title={props.name}>{props.name}</span>
+      <span className="bg-row-name" data-tip={props.name}>{props.name}</span>
       <span className="bg-row-usd">{props.money(props.usd)}{props.limit ? <span className="faint"> / {props.money(props.limit)}</span> : null}</span>
       {props.limit ? <span className="bg-bar" aria-hidden><i style={{ width: `${share * 100}%` }} /></span> : null}
       {props.note && <span className="faint bg-row-note">{props.note}</span>}

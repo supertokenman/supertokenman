@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
+import { Checkbox } from './ui'
 
 type Info = Awaited<ReturnType<typeof window.stm.shortTerm.get>>
 
@@ -31,7 +32,7 @@ export function ShortTerm(props: { sid?: string; onClose: () => void; onAttach: 
           {!props.sid ? <div className="faint">Open a panel first.</div> : !info ? <div className="faint">Reading…</div> : (
             <>
               <label className="stc-toggle">
-                <input type="checkbox" checked={info.on} onChange={(e) => flip(e.target.checked)} />
+                <Checkbox checked={info.on} onChange={(e) => flip(e.target.checked)} />
                 <span>On for this panel: results over 6 KB from commands, searches, web pages and connectors</span>
               </label>
               <p className="faint stc-how">Each kind has its rule: a log keeps its error lines and how it ended, a diff its files and counts, JSON its shape, a listing its folders. File reads and edits are never touched. Claude can read the original back itself; so can you, below.</p>

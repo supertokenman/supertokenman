@@ -56,7 +56,7 @@ export function SecretsSheet({ onClose }: { onClose: () => void }) {
           <div className="sheet-title">Secrets</div>
           <span className="faint">Env files in your projects. Values stay on this Mac and are never shown whole.</span>
           <span className="spacer-flex" />
-          <button className="icon" title="Scan again" aria-label="Scan again" onClick={load} disabled={scanning}>{files && !scanning ? <IconRefresh /> : <span className="spinner" />}</button>
+          <button className="icon" data-tip="Scan again" aria-label="Scan again" onClick={load} disabled={scanning}>{files && !scanning ? <IconRefresh /> : <span className="spinner" />}</button>
           <button className="icon" aria-label="Close" onClick={onClose}>
             <IconClose />
           </button>
@@ -115,12 +115,12 @@ export function SecretsSheet({ onClose }: { onClose: () => void }) {
                     return (
                       <div key={f.path} className={`sc-card ${state} ${open === f.path ? 'open' : ''}`}>
                         <button className="sc-card-head" onClick={() => setOpen(open === f.path ? null : f.path)}>
-                          <span className={`sc-state ${state}`} title={state === 'bad' ? 'In git' : state === 'warn' ? 'Not ignored by git' : 'Ignored by git'} />
+                          <span className={`sc-state ${state}`} data-tip={state === 'bad' ? 'In git' : state === 'warn' ? 'Not ignored by git' : 'Ignored by git'} role="img" aria-label={state === 'bad' ? 'In git' : state === 'warn' ? 'Not ignored by git' : 'Ignored by git'} />
                           <b>{f.project}</b>
                           <span className="faint">{f.path.split('/').pop()} · {age(f.mtime)}</span>
                         </button>
                         <span className="sc-dots" aria-label={`${secrets.length} secrets, ${f.keys.length - secrets.length} settings`}>
-                          {f.keys.map((k) => <i key={k.name} className={k.kind === 'setting' || k.kind === 'empty' ? 'set' : 'sec'} title={`${k.name}: ${k.kind}`} />)}
+                          {f.keys.map((k) => <i key={k.name} className={k.kind === 'setting' || k.kind === 'empty' ? 'set' : 'sec'} data-tip={`${k.name}: ${k.kind}`} role="img" aria-label={`${k.name}: ${k.kind}`} />)}
                         </span>
                         {open === f.path && (
                           <div className="sc-keys">
@@ -133,7 +133,7 @@ export function SecretsSheet({ onClose }: { onClose: () => void }) {
                                   <code className="faint">{k.masked || 'empty'}</code>
                                   <span className={`sc-kind ${secret ? 'sec' : ''}`}>{k.kind}</span>
                                   {secret && !k.empty && (
-                                    <button className="ghost small" title="Copies the value into the encrypted vault; the file is left as it is" onClick={() => void act(() => window.stm.env.toVault(f.path, k.name, k.name.toUpperCase().replace(/[^A-Z0-9_]/g, '_')), `${k.name} copied to the vault`)}>To vault</button>
+                                    <button className="ghost small" data-tip="Copies the value into the encrypted vault; the file is left as it is" onClick={() => void act(() => window.stm.env.toVault(f.path, k.name, k.name.toUpperCase().replace(/[^A-Z0-9_]/g, '_')), `${k.name} copied to the vault`)}>To vault</button>
                                   )}
                                 </div>
                               )

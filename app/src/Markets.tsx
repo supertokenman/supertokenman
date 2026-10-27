@@ -86,8 +86,8 @@ function Predictions() {
         {list?.map((m) => {
           const top = [...m.outcomes].sort((a, b) => b.p - a.p).slice(0, 3)
           return (
-            <button key={m.id} className="pm-card" onClick={() => void window.stm.openUrl(m.url)} title={m.question}>
-              <span className="pm-q" title={m.question}>{m.question}</span>
+            <button key={m.id} className="pm-card" onClick={() => void window.stm.openUrl(m.url)} data-tip={m.question}>
+              <span className="pm-q" data-tip={m.question}>{m.question}</span>
               {top.map((o, i) => (
                 <span key={o.name} className="pm-row">
                   <span className="pm-name">{o.name}</span>
@@ -132,7 +132,7 @@ export function MarketsSheet({ onClose }: { onClose: () => void }) {
           {best.length > 1 && (
             <div className="mk-heat" aria-label="Today, best to worst">
               {best.map((q) => (
-                <span key={q.label} style={{ flexGrow: 1, background: `rgba(var(--${q.changePct >= 0 ? 'green' : 'red'}-rgb), ${Math.min(0.85, 0.15 + Math.abs(q.changePct) / 4)})` }} title={`${q.label} ${q.changePct.toFixed(2)}%`}>
+                <span key={q.label} style={{ flexGrow: 1, background: `rgba(var(--${q.changePct >= 0 ? 'green' : 'red'}-rgb), ${Math.min(0.85, 0.15 + Math.abs(q.changePct) / 4)})` }} data-tip={`${q.label} ${q.changePct.toFixed(2)}%`}>
                   {q.label}
                   <b>{q.changePct >= 0 ? '+' : ''}{q.changePct.toFixed(1)}%</b>
                 </span>
@@ -147,7 +147,7 @@ export function MarketsSheet({ onClose }: { onClose: () => void }) {
                   <div className="mk-top">
                     <b>{q?.label ?? w}</b>
                     {q && <span className="mk-pct">{q.changePct >= 0 ? '▲' : '▼'} {Math.abs(q.changePct).toFixed(2)}%</span>}
-                    <button className="nw-x" title="Remove" onClick={() => m.save(m.watch.filter((x) => x !== w))}>×</button>
+                    <button className="nw-x" data-tip="Remove" aria-label="Remove" onClick={() => m.save(m.watch.filter((x) => x !== w))}>×</button>
                   </div>
                   {q ? (
                     <>

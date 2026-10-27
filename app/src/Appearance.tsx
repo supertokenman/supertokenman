@@ -8,6 +8,7 @@ import { hudMini } from './hudMini'
 import { AUTO, NONE, SCENES, sceneSvg } from './landscapes'
 import { DEFAULT_TYPO, FONTS, type Typo } from './typography'
 import { resolve, SYSTEM, themeSvg, THEMES, type Theme } from './themes'
+import { ColorField, Select, Slider, Switch } from './ui'
 
 const SAMPLE: HudView = {
   ctxUsed: 34, ctxTokens: '68k', ctxWindow: '200k', five: { used: 23, resets: '23:00' }, seven: { used: 41, resets: '' },
@@ -31,9 +32,9 @@ function Colors(props: { value: string; roles: string[]; onPick: (v: string) => 
   return (
     <span className="typo-swatches" role="radiogroup" aria-label={props.label}>
       {props.roles.map((r) => (
-        <button key={r} role="radio" aria-checked={props.value === r} title={r} className={props.value === r ? 'on' : ''} style={{ background: `var(--${r})` }} onClick={() => props.onPick(r)} />
+        <button key={r} role="radio" aria-checked={props.value === r} data-tip={r} aria-label={r} className={props.value === r ? 'on' : ''} style={{ background: `var(--${r})` }} onClick={() => props.onPick(r)} />
       ))}
-      <input type="color" title="Custom color" aria-label={`${props.label}: custom`} value={custom ? props.value : '#d97757'} onChange={(e) => props.onPick(e.target.value)} className={custom ? 'on' : ''} />
+      <ColorField data-tip="Custom color" aria-label={`${props.label}: custom`} value={custom ? props.value : '#d97757'} onChange={(e) => props.onPick(e.target.value)} className={custom ? 'on' : ''} />
     </span>
   )
 }
@@ -45,23 +46,23 @@ function TextSettings({ typo, onChange }: { typo: Typo; onChange: (t: Typo) => v
     <div className="typo">
       <div className="typo-controls">
         <label className="typo-row">Font
-          <select value={typo.font} onChange={(e) => set({ font: e.target.value })}>
+          <Select value={typo.font} onChange={(e) => set({ font: e.target.value })}>
             {Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}
-          </select>
+          </Select>
         </label>
         <label className="typo-row">Size
-          <span><input type="range" min={11} max={20} step={0.5} value={typo.size} onChange={(e) => set({ size: Number(e.target.value) })} /><output>{typo.size}px</output></span>
+          <span><Slider min={11} max={20} step={0.5} value={typo.size} onChange={(e) => set({ size: Number(e.target.value) })} /><output>{typo.size}px</output></span>
         </label>
         <label className="typo-row">Line height
-          <span><input type="range" min={1.2} max={2.2} step={0.05} value={typo.line} onChange={(e) => set({ line: Number(e.target.value) })} /><output>{typo.line.toFixed(2)}</output></span>
+          <span><Slider min={1.2} max={2.2} step={0.05} value={typo.line} onChange={(e) => set({ line: Number(e.target.value) })} /><output>{typo.line.toFixed(2)}</output></span>
         </label>
         <div className="typo-row">Claude<Colors label="Claude's text" value={typo.claudeColor} roles={CLAUDE_COLORS} onPick={(v) => set({ claudeColor: v })} /></div>
         <div className="typo-row">You<Colors label="Your text" value={typo.youColor} roles={YOU_COLORS} onPick={(v) => set({ youColor: v })} /></div>
         <div className="typo-row">Your bubble<Colors label="Your bubble" value={typo.youBubble} roles={BUBBLES} onPick={(v) => set({ youBubble: v })} /></div>
         <label className="typo-row">Code
-          <select value={typo.code} onChange={(e) => set({ code: e.target.value })}>
+          <Select value={typo.code} onChange={(e) => set({ code: e.target.value })}>
             {Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}
-          </select>
+          </Select>
         </label>
         <div><button className="ghost small" onClick={() => onChange(DEFAULT_TYPO)}>Reset</button></div>
       </div>
@@ -91,7 +92,7 @@ function Backgrounds(props: { theme: Theme; value: SceneSetting; onChange: (v: S
           <span className="scene-name">Every day a new place</span>
         </button>
         {SCENES.map((sc) => (
-          <button key={sc.id} className={`scene-card ${props.value.id === sc.id ? 'on' : ''}`} onClick={() => pick(sc.id)} title={sc.place}>
+          <button key={sc.id} className={`scene-card ${props.value.id === sc.id ? 'on' : ''}`} onClick={() => pick(sc.id)} data-tip={sc.place}>
             <span className="scene-thumb" dangerouslySetInnerHTML={{ __html: sceneSvg(sc, props.theme, hour, 1.6) }} />
             <span className="scene-name">{sc.name}</span>
           </button>
@@ -103,7 +104,7 @@ function Backgrounds(props: { theme: Theme; value: SceneSetting; onChange: (v: S
       </div>
       {props.value.id !== NONE && (
         <label className="typo-row scene-strength">Strength
-          <span><input type="range" min={0.4} max={2} step={0.1} value={props.value.strength} onChange={(e) => props.onChange({ ...props.value, strength: Number(e.target.value) })} /><output>{Math.round(props.value.strength * 100)}%</output></span>
+          <span><Slider min={0.4} max={2} step={0.1} value={props.value.strength} onChange={(e) => props.onChange({ ...props.value, strength: Number(e.target.value) })} /><output>{Math.round(props.value.strength * 100)}%</output></span>
         </label>
       )}
     </>
@@ -120,7 +121,7 @@ function LoginToggle() {
   return (
     <div className="tid-row">
       <span>Open when the Mac starts</span>
-      <label className="switch"><input type="checkbox" checked={on} onChange={(e) => void window.stm.openAtLogin(e.target.checked).then(setOn)} /><span /></label>
+      <Switch checked={on} onChange={(e) => void window.stm.openAtLogin(e.target.checked).then(setOn)} />
     </div>
   )
 }
@@ -135,7 +136,7 @@ function UpdateToggle() {
   return (
     <div className="tid-row">
       <span>Check for updates automatically</span>
-      <label className="switch"><input type="checkbox" checked={on} onChange={(e) => void window.stm.updateAuto(e.target.checked).then(setOn)} /><span /></label>
+      <Switch checked={on} onChange={(e) => void window.stm.updateAuto(e.target.checked).then(setOn)} />
     </div>
   )
 }
@@ -148,9 +149,9 @@ function ClaudeUsageToggle() {
   }, [])
   if (on === null) return null
   return (
-    <div className="tid-row" title="Claude Code's telemetry, error reports and other non-essential calls. Messages to Claude always go to Anthropic. Applies to panels opened after the change.">
+    <div className="tid-row" data-tip="Claude Code's telemetry, error reports and other non-essential calls. Messages to Claude always go to Anthropic. Applies to panels opened after the change.">
       <span>Let Claude Code send usage data to Anthropic</span>
-      <label className="switch"><input type="checkbox" checked={on} onChange={(e) => void window.stm.claudeUsageData(e.target.checked).then(setOn)} /><span /></label>
+      <Switch checked={on} onChange={(e) => void window.stm.claudeUsageData(e.target.checked).then(setOn)} />
     </div>
   )
 }

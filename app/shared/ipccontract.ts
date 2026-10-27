@@ -29,7 +29,7 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'iso:start': z.tuple([sid, z.string().regex(/^[\w./:@-]{1,200}$/)]),
   'iso:stop': z.tuple([sid]),
   'iso:network': z.tuple([sid, z.boolean()]),
-  'export:text': z.tuple([z.string().min(1).max(200), text(20_000_000)]),
+  'export:text': z.tuple([z.string().min(1).max(200), text(20_000_000), z.string().max(4096).nullable().optional()]),
   'sdraft:import': z.tuple([z.string().url().max(2000), z.string().max(4096)]),
   'sdraft:approve': z.tuple([z.string().max(100), z.object({ name: z.string(), description: z.string(), body: z.string() }), z.enum(['project', 'personal']), z.boolean(), opt(z.number().int().min(0))]),
   'msgf:save': z.tuple([z.object({ code: text(20_000) }).loose()]),

@@ -8,7 +8,7 @@ const KIND: Record<Check['kind'], string> = { domain: 'Domain', npm: 'npm', pypi
 /** One lookup as a tile: the shape says the answer before the word does. */
 function Tile({ c }: { c: Check }) {
   return (
-    <button className={`val-tile ${c.verdict}`} onClick={() => void window.stm.openUrl(c.url)} title={c.note ?? c.url}>
+    <button className={`val-tile ${c.verdict}`} onClick={() => void window.stm.openUrl(c.url)} data-tip={c.note ?? c.url}>
       <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
         {c.verdict === 'free' ? <circle cx="11" cy="11" r="8" /> : c.verdict === 'taken' ? <rect x="3" y="3" width="16" height="16" rx="2" /> : <path d="M11 3 19 18H3z" />}
       </svg>

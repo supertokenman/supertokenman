@@ -14,10 +14,10 @@ const took = (a: string | null, b: string | null) => {
 
 /** The state of a run, job or step as one small mark. */
 export function Mark({ status, conclusion }: { status: string; conclusion: string | null }) {
-  if (status !== 'completed') return <span className="ci-mark run" title={status.replace('_', ' ')} />
+  if (status !== 'completed') return <span className="ci-mark run" data-tip={status.replace('_', ' ')} role="img" aria-label={status.replace('_', ' ')} />
   const c = conclusion ?? 'neutral'
   return (
-    <span className={`ci-mark ${c}`} title={c}>
+    <span className={`ci-mark ${c}`} data-tip={c} role="img" aria-label={c}>
       <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
         {c === 'success' ? <path d="M2 5.2l2 2 4-4.4" /> : c === 'failure' ? <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" /> : <path d="M2.5 5h5" />}
       </svg>

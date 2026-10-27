@@ -5,6 +5,7 @@ import { clean } from './errors'
 import { Markdown } from './markdown'
 import { DAYS, EVERY, type When } from '../shared/triggers'
 import { nextOf, type Draft, type Routine } from '../shared/routines'
+import { Checkbox, Select, TimeField } from './ui'
 
 const blank = (cwd: string): Partial<Routine> => ({ name: '', cwd, skill: '', params: '', when: { kind: 'schedule', days: [1], time: '09:00' }, enabled: true })
 
@@ -52,22 +53,22 @@ export function RoutinesSheet(props: { cwd?: string; onClose: () => void }) {
                 <input value={edit.skill ?? ''} onChange={(e) => setEdit({ ...edit, skill: e.target.value })} placeholder="Skill name (optional)" aria-label="Skill" spellCheck={false} />
                 <textarea rows={3} value={edit.params ?? ''} onChange={(e) => setEdit({ ...edit, params: e.target.value })} placeholder="What to look at and what to report" aria-label="What it does" />
                 <div className="ob-row">
-                  <select className="select" value={when?.kind} onChange={(e) => setWhen(e.target.value === 'every' ? { kind: 'every', minutes: 240 } : { kind: 'schedule', days: [1], time: '09:00' })} aria-label="When">
+                  <Select className="select" value={when?.kind} onChange={(e) => setWhen(e.target.value === 'every' ? { kind: 'every', minutes: 240 } : { kind: 'schedule', days: [1], time: '09:00' })} aria-label="When">
                     <option value="schedule">On days</option>
                     <option value="every">Every few hours</option>
-                  </select>
+                  </Select>
                   {when?.kind === 'schedule' && (
                     <>
-                      {DAYS.map((dn, i) => <label key={dn} className="rt-day"><input type="checkbox" checked={when.days.includes(i)} onChange={(e) => setWhen({ ...when, days: e.target.checked ? [...when.days, i].sort() : when.days.filter((x) => x !== i) })} />{dn}</label>)}
-                      <input type="time" value={when.time} onChange={(e) => setWhen({ ...when, time: e.target.value })} aria-label="Time" />
+                      {DAYS.map((dn, i) => <label key={dn} className="rt-day"><Checkbox checked={when.days.includes(i)} onChange={(e) => setWhen({ ...when, days: e.target.checked ? [...when.days, i].sort() : when.days.filter((x) => x !== i) })} />{dn}</label>)}
+                      <TimeField value={when.time} onChange={(e) => setWhen({ ...when, time: e.target.value })} aria-label="Time" />
                     </>
                   )}
                   {when?.kind === 'every' && (
-                    <select className="select" value={when.minutes} onChange={(e) => setWhen({ kind: 'every', minutes: Number(e.target.value) })} aria-label="How often">{EVERY.filter((m) => m >= 60).map((m) => <option key={m} value={m}>every {m / 60} h</option>)}</select>
+                    <Select className="select" value={when.minutes} onChange={(e) => setWhen({ kind: 'every', minutes: Number(e.target.value) })} aria-label="How often">{EVERY.filter((m) => m >= 60).map((m) => <option key={m} value={m}>every {m / 60} h</option>)}</Select>
                   )}
                 </div>
                 <div className="ob-row">
-                  <label className="ca-toggle"><input type="checkbox" checked={Boolean(edit.enabled)} onChange={(e) => setEdit({ ...edit, enabled: e.target.checked })} />On</label>
+                  <label className="ca-toggle"><Checkbox checked={Boolean(edit.enabled)} onChange={(e) => setEdit({ ...edit, enabled: e.target.checked })} />On</label>
                   <span className="spacer-flex" />
                   {edit.id && <button className="danger" onClick={() => void window.stm.rt.remove(edit.id!).then(() => (setEdit(null), load()))}>Delete</button>}
                   <button onClick={() => setEdit(null)}>Cancel</button>

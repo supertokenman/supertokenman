@@ -26,7 +26,7 @@ export function InboxButton({ items, onGo }: { items: Need[]; onGo: (n: Need) =>
   const soon = items.filter((i) => i.level === 1).length
   return (
     <div className="menu" ref={root}>
-      <button className={`ghost menu-btn inbox-btn ${urgent ? 'urgent' : ''} ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} title="What needs you">
+      <button className={`ghost menu-btn inbox-btn ${urgent ? 'urgent' : ''} ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} data-tip="What needs you">
         <svg className="ico" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1.25 1.25H2.75z" />
           <path d="M6.5 14.25h3" />

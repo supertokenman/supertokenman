@@ -6,6 +6,7 @@ import { framed } from '../shared/mcpapps'
 import { contrast } from './colorKit'
 import { RULES } from './themeContrast'
 import { THEMES } from './themes'
+import { chooseFiles } from './FilePicker'
 
 /** Phase 102: hand the design system to a project as DESIGN.md, and look at generated HTML safely. */
 export function DesignHandoff(props: { cwd?: string; onClose: () => void }) {
@@ -15,7 +16,7 @@ export function DesignHandoff(props: { cwd?: string; onClose: () => void }) {
   const text = () => designMd(THEMES.filter((t) => t.id === 'claude-paper' || t.id === 'claude-dark'), RULES, contrast)
   const write = (replace: boolean) =>
     props.cwd && void window.stm.handoff.write(props.cwd, text(), replace).then((r) => (r.exists ? (setExists(true), setMsg(`${r.file} is already there.`)) : (setExists(false), setMsg(`Wrote ${r.file}. Panels in this folder read it like any file.`))), (e) => setMsg(clean(e)))
-  const open = () => void window.stm.handoff.pickHtml().then((r) => r && window.stm.insp.appDoc(framed(r.html)).then((src) => setDoc({ file: r.file, src })), (e) => setMsg(clean(e)))
+  const open = () => void chooseFiles({ title: 'Open an HTML file', accept: ['html', 'htm'], action: 'Open' }).then((c) => window.stm.handoff.pickHtml(c)).then((r) => r && window.stm.insp.appDoc(framed(r.html)).then((src) => setDoc({ file: r.file, src })), (e) => setMsg(clean(e)))
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
       <div className="sheet config observe dh" role="dialog" aria-label="Design handoff">

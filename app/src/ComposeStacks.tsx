@@ -102,7 +102,7 @@ export function ComposeStacks(props: { onClose: () => void }) {
                     </>
                   ) : (
                     <>
-                      <button className="primary" disabled={!!busy || dirty} title={dirty ? 'Save the file first' : undefined} onClick={() => setAsk('up')}>{busy === 'up' ? 'Starting…' : 'Start'}</button>
+                      <button className="primary" disabled={!!busy || dirty} data-tip={dirty ? 'Save the file first' : undefined} onClick={() => setAsk('up')}>{busy === 'up' ? 'Starting…' : 'Start'}</button>
                       <button disabled={!!busy || !stack.running} onClick={() => setAsk('stop')}>{busy === 'stop' ? 'Stopping…' : 'Stop'}</button>
                       <button className="ghost" disabled={!!busy} onClick={() => setAsk('pull')}>{busy === 'pull' ? 'Pulling…' : 'Pull'}</button>
                     </>

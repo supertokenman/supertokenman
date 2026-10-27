@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { StateMark } from './StateMark'
 import './bridge'
+import { Checkbox } from './ui'
 
 type Change = { path: string; kind: 'added' | 'changed' | 'deleted' }
 
@@ -63,7 +64,7 @@ export function SandboxButton({ cwd, onOpen }: { cwd?: string; onOpen: (cwd: str
   }
   return (
     <div className="sbx" ref={root}>
-      <button className="ghost icon" onClick={() => setOpen(!open)} aria-expanded={open} title="New panel in a sandbox (OpenShell)">
+      <button className="ghost icon" onClick={() => setOpen(!open)} aria-expanded={open} data-tip="New panel in a sandbox (OpenShell)" aria-label="New panel in a sandbox (OpenShell)">
         <SandboxMark />
       </button>
       {open && (
@@ -142,7 +143,7 @@ export function SandboxChip({ cwd }: { cwd: string }) {
           if (!open) void look()
         }}
         aria-expanded={open}
-        title="This panel runs in an OpenShell sandbox. Click to see its changes and bring them back."
+        data-tip="This panel runs in an OpenShell sandbox. Click to see its changes and bring them back."
       >
         <SandboxMark size={12} />
         Sandbox
@@ -157,9 +158,9 @@ export function SandboxChip({ cwd }: { cwd: string }) {
             <div className="sbx-list">
               {list.map((c) => (
                 <label key={c.path} className={`sbx-row ${c.kind}`}>
-                  <input type="checkbox" checked={pick.has(c.path)} onChange={(e) => setPick((p) => { const n = new Set(p); if (e.target.checked) n.add(c.path); else n.delete(c.path); return n })} />
+                  <Checkbox checked={pick.has(c.path)} onChange={(e) => setPick((p) => { const n = new Set(p); if (e.target.checked) n.add(c.path); else n.delete(c.path); return n })} />
                   <b>{KIND[c.kind]}</b>
-                  <span title={c.path}>{c.path}</span>
+                  <span data-tip={c.path}>{c.path}</span>
                 </label>
               ))}
             </div>

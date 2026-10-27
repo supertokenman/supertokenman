@@ -4,6 +4,8 @@ import { best, TARGETS, type Target } from '../shared/shot2code'
 import type { Job, RoundView } from '../electron/shot2code'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, NumberField, Select } from './ui'
+import { pickFile } from './FilePicker'
 
 const close = (
   <IconClose />
@@ -69,15 +71,14 @@ export function ShotToCodeSheet(props: { cwd?: string; onClose: () => void }) {
         </header>
         <div className="cf-body s2c-body">
           <div className="cf-col ob-list">
-            <label className="s2c-drop" onDragOver={(e) => e.preventDefault()} onDrop={(e) => (e.preventDefault(), void drop(e.dataTransfer.files[0]))}>
-              <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void drop(e.target.files?.[0])} />
+            <div role="button" tabIndex={0} className="s2c-drop" onClick={() => void pickFile({ title: 'A screenshot, sketch or mockup', accept: ['png', 'jpg', 'jpeg', 'webp'], action: 'Use' }).then((f) => f && drop(f))} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), e.currentTarget.click())} onDragOver={(e) => e.preventDefault()} onDrop={(e) => (e.preventDefault(), void drop(e.dataTransfer.files[0]))}>
               <b>Drop a screenshot, sketch or mockup</b>
               <span className="faint">or click to pick one. Your own designs; someone else's site only as a layout reference.</span>
-            </label>
+            </div>
             {!props.cwd && <div className="notice error">Open a panel on a project first: files go there when you apply.</div>}
             {jobs.map((j) => (
               <div key={j.id} className="s2c-item">
-                {j.target === 'html' && <input type="checkbox" aria-label={`Add ${j.name} to the prototype`} checked={protoIds.includes(j.id)} onChange={(e) => setProtoIds((l) => (e.target.checked ? [...l, j.id] : l.filter((x) => x !== j.id)))} />}
+                {j.target === 'html' && <Checkbox aria-label={`Add ${j.name} to the prototype`} checked={protoIds.includes(j.id)} onChange={(e) => setProtoIds((l) => (e.target.checked ? [...l, j.id] : l.filter((x) => x !== j.id)))} />}
                 <button className={`ob-turn ${j.id === pick ? 'on' : ''}`} onClick={() => (setPick(j.id), setForm(null))}>
                   <span className="ob-turn-top"><span>{j.name}</span><span className="faint">{TARGETS[j.target].label}</span></span>
                   <span className="faint">{j.rounds.length} {j.rounds.length === 1 ? 'round' : 'rounds'}{best(j.rounds) ? `, best ${best(j.rounds)!.percent}% differ` : ''}{j.running ? ', running' : j.stopped ? `, ${j.stopped}` : ''}</span>
@@ -96,9 +97,9 @@ export function ShotToCodeSheet(props: { cwd?: string; onClose: () => void }) {
                 <img className="s2c-img" src={form.image} alt="The image to rebuild" />
                 <div className="mn-form">
                   <label>Name<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-                  <label>Write as<select value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value as Target })}>{Object.entries(TARGETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></label>
-                  <label>Rounds at most<input type="number" min={1} max={6} value={form.rounds} onChange={(e) => setForm({ ...form, rounds: Number(e.target.value) })} /></label>
-                  <label>Stop under (% differ)<input type="number" min={0.5} step={0.5} value={form.target_} onChange={(e) => setForm({ ...form, target_: Number(e.target.value) })} /></label>
+                  <label>Write as<Select value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value as Target })}>{Object.entries(TARGETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select></label>
+                  <label>Rounds at most<NumberField min={1} max={6} value={form.rounds} onChange={(e) => setForm({ ...form, rounds: Number(e.target.value) })} /></label>
+                  <label>Stop under (% differ)<NumberField min={0.5} step={0.5} value={form.target_} onChange={(e) => setForm({ ...form, target_: Number(e.target.value) })} /></label>
                   <label className="wide">Note for Claude<input placeholder="optional, such as: the sidebar collapses on mobile" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
                 </div>
                 <div className="faint">Each round is one call on your Claude plan, checked by the budget brake. The project's components and Tailwind or CSS tokens go along with the image.</div>

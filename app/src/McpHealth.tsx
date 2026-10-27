@@ -51,7 +51,7 @@ export function McpHealthSheet(props: { onCatalog?: () => void; cwd?: string; on
                 <button className="ghost small" disabled={!!busy} onClick={() => check(r.name)}>{busy === r.name ? 'Checking…' : 'Check'}</button>
               </div>
               {r.last?.ok && (
-                <div className="mh-cost" title={`${r.last.tokens.toLocaleString()} tokens`}>
+                <div className="mh-cost" data-tip={`${r.last.tokens.toLocaleString()} tokens`}>
                   <span className="ob-label">Context per turn</span>
                   <span className="mh-bar"><i style={{ width: `${(r.last.tokens / max) * 100}%` }} /></span>
                   <span className="mh-tok">{r.last.tokens.toLocaleString()}</span>

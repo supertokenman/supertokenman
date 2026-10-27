@@ -22,7 +22,7 @@ export function Menu(props: { icon: ReactNode; label: string; items: MenuItem[] 
   const hot = props.items.some((i) => i.hot)
   return (
     <div className="menu" ref={root}>
-      <button className={`ghost menu-btn ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open} title={props.items.map((i) => i.label).join(', ')}>
+      <button className={`ghost menu-btn ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open} data-tip={props.items.map((i) => i.label).join(', ')}>
         {props.icon} <span className="lbl">{props.label}</span>
         {count > 0 ? <span className="count">{count > 99 ? '99+' : count}</span> : hot ? <span className="menu-dot" /> : null}
       </button>

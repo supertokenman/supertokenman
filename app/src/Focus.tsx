@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconClose } from './icons'
 import { clock, hm, roundState, summary, type Focus, type TimeLog } from './focusRound'
+import { Select } from './ui'
 
 const LENGTHS = [25, 50, 90]
 
@@ -9,7 +10,7 @@ export function FocusChip({ f, now, onClick }: { f: Focus; now: number; onClick:
   const r = roundState(f, now)
   const C = 2 * Math.PI * 7
   return (
-    <button className={`focus-chip ${f.kind}`} onClick={onClick} title={f.goal || (f.kind === 'break' ? 'Break' : 'Focus')}>
+    <button className={`focus-chip ${f.kind}`} onClick={onClick} data-tip={f.goal || (f.kind === 'break' ? 'Break' : 'Focus')}>
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
         <circle cx="9" cy="9" r="7" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2" fill="none" />
         <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray={C} strokeDashoffset={C * r.progress} transform="rotate(-90 9 9)" strokeLinecap="round" />
@@ -85,11 +86,11 @@ export function FocusSheet(props: {
                 {props.panels.length > 1 && (
                   <label className="select">
                     <span className="select-label">Panel</span>
-                    <select value={sid} onChange={(e) => setSid(e.target.value)}>
+                    <Select value={sid} onChange={(e) => setSid(e.target.value)}>
                       {props.panels.map((p) => (
                         <option key={p.sid} value={p.sid}>{p.name}</option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                 )}
                 <button className="primary" onClick={start}>Start round</button>
@@ -113,7 +114,7 @@ export function FocusSheet(props: {
             {sum.rows.length === 0 && <div className="faint">Nothing yet. Time is counted while panels are open.</div>}
             {sum.rows.map((r) => (
               <div key={r.project} className="time-row">
-                <span className="time-name" title={r.project}>
+                <span className="time-name" data-tip={r.project}>
                   {/* a worktree panel's folder ends in -panel-<id>: the project is the part before it */}
                   {r.project.replace(/-panel-[a-z0-9]+$/i, '')}
                   {/-panel-[a-z0-9]+$/i.test(r.project) && <span className="faint"> worktree</span>}

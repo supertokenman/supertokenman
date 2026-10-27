@@ -4,6 +4,7 @@ import { clean, friendly } from './errors'
 import { threadsText, type Inbox, type PrDetail, type PrItem } from '../electron/prs'
 import { Mark } from './CiView'
 import { Markdown } from './markdown'
+import { Select, confirmDialog } from './ui'
 
 const ago = (iso: string) => {
   const m = Math.round((Date.now() - Date.parse(iso)) / 60000)
@@ -241,12 +242,12 @@ export function PullRequests(props: { focusSid: string | null; onAsk: (text: str
                         <button className="ghost small" disabled={!!busy || !text.trim()} onClick={() => void act('changes', () => window.stm.pr.review(d.repo, d.number, 'REQUEST_CHANGES', text), 'Asked for changes')}>Request changes</button>
                         <button className="small" disabled={!!busy} onClick={() => void act('approve', () => window.stm.pr.review(d.repo, d.number, 'APPROVE', text), 'Approved')}>Approve</button>
                         <span className="spacer-flex" />
-                        <select value={method} onChange={(e) => setMethod(e.target.value as typeof method)} aria-label="Merge method">
+                        <Select value={method} onChange={(e) => setMethod(e.target.value as typeof method)} aria-label="Merge method">
                           <option value="squash">Squash</option>
                           <option value="merge">Merge commit</option>
                           <option value="rebase">Rebase</option>
-                        </select>
-                        <button className="primary small" disabled={!!busy || d.draft || d.mergeable === false} onClick={() => confirm(`Merge #${d.number} into ${d.base}?`) && void act('merge', () => window.stm.pr.merge(d.repo, d.number, method), 'Merged')}>
+                        </Select>
+                        <button className="primary small" disabled={!!busy || d.draft || d.mergeable === false} onClick={async () => (await confirmDialog({ message: `Merge #${d.number} into ${d.base}?`, confirm: 'Merge' })) && void act('merge', () => window.stm.pr.merge(d.repo, d.number, method), 'Merged')}>
                           {busy === 'merge' ? 'Merging...' : 'Merge'}
                         </button>
                       </div>

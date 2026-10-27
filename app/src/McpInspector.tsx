@@ -6,6 +6,7 @@ import { clean } from './errors'
 import './bridge'
 import { McpAppFrame } from './McpAppFrame'
 import { uiUriOf } from '../shared/mcpapps'
+import { Select } from './ui'
 
 const close = (
   <IconClose />
@@ -59,7 +60,7 @@ export function McpInspectorSheet(props: { cwd?: string; onClose: () => void }) 
           </div>
           <div className="fld ob-grow">
             {mode === 'installed' ? (
-              <select value={name} onChange={(e) => setName(e.target.value)} aria-label="Server">{servers.map((s) => <option key={s.name} value={s.name}>{s.name} · {s.kind} · {s.target}</option>)}</select>
+              <Select value={name} onChange={(e) => setName(e.target.value)} aria-label="Server">{servers.map((s) => <option key={s.name} value={s.name}>{s.name} · {s.kind} · {s.target}</option>)}</Select>
             ) : mode === 'command' ? (
               <input value={command} onChange={(e) => setCommand(e.target.value)} aria-label="Command" spellCheck={false} />
             ) : (
@@ -107,9 +108,9 @@ function FieldInput(props: { f: Field; value: string; onChange: (v: string) => v
     <label className={`fld ${f.kind === 'json' ? 'wide' : ''}`}>
       <span className="fld-label">{f.name}{f.required ? <i aria-label="required">*</i> : null}<span className="fld-kind">{f.kind}</span></span>
       {f.kind === 'enum' ? (
-        <select value={props.value} onChange={(e) => props.onChange(e.target.value)}><option value="">—</option>{f.options!.map((o) => <option key={o}>{o}</option>)}</select>
+        <Select value={props.value} onChange={(e) => props.onChange(e.target.value)}><option value="">—</option>{f.options!.map((o) => <option key={o}>{o}</option>)}</Select>
       ) : f.kind === 'boolean' ? (
-        <select value={props.value} onChange={(e) => props.onChange(e.target.value)}><option value="">—</option><option value="true">true</option><option value="false">false</option></select>
+        <Select value={props.value} onChange={(e) => props.onChange(e.target.value)}><option value="">—</option><option value="true">true</option><option value="false">false</option></Select>
       ) : f.kind === 'json' ? (
         <textarea rows={3} spellCheck={false} placeholder="JSON" value={props.value} onChange={(e) => props.onChange(e.target.value)} />
       ) : (
@@ -143,7 +144,7 @@ function ToolView(props: { t: Tool; all: Tool[] }) {
   return (
     <>
       <div className="ob-head">
-        <div className="ob-row"><b className="in-name ob-grow">{t.name}</b>{ui && <span className="in-cls app" title={ui}>App</span>}<span className={`in-cls ${t.cls}`}>{t.cls === 'read' ? 'Read' : 'Write'}</span></div>
+        <div className="ob-row"><b className="in-name ob-grow">{t.name}</b>{ui && <span className="in-cls app" data-tip={ui}>App</span>}<span className={`in-cls ${t.cls}`}>{t.cls === 'read' ? 'Read' : 'Write'}</span></div>
         {t.description && <div className="in-desc">{t.description}</div>}
       </div>
       {t.flags.length > 0 && <div className="notice error">This description tries to steer the model: {t.flags.join('; ')}. Do not install a server that does this.</div>}

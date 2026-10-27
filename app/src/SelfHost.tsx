@@ -4,6 +4,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconClose, IconDeploy, IconExternal } from './icons'
 import './bridge'
+import { Checkbox, NumberField, Select } from './ui'
 
 /**
  * Self-hosting: apps worth running on your own server, each a single container. Pick one, read the
@@ -78,9 +79,9 @@ function Deploy(props: { app: SelfApp }) {
       <div>{a.what}</div>
       <div className="faint">License as the project states it: {a.license}. Check it, and the project's own docs, before relying on it.</div>
       <div className="fld-grid">
-        <label className="fld"><span className="fld-label">Host, from ~/.ssh/config</span>{hosts.length ? <select value={host} onChange={(e) => (setHost(e.target.value), setConfirm(false))}>{hosts.map((h) => <option key={h}>{h}</option>)}</select> : <input value={host} placeholder="my-server" onChange={(e) => setHost(e.target.value.trim())} />}</label>
-        <label className="fld"><span className="fld-label">Port on the host</span><input type="number" min={1} max={65535} value={port} onChange={(e) => (setPort(Number(e.target.value)), setConfirm(false))} /></label>
-        <label className="check wide"><input type="checkbox" checked={open} onChange={(e) => (setOpen(e.target.checked), setConfirm(false))} /> Open it on all interfaces (otherwise only 127.0.0.1 on the host: reach it through a tunnel or a reverse proxy)</label>
+        <label className="fld"><span className="fld-label">Host, from ~/.ssh/config</span>{hosts.length ? <Select value={host} onChange={(e) => (setHost(e.target.value), setConfirm(false))}>{hosts.map((h) => <option key={h}>{h}</option>)}</Select> : <input value={host} placeholder="my-server" onChange={(e) => setHost(e.target.value.trim())} />}</label>
+        <label className="fld"><span className="fld-label">Port on the host</span><NumberField min={1} max={65535} value={port} onChange={(e) => (setPort(Number(e.target.value)), setConfirm(false))} /></label>
+        <label className="check wide"><Checkbox checked={open} onChange={(e) => (setOpen(e.target.checked), setConfirm(false))} /> Open it on all interfaces (otherwise only 127.0.0.1 on the host: reach it through a tunnel or a reverse proxy)</label>
       </div>
       {needsOf(a).length > 0 && <div className="faint">Needs {needsOf(a).join(', ')} in the vault; it is filled in only when the file is sent.</div>}
       <pre className="ob-pre">{composeOf(a, { hostPort: port, publicBind: open })}</pre>

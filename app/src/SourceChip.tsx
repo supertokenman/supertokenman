@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { QuotaState } from './bridge'
 import { confirmsFor, headroom, type Source, type Window } from '../shared/quotapolicy'
 import { clean } from './errors'
+import { Radio } from './ui'
 
 const LABEL: Record<Source, string> = { setup: 'As set up', plan: 'Plan only', api: 'Paid API', custom: 'Custom endpoint' }
 const WHAT: Record<Source, string> = {
@@ -30,7 +31,7 @@ export function SourceChip(props: { sid: string; limits: Record<string, { percen
   }
   return (
     <span className="iso-wrap">
-      <button className={`ghost small iso-chip src-chip ${st.paused ? 'held' : st.source !== 'setup' ? 'on' : ''}`} title="Which source this panel may bill" onClick={(e) => {
+      <button className={`ghost small iso-chip src-chip ${st.paused ? 'held' : st.source !== 'setup' ? 'on' : ''}`} data-tip="Which source this panel may bill" onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect()
         setAt({ top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 336) })
         setTo(st.source); setConfirms(0); setOpen(!open)
@@ -44,7 +45,7 @@ export function SourceChip(props: { sid: string; limits: Record<string, { percen
           {st.paused && <div className="src-warn">The plan limit was reached. Nothing was sent anywhere else.</div>}
           {(['setup', 'plan', 'api', 'custom'] as Source[]).map((s) => (
             <label key={s} className="ca-toggle src-opt">
-              <input type="radio" name="src" checked={to === s} disabled={(s === 'api' && !st.hasKey) || (s === 'custom' && !st.customOn)} onChange={() => (setTo(s), setConfirms(0))} />
+              <Radio name="src" checked={to === s} disabled={(s === 'api' && !st.hasKey) || (s === 'custom' && !st.customOn)} onChange={() => (setTo(s), setConfirms(0))} />
               <span><b>{LABEL[s]}</b><span className="faint"> {s === 'custom' && st.customUrl ? `${st.customUrl}. ` : ''}{WHAT[s]}{s === 'api' && !st.hasKey ? ' Add the key to the vault first.' : ''}{s === 'custom' && !st.customOn ? ' Off: turn it on in Settings.' : ''}</span></span>
             </label>
           ))}

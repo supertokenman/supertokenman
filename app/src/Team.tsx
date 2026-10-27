@@ -73,7 +73,7 @@ function Mark({ id, name, live }: { id: string; name: string; live?: boolean }) 
   const shape = h % 3
   const fill = `hsl(${h} 55% 58%)`
   return (
-    <span className={`team-mark ${live ? 'live' : ''}`} title={name}>
+    <span className={`team-mark ${live ? 'live' : ''}`} data-tip={name} role="img" aria-label={name}>
       <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
         {shape === 0 ? <circle cx="14" cy="14" r="11" fill={fill} /> : shape === 1 ? <rect x="4" y="4" width="20" height="20" rx="3" fill={fill} /> : <path d="M14 3 25 24H3z" fill={fill} />}
         <text x="14" y="18.5" textAnchor="middle" fontSize="11" fontWeight="800" fill="#111">{name.slice(0, 1).toUpperCase()}</text>
@@ -193,7 +193,7 @@ export function TeamSheet(props: {
                     <b>{m.name}</b>
                     <span className="faint">{m.repo ? `${m.repo}${m.branch ? ` · ${m.branch}` : ''}` : 'no panel open'}</span>
                   </span>
-                  {m.status && <span className={`team-dot ${m.status}`} title={m.status} />}
+                  {m.status && <span className={`team-dot ${m.status}`} data-tip={m.status} role="img" aria-label={m.status} />}
                 </div>
               ))}
               {live && others.length === 0 && <div className="faint team-alone">Nobody else here yet. Send them the invite.</div>}
@@ -230,7 +230,7 @@ export function TeamSheet(props: {
               </div>
               <form className="team-compose" onSubmit={(e) => { e.preventDefault(); if (text.trim()) void send(async () => { await team.room.current!.send({ kind: 'chat', name: saved.name, text: text.trim() }); setText('') }) }}>
                 <input value={text} onChange={(e) => setText(e.target.value)} placeholder={live ? 'Message the room' : 'Waiting for the relay...'} disabled={!live} />
-                <button className="ghost small" type="button" disabled={!live} title="Send the focused panel's last answer as a hand-off" onClick={() => {
+                <button className="ghost small" type="button" disabled={!live} data-tip="Send the focused panel's last answer as a hand-off" onClick={() => {
                   const h = props.handoffFrom()
                   if (!h) return setErr('Focus a panel with an answer to hand off.')
                   void send(() => team.room.current!.send({ kind: 'handoff', name: saved.name, ...h }))

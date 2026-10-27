@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Checkbox } from './ui'
 
 /** Phase 96: the snapshot the app made before a compact, shown before it goes back to Claude. */
 export function SnapshotCard(props: { sid: string; text: string; inject: boolean; onDone: () => void }) {
@@ -15,7 +16,7 @@ export function SnapshotCard(props: { sid: string; text: string; inject: boolean
         <button className="ghost small" onClick={props.onDone}>Hide</button>
       </div>
       <textarea value={text} rows={Math.min(10, text.split('\n').length + 1)} spellCheck={false} onChange={(e) => setText(e.target.value)} onBlur={() => save(text, inject)} />
-      <label className="ca-toggle"><input type="checkbox" checked={!inject} onChange={(e) => (setInject(!e.target.checked), save(text, !e.target.checked))} />Do not hand this back</label>
+      <label className="ca-toggle"><Checkbox checked={!inject} onChange={(e) => (setInject(!e.target.checked), save(text, !e.target.checked))} />Do not hand this back</label>
     </div>
   )
 }

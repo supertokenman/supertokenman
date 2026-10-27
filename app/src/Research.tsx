@@ -6,6 +6,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { LastDays } from './LastDays'
 import './bridge'
+import { Checkbox, Select } from './ui'
 
 const KINDS: { id: SourceKind; label: string; note: string }[] = [
   { id: 'web', label: 'Web', note: 'your SearXNG and the web reader' },
@@ -36,7 +37,7 @@ function Cited(props: { text: string; sources: Source[]; uncited: Set<string> })
         const n = /^\[(\d+)\]$/.exec(p)?.[1]
         if (!n) return <Fragment key={i}>{p}</Fragment>
         const s = props.sources[Number(n) - 1]
-        return s ? <a key={i} className="rs-cite" href={s.url} target="_blank" rel="noreferrer" title={s.title}>{n}</a> : <span key={i} className="rs-cite bad" title="No such source">{n}</span>
+        return s ? <a key={i} className="rs-cite" href={s.url} target="_blank" rel="noreferrer" data-tip={s.title}>{n}</a> : <span key={i} className="rs-cite bad" data-tip="No such source">{n}</span>
       })}
     </>
   )
@@ -115,14 +116,14 @@ export function ResearchSheet(props: { cwd?: string; onClose: () => void; onSend
             </div>
             <div className="rs-opts">
               {KINDS.map((k) => (
-                <label key={k.id} className="rs-kind" title={k.note}>
-                  <input type="checkbox" checked={kinds.includes(k.id)} disabled={k.id === 'folder' && !props.cwd} onChange={(e) => setKinds(e.target.checked ? [...kinds, k.id] : kinds.filter((x) => x !== k.id))} />
+                <label key={k.id} className="rs-kind" data-tip={k.note}>
+                  <Checkbox checked={kinds.includes(k.id)} disabled={k.id === 'folder' && !props.cwd} onChange={(e) => setKinds(e.target.checked ? [...kinds, k.id] : kinds.filter((x) => x !== k.id))} />
                   {k.label}
                 </label>
               ))}
               <span className="spacer-flex" />
-              <label className="rs-num">Questions<select value={breadth} onChange={(e) => setBreadth(Number(e.target.value))}>{[2, 3, 4, 5, 6].map((n) => <option key={n}>{n}</option>)}</select></label>
-              <label className="rs-num">Sources each<select value={depth} onChange={(e) => setDepth(Number(e.target.value))}>{[2, 3, 4, 6, 8].map((n) => <option key={n}>{n}</option>)}</select></label>
+              <label className="rs-num">Questions<Select value={breadth} onChange={(e) => setBreadth(Number(e.target.value))}>{[2, 3, 4, 5, 6].map((n) => <option key={n}>{n}</option>)}</Select></label>
+              <label className="rs-num">Sources each<Select value={depth} onChange={(e) => setDepth(Number(e.target.value))}>{[2, 3, 4, 6, 8].map((n) => <option key={n}>{n}</option>)}</Select></label>
             </div>
             <div className="faint">Two Claude calls on your plan: one plans, one writes. Searching, reading and ranking run on this machine. The budget brake checks both calls first. Topics, companies and public projects only.</div>
             {stage && <div className="rs-stage"><StateMark state="busy" label="Working" /> {stage}…</div>}
@@ -135,7 +136,7 @@ export function ResearchSheet(props: { cwd?: string; onClose: () => void; onSend
                     <span className="rs-reads">
                       {kinds.map((k) => {
                         const r = reads[i]?.[k]
-                        return <span key={k} className={`rs-read ${r?.error ? 'bad' : r ? 'ok' : ''}`} title={r?.error ?? ''}>{TAG[k]} {r ? (r.error ? '!' : r.found) : '…'}</span>
+                        return <span key={k} className={`rs-read ${r?.error ? 'bad' : r ? 'ok' : ''}`} data-tip={r?.error ?? ''}>{TAG[k]} {r ? (r.error ? '!' : r.found) : '…'}</span>
                       })}
                     </span>
                   </li>

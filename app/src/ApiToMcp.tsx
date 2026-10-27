@@ -4,6 +4,7 @@ import { IconClose } from './icons'
 import type { ApiRow, Auth, Gen, Op } from '../shared/api2mcp'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, NumberField, Select } from './ui'
 
 const close = (
   <IconClose />
@@ -46,8 +47,8 @@ export function ApiToMcpSheet(props: { cwd?: string; onClose: () => void }) {
             <div className="cf-col ob-list">
               <input placeholder="Search APIs" value={q} onChange={(e) => setQ(e.target.value)} />
               <div className="ob-row">
-                <select className="ob-grow" value={cat} onChange={(e) => setCat(e.target.value)}><option value="">All categories</option>{list.categories.map((c) => <option key={c}>{c}</option>)}</select>
-                <label className="check"><input type="checkbox" checked={keyless} onChange={(e) => setKeyless(e.target.checked)} /> No key</label>
+                <Select className="ob-grow" value={cat} onChange={(e) => setCat(e.target.value)}><option value="">All categories</option>{list.categories.map((c) => <option key={c}>{c}</option>)}</Select>
+                <label className="check"><Checkbox checked={keyless} onChange={(e) => setKeyless(e.target.checked)} /> No key</label>
               </div>
               {list.rows.map((r) => (
                 <button key={r.url + r.name} className={`ob-turn ${r === api ? 'on' : ''}`} onClick={() => setApi(r)}>
@@ -97,16 +98,16 @@ function Builder(props: { api: ApiRow; project: string }) {
           <span className="ob-row"><input className="ob-grow" placeholder="https://…/openapi.json" value={specUrl} onChange={(e) => setSpecUrl(e.target.value)} /><button disabled={!specUrl || !!busy} onClick={() => run('spec', window.stm.a2m.spec(specUrl).then((s) => (setOps(s.ops), s.base && setBase(s.base), setSource('its OpenAPI file'), setMsg(`Read ${s.ops.length} endpoints.`))))}>{busy === 'spec' ? 'Reading…' : 'Read endpoints'}</button></span>
         </label>
         <label className="fld"><span className="fld-label">Key</span>
-          <select value={auth.type} onChange={(e) => setAuth({ ...auth, type: e.target.value as Auth['type'] })}><option value="none">No key</option><option value="header">In a header</option><option value="query">In the query</option><option value="bearer">Bearer token</option></select>
+          <Select value={auth.type} onChange={(e) => setAuth({ ...auth, type: e.target.value as Auth['type'] })}><option value="none">No key</option><option value="header">In a header</option><option value="query">In the query</option><option value="bearer">Bearer token</option></Select>
         </label>
         {(auth.type === 'header' || auth.type === 'query') && <label className="fld"><span className="fld-label">{auth.type === 'header' ? 'Header name' : 'Query parameter'}</span><input value={auth.name ?? ''} onChange={(e) => setAuth({ ...auth, name: e.target.value })} /></label>}
         {auth.type !== 'none' && <label className="fld"><span className="fld-label">Vault name</span><input value={auth.env ?? ''} onChange={(e) => setAuth({ ...auth, env: e.target.value.toUpperCase() })} /></label>}
-        <label className="fld"><span className="fld-label">Wait between calls (ms)</span><input type="number" min={0} value={gap} onChange={(e) => setGap(Number(e.target.value))} /></label>
+        <label className="fld"><span className="fld-label">Wait between calls (ms)</span><NumberField min={0} value={gap} onChange={(e) => setGap(Number(e.target.value))} /></label>
       </div>
       <div className="ob-label">Endpoints, one tool each</div>
       {ops.map((o, i) => (
         <div key={i} className="a2m-op">
-          <select value={o.method} onChange={(e) => setOp(i, { method: e.target.value as Op['method'] })} aria-label="Method">{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => <option key={m}>{m}</option>)}</select>
+          <Select value={o.method} onChange={(e) => setOp(i, { method: e.target.value as Op['method'] })} aria-label="Method">{['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => <option key={m}>{m}</option>)}</Select>
           <input value={o.path} onChange={(e) => setOp(i, { path: e.target.value })} aria-label="Path" />
           <input value={o.tool} onChange={(e) => setOp(i, { tool: e.target.value })} aria-label="Tool name" />
           <input value={o.params.filter((p) => p.in === 'query').map((p) => p.name).join(', ')} placeholder="query params" onChange={(e) => setOp(i, { params: [...o.params.filter((p) => p.in !== 'query'), ...e.target.value.split(/[,\s]+/).filter(Boolean).map((n) => ({ name: n, in: 'query' as const, required: false, type: 'string' as const }))] })} aria-label="Query parameters" />

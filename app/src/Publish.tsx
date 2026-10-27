@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean, friendly } from './errors'
 import { lengthOn, NETWORKS } from '../shared/publish'
+import { Checkbox } from './ui'
 
 const KEY = 'stm.publish'
 
@@ -102,7 +103,7 @@ export function Publish(props: { focusSid: string | null; onClose: () => void })
               return (
                 <div key={n.id} className={`pub-net ${picked ? 'on' : ''} ${over && picked ? 'over' : ''}`}>
                   <label className="pub-pick">
-                    <input type="checkbox" checked={picked} onChange={() => setOn(picked ? on.filter((x) => x !== n.id) : [...on, n.id])} />
+                    <Checkbox checked={picked} onChange={() => setOn(picked ? on.filter((x) => x !== n.id) : [...on, n.id])} />
                     <span className="pub-name">{n.name}</span>
                   </label>
                   <Gauge used={used} limit={n.limit} />

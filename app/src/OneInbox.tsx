@@ -5,6 +5,7 @@ import { ALL_VIEW, applyView, counts, expand, matchShortcut, snoozeChoices, vari
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, TimeField } from './ui'
 
 type Data = Awaited<ReturnType<typeof window.stm.inbox.load>>
 const SRC: Record<Source, string> = { outlook: 'Outlook', gmail: 'Gmail', bluesky: 'Bluesky', mastodon: 'Mastodon', rocketchat: 'Rocket.Chat' }
@@ -75,7 +76,7 @@ export function InboxSheet(props: { onClose: () => void }) {
               ))}
               <div className="sp-label">Sources</div>
               {(Object.keys(SRC) as Source[]).filter((s) => data.connected[s]).map((s) => (
-                <label key={s} className="ib-check"><input type="checkbox" checked={!view.sources.length || view.sources.includes(s)} onChange={(e) => {
+                <label key={s} className="ib-check"><Checkbox checked={!view.sources.length || view.sources.includes(s)} onChange={(e) => {
                   const all = (Object.keys(SRC) as Source[]).filter((x) => data.connected[x])
                   const cur = view.sources.length ? view.sources : all
                   const next = e.target.checked ? [...cur, s] : cur.filter((x) => x !== s)
@@ -84,7 +85,7 @@ export function InboxSheet(props: { onClose: () => void }) {
               ))}
               <div className="sp-label">Labels</div>
               {[...new Set(data.list.flatMap((x) => x.labels))].sort().map((l) => (
-                <label key={l} className="ib-check"><input type="checkbox" checked={view.labels.includes(l)} onChange={(e) => setView({ ...view, name: '', labels: e.target.checked ? [...view.labels, l] : view.labels.filter((x) => x !== l) })} />{l}</label>
+                <label key={l} className="ib-check"><Checkbox checked={view.labels.includes(l)} onChange={(e) => setView({ ...view, name: '', labels: e.target.checked ? [...view.labels, l] : view.labels.filter((x) => x !== l) })} />{l}</label>
               ))}
               <div className="sp-label">Saved views</div>
               {data.views.map((v) => (
@@ -248,15 +249,15 @@ function HoursForm(props: { hours: Hours; act: (p: Promise<unknown>) => void }) 
   const [h, setH] = useState(props.hours)
   return (
     <div className="dsg-body">
-      <label className="ib-check"><input type="checkbox" checked={h.on} onChange={(e) => setH({ ...h, on: e.target.checked })} />Use business hours</label>
+      <label className="ib-check"><Checkbox checked={h.on} onChange={(e) => setH({ ...h, on: e.target.checked })} />Use business hours</label>
       <div className="ib-days">
         {DAYS.map((d, i) => <button key={d} className={`ib-day ${h.days.includes(i) ? 'on' : ''}`} aria-pressed={h.days.includes(i)} disabled={!h.on} onClick={() => setH({ ...h, days: h.days.includes(i) ? h.days.filter((x) => x !== i) : [...h.days, i].sort() })}>{d}</button>)}
       </div>
       <div className="dep-row ib-times">
         <label className="faint" htmlFor="ib-start">From</label>
-        <input id="ib-start" type="time" value={h.start} disabled={!h.on} onChange={(e) => setH({ ...h, start: e.target.value })} />
+        <TimeField id="ib-start" value={h.start} disabled={!h.on} onChange={(e) => setH({ ...h, start: e.target.value })} />
         <label className="faint" htmlFor="ib-end">to</label>
-        <input id="ib-end" type="time" value={h.end} disabled={!h.on} onChange={(e) => setH({ ...h, end: e.target.value })} />
+        <TimeField id="ib-end" value={h.end} disabled={!h.on} onChange={(e) => setH({ ...h, end: e.target.value })} />
         <span className="spacer-flex" />
         <button className="primary small" onClick={() => props.act(window.stm.inbox.hours(h))}>Save</button>
       </div>
@@ -299,8 +300,8 @@ function TeamChat(props: { onChange: () => void }) {
           <div className="fld-grid">
             <label className="fld"><span className="fld-label">Channel</span><input value={room} placeholder="#alerts" onChange={(e) => setRoom(e.target.value)} /></label>
             <div className="fld"><span className="fld-label">Kinds</span>
-              <label className="check"><input type="checkbox" checked={!!al.turns} onChange={(e) => setAl({ ...al, turns: e.target.checked })} /> A panel finished while you were away</label>
-              <label className="check"><input type="checkbox" checked={!!al.ci} onChange={(e) => setAl({ ...al, ci: e.target.checked })} /> CI failed on a panel's branch</label>
+              <label className="check"><Checkbox checked={!!al.turns} onChange={(e) => setAl({ ...al, turns: e.target.checked })} /> A panel finished while you were away</label>
+              <label className="check"><Checkbox checked={!!al.ci} onChange={(e) => setAl({ ...al, ci: e.target.checked })} /> CI failed on a panel's branch</label>
             </div>
           </div>
           <div className="ob-row">

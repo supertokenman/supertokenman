@@ -33,7 +33,7 @@ export function TraceSheet(props: { sid?: string; name: string; money: (usd: num
           <div className="sheet-title">Trace</div>
           <span className="faint">{props.name}</span>
           {rc && rc.count > 0 && (
-            <span className={`tr-receipts ${rc.brokenAt ? 'bad' : ''}`} title="Every tool call is kept in a log chained with a key from your vault; an edited or removed line breaks the chain">
+            <span className={`tr-receipts ${rc.brokenAt ? 'bad' : ''}`} data-tip="Every tool call is kept in a log chained with a key from your vault; an edited or removed line breaks the chain">
               <StateMark state={rc.brokenAt ? 'down' : 'up'} label={rc.brokenAt ? 'Edited' : 'Intact'} />
               {rc.brokenAt ? `Tool log edited at line ${rc.brokenAt} of ${rc.count}` : `Tool log intact · ${rc.count} ${rc.count === 1 ? 'call' : 'calls'}${rc.signed ? '' : ' · unsigned, no vault'}`}
             </span>
@@ -68,7 +68,7 @@ export function TraceSheet(props: { sid?: string; name: string; money: (usd: num
                       <span className="tr-time">{new Date(t.at).toLocaleTimeString()}</span>
                       <span className="tr-prompt">{t.prompt || '(no text)'}</span>
                       <b className="tr-cost">{props.money(t.costUsd)}</b>
-                      <button className="ghost small tr-copy" title="Copies this turn as JSON, with its id (the same id is on each of its calls in the tool log)" onClick={() => void navigator.clipboard.writeText(JSON.stringify(t, null, 2)).catch(() => undefined)}>{t.id ?? 'Copy'}</button>
+                      <button className="ghost small tr-copy" data-tip="Copies this turn as JSON, with its id (the same id is on each of its calls in the tool log)" onClick={() => void navigator.clipboard.writeText(JSON.stringify(t, null, 2)).catch(() => undefined)}>{t.id ?? 'Copy'}</button>
                     </div>
                     <div className="tr-meta">
                       <span>Why here: {t.why ?? 'typed in this panel'}</span>

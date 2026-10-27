@@ -37,7 +37,7 @@ export function AppContainers(props: { onClose: () => void }) {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td title={r.name}><code>{r.name}</code></td>
+                    <td data-tip={r.name}><code>{r.name}</code></td>
                     <td><span className="pt-kind">{r.kind}</span></td>
                     <td className="faint">{r.image}</td>
                     <td><span className={`ac-state ${r.state}`}>{r.state}</span> <span className="faint">{r.status}</span></td>

@@ -324,40 +324,40 @@ export function WebAppsDrawer(props: { open: boolean; app: string; width: number
             const Ico = APP_ICONS[a.id] ?? (() => (site?.icon ? <img className="wa-site-icon" src={site.icon} alt="" /> : <span className="wa-site-mono" aria-hidden="true">{a.name.slice(0, 1).toUpperCase()}</span>))
             const n = unread[a.id] ?? 0
             return (
-              <button key={a.id} role="tab" aria-selected={a.id === current.id && !editing} className={`wa-app app-${a.id}`} title={a.name} onClick={() => (setEditing(null), props.onApp(a.id))}>
+              <button key={a.id} role="tab" aria-selected={a.id === current.id && !editing} className={`wa-app app-${a.id}`} data-tip={a.name} onClick={() => (setEditing(null), props.onApp(a.id))}>
                 <Ico />
                 <span className="wa-app-name">{a.name}</span>
                 {n > 0 && <span className="count">{n > 99 ? '99+' : n}</span>}
               </button>
             )
           })}
-          <button className={`wa-app wa-add ${editing === 'new' ? 'on' : ''}`} title="Add a site as an app" aria-label="Add a site as an app" onClick={() => setEditing('new')}>
+          <button className={`wa-app wa-add ${editing === 'new' ? 'on' : ''}`} data-tip="Add a site as an app" aria-label="Add a site as an app" onClick={() => setEditing('new')}>
             <span className="wa-site-mono" aria-hidden="true">+</span>
             <span className="wa-app-name">Add site</span>
           </button>
         </div>
         <span className="spacer-flex" />
-        {currentSite && !editing && <button className="ghost small" title={`Edit ${currentSite.name}: address, CSS, user agent`} onClick={() => setEditing(currentSite)}>Edit</button>}
+        {currentSite && !editing && <button className="ghost small" data-tip={`Edit ${currentSite.name}: address, CSS, user agent`} onClick={() => setEditing(currentSite)}>Edit</button>}
         {current.id === 'youtube' && video && (
-          <button className="wa-float" title="Keep this video in a small window above every app, even full-screen ones" onClick={() => void float()}>
+          <button className="wa-float" data-tip="Keep this video in a small window above every app, even full-screen ones" onClick={() => void float()}>
             <svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="0.7" y="0.7" width="11.6" height="9.6" rx="1" /><rect x="6.2" y="5" width="5" height="4" fill="currentColor" stroke="none" /></svg>
             Float
           </button>
         )}
         {hasSkin(current.id) && (
-          <button className={`wa-skin ${plainApps.includes(current.id) ? '' : 'on'}`} title={plainApps.includes(current.id) ? `${current.name} in its own look. Click for the app's look: our colors and font, without the side columns.` : `${current.name} in the app's look. Only style is added; nothing on the page is read. Click for the site's own look.`} aria-pressed={!plainApps.includes(current.id)} onClick={() => toggleSkin(current.id)}>
+          <button className={`wa-skin ${plainApps.includes(current.id) ? '' : 'on'}`} data-tip={plainApps.includes(current.id) ? `${current.name} in its own look. Click for the app's look: our colors and font, without the side columns.` : `${current.name} in the app's look. Only style is added; nothing on the page is read. Click for the site's own look.`} aria-pressed={!plainApps.includes(current.id)} onClick={() => toggleSkin(current.id)}>
             {plainApps.includes(current.id) ? 'Site look' : 'Our look'}
           </button>
         )}
-        <button className={`icon keep ${lightApps.includes(current.id) ? '' : 'on'}`} title={lightApps.includes(current.id) ? `${current.name} shows in its own colors. Click to match the app's dark look.` : `${current.name} is darkened to match the app when the page is light. Click for its own colors.`} aria-pressed={!lightApps.includes(current.id)} onClick={() => toggleDark(current.id)}>
+        <button className={`icon keep ${lightApps.includes(current.id) ? '' : 'on'}`} data-tip={lightApps.includes(current.id) ? `${current.name} shows in its own colors. Click to match the app's dark look.` : `${current.name} is darkened to match the app when the page is light. Click for its own colors.`} aria-label={lightApps.includes(current.id) ? `${current.name} shows in its own colors. Click to match the app's dark look.` : `${current.name} is darkened to match the app when the page is light. Click for its own colors.`} aria-pressed={!lightApps.includes(current.id)} onClick={() => toggleDark(current.id)}>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 7.2A4.25 4.25 0 1 1 4.8 2a3.4 3.4 0 0 0 5.2 5.2z" /></svg>
         </button>
-        <button className={`icon keep ${keep.includes(current.id) ? 'on' : ''}`} title={keep.includes(current.id) ? `${current.name} stays loaded while hidden (uses memory). Click to let it sleep after 10 minutes.` : `${current.name} sleeps after 10 minutes hidden. Click to keep it loaded.`} aria-pressed={keep.includes(current.id)} onClick={() => toggleKeep(current.id)}>
+        <button className={`icon keep ${keep.includes(current.id) ? 'on' : ''}`} data-tip={keep.includes(current.id) ? `${current.name} stays loaded while hidden (uses memory). Click to let it sleep after 10 minutes.` : `${current.name} sleeps after 10 minutes hidden. Click to keep it loaded.`} aria-label={keep.includes(current.id) ? `${current.name} stays loaded while hidden (uses memory). Click to let it sleep after 10 minutes.` : `${current.name} sleeps after 10 minutes hidden. Click to keep it loaded.`} aria-pressed={keep.includes(current.id)} onClick={() => toggleKeep(current.id)}>
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 1.5h4l-.5 3 2 2H2.5l2-2zM6 6.5V11" /></svg>
         </button>
-        <button className="icon" title="Back" aria-label="Back" onClick={() => view()?.canGoBack() && view()?.goBack()}>‹</button>
-        <button className="icon" title="Reload" aria-label="Reload" onClick={() => view()?.reload()}>↻</button>
-        <button className="icon" title="Open in browser" aria-label="Open in browser" onClick={() => void window.stm.openUrl(view()?.getURL() || current.url)}>
+        <button className="icon" data-tip="Back" aria-label="Back" onClick={() => view()?.canGoBack() && view()?.goBack()}>‹</button>
+        <button className="icon" data-tip="Reload" aria-label="Reload" onClick={() => view()?.reload()}>↻</button>
+        <button className="icon" data-tip="Open in browser" aria-label="Open in browser" onClick={() => void window.stm.openUrl(view()?.getURL() || current.url)}>
           <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M5 2H2.5v7.5H10V7M7 1.5h3.5V5M10.5 1.5 5.5 6.5" /></svg>
         </button>
         <button className="icon" aria-label="Close drawer" onClick={props.onClose}>

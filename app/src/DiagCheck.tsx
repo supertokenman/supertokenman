@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
+import { Checkbox } from './ui'
 
 type Info = Awaited<ReturnType<typeof window.stm.diagCheck.get>>
 
@@ -33,7 +34,7 @@ export function DiagCheck(props: { sid?: string; onClose: () => void }) {
                 <div className="ck-k">LIMIT</div><span>90 s per run; a slower check leaves the turn unchecked</span>
               </div>
               <label className="ck-toggle">
-                <input type="checkbox" checked={info.on} disabled={!info.check} onChange={(e) => flip(e.target.checked)} />
+                <Checkbox checked={info.on} disabled={!info.check} onChange={(e) => flip(e.target.checked)} />
                 <span>Run it around turns that edit files in this folder</span>
               </label>
               <p className="faint ck-how">Before the turn's first edit the check runs once; when Claude is about to finish it runs again. New errors go back to Claude one time, with the files it touched first. Errors that were there before are left out.</p>
