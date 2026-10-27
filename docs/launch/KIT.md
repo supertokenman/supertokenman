@@ -17,6 +17,9 @@ line "Not affiliated with Anthropic" wherever there is room.
   is free, so people find one name.
 - [ ] A 30-second screen recording of the real app (three panels, one approval, the meter).
 
+- [ ] An `awesome-supertokenman` list repo (community personas, skills, setups, videos), linked from the
+  README, so what people make has a home from day one.
+
 ## Bios
 
 | Where | Text |
