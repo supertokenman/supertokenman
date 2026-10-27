@@ -366,3 +366,12 @@ Ideas, not code: a Trace tab (from MLflow tracing), a local MCP server over the 
 OpenSEO), and a JSON command line, plus Google Workspace through `gws` (from googleworkspace/cli).
 Planned for v1.2. Left out: Humanizer (a writing skill; people can add it from the Catalog) and
 CL4R1T4S (leaked system prompts of other companies: not something we build on).
+
+## Distribution and languages (decided 2026-10-27)
+
+- Homebrew: our own tap first (`supertokenman/homebrew-tap`, updated by a workflow on each published
+  release); the official `homebrew/cask` later, once the app qualifies under its notability rules. The
+  install line goes public only once the tap exists.
+- README languages: Portuguese (Brazil) and Spanish first (`README.pt-BR.md`, `README.es.md`), because
+  Brazil and Latin America are a natural audience. They translate README.md and add nothing; a change
+  to README.md is carried to both.

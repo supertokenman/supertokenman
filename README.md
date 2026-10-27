@@ -1,5 +1,7 @@
 # SuperTokenMan
 
+English · [Português (Brasil)](README.pt-BR.md) · [Español](README.es.md)
+
 A Mac app around Claude Code: several panels side by side, tool approvals in the window, and a meter that
 shows what a session costs and what the app kept out of the context. It runs Claude Code through the
 Agent SDK with your own login, settings, plugins and hooks.

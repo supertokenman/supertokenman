@@ -83,6 +83,38 @@ gh attestation verify SuperTokenMan-arm64.dmg --repo supertokenman/supertokenman
 
 Not verified yet: the first run of this workflow in the public repository.
 
+## Homebrew tap
+
+The cask lives in `packaging/homebrew/supertokenman.rb`, written by `packaging/homebrew/gen-cask.sh`
+from a release's `SHA256SUMS` (test: `bash packaging/homebrew/test-gen-cask.sh`, also run in CI). When a
+release is published, `.github/workflows/homebrew-tap.yml` regenerates it and pushes it to
+`supertokenman/homebrew-tap` as `Casks/supertokenman.rb`. Until the setup below exists, that job logs
+"HOMEBREW_TAP_TOKEN is not set" and ends green.
+
+Once:
+
+1. Create the tap repository: in the `supertokenman` org, a new **public** repository named exactly
+   `homebrew-tap`, created **empty** (no README, license or .gitignore). Then push a first commit with the
+   current cask as `Casks/supertokenman.rb` (copy `packaging/homebrew/supertokenman.rb`), or publish the
+   next release and let the workflow do it.
+2. Create the token: GitHub > Settings > Developer settings > Fine-grained tokens > Generate. Resource
+   owner `supertokenman`, repository access **Only select repositories** > `homebrew-tap`, permission
+   **Contents: Read and write** (nothing else). Pick an expiry and put a reminder to renew it.
+3. In `supertokenman/supertokenman` > Settings > Secrets and variables > Actions, add it as
+   `HOMEBREW_TAP_TOKEN`.
+4. Check: `brew install --cask supertokenman/tap/supertokenman` on a Mac, then `brew audit --cask
+   supertokenman/tap/supertokenman`. Only after that does the install line go on the site and README.
+
+Users then install with:
+
+```bash
+brew install --cask supertokenman/tap/supertokenman
+```
+
+The app updates itself (electron-updater), so the cask says `auto_updates true` and `brew upgrade`
+leaves it alone unless run with `--greedy`. The official `homebrew/cask` comes later, once the app meets
+its notability rules.
+
 ## The proof after each release
 
 `.github/workflows/proof-mac.yml` runs by itself when a release is published, and by hand from the
