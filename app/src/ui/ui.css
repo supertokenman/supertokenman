@@ -1,0 +1,75 @@
+/* ---- own controls (src/ui, decided 2026-10-27): nothing the system draws. The menus share the model
+   menu's .mm look; these rules add what the kit needs on top. Tokens only, so every theme follows. */
+
+/* select: the trigger keeps the field look from app.css (.ui-select); the face sizes to the widest option */
+.ui-select-face { display: grid; min-width: 0; overflow: hidden; }
+.ui-select-face > * { grid-area: 1 / 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-select-sizer { visibility: hidden; height: 0; }
+.ui-select-label.ph { color: var(--faint); }
+.ui-select:active { transform: none; }
+.ui-select.on { border-color: rgba(var(--accent-rgb), 0.5); }
+.ui-menu { max-height: min(360px, calc(100vh - 24px)); overflow-y: auto; }
+.mm-sub.ui-menu { overflow-y: auto; }
+.ui-menu .mm-item, .ui-ctx .mm-item, .ui-combo .mm-item { height: auto; min-height: 28px; }
+.ui-menu .mm-item[aria-disabled='true'], .ui-ctx .mm-item[aria-disabled='true'] { opacity: 0.4; cursor: default; }
+.ui-menu .mm-item[aria-selected='true'] .mm-label { font-weight: 550; }
+.ui-group-label { padding: 6px 10px 3px 26px; font: 600 10px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.ui-ctx { min-width: 190px; outline: none; }
+.ui-ctx .mm-item { padding-left: 10px; }
+.ui-ctx .mm-item.danger { color: var(--red); }
+
+/* radio: a ring with the accent dot */
+.ui-radio { appearance: none; width: 14px; height: 14px; margin: 0; flex: none; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--raised); cursor: pointer; display: inline-grid; place-content: center; vertical-align: -2px; transition: border-color 120ms var(--ease); }
+.ui-radio::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); transform: scale(0); transition: transform 120ms var(--ease); }
+.ui-radio:checked { border-color: var(--accent); }
+.ui-radio:checked::after { transform: scale(1); }
+.ui-radio:hover { border-color: rgba(var(--accent-rgb), 0.6); }
+.ui-radio:focus-visible { outline: 2px solid rgba(var(--accent-rgb), 0.5); outline-offset: 1px; }
+.ui-radio:disabled, .ui-check:disabled { opacity: 0.4; cursor: default; }
+.ui-radiogroup { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+
+/* number: the field with our stepper; the system's spin buttons are hidden */
+.ui-num { position: relative; display: inline-flex; align-items: stretch; max-width: 100%; }
+.ui-num > input { padding-right: 22px !important; -moz-appearance: textfield; }
+.ui-num > input::-webkit-inner-spin-button, .ui-num > input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ui-num-steps { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 18px; display: grid; grid-template-rows: 1fr 1fr; border-left: 1px solid var(--border); }
+.ui-num-steps button, .ui-num-steps button:hover, .ui-num-steps button:active, .ui-num-steps button:focus-visible { all: unset; display: grid; place-items: center; color: var(--muted); cursor: pointer; }
+.ui-num-steps button:hover { color: var(--accent); background: var(--hover); }
+.ui-num-steps button + button { border-top: 1px solid var(--border); }
+.ui-num.off .ui-num-steps { opacity: 0.4; pointer-events: none; }
+
+/* slider: track, accent fill to the value, a square thumb under the cut */
+.ui-slider { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; cursor: pointer; margin: 0; --ui-fill: 50%; }
+.ui-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) var(--ui-fill), var(--hover) var(--ui-fill)); }
+.ui-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 3px; background: var(--text); border: 2px solid var(--accent); transition: transform 120ms var(--ease); }
+.ui-slider:hover::-webkit-slider-thumb { transform: scale(1.12); }
+.ui-slider:focus-visible { outline: none; }
+.ui-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.3); }
+.ui-slider:disabled { opacity: 0.4; cursor: default; }
+
+/* date and time: a text field; a wrong value shows the red edge until it is fixed or left */
+.ui-when { font-variant-numeric: tabular-nums; }
+.ui-when.bad, .ui-when.bad:focus-visible { border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(var(--red-rgb), 0.16); }
+
+/* color: a swatch and a small panel */
+button.ui-color, button.ui-color:hover, button.ui-color:active { width: 22px; height: 22px; padding: 2px; clip-path: none; border-radius: 6px; background: var(--raised); border: 1px solid var(--border-strong); transform: none; }
+.ui-color-chip { display: block; width: 100%; height: 100%; border-radius: 4px; background: var(--swatch); }
+.ui-color-pane { width: 196px; padding: 8px; }
+.ui-color-pane .ui-group-label { padding: 0 0 6px; }
+.ui-color-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 8px; }
+button.ui-color-cell, button.ui-color-cell:hover, button.ui-color-cell:active { all: unset; aspect-ratio: 1; border-radius: 4px; background: var(--swatch); box-shadow: inset 0 0 0 1px rgba(var(--overlay-rgb), 0.15); cursor: pointer; }
+button.ui-color-cell[aria-pressed='true'], button.ui-color-cell:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--accent); }
+.ui-color-hex { width: 100%; height: 26px; font: 12px var(--mono); }
+
+/* dialogs: confirm, alert, prompt */
+.ui-dialog-overlay { z-index: 9000; }
+.ui-dialog { width: min(420px, calc(100vw - 32px)); padding: 18px 18px 14px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5); animation: mm-in 140ms var(--ease) both; display: grid; gap: 12px; }
+.ui-dialog-title { font-weight: 650; font-size: 14px; }
+.ui-dialog-msg { color: var(--muted); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 50vh; overflow-y: auto; }
+.ui-dialog-title + .ui-dialog-msg { margin-top: -4px; }
+.ui-dialog-input { height: 30px; width: 100%; }
+.ui-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-dialog, .ui-radio::after, .ui-slider::-webkit-slider-thumb { animation: none; transition: none; }
+}

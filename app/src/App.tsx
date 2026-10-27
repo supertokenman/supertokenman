@@ -136,6 +136,7 @@ import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 import { FilePickerHost } from './FilePicker'
+import { ContextMenuHost, DialogHost } from './ui'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
 
@@ -1229,6 +1230,8 @@ export function App() {
       <Backdrop id={scene.id} strength={scene.strength} theme={theme} />
       <FolderPickerHost recents={recentDirs} />
       <FilePickerHost />
+      <DialogHost />
+      <ContextMenuHost />
       <header className={`top ${topFit === 'tightest' ? 'tight tighter tightest' : topFit === 'tighter' ? 'tight tighter' : topFit}`} ref={topRef}>
         <div className="brand">
           <BrandMark />

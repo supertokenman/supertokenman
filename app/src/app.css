@@ -75,7 +75,7 @@ button {
 button:hover { --btn-bg: var(--hover); --btn-line: var(--muted); }
 button:active { transform: translateY(0.5px); box-shadow: inset 0 -2px 0 var(--accent); }
 button:focus-visible { outline: none; box-shadow: inset 3px 0 0 var(--accent); }
-textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+textarea:focus-visible, .ui-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button:disabled { opacity: 0.35; cursor: default; transform: none; box-shadow: none; }
 button.ghost { --btn-bg: transparent; --btn-line: transparent; color: var(--muted); }
 button.ghost:hover { --btn-bg: var(--hover); --btn-line: transparent; color: var(--text); }
@@ -92,7 +92,7 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 /* window */
 .shell { display: grid; grid-template-rows: 48px 1fr; height: 100%; }
 .top { display: flex; align-items: center; gap: 12px; padding: 0 12px 0 88px; background: var(--surface); border-bottom: 1px solid var(--border); -webkit-app-region: drag; }
-.top button, .top label, .top select { -webkit-app-region: no-drag; }
+.top button, .top label, .top .ui-select { -webkit-app-region: no-drag; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: -0.01em;  font-family: var(--display); font-weight: 400; letter-spacing: 0.04em; font-size: 15px; }
 .brand-mark { width: 16px; height: 16px; color: var(--text); flex: none; }
 .top-actions { display: flex; align-items: center; gap: 4px; margin-left: 8px; }
@@ -101,8 +101,8 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 .select:focus-within { box-shadow: inset 3px 0 0 var(--accent); }
 .select-label { font: 600 10px var(--mono) !important; letter-spacing: 0.08em; text-transform: uppercase; }
 .select-label { color: var(--faint); font-size: 12px; line-height: 26px; }
-.select select { appearance: none; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%238f8d86' fill='none' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 6px center; border: 0; color: var(--text); font: inherit; padding: 0 20px 0 0; height: 26px; line-height: 26px; cursor: pointer; }
-.select select:focus-visible { outline: none; }
+.select .ui-select { appearance: none; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%238f8d86' fill='none' stroke-width='1.4'/%3E%3C/svg%3E") no-repeat right 6px center; border: 0; color: var(--text); font: inherit; padding: 0 20px 0 0; height: 26px; line-height: 26px; cursor: pointer; }
+.select .ui-select:focus-visible { outline: none; }
 .total { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
 .total-n { color: var(--text); }
 .sep { width: 1px; height: 12px; background: var(--border-strong); }
@@ -816,7 +816,6 @@ html[data-blurred] .dk-dot.running { animation-play-state: paused; }
 .dk-exec:focus-within { border-color: var(--accent); }
 .dk-prompt { font: 11px var(--mono); color: var(--accent); white-space: nowrap; }
 .dk-exec input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: 12px var(--mono); outline: none; }
-input[type='checkbox'] { accent-color: var(--accent); }
 
 /* Pull requests */
 .sheet.prs { width: min(1180px, calc(100vw - 32px)); height: min(820px, calc(100vh - 64px)); display: flex; flex-direction: column; }
@@ -1079,7 +1078,7 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .sp-remove:hover { color: var(--red); }
 .sp-add { place-content: center; justify-items: center; color: var(--muted); border-style: dashed; background: transparent; }
 .sp-add:hover { color: var(--accent); border-color: var(--accent); }
-.sp-add-form input, .sp-add-form select { height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--sunken); color: var(--text); font-size: 12px; min-width: 0; width: 100%; }
+.sp-add-form input, .sp-add-form .ui-select { height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--sunken); color: var(--text); font-size: 12px; min-width: 0; width: 100%; }
 .sp-add-row { display: grid; grid-template-columns: 1fr 70px 52px; gap: 6px; width: 100%; }
 .sp-add-row:last-child { display: flex; }
 .sp-missing { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
@@ -1406,11 +1405,11 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .steps li span { margin-right: 8px; }
 
 /* one look for checkboxes and header buttons everywhere */
-input[type='checkbox']:not(.switch > input) { appearance: none; width: 14px; height: 14px; margin: 0; flex: none; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--raised); cursor: pointer; display: inline-grid; place-content: center; transition: background 120ms var(--ease), border-color 120ms var(--ease); vertical-align: -2px; }
-input[type='checkbox']:not(.switch > input):hover { border-color: rgba(var(--accent-rgb), 0.6); }
-input[type='checkbox']:not(.switch > input):checked { background: var(--accent); border-color: var(--accent); }
-input[type='checkbox']:not(.switch > input):checked::after { content: ''; width: 7px; height: 4px; border: solid #fff; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
-input[type='checkbox']:not(.switch > input):focus-visible { outline: 2px solid rgba(var(--accent-rgb), 0.5); outline-offset: 1px; }
+.ui-check { appearance: none; width: 14px; height: 14px; margin: 0; flex: none; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--raised); cursor: pointer; display: inline-grid; place-content: center; transition: background 120ms var(--ease), border-color 120ms var(--ease); vertical-align: -2px; }
+.ui-check:hover { border-color: rgba(var(--accent-rgb), 0.6); }
+.ui-check:checked { background: var(--accent); border-color: var(--accent); }
+.ui-check:checked::after { content: ''; width: 7px; height: 4px; border: solid #fff; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
+.ui-check:focus-visible { outline: 2px solid rgba(var(--accent-rgb), 0.5); outline-offset: 1px; }
 .sheet-head button.ghost.small { border-color: var(--border); border-radius: 999px; padding: 0 11px; }
 .sheet-head button.ghost.small:hover { border-color: var(--border-strong); }
 
@@ -1424,9 +1423,9 @@ input[type='checkbox']:not(.switch > input):focus-visible { outline: 2px solid r
 .sheet-empty .se-line { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; }
 
 /* selects and text areas in the app's own look */
-select { appearance: none; height: 28px; padding: 0 28px 0 10px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--raised); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 13px center, right 9px center; background-size: 4px 4px; background-repeat: no-repeat; }
-select:hover { border-color: var(--border-strong); }
-select:focus { outline: none; border-color: rgba(var(--accent-rgb), 0.5); }
+.ui-select { appearance: none; clip-path: none; box-shadow: none; display: inline-flex; align-items: center; gap: 0; letter-spacing: normal; text-align: left; max-width: 100%; height: 28px; padding: 0 28px 0 10px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--raised); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 13px center, right 9px center; background-size: 4px 4px; background-repeat: no-repeat; }
+.ui-select:hover { border-color: var(--border-strong); }
+.ui-select:focus { outline: none; border-color: rgba(var(--accent-rgb), 0.5); }
 textarea { resize: none; }
 
 /* Touch ID lock: the window behind blurs, one fingerprint to touch */
@@ -1447,7 +1446,7 @@ textarea { resize: none; }
 .hk-key.rec { border-color: var(--accent); color: var(--accent); }
 .touchid-head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; color: var(--text); padding: 10px 0 6px; margin: 4px 0 2px; border-top: 1px solid var(--border); }
 .touchid-head svg { color: var(--accent); }
-.tid-row select { height: 26px; font-size: 12px; }
+.tid-row .ui-select { height: 26px; font-size: 12px; }
 
 /* personas */
 .persona-chip { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px 0 6px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--text); background: color-mix(in srgb, var(--pc) 16%, transparent); border: 1px solid color-mix(in srgb, var(--pc) 45%, transparent); }
@@ -1896,7 +1895,7 @@ textarea { resize: none; }
 .sp-small { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--raised); display: grid; gap: 8px; margin-bottom: 14px; }
 .sp-small-head { display: flex; align-items: center; gap: 12px; }
 .sp-small-what { font-size: 13px; color: var(--text); margin-top: 2px; }
-.sp-small-head select { max-width: 360px; }
+.sp-small-head .ui-select { max-width: 360px; }
 .sp-small-note { font-size: 12.5px; }
 .sp-small-live { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
 .sp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); flex: none; }
@@ -2041,12 +2040,12 @@ textarea { resize: none; }
 .hud { min-width: 0; overflow: hidden; }
 /* a button beside a text field in a form takes the field's height and corners, wherever it is */
 form:has(> input:not([type='checkbox']):not([type='radio'])) > button,
-form:has(> select) > button,
+form:has(> .ui-select) > button,
 form:has(> textarea) > button { height: auto; align-self: stretch; border-radius: 9px; }
 .val-ask button { border-radius: 9px; }
 /* the same anywhere a button shares a row with a field (not the composer, whose send button sits at the bottom) */
 :where(div, label, header, section):not(.composer):has(> input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='range'])) > button,
-:where(div, label, header, section):not(.composer):has(> select) > button { height: auto; align-self: stretch; }
+:where(div, label, header, section):not(.composer):has(> .ui-select) > button { height: auto; align-self: stretch; }
 
 /* the composer in the app's own line: a prompt mark, an accent edge when typing, a cut-corner send */
 .composer { position: relative; align-items: center; border-radius: 6px; padding: 7px 7px 7px 12px; gap: 10px; }
@@ -2108,7 +2107,7 @@ button { white-space: nowrap; }
 .lm-cmd code { font: 11.5px var(--mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; }
 .lm-cmd span { color: var(--accent); flex: none; }
 .lm-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.lm-row select { flex: 1; min-width: 200px; }
+.lm-row .ui-select { flex: 1; min-width: 200px; }
 .lm-label { font-size: 12px; color: var(--muted); }
 .lm-test { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; padding: 12px 14px; border: 1px solid var(--border); background: var(--raised); animation: thump 300ms var(--print, ease) both; }
 .lm-test.down { border-left: 3px solid var(--accent); }
@@ -2268,7 +2267,7 @@ button { white-space: nowrap; }
 .api input:not([type='checkbox']), .api textarea { height: 30px; padding: 0 10px; border: 1px solid var(--border); background: var(--sunken); color: var(--text); font: inherit; font-size: 12.5px; outline: none; border-radius: 6px; }
 .api textarea { height: auto; padding: 8px 10px; }
 .api input:not([type='checkbox']):focus, .api textarea:focus { border-color: rgba(var(--accent-rgb), 0.6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12); }
-.api .api-line select, .api .api-line button { height: 30px; }
+.api .api-line .ui-select, .api .api-line button { height: 30px; }
 .api-side > * { flex: none; }
 .api-hist { width: 100%; }
 .api input.api-url, .api .api-header input { font: 12px var(--mono); }
@@ -2694,7 +2693,7 @@ button.diff-comment.saved { border-radius: 0; clip-path: polygon(0 0, calc(100% 
 
 /* Memory lab, Headroom quality */
 .lab-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.lab-row select { height: 28px; }
+.lab-row .ui-select { height: 28px; }
 .lab-arena textarea#lab-memq { font-family: inherit; }
 .hrq { display: grid; gap: 4px; }
 .hrq-row { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border); font-size: 12px; }
@@ -2999,7 +2998,7 @@ button.dc-tag.on { cursor: pointer; }
 .rs-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 12.5px; }
 .rs-kind { display: inline-flex; align-items: center; gap: 6px; }
 .rs-num { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
-.rs-num select { height: 26px; border: 1px solid var(--border); background: var(--sunken, var(--bg)); color: var(--text); font: 12px var(--mono); padding: 0 4px; }
+.rs-num .ui-select { height: 26px; border: 1px solid var(--border); background: var(--sunken, var(--bg)); color: var(--text); font: 12px var(--mono); padding: 0 4px; }
 .rs-stage { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
 .rs-qs { margin: 0; padding: 0 0 0 20px; display: grid; gap: 6px; font-size: 13px; }
 .rs-qs li { padding-left: 4px; }
@@ -3064,7 +3063,7 @@ button.dc-tag.on { cursor: pointer; }
 .fd-setup { padding: 16px 18px; display: grid; gap: 18px; align-content: start; overflow: auto; flex: 1; }
 .fd-setup section { display: grid; gap: 8px; }
 .fd-rule-form { display: grid; grid-template-columns: 150px minmax(0, 1fr) 150px auto; gap: 8px; align-items: center; }
-.fd-rule-form select, .fd-sched select, .fd-setup input:not([type='checkbox']) { height: 28px; border: 1px solid var(--border); background: var(--sunken, var(--bg)); color: var(--text); font: 12.5px var(--mono); padding: 0 8px; min-width: 0; }
+.fd-rule-form .ui-select, .fd-sched .ui-select, .fd-setup input:not([type='checkbox']) { height: 28px; border: 1px solid var(--border); background: var(--sunken, var(--bg)); color: var(--text); font: 12.5px var(--mono); padding: 0 8px; min-width: 0; }
 .fd-setup .dep-row input:not([type='checkbox']):not([type='time']) { flex: 1; }
 .fd-senders { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 
@@ -3076,7 +3075,7 @@ button.dc-tag.on { cursor: pointer; }
 .pc-range { font: 500 12px var(--mono); color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; }
 .pc-notice { margin: 10px 16px 0; }
 .pc-slots { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--raised); }
-.pc-slots select, .pc-slots input { height: 28px; border: 1px solid var(--border); background: var(--sunken, var(--bg)); color: var(--text); font: 12.5px var(--mono); padding: 0 6px; }
+.pc-slots .ui-select, .pc-slots input { height: 28px; border: 1px solid var(--border); background: var(--sunken, var(--bg)); color: var(--text); font: 12.5px var(--mono); padding: 0 6px; }
 .pc-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 190px minmax(0, 1fr); }
 .pc-body.with-editor { grid-template-columns: 160px minmax(0, 1fr) 330px; }
 .pc-drafts { border-right: 1px solid var(--border); padding: 12px 10px; overflow: auto; display: grid; gap: 8px; align-content: start; }
@@ -3328,7 +3327,7 @@ button.dc-tag.on { cursor: pointer; }
    One set of rules for every sheet built on .observe; the cut is drawn with a gradient so the border follows it. */
 :root { --ui-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Helvetica Neue', sans-serif; --field: var(--sunken, var(--bg)); --line: var(--border-strong, var(--border)); --notch: 9px; }
 .sheet.observe input:not([type='checkbox']):not([type='radio']), .cutfields input:not([type='checkbox']):not([type='radio']),
-.sheet.observe select, .cutfields select,
+.sheet.observe .ui-select, .cutfields .ui-select,
 .sheet.observe textarea, .cutfields textarea {
   -webkit-appearance: none;
   appearance: none;
@@ -3343,17 +3342,17 @@ button.dc-tag.on { cursor: pointer; }
   clip-path: polygon(0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%);
   transition: box-shadow 120ms var(--ease, ease);
 }
-.sheet.observe input:not([type='checkbox']):not([type='radio']), .sheet.observe select, .cutfields input:not([type='checkbox']):not([type='radio']), .cutfields select { height: 32px; padding-block: 0; }
+.sheet.observe input:not([type='checkbox']):not([type='radio']), .sheet.observe .ui-select, .cutfields input:not([type='checkbox']):not([type='radio']), .cutfields .ui-select { height: 32px; padding-block: 0; }
 .sheet.observe input::placeholder, .sheet.observe textarea::placeholder, .cutfields input::placeholder, .cutfields textarea::placeholder { color: var(--muted); opacity: 0.7; }
 .sheet.observe input:not([type='checkbox']):not([type='radio']):hover, .cutfields input:not([type='checkbox']):not([type='radio']):hover,
-.sheet.observe select:hover, .cutfields select:hover,
+.sheet.observe .ui-select:hover, .cutfields .ui-select:hover,
 .sheet.observe textarea:hover, .cutfields textarea:hover { --line: rgba(var(--accent-rgb), 0.45); }
 .sheet.observe input:not([type='checkbox']):not([type='radio']):focus, .cutfields input:not([type='checkbox']):not([type='radio']):focus,
-.sheet.observe select:focus, .cutfields select:focus,
+.sheet.observe .ui-select:focus, .cutfields .ui-select:focus,
 .sheet.observe textarea:focus, .cutfields textarea:focus { outline: none; --line: var(--accent); box-shadow: inset 0 0 0 1px var(--line), inset 3px 0 0 var(--accent); }
-.sheet.observe input:disabled, .sheet.observe select:disabled, .sheet.observe textarea:disabled, .cutfields input:disabled, .cutfields select:disabled, .cutfields textarea:disabled { opacity: 0.45; }
+.sheet.observe input:disabled, .sheet.observe .ui-select:disabled, .sheet.observe textarea:disabled, .cutfields input:disabled, .cutfields .ui-select:disabled, .cutfields textarea:disabled { opacity: 0.45; }
 /* the select's arrow: a small solid triangle, square to the grid, under the cut */
-.sheet.observe select, .cutfields select {
+.sheet.observe .ui-select, .cutfields .ui-select {
   padding-right: 30px;
   background:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 16px top 50% / 5px 5px no-repeat,
@@ -3362,7 +3361,7 @@ button.dc-tag.on { cursor: pointer; }
 }
 /* labels above fields: mono, upper case, tracked; the old sentence-case labels in .mn-form follow it */
 .sheet.observe .mn-form label:not(.check), .fld { display: grid; gap: 5px; min-width: 0; color: var(--muted); font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; }
-.sheet.observe .mn-form label:not(.check) > input, .sheet.observe .mn-form label:not(.check) > select, .sheet.observe .mn-form label:not(.check) > textarea { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.sheet.observe .mn-form label:not(.check) > input, .sheet.observe .mn-form label:not(.check) > .ui-select, .sheet.observe .mn-form label:not(.check) > textarea { text-transform: none; letter-spacing: normal; font-weight: 400; }
 .fld-label { display: flex; align-items: baseline; gap: 6px; }
 .fld-label i { color: var(--accent); font-style: normal; }
 .fld-kind { margin-left: auto; font-weight: 400; opacity: 0.7; text-transform: lowercase; letter-spacing: 0.02em; }
@@ -4072,7 +4071,7 @@ button.dc-tag.on { cursor: pointer; }
 .dbv-vec { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 6px 8px; background: var(--surface); border-left: 3px solid var(--sv-8); }
 .dbv-vec-tag { font-family: var(--mono, monospace); font-size: 10px; letter-spacing: 1px; color: var(--sv-8); }
 .dbv-vec input.mono { flex: 1; min-width: 200px; font-size: 12px; }
-.dbv-vec select { font-size: 12px; font-family: var(--mono, monospace); }
+.dbv-vec .ui-select { font-size: 12px; font-family: var(--mono, monospace); }
 .dbv-vec-k { width: 56px; font-size: 12px; }
 /* Large and turned monitors: a panel sizes its reading column by its own width, not the window's */
 .panel { container-type: inline-size; container-name: panel; }
@@ -4081,7 +4080,7 @@ button.dc-tag.on { cursor: pointer; }
 @container panel (max-width: 560px) { .column { padding-left: 10px; padding-right: 10px; } .dock { padding: 0 10px 10px; } }
 .grd-nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 0; font-size: 12px; }
 .grd-filter { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
-.grd-filter select, .grd-filter input, .grd-nav > select { font-size: 12px; font-family: var(--mono, monospace); }
+.grd-filter .ui-select, .grd-filter input, .grd-nav > .ui-select { font-size: 12px; font-family: var(--mono, monospace); }
 .grd-filter input { width: 140px; }
 .grd-tag { font-family: var(--mono, monospace); font-size: 10px; letter-spacing: 1px; color: var(--faint); }
 .grd-chip { display: inline-flex; gap: 4px; align-items: center; padding: 1px 4px 1px 8px; background: var(--surface); border-left: 2px solid var(--accent); }
@@ -4093,7 +4092,7 @@ th.grd-sortable:hover { color: var(--accent); }
 td.grd-sel { outline: 2px solid var(--accent); outline-offset: -2px; }
 .dbv-grid:focus { outline: none; }
 .grd-json { min-height: 80px; min-width: 240px; font-family: var(--mono, monospace); font-size: 11px; }
-.grd-nav select, .grd-nav input { height: 26px; padding-top: 0; padding-bottom: 0; }
+.grd-nav .ui-select, .grd-nav input { height: 26px; padding-top: 0; padding-bottom: 0; }
 .grd-nav .ghost.small { padding: 2px 8px; }
 .ps-vec { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 6px 16px; font-size: 12px; border-bottom: 1px solid var(--border); }
 .ps-vec-bar { width: 120px; height: 4px; background: var(--sunken); position: relative; }
@@ -4117,7 +4116,7 @@ button.remote-chip { cursor: pointer; }
 .tip.on { opacity: 1; transform: none; }
 /* fields: an accent edge on focus, never the system's blue ring */
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):focus-visible,
-textarea:focus-visible, select:focus-visible { outline: none; border-color: rgba(var(--accent-rgb), 0.7) !important; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16); }
+textarea:focus-visible, .ui-select:focus-visible { outline: none; border-color: rgba(var(--accent-rgb), 0.7) !important; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16); }
 :focus:not(:focus-visible) { outline: none; }
 /* radios and checkboxes in the accent */
 input[type='radio'], input[type='checkbox'], input[type='range'] { accent-color: var(--accent); }
@@ -4132,7 +4131,7 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='
 /* the panel id: quiet mono text, its meaning in the tooltip */
 .pid { border: 0; padding: 0; color: var(--faint); opacity: 0.8; }
 /* selects outside the .select wrapper: the app's caret, not the system's */
-select:not(.select select) { appearance: none; padding-right: 26px !important; background-repeat: no-repeat; background-position: right 9px center; background-size: 9px 6px;
+.ui-select:not(.select .ui-select) { appearance: none; padding-right: 26px !important; background-repeat: no-repeat; background-position: right 9px center; background-size: 9px 6px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Cpath d='M1 1l3.5 3.5L8 1' fill='none' stroke='%23999' stroke-width='1.4'/%3E%3C/svg%3E"); }
 /* date, time and file inputs: dark controls and a button that matches ours */
 input[type='date']::-webkit-calendar-picker-indicator, input[type='time']::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
