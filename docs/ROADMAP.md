@@ -65,6 +65,10 @@ References to read before choosing (what they did, not claims about us):
 - An `stm` command line with JSON output and documented exit codes (open a panel, list sessions,
   costs), for people and agents. Google Workspace through the `gws` CLI and the login already on the
   Mac, the same way GitHub uses `gh`. Idea from googleworkspace/cli.
+- News in the terminal: `stm news` prints the unread headlines from the feeds already in News, one
+  per line with source and link; `stm news --open 3` opens one. The app's MCP server also serves the
+  feeds, so Claude in a panel can answer "what's in the news today?". No new network calls: the feed
+  fetches are already in `docs/NETWORK.md`.
 - MCP: OAuth, per-persona servers, health check interval.
 - Check after edits on the touched files; fan-out lint and typecheck.
 - Compression: correctness.
