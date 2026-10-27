@@ -367,6 +367,12 @@ OpenSEO), and a JSON command line, plus Google Workspace through `gws` (from goo
 Planned for v1.2. Left out: Humanizer (a writing skill; people can add it from the Catalog) and
 CL4R1T4S (leaked system prompts of other companies: not something we build on).
 
+## Money: direction (2026-10-27, on hold)
+
+Direction, not a plan yet: the app stays free and complete for one person, and a paid plan adds what
+teams need (shared panels, cost by team, a team vault, support). Nothing free today becomes paid. On
+hold until a lawyer has read the Claude Agent SDK terms; no price, page or checkout before that.
+Taken from how Halo pairs a free community edition with paid editions.
 ## Distribution and languages (decided 2026-10-27)
 
 - Homebrew: our own tap first (`supertokenman/homebrew-tap`, updated by a workflow on each published

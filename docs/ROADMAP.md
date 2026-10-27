@@ -83,6 +83,9 @@ References to read before choosing (what they did, not claims about us):
 
 ## Later
 
+- A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
+  after there are users.
+
 - Codex (OpenAI) panels, once users ask for them.
 - UI backlog leftovers (`docs/UI-BACKLOG.md`): empty sheets, copyable commands, left edges, one accent.
 - Vault passwords URL-encoded in database connections; single-step guides without "0 of 1"; the
