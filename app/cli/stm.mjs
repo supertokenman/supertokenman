@@ -17,6 +17,8 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
   stm key <NAME>                     print a provider key from the vault (Claude Code's apiKeyHelper)
   stm trace <panel>                  the panel's turns: why, tools, cost
   stm spend                          today's spend and limits
+  stm top [--once] [--json]          live dashboard: panels, costs, approvals waiting, CI (q quits, ? help)
+       [--currency USD|BRL]          --once --json prints one snapshot; exit 2 when the app is not running
   stm memory [--cwd DIR] "query"     the project's memory index for a query
   stm db <connection> "select ..."   a read-only query on a saved connection
   stm db list                        the saved connections
@@ -34,7 +36,7 @@ const flags = {}
 const pos = []
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i]
-  if (a === '--json' || a === '--no-wait' || a === '--help' || a === '-h') flags[a.replace(/^-+/, '')] = true
+  if (a === '--json' || a === '--no-wait' || a === '--once' || a === '--help' || a === '-h') flags[a.replace(/^-+/, '')] = true
   else if (a.startsWith('--')) flags[a.slice(2)] = argv[++i]
   else pos.push(a)
 }
@@ -148,7 +150,16 @@ function mcpServe() {
 }
 
 try {
-  if (cmd === 'status') print(await call('status', {}), (d) => [`SuperTokenMan ${d.version}`, `${d.panels} panel${d.panels === 1 ? '' : 's'} open, ${d.busy} working`, `Spent today ${money(d.todayUsd)}`, `Headroom ${d.headroom ? 'on' : 'off'} · local model ${d.localModel ?? 'none'}`].join('\n'))
+  if (cmd === 'top') {
+    const { runTop } = await import('./top.mjs')
+    let code
+    try {
+      code = await runTop(call, { json, once: Boolean(flags.once), currency: flags.currency })
+    } catch (e) {
+      die(e.message, 2)
+    }
+    process.exit(code)
+  } else if (cmd === 'status') print(await call('status', {}), (d) => [`SuperTokenMan ${d.version}`, `${d.panels} panel${d.panels === 1 ? '' : 's'} open, ${d.busy} working`, `Spent today ${money(d.todayUsd)}`, `Headroom ${d.headroom ? 'on' : 'off'} · local model ${d.localModel ?? 'none'}`].join('\n'))
   else if (cmd === 'key') {
     // only for Claude Code's apiKeyHelper: the bare key on stdout, nothing else
     if (!rest[0]) die('Usage: stm key <NAME>')
