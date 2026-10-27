@@ -359,3 +359,10 @@ between the cards. Panels do not resize by hand yet, so there is no handle in th
 Developers should leave the app as little as possible. GitHub is brought in as our own screens over
 its API, not as github.com in a web view: it keeps the app's look and weight, and it can tie pull
 requests, checks and reviews to panels, which the website cannot. Planned for v1.2 (`docs/ROADMAP.md`).
+
+## Ideas taken from other open-source projects (2026-10-27)
+
+Ideas, not code: a Trace tab (from MLflow tracing), a local MCP server over the app's own data (from
+OpenSEO), and a JSON command line, plus Google Workspace through `gws` (from googleworkspace/cli).
+Planned for v1.2. Left out: Humanizer (a writing skill; people can add it from the Catalog) and
+CL4R1T4S (leaked system prompts of other companies: not something we build on).
