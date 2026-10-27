@@ -46,7 +46,7 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | Pull requests, CI, triggers, repo secrets (names) | api.github.com | the GitHub integration in Connections; signs in with the vault token or your `gh` login |
 | Feeds and briefing | the feeds you add | adding a feed; the briefing schedule is off by default |
 | Cloud resources | AWS, Google Cloud, DigitalOcean, Fly.io, Supabase, Neon (through their CLIs or vault tokens) | opening Cloud, "Look in the cloud" in the terminal, or the "Check every 6 hours" switch |
-| Integrations and MCP servers | the service each one names | turning it on in Connections |
+| Integrations and MCP servers | the service each one names | turning it on in Connections (none is on by default since 0.1.7; up to 0.1.6 a new profile started with Context7 and Cloudflare docs on) |
 | Monitors, Prometheus, PostHog, local model servers, storage | the addresses you enter | adding them |
 | Web reader, embedded videos, web apps | the page you open | opening it |
 
