@@ -1,10 +1,14 @@
-Panels are cards now, and a narrow panel no longer cuts its tabs.
+A pass over the whole app: tooltips, controls, setup guides, and the bugs found on the way.
 
-- Panels sit apart as cards, with the 45 degree corner; the focused one has an accent edge.
-- In a narrow panel the tabs and the close button always show whole; the folder name keeps its room.
-- Switching the model of a panel that was asleep no longer fails with "Query closed before response
-  received"; the panel wakes with the new model.
-- token-kit: the permission rule now matches the hook when `~/.claude` is a symlink.
+- Tooltips everywhere, top bar included. Fields, selects, checkboxes and file pickers in the app's
+  own look; buttons take their own width; lighter error notes.
+- Panels animate when they open, move and close.
+- Setup guides as steps with one action each; tools installed from inside the app; an in-app folder
+  picker with recent projects and repos found on disk.
+- One table and status pill style, row actions you can see, empty states, icons in the catalog.
+- Markets: symbol search with suggestions (listed in the Security page's network list).
+- Fixed: Health double counting, repeated rows in Ports, the Cloud toggle over its label, repeated
+  Diagnostics errors, Today's timeline labels, Markets titles cut mid-word, a slow apps sidebar.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:

@@ -353,3 +353,9 @@ between the cards. Panels do not resize by hand yet, so there is no handle in th
 - Persona avatars: the caped mascot is retired; each persona is its initial in the display face on the cut-corner tile tinted with its color (`RoleHero.tsx`). Screen: `design/personas-initials-paper.png`. The mascot now appears nowhere in the app; `src/mascot.ts` stays for the easter egg.
 - Site screenshots now come from `app/scripts/shots.mjs` (real app, Paper theme, sample project `acme`).
 - Fix: the thinking row lost its text. An old rule (`.thinking span`, from when it was three dots) turned every span in the row into a 3 px bar, so only the loader and stray bars showed. Removed; the row reads loader, verb, file or command, time. Screen: `design/thinking-fixed.png`.
+
+## GitHub inside the app (2026-10-27)
+
+Developers should leave the app as little as possible. GitHub is brought in as our own screens over
+its API, not as github.com in a web view: it keeps the app's look and weight, and it can tie pull
+requests, checks and reviews to panels, which the website cannot. Planned for v1.2 (`docs/ROADMAP.md`).
