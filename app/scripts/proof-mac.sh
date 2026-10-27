@@ -154,7 +154,7 @@ cat > REPORT.md <<EOF
 # Mac proof: SuperTokenMan $VERSION
 
 Run on $(sw_vers -productName) $(sw_vers -productVersion), $(uname -m), $(date -u +"%Y-%m-%d %H:%M UTC"), for up to $MINUTES minutes
-of use. Made with \`app/scripts/proof-mac.sh\`$( [ "$MITM" = 1 ] && echo ' --mitm').
+of use. Made with \`app/scripts/proof-mac.sh\`$( [ "$NAMES" = 1 ] && echo ' --names' || { [ "$MITM" = 1 ] && echo ' --mitm'; }).
 
 ## The download
 
