@@ -281,7 +281,7 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
                 })()}
               </figure>
 
-              <table className="sv-table">
+              <table className="tbl sv-table">
                 <thead>
                   <tr><th>Tool</th><th>What it does</th><th className="num">Tokens</th><th className="num">Kept off</th><th>How we know</th></tr>
                 </thead>
@@ -290,27 +290,27 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
                     const i = info(b.id)
                     return (
                       <tr key={b.id}>
-                        <td><span className="sv-key" style={{ background: COLOR[b.id] }} />{i?.name}</td>
+                        <td className="tbl-name" title={i?.name}><span className="sv-key" style={{ background: COLOR[b.id] }} />{i?.name}</td>
                         <td className="faint">{i?.what}</td>
                         <td className="num">{kTok(b.tokens)}</td>
                         <td className="num">{money(b.usd)}</td>
-                        <td><span className={`sv-method ${i?.method.replace(/\s/g, '-')}`}>{i?.method}</span></td>
+                        <td><span className={`status ${i?.method === 'estimated' ? 'warn' : 'ok'}`}>{i?.method}</span></td>
                       </tr>
                     )
                   })}
                   <tr className="sv-unmeasured">
-                    <td><span className="sv-key off" />caveman</td>
+                    <td className="tbl-name" title="caveman"><span className="sv-key off" />caveman</td>
                     <td className="faint">Terse answers, from the Catalog. Our test: replies two thirds shorter, total cost unchanged on a code task, one answer in three incomplete.</td>
                     <td className="num faint">–</td>
                     <td className="num faint">–</td>
-                    <td><span className="sv-method none">no saving found</span></td>
+                    <td><span className="status off">no saving found</span></td>
                   </tr>
                   <tr className="sv-unmeasured">
-                    <td><span className="sv-key off" />superpowers</td>
+                    <td className="tbl-name" title="superpowers"><span className="sv-key off" />superpowers</td>
                     <td className="faint">Planning and review habits that aim for fewer wasted turns, from the Catalog.</td>
                     <td className="num faint">–</td>
                     <td className="num faint">–</td>
-                    <td><span className="sv-method none">not measured</span></td>
+                    <td><span className="status off">not measured</span></td>
                   </tr>
                 </tbody>
               </table>

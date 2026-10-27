@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import type { Template } from '../shared/mdimages'
@@ -25,17 +26,17 @@ export function MdImages(props: { onClose: () => void }) {
   const total = scan?.images.filter((i) => pick.has(i.ref)).reduce((a, i) => a + Math.max(0, i.bytes), 0) ?? 0
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe mi-sheet" role="dialog" aria-label="Publish images">
+      <div className={`sheet config observe mi-sheet ${scan?.images.length ? '' : 'fit'}`} role="dialog" aria-label="Publish images">
         <header className="sheet-head">
           <div className="sheet-title">Publish images</div>
           <span className="faint">{scan ? scan.file : 'images a Markdown file keeps on this machine'}</span>
           <span className="spacer-flex" />
-          <button className="ghost small" onClick={open}>{scan ? 'Other file…' : 'Pick a Markdown file…'}</button>
+          {scan && <button className="ghost small" onClick={open}>Other file…</button>}
           <button className="icon" aria-label="Close" onClick={props.onClose}><IconClose /></button>
         </header>
         <div className="mi-body">
           {err && <div className="bg-err">{err}</div>}
-          {!scan ? <div className="faint">Pick a .md file. Its local images are listed with a preview; only the ones you tick go to your bucket, and the file's links are rewritten to them.</div>
+          {!scan ? <EmptyState title="Publish a Markdown file's images" text="Its local images are listed with a preview; only the ones you tick go to your bucket, and the file's links are rewritten to them."><button className="primary" onClick={open}>Pick a Markdown file…</button></EmptyState>
             : !scan.images.length ? <div className="faint">No local images in this file{res?.changed ? ' any more: all links point online now.' : '.'}</div>
             : (
               <>

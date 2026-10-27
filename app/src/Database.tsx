@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconClose } from './icons'
+import { IconClose, IconEdit } from './icons'
+import { RowAct, RowActs } from './RowActs'
 import type { DbConn, DbKind, DbResult, DbSchema, DbTable, PlanNode } from '../electron/db'
 import { StateMark } from './StateMark'
 import { DataGrid } from './DataGrid'
@@ -151,12 +152,15 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
           <aside className="dbv-side">
             <div className="dbv-conns">
               {conns.map((c) => (
-                <button key={c.id} className={`dbv-conn ${cur?.id === c.id ? 'on' : ''}`} onClick={() => void open(c)} title={c.target}>
+                <div key={c.id} className="dbv-conn-row row-host">
+                <button className={`dbv-conn ${cur?.id === c.id ? 'on' : ''}`} onClick={() => void open(c)} title={c.target}>
                   {cur?.id === c.id ? <StateMark state={state} label={state === 'up' ? 'Connected' : state === 'busy' ? 'Connecting' : state === 'down' ? 'Failed' : 'Not open'} /> : <StateMark state="off" label="Not open" />}
                   <span className={`dbv-kind ${c.kind}`}>{KINDS.find((x) => x.k === c.kind)?.short ?? 'PG'}</span>
                   <span className="dbv-name">{c.name}</span>
                   {c.writes && <span className="dbv-w" title="Writes are on">W</span>}
                 </button>
+                <RowActs><RowAct label={`Edit ${c.name}`} icon={<IconEdit />} onClick={() => (setCur(c), setEditing(c))} /></RowActs>
+                </div>
               ))}
               <button className="small" onClick={() => (setEditing(fresh()), setCur(null))}>New connection</button>
             </div>

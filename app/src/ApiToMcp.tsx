@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import type { ApiRow, Auth, Gen, Op } from '../shared/api2mcp'
 import { clean } from './errors'
@@ -28,7 +29,7 @@ export function ApiToMcpSheet(props: { cwd?: string; onClose: () => void }) {
   useEffect(load, [q, cat, keyless])
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="API to MCP">
+      <div className={`sheet config observe ${list?.count ? '' : 'fit'}`} role="dialog" aria-label="API to MCP">
         <header className="sheet-head">
           <div className="sheet-title">API to MCP</div>
           <span className="faint">{list?.count ? `${list.count.toLocaleString()} free APIs from public-apis` : ''}</span>
@@ -36,11 +37,10 @@ export function ApiToMcpSheet(props: { cwd?: string; onClose: () => void }) {
           <button className="icon" aria-label="Close" onClick={props.onClose}>{close}</button>
         </header>
         {!list ? null : !list.count ? (
-          <div className="dsg-body">
-            <div className="faint">The list comes from public-apis (MIT), downloaded once. Each API has its own terms: read them before you build on one.</div>
-            <div className="ob-row"><button className="primary" disabled={!!busy} onClick={() => (setBusy('list'), void window.stm.a2m.refresh().then(load, (e) => setErr(clean(e))).finally(() => setBusy('')))}>{busy ? 'Downloading…' : 'Download the list'}</button></div>
+          <EmptyState title="No API list yet" text="The list comes from public-apis (MIT), downloaded once. Each API has its own terms: read them before you build on one.">
+            <button className="primary" disabled={!!busy} onClick={() => (setBusy('list'), void window.stm.a2m.refresh().then(load, (e) => setErr(clean(e))).finally(() => setBusy('')))}>{busy ? 'Downloading…' : 'Download the list'}</button>
             {err && <div className="notice error">{err}</div>}
-          </div>
+          </EmptyState>
         ) : (
           <div className="cf-body">
             <div className="cf-col ob-list">

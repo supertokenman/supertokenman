@@ -91,7 +91,7 @@ function AppView(props: { id: string; url: string; shown: boolean; dark: boolean
       el.removeEventListener('did-stop-loading', check)
     }
   }, [props.dark, props.skin, props.id])
-  return <webview ref={ref} className="wa-view" {...({ allowpopups: "true" } as object)} src={props.url} partition={`persist:${props.id}`} style={props.shown ? undefined : { display: 'none' }} />
+  return <webview ref={ref} {...({ allowpopups: "true" } as object)} src={props.url} partition={`persist:${props.id}`} className={`wa-view ${props.shown ? '' : 'hidden'}`} aria-hidden={!props.shown} />
 }
 
 /**
@@ -100,6 +100,25 @@ function AppView(props: { id: string; url: string; shown: boolean; dark: boolean
  */
 export function WebAppsDrawer(props: { open: boolean; app: string; width: number; onApp: (id: string) => void; onUnread: (byApp: Record<string, number>) => void; onResize: (w: number) => void; onClose: () => void }) {
   const [mounted, setMounted] = useState<string[]>([props.app])
+  // The slide is a transform over the panels; the panel grid gives up its width once, at rest.
+  // Opening: slide in over the panels, then dock (one reflow, under a still drawer).
+  // Closing: undock first (one reflow, hidden under the drawer), then slide out.
+  const [slid, setSlid] = useState(false)
+  const [docked, setDocked] = useState(false)
+  const [gone, setGone] = useState(true)
+  const sheet = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (props.open) {
+      setGone(false)
+      // two frames: the sheet is laid out off-screen first, so the slide has somewhere to start from
+      let f = requestAnimationFrame(() => (f = requestAnimationFrame(() => setSlid(true))))
+      // no transition (reduced motion) means no transitionend: dock anyway
+      const t = window.setTimeout(() => setDocked(true), 600)
+      return () => (cancelAnimationFrame(f), window.clearTimeout(t))
+    }
+    setDocked(false)
+    setSlid(false)
+  }, [props.open])
   const [unread, setUnread] = useState<Record<string, number>>({})
   const views = useRef<Record<string, View | null>>({})
   const [lightApps, setLightApps] = useState<string[]>(() => {
@@ -207,13 +226,15 @@ export function WebAppsDrawer(props: { open: boolean; app: string; width: number
 
   const drag = (e: React.MouseEvent) => {
     // resizing follows the pointer at once; the open and close glide stays for those
-    const aside = (e.currentTarget as HTMLElement).parentElement
+    const aside = sheet.current?.parentElement
     aside?.classList.add('dragging')
+    sheet.current?.classList.add('dragging')
     const start = e.clientX
     const w0 = props.width
     const move = (ev: MouseEvent) => props.onResize(Math.max(340, Math.min(1100, w0 + (start - ev.clientX))))
     const up = () => {
       aside?.classList.remove('dragging')
+      sheet.current?.classList.remove('dragging')
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
     }
@@ -252,7 +273,17 @@ export function WebAppsDrawer(props: { open: boolean; app: string; width: number
   }
 
   return (
-    <aside className={`wa ${props.open ? 'open' : ''}`} style={{ width: props.open ? props.width : 0 }} aria-hidden={!props.open}>
+    <aside className={`wa ${docked ? 'docked' : ''}`} style={{ width: docked ? props.width : 0 }} aria-hidden={!props.open}>
+      <div
+        ref={sheet}
+        className={`wa-sheet ${slid ? 'open' : ''} ${gone && !props.open ? 'gone' : ''}`}
+        style={{ width: props.width }}
+        onTransitionEnd={(e) => {
+          if (e.target !== e.currentTarget || e.propertyName !== 'transform') return
+          if (props.open) setDocked(true)
+          else setGone(true)
+        }}
+      >
       <div className="wa-grip" onMouseDown={drag} />
       <header className="wa-head">
         <div className="wa-apps" role="tablist" aria-label="Apps">
@@ -303,6 +334,7 @@ export function WebAppsDrawer(props: { open: boolean; app: string; width: number
           )
         })}
         <div className="wa-foot faint">{current.hint} Claude does not read or send anything here.</div>
+      </div>
       </div>
     </aside>
   )

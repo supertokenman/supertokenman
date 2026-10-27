@@ -17,13 +17,16 @@ function fixture() {
   const projects = join(home, 'projects', 'proj');
   mkdirSync(projects, { recursive: true });
   const now = Date.now();
-  const t0 = now - 60000 * 30;
+  // the session stays inside today, even when the test runs just after midnight
+  const midnight = new Date(now).setHours(0, 0, 0, 0);
+  const step = Math.max(1, Math.min(60000, Math.floor((now - midnight) / 40)));
+  const t0 = now - step * 30;
   // 1 request before the cut and 10 after: each would have re-read the saved tokens
   const lines = [req('a', t0, 0, 30000)];
-  for (let i = 1; i <= 10; i++) lines.push(req(`b${i}`, t0 + i * 60000, 30000, 500));
-  lines.push(req('b1', t0 + 60000, 30000, 500)); // split message: counts once
+  for (let i = 1; i <= 10; i++) lines.push(req(`b${i}`, t0 + i * step, 30000, 500));
+  lines.push(req('b1', t0 + step, 30000, 500)); // split message: counts once
   writeFileSync(join(projects, 'sess1.jsonl'), lines.join('\n'));
-  return { home, projects: join(home, 'projects'), now, t0 };
+  return { home, projects: join(home, 'projects'), now, t0, step };
 }
 
 test('adds up real usage and savings with avoided re-reads in the same session', () => {
@@ -43,8 +46,8 @@ test('adds up real usage and savings with avoided re-reads in the same session',
 });
 
 test('a cut mid-session counts the following requests', () => {
-  const { projects, now, t0 } = fixture();
-  const entry = { ts: new Date(t0 + 30000).toISOString(), kind: 'wrap', profile: 'test', cmd: 'test', inChars: 40400, outChars: 400, session: 'sess1' };
+  const { projects, now, t0, step } = fixture();
+  const entry = { ts: new Date(t0 + step / 2).toISOString(), kind: 'wrap', profile: 'test', cmd: 'test', inChars: 40400, outChars: 400, session: 'sess1' };
   mkdirSync(process.env.TOKEN_KIT_HOME, { recursive: true });
   writeFileSync(join(process.env.TOKEN_KIT_HOME, `stats-${new Date().toISOString().slice(0, 7)}.jsonl`), JSON.stringify(entry) + '\n', { flag: 'a' });
   const d = computeBar(projects, now);

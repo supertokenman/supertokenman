@@ -192,7 +192,7 @@ function Datasets(props: { datasets: Dataset[]; reload: () => void }) {
         {last && (
           <>
             <div className="ob-label">Last run, {when(last.at)}</div>
-            <table className="ob-table">
+            <table className="tbl ob-table">
               <thead><tr><th>Variant</th><th>Checks passed</th><th>ROUGE-L</th><th>Cost</th><th>Avg time</th><th>Errors</th></tr></thead>
               <tbody>{last.summary.map((r) => <tr key={r.variant}><td>{r.variant}</td><td>{Math.round(r.passRate * 100)}%</td><td>{r.rouge == null ? 'n/a' : r.rouge.toFixed(2)}</td><td>{usd(r.costUsd)}</td><td>{ms(r.ms)}</td><td>{r.errors}</td></tr>)}</tbody>
             </table>

@@ -1,3 +1,5 @@
+import { IconTrash } from './icons'
+import { RowAct, RowActs } from './RowActs'
 import { useEffect, useState } from 'react'
 import { DEFAULT_SCHEDULE, type FeedItem, type FeedRule, type RuleAction, type Schedule } from '../shared/feeds'
 import { StateMark } from './StateMark'
@@ -93,10 +95,9 @@ export function SetupView(props: { onChanged: () => void }) {
         <div className="sp-label">Rules on arrival</div>
         <div className="wr-rules">
           {s.rules.map((r) => (
-            <div key={r.id} className="wr-rule">
+            <div key={r.id} className="wr-rule row-host">
               <span className="faint">When {r.field === 'any' ? 'an item' : `the ${r.field}`} has</span><code>{r.words}</code><b>{ACTIONS[r.action]}</b>
-              <span className="spacer-flex" />
-              <button className="ghost small" onClick={() => act(window.stm.news.rules(s.rules.filter((x) => x.id !== r.id)))}>Remove</button>
+              <RowActs><RowAct label="Remove this rule" icon={<IconTrash />} danger onClick={() => act(window.stm.news.rules(s.rules.filter((x) => x.id !== r.id)))} /></RowActs>
             </div>
           ))}
           {s.rules.length === 0 && <div className="faint">No rules yet.</div>}

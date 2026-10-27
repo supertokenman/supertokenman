@@ -18,12 +18,14 @@ function textOf(el: Element): string {
   if (own) return own
   // an icon button: its accessible name is the only words it has
   if (el.tagName === 'BUTTON' && !el.textContent?.trim()) return el.getAttribute('aria-label') ?? ''
+  // a table's name cell cut with an ellipsis: the full name
+  if (el.tagName === 'TD' && el.scrollWidth > el.clientWidth) return el.textContent?.trim() ?? ''
   return ''
 }
 
 function target(from: EventTarget | null): Element | null {
   const el = from instanceof Element ? from : null
-  return el?.closest('[title], [data-tip], button[aria-label]') ?? null
+  return el?.closest('[title], [data-tip], button[aria-label], table.tbl td:first-child') ?? null
 }
 
 function hide() {
@@ -64,6 +66,17 @@ export function installTips() {
     current = el
     timer = window.setTimeout(() => current === el && el.isConnected && show(el, text), DELAY)
   })
+  // keyboard focus shows the same words as hover, so icon-only row actions are named either way
+  document.addEventListener('focusin', (e) => {
+    const el = e.target instanceof Element && e.target.matches(':focus-visible') ? target(e.target) : null
+    if (!el || el === current) return
+    hide()
+    const text = textOf(el)
+    if (!text) return
+    current = el
+    timer = window.setTimeout(() => current === el && el.isConnected && show(el, text), DELAY)
+  })
+  document.addEventListener('focusout', () => hide())
   document.addEventListener('pointerout', (e) => {
     if (current && !current.contains(e.relatedTarget as Node | null)) hide()
   })

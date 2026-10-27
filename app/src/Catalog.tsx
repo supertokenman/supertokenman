@@ -3,9 +3,11 @@ import { StateMark } from './StateMark'
 import { friendly } from './errors'
 import { Markdown } from './markdown'
 import type { CatalogItem } from './bridge'
+import { IconPluginKind, IconSkillKind, IconServerKind, IconRepoKind } from './icons'
 
 type Filter = 'all' | CatalogItem['source']
 const LABEL: Record<CatalogItem['source'], string> = { plugin: 'Plugin', skill: 'Skill', mcp: 'MCP server', github: 'Repository' }
+const KIND_ICON: Record<CatalogItem['source'], () => JSX.Element> = { plugin: IconPluginKind, skill: IconSkillKind, mcp: IconServerKind, github: IconRepoKind }
 const PLURAL: Record<CatalogItem['source'], string> = { plugin: 'Plugins', skill: 'Skills', mcp: 'MCP servers', github: 'Repositories' }
 
 /** Local ranking for instant results: every word must appear, name hits first. */
@@ -139,8 +141,9 @@ export function Catalog(props: { cwd: string; onClose: () => void }) {
         <div className="filters">
           {(['all', 'plugin', 'skill', 'mcp', 'github'] as const).map((f) => (
             <button key={f} className={`chip ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>
+              {f !== 'all' && (() => { const I = KIND_ICON[f]; return <I /> })()}
               {f === 'all' ? 'All' : PLURAL[f]}
-              {f !== 'all' && counts[f] ? <span className="faint">{counts[f]}</span> : null}
+              {f !== 'all' && counts[f] ? <span className="chip-count">{counts[f]}</span> : null}
             </button>
           ))}
           {notice && <span className="catalog-notice">{notice}</span>}

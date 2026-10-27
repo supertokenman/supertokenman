@@ -64,8 +64,8 @@ export function Ports(props: { onClose: () => void }) {
               <span className="port-num">{l.port}</span>
               <span className="port-main">
                 <span className="port-cmd" title={l.command}>{l.command}</span>
-                <span className="faint port-meta">
-                  {l.name} · pid {l.pid}{l.cwd ? ` · ${short(l.cwd)}` : ''}{l.uptime ? ` · up ${l.uptime}` : ''} · {l.memMb} MB{l.cpu >= 1 ? ` · ${l.cpu}% CPU` : ''}
+                <span className="faint port-meta" title={`${l.name} · pid ${l.pid}${l.cwd ? ` · ${l.cwd}` : ''}${l.shared?.length ? ` · also held by pid ${l.shared.join(', ')}` : ''}`}>
+                  {l.name} · pid {l.pid}{l.cwd ? ` · ${short(l.cwd)}` : ''}{l.shared?.length ? ` (+${l.shared.length} sharing)` : ''}{l.uptime ? ` · up ${l.uptime}` : ''} · {l.memMb} MB{l.cpu >= 1 ? ` · ${l.cpu}% CPU` : ''}
                   {l.host !== '*' && l.host !== '127.0.0.1' && l.host !== '::1' ? ` · on ${l.host}` : l.host === '*' ? ' · all interfaces' : ''}
                 </span>
               </span>

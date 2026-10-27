@@ -102,7 +102,7 @@ export function Chart(p: ChartProps) {
       )}
       {table ? (
         <div className="ph-table" style={{ maxHeight: h }}>
-          <table className="ob-table">
+          <table className="tbl ob-table">
             <thead><tr><th>{p.time ? 'time' : ''}</th>{p.series.map((s) => <th key={s.name}>{s.name}</th>)}</tr></thead>
             <tbody>{rows.map((r, i) => <tr key={i}><td>{xLabel(i)}</td>{r.slice(1).map((v, k) => <td key={k}>{v == null ? '' : `${fmt(v as number)}${unit}`}</td>)}</tr>)}</tbody>
           </table>
