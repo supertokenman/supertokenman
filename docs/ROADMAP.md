@@ -81,6 +81,49 @@ References to read before choosing (what they did, not claims about us):
 - Past sessions indexed and searchable.
 - Structure: one icon set, design tokens, typed IPC, branded fields.
 
+## After v1.1: from the repo review of 2026-10-27
+
+Ideas taken from other open-source projects, in the order to build them once v1.1 (performance) is
+done. Ideas only, no code. Each one ships with a test, an empty state and its `docs/NETWORK.md` line.
+
+1. Repository storefront (GitHub): website and topics set, Discussions on, CONTRIBUTING, code of
+   conduct, issue and PR templates, a picture and the live demo link at the top of the README, CI and
+   Mac proof badges; read and answer the open issues. On the site: "No server of ours: you use your own
+   Claude plan." (Puter)
+2. Launch channels in `docs/launch/KIT.md`: awesome-claude-code and similar lists, GitHubDaily,
+   HelloGitHub, Product Hunt, TLDR, Console.dev, Changelog, each with its link and text. (GitHubDaily)
+3. `stm top`: a live terminal dashboard of panels, costs, approvals waiting and CI, next to `stm` and
+   `stm news`. (World Monitor)
+4. Triggers on events, not only on a clock: a monitor down, CI red, a feed item matching a filter, a
+   file in a folder. Each run opens a panel and still asks before edits and commands. Plus a daily
+   digest of trigger notifications instead of one interruption each. No inbound webhooks. (Huginn)
+5. A daily news brief written from the user's feeds at a chosen hour, if the briefing setting does not
+   already do it. (World Monitor)
+6. Observability: export turns over OTLP to any collector (SigNoz, Jaeger, Tempo, Honeycomb), not only
+   Langfuse; off until an endpoint is set. Correction: the v1.2 "Trace" item is mostly the existing
+   Observability sheet; it becomes "improve it": a command's output and time inside its span, and the
+   CI run a turn started. (SigNoz)
+7. API Client in files: requests saved in the project (`.supertokenman/requests/`, readable and
+   editable by Claude), import from Postman, Insomnia, Bruno and OpenAPI, environments whose secrets
+   come from the vault and never land in the file, and a collection run with assertions from `stm` or a
+   trigger. Public APIs list: key/HTTPS/CORS tags and a filter, a dated "update list" button, and
+   requests created with the MCP. (Bruno, public-apis)
+8. Support to code: from a OneInbox message, "this is a bug" opens a panel in the right repo with the
+   message; the reply draft says which version fixed it. Claude drafts replies from Memory, docs and
+   code, sent only after approval. Saved replies and labels. Integrate with Chatwoot's API rather than
+   copy its team features. (Chatwoot)
+9. Better local models: "will it run on this Mac" from its RAM before a download; Jan and LM Studio
+   servers on loopback as sources besides Ollama; what local runs saved, saying how it was estimated.
+   (Jan, RuView)
+10. Isolated commands, VM-backed: a project option to run Claude's commands in a light Linux VM through
+    Apple's Virtualization.framework (via Apple's `container`, Lima or OrbStack): only the project folder
+    mounted, network off by default, vault secrets only when allowed, the VM thrown away after; a proof
+    check that `~/.ssh` cannot be read from inside. (Firecracker)
+11. Savings that say how each number was estimated. (RuView)
+
+Also queued and already in v1.2 above: import docs (Crawlee); the social pack (last 30 days brief, RSSHub
+and feed discovery, any site as an app) is being built now.
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
