@@ -97,16 +97,23 @@ not written in `docs/NETWORK.md`. Claude Code and its MCP servers are listed, no
 the raw logs are kept as the `proof-mac` artifact for 30 days; after a release, the report is also
 attached to it as `proof-mac-<version>.md`.
 
-Claude needs a key. Once:
+Claude Code needs an Anthropic API to talk to. Two modes:
 
-1. Settings > Environments > New environment, named `proof`. No required reviewers: the run must
-   start by itself.
-2. In it, add the secret `ANTHROPIC_API_KEY`. A key of its own with a small monthly spend limit is
-   enough (console.anthropic.com > Settings > Limits): one run is one short turn.
+- **Mock, the default.** With no key set, the run starts a local stand-in of the Anthropic Messages API
+  on loopback (`app/scripts/proof-mock-api.mjs`) and points Claude Code at it with
+  `ANTHROPIC_BASE_URL` and the fake key `proof-mock-key`. It asks for the Bash tool once
+  (`echo hello && date`), then answers in text, so the whole turn runs, the command included, for free.
+  Every request Claude Code sends, with its full body, is kept in `mock-requests.jsonl`, and the decoy is
+  searched there like in every other file of the run. This shows every byte the app and Claude Code
+  send; it does not exercise Anthropic's real service.
+- **Real, optional.** Settings > Environments > `proof` (no required reviewers: the run must start by
+  itself), with the secret `ANTHROPIC_API_KEY`. A key of its own with a small monthly spend limit is
+  enough (console.anthropic.com > Settings > Limits): one run is one short turn. Then the turn goes to
+  Anthropic, through the proxy in `--names` mode: the host names are logged, the content is not read.
+  The key goes to the app's process only; the run checks that no log carries it before uploading.
 
-Without the secret the workflow still runs every other check, and the report says the Claude turn was
-skipped and why. The key goes to the app's process only; the run checks that no log carries it
-before uploading.
+The workflow names the `proof` environment either way; GitHub creates it empty on the first run, and an
+empty one means mock mode.
 
 To run the proof on your own Mac instead, with your own Claude login: `bash app/scripts/proof-mac.sh
 --names`.

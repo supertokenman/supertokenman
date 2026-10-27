@@ -84,6 +84,13 @@ export function verdict({ decoyHits, netlog, appDirect, allowed }) {
   return fail
 }
 
+/** What Claude Code sent to the local mock: request count, body bytes, and the count per path. */
+export function mockSummary(jsonl) {
+  const rows = String(jsonl).split('\n').filter(Boolean).flatMap((l) => { try { return [JSON.parse(l)] } catch { return [] } })
+  const bytes = rows.reduce((n, r) => n + (Number(r.bytes) || Buffer.byteLength(String(r.body ?? ''))), 0)
+  return { requests: rows.length, bytes, paths: count(rows.map((r) => `${r.method} ${String(r.path).split('?')[0]}`)) }
+}
+
 const block = (rows, none) => '```\n' + (rows.length ? rows.map((r) => `${String(r.n).padStart(4)} ${r.host}`).join('\n') : none) + '\n```'
 
 /** REPORT.md from what the run gathered. */
@@ -109,12 +116,27 @@ Driven over Chromium's debugging port on loopback (\`app/scripts/proof-drive.mjs
 DECOY_KEY added to the vault with "Commands can read it", a panel opened, "run echo hello and tell me
 the date" sent, the command allowed, the reply waited for, the app closed.
 
+- Claude: ${d.drive.mode ?? 'unknown'}
 - Vault: ${d.drive.vault}
 - Panel: ${d.drive.panel}
 - Claude turn: ${d.drive.claude}
 - Command: ${d.drive.command}
 ${d.drive.reply ? `- Reply: ${d.drive.reply.replace(/\s+/g, ' ')}\n` : ''}${d.drive.error ? `- Error: ${d.drive.error}\n` : ''}
-## Where the app and its processes connected
+${d.mock ? `## What Claude Code sent
+
+No real key was set, so Claude Code talked to a local stand-in of the Anthropic API
+(\`app/scripts/proof-mock-api.mjs\`, on loopback) with the fake key \`proof-mock-key\`. Every request
+it got, with its full body, is in \`mock-requests.jsonl\` (keys masked).
+
+- Requests: ${d.mock.requests}, ${d.mock.bytes} bytes of body in all
+- The decoy in what Claude Code sent: ${d.decoyHits.includes('mock-requests.jsonl') ? 'FOUND' : 'not found'}. \`mock-requests.jsonl\` is a file of this run, so the search of every run file below covers it.
+
+${block(d.mock.paths.map((p) => ({ host: p.host, n: p.n })), 'none')}
+
+This shows what the app and Claude Code send, byte for byte; it does not exercise Anthropic's real
+service or what it does with a message.
+
+` : ''}## Where the app and its processes connected
 
 Every TCP and UDP connection of the app and of every process it started, sampled twice a second with
 \`lsof\`. Loopback is left out, and so is the app's traffic to the proxy. The name is the reverse DNS; the
@@ -155,7 +177,8 @@ A value made for this run was put in the vault as DECOY_KEY.
 - A sample twice a second can miss a connection that opens and closes in between.
 - The destinations are known, not what was sent to them.
 - The runner is a clean macOS VM with no MCP servers or plugins of its own; a person's Mac may run more.
-- Claude Code sends the message to Anthropic; that is its job and it is listed on the Security page.
+- Claude Code sends the message to Anthropic (or, in mock mode, to the local stand-in); that is its job
+  and it is listed on the Security page.
 `
 }
 
@@ -208,6 +231,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     refused: refusedHosts(read(join(dir, 'mitm.log'))),
     decoyHits,
     fail,
+    mock: existsSync(join(dir, 'mock-requests.jsonl')) ? mockSummary(read(join(dir, 'mock-requests.jsonl'))) : null,
   })
   writeFileSync(join(dir, 'REPORT.md'), md)
   console.log(fail.length ? `proof: FAILED\n${fail.map((f) => '  ' + f).join('\n')}` : 'proof: passed')

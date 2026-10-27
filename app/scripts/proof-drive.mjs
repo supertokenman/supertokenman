@@ -7,8 +7,9 @@
 //
 //   node scripts/proof-drive.mjs --app <SuperTokenMan.app> --out <dir> [-- <extra app flags>]
 //
-// Reads the decoy from <out>/decoy.txt. Without ANTHROPIC_API_KEY in the environment it still adds the
-// decoy and opens a panel, but sends no message. Writes <out>/drive.json (what happened, never a value)
+// Reads the decoy from <out>/decoy.txt. The Claude turn goes wherever ANTHROPIC_BASE_URL says (the
+// local mock in CI when there is no real key); drive.json records the mode. Writes <out>/drive.json
+// (what happened, never a value)
 // and <out>/app.pid. The key is passed to the app only, never written.
 import { spawn } from 'node:child_process'
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs'
@@ -25,8 +26,8 @@ const port = Number(opt('--port') ?? 9333)
 if (!appDir || !out) { console.error('usage: proof-drive.mjs --app <SuperTokenMan.app> --out <dir> [-- flags]'); process.exit(2) }
 
 const decoy = readFileSync(join(out, 'decoy.txt'), 'utf8').trim()
-const hasKey = Boolean(process.env.ANTHROPIC_API_KEY)
-const result = { started: new Date().toISOString(), vault: 'not done', panel: 'not done', claude: 'not done', command: 'not asked', reply: '', steps: [] }
+const mode = process.env.STM_PROOF_MODE === 'mock' ? 'mock Anthropic API, local' : 'real Anthropic API'
+const result = { started: new Date().toISOString(), mode, vault: 'not done', panel: 'not done', claude: 'not done', command: 'not asked', reply: '', steps: [] }
 const step = (s) => { result.steps.push(`${new Date().toISOString().slice(11, 19)} ${s}`); console.log(`proof-drive: ${s}`) }
 const save = () => writeFileSync(join(out, 'drive.json'), JSON.stringify(result, null, 2) + '\n')
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -72,11 +73,7 @@ try {
   result.vault = 'DECOY_KEY added, commands can read it'
   step('decoy in the vault')
 
-  if (!hasKey) {
-    result.claude = 'skipped: no ANTHROPIC_API_KEY in the proof environment'
-    step(result.claude)
-    await sleep(60_000) // the app still runs a minute with nobody asking, like netwatch
-  } else {
+  {
     await win.fill('.composer textarea', 'run echo hello and tell me the date')
     await win.click('.composer .send')
     step('message sent')

@@ -3,8 +3,9 @@
 # (SHA256SUMS, the build attestation, the signature, the notarization), runs it with its own profile
 # through mitmproxy in --names mode, drives it (decoy in the vault, a panel, `echo hello`, the command
 # allowed) and writes REPORT.md. Fails when the decoy shows up anywhere, or when the app's own processes
-# reach a host not written in docs/NETWORK.md. ANTHROPIC_API_KEY comes from the "proof" environment;
-# without it the Claude turn is skipped and the report says so. Actions are pinned to commits.
+# reach a host not written in docs/NETWORK.md. By default Claude Code talks to a local mock of the
+# Anthropic API that records every request; with ANTHROPIC_API_KEY in the "proof" environment it talks
+# to the real one. Actions are pinned to commits.
 name: proof-mac
 on:
   release:
@@ -92,6 +93,8 @@ jobs:
             proof-run/mitm.log
             proof-run/netlog.json
             proof-run/decoy.txt
+            proof-run/mock-requests.jsonl
+            proof-run/mock.log
           retention-days: 30
           if-no-files-found: warn
 
