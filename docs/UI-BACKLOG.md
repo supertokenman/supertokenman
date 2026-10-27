@@ -54,11 +54,11 @@ before and after when it is done. Systemic items first: one fix reaches many she
 
 ## Flows
 
-- [ ] Integration guides (Connect Outlook and the rest): too much text, not "play-action". Steps as
+- [x] Integration guides (Connect Outlook and the rest): too much text, not "play-action". Steps as
       cards with one action each, copy buttons, progress.
-- [ ] External setup pages (Get Ollama and the like): bring the steps into the app's own look, with the
+- [x] External setup pages (Get Ollama and the like): bring the steps into the app's own look, with the
       source linked, instead of opening the vendor's site.
-- [ ] Folder picker: the macOS dialog; an in-app picker (recent projects, git repos found on disk,
+- [x] Folder picker: the macOS dialog; an in-app picker (recent projects, git repos found on disk,
       search) with the system dialog as a fallback.
 - [x] Panels: animate create, move and close.
 - [ ] Apps sidebar (WhatsApp and the rest): opening, closing and switching lag.

@@ -1,3 +1,4 @@
+import { InstallTool } from './Steps'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { byPackage, counts, isAccepted, SEVERITIES, type Finding, type Kind } from '../shared/trivy'
@@ -62,7 +63,11 @@ function Deps(props: { cwd?: string; sid?: string; onClose: () => void; tabs: Re
     <Shell onClose={props.onClose} tabs={props.tabs}>
       <div className="cf-body">
         <div className="cf-col ob-list">
-          <div className="faint">{st?.trivy ? `trivy at ${st.trivy}. Only your own projects and images.` : 'trivy is not installed. On a Mac: brew install trivy. The first scan downloads its vulnerability database.'}</div>
+          {st && !st.trivy ? (
+            <InstallTool name="trivy" command="brew install trivy" site="trivy.dev" url="https://trivy.dev/latest/getting-started/installation/" installed={Boolean(st.trivy)} recheck={load} why="trivy scans your project's dependencies and images for known vulnerabilities. It is a separate open source program; the first scan downloads its vulnerability database." />
+          ) : (
+            <div className="faint">{st?.trivy ? `trivy at ${st.trivy}. Only your own projects and images.` : 'Checking for trivy…'}</div>
+          )}
           <div className="ob-row">
             <select value={kind} onChange={(e) => setKind(e.target.value as Kind)}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
             {kind === 'image' && <input className="ob-grow" placeholder="name:tag" value={image} onChange={(e) => setImage(e.target.value)} />}
@@ -195,7 +200,11 @@ function Secrets(props: { project: string; sid?: string }) {
   return (
     <div className="cf-body">
       <div className="cf-col ob-list">
-        <div className="faint">{st.trufflehog ? `trufflehog at ${st.trufflehog}. Your own repositories only. Found values are never stored or shown whole.` : 'trufflehog is not installed. On a Mac: brew install trufflehog.'}</div>
+        {st.trufflehog ? (
+          <div className="faint">trufflehog at {st.trufflehog}. Your own repositories only. Found values are never stored or shown whole.</div>
+        ) : (
+          <InstallTool name="trufflehog" command="brew install trufflehog" site="github.com/trufflesecurity" url="https://github.com/trufflesecurity/trufflehog#floppy_disk-installation" installed={false} recheck={load} why="trufflehog finds keys and passwords left in a repository's history. It runs as its own program on this Mac; found values are never stored or shown whole." />
+        )}
         <div className="ob-row">
           <button className="primary" disabled={busy || !st.trufflehog || !st.git} onClick={() => run('git')}>{busy ? 'Scanning…' : 'Scan git history'}</button>
           <button disabled={busy || !st.trufflehog} onClick={() => run('filesystem')}>Scan files</button>

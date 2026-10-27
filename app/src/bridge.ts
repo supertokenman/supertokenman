@@ -658,6 +658,8 @@ export type Bridge = {
   addMcp: (c: { id: string; name: string; remote?: string; npm?: string }) => Promise<void>
   closeSession: (sid: string) => Promise<void>
   pickFolder: () => Promise<string | null>
+  /** git repositories under the home folder, for the in-app folder picker */
+  findRepos: () => Promise<{ home: string; repos: string[] }>
   setPrivate: (on: boolean) => Promise<boolean>
   runShell: (sid: string, command: string) => Promise<string | null>
   stopShell: (sid: string, id: string) => Promise<void>

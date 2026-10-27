@@ -9,6 +9,7 @@ import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync
 import { listSessions, query as sdkQuery } from '@anthropic-ai/claude-agent-sdk'
 import { claudeBinary, shellPath } from './packaged.js'
 import { homedir } from 'node:os'
+import { findRepos, repoRoots } from './repos.js'
 import { createServer as netServer } from 'node:net'
 import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -2231,6 +2232,8 @@ ipcMain.on('term:write', (_e, sid: string, data: string) => writeTerminal(String
 ipcMain.on('term:resize', (_e, sid: string, cols: number, rows: number) => resizeTerminal(String(sid), Number(cols), Number(rows)))
 ipcMain.handle('term:close', (_e, sid: string) => closeTerminal(String(sid)))
 ipcMain.handle('shell:stop', (_e, sid: string, id: string) => shells.get(sid)?.runner.stop(id))
+// the in-app folder picker: git repositories under the home folder (local disk only)
+ipcMain.handle('folders:repos', async () => ({ home: homedir(), repos: (await findRepos(repoRoots(homedir()), { depth: 3 })).map((r) => r.path) }))
 ipcMain.handle('session:pick', async () => {
   const r = await dialog.showOpenDialog({ properties: ['openDirectory'], defaultPath: startDir })
   return r.canceled ? null : (r.filePaths[0] ?? null)
