@@ -111,3 +111,5 @@ jobs:
           # scrolling 2000 transcript lines draws a few screens, not all of them, and a new line still
           # scrolls to the bottom (counts first; the frame bound is loose for a slow shared runner)
           xvfb-run -a node scripts/perf-scroll.mjs --max-drawn 300 --max-over-33 1000
+          # an idle window with four panels must not lay out (a count per second, not a time)
+          xvfb-run -a node scripts/perf-idle.mjs --panels 4 --seconds 20 --max-layouts-per-s 0.5

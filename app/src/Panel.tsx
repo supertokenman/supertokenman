@@ -179,8 +179,11 @@ const mins = (ms: number) => (ms >= 60_000 ? `${Math.ceil(ms / 60_000)} min` : `
 function CacheChip(props: { at: number; ttl: number; tokens: number; model: string; money: (usd: number) => string }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 15_000)
-    return () => clearInterval(t)
+    // frozen while the window is hidden, caught up the moment it shows
+    const t = setInterval(() => !document.hidden && setNow(Date.now()), 15_000)
+    const show = () => !document.hidden && setNow(Date.now())
+    document.addEventListener('visibilitychange', show)
+    return () => (clearInterval(t), document.removeEventListener('visibilitychange', show))
   }, [])
   const left = cacheLeft(props.at, props.ttl, now)
   const extra = coldExtraUsd(props.tokens, props.model)
