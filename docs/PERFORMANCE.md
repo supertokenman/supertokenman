@@ -35,3 +35,30 @@ on a Mac with a GPU will be lower; the before and after are on the same machine.
 - `STM_PERF=1`: the main process logs start-up marks.
 - `STM_IPC_COUNT=1`: logs, every 10 s, how often each IPC channel ran in both directions.
 - In DevTools, Performance > idle for 5 s: the Layout and Recalculate Style counts should stay near zero.
+
+## Measured on each release
+
+`.github/workflows/perf-mac.yml` runs after each published release, and by hand from the Actions tab
+with a tag. On a `macos-latest` runner (Apple silicon) it downloads the released dmg, checks it against
+SHA256SUMS, and runs `app/scripts/perf-mac.mjs` on the signed app, driven over Chromium's debugging
+port on loopback like the proof. Every launch has a fresh profile; Claude Code talks to the local mock
+Anthropic API (`app/scripts/proof-mock-api.mjs`), so there is no key and no network for it.
+
+What it records, against the v1.1 budgets in docs/ROADMAP.md:
+
+- Launch to window shown, and to the composer usable (enabled and taking focus), from process spawn:
+  the median of 5 launches. Polled every 50 ms, so a number can be up to 50 ms late.
+- Idle for 30 s with 1 panel, then with 4: layouts and style recalcs per second (CDP
+  `Performance.getMetrics`), CPU and memory of the app and every process under it (`ps` once a
+  second), and memory per added panel.
+- Typing 200 characters into the composer: the longest frame and the frames over 16 ms
+  (`requestAnimationFrame` gaps), and the longest input to paint (Event Timing).
+- Sizes: renderer JS and CSS in `app.asar`, gzip of the files `index.html` loads at start, the .app
+  on disk and the dmg.
+
+The numbers go to `perf.json` and `PERF.md` in the `perf-mac` artifact (30 days), and are attached to
+the release as `perf-mac-<version>.md` and `perf-mac-<version>.json`. The next run reads the previous
+release's json and adds a comparison; changes over 10% are marked. Nothing fails on a number yet:
+budgets come once there are a few releases of numbers. A CI runner is a shared VM, so read single
+changes with care; a trend over releases says more.
+

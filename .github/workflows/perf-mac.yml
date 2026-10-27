@@ -1,0 +1,84 @@
+# The Mac performance numbers of each release (docs/PERFORMANCE.md, "Measured on each release"): after
+# a release is published, and by hand. Runs the released dmg with a fresh profile and the local mock
+# Anthropic API, writes perf.json and PERF.md, and compares them with the previous release's numbers when
+# those were attached to it. Records only: no number fails the run yet. Actions are pinned to commits.
+name: perf-mac
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to measure (empty for the latest)
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  perf:
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    env:
+      RUN_DIR: ${{ github.workspace }}/perf-run
+      TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Playwright and asar for the measuring script (no browser download, no Electron)
+        working-directory: app
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --ignore-scripts
+      - name: Download and measure
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/perf-ci.sh "$TAG" "$RUN_DIR"
+      - id: version
+        if: always()
+        run: '[ -f "$RUN_DIR/version.txt" ] && echo "version=$(cat "$RUN_DIR/version.txt")" >> "$GITHUB_OUTPUT" || true'
+      - name: Summary
+        if: always()
+        run: '[ -f "$RUN_DIR/PERF.md" ] && cat "$RUN_DIR/PERF.md" >> "$GITHUB_STEP_SUMMARY" || true'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: perf-mac
+          path: |
+            perf-run/perf.json
+            perf-run/PERF.md
+            perf-run/prev-perf.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  attach:
+    # the numbers next to the release, as perf-mac-<version>.md and .json (the next release compares with the json)
+    needs: perf
+    if: github.event_name == 'release' && needs.perf.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: perf-mac
+          path: perf-run
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ needs.perf.outputs.version }}
+        run: |
+          cp perf-run/PERF.md "perf-mac-$VERSION.md"
+          cp perf-run/perf.json "perf-mac-$VERSION.json"
+          gh release upload "$TAG" "perf-mac-$VERSION.md" "perf-mac-$VERSION.json" --repo "$REPO" --clobber
