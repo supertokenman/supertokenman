@@ -59,4 +59,4 @@ const watch = (s) =>
 app.on('session-created', watch)
 app.whenReady().then(() => watch(session.defaultSession))
 
-await import('../dist-electron/electron/entry.js')
+await import('../dist-electron/electron/app.mjs')
