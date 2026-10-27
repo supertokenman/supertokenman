@@ -32,13 +32,13 @@ before and after when it is done. Systemic items first: one fix reaches many she
 
 ## Found in the sweep, per sheet
 
-- Ports: port 9336 repeated on six rows; commands cut with no tooltip.
-- Health: implausible numbers (1877.5 GB, 7993% CPU) and identical rows: likely a bug.
-- Cloud: a toggle overlaps its label ("eck every 6 hours").
-- Diagnostics: the same GitHub error fourteen times; group with a count and an action.
-- Today: hour labels inside the timeline bar, "20" clipped; THREE STORIES heading with nothing under it.
-- Markets: prediction titles cut mid-word with no ellipsis.
-- Catalog, Personas, Connections, Appearance: last row clipped by the sheet edge.
+- [x] Ports: port 9336 repeated on six rows; commands cut with no tooltip.
+- [x] Health: implausible numbers (1877.5 GB, 7993% CPU) and identical rows: likely a bug.
+- [x] Cloud: a toggle overlaps its label ("eck every 6 hours").
+- [x] Diagnostics: the same GitHub error fourteen times; group with a count and an action.
+- [x] Today: hour labels inside the timeline bar, "20" clipped; THREE STORIES heading with nothing under it.
+- [x] Markets: prediction titles cut mid-word with no ellipsis.
+- [x] Catalog, Personas, Connections, Appearance: last row clipped by the sheet edge. Checked: each body scrolls and ends with padding; the cut is only the scroll position before scrolling.
 
 ## Sheets
 

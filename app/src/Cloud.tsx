@@ -52,11 +52,11 @@ export function CloudSheet({ onClose }: { onClose: () => void }) {
           <div className="sheet-title">Cloud</div>
           <span className="faint">What is running in your accounts. Read-only, with the logins already on this Mac.</span>
           <span className="spacer-flex" />
-          <label className="faint" title="Off by default: the clouds are asked only when this sheet is open">
+          <label className="faint cloud-watch" title="Off by default: the clouds are asked only when this sheet is open">
             <span className="switch">
               <input type="checkbox" checked={watching} onChange={(e) => (setCloudWatch(e.target.checked), setWatching(e.target.checked))} />
               <span />
-            </span>{' '}
+            </span>
             Check every 6 hours
           </label>
           <button className="icon" title="Check again" aria-label="Check again" onClick={scan} disabled={scanning}>{res && !scanning ? <IconRefresh /> : <span className="spinner" />}</button>

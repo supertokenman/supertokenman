@@ -3967,10 +3967,7 @@ ipcMain.handle('health:get', async () => {
         done()
       }),
     )
-  const claude = [...sessions.entries()].map(([sid, s]) => {
-    const mine = kids.filter((k) => cwds.get(k.pid) === s.cwd)
-    return { sid, label: `Claude: ${s.cwd.split('/').filter(Boolean).slice(-2).join('/')}`, pids: mine.map((k) => k.pid), rssKb: mine.reduce((n, k) => n + k.rssKb, 0), cpu: mine.reduce((n, k) => n + k.cpu, 0) }
-  }).filter((c) => c.pids.length)
+  const claude = Health.claudeByFolder([...sessions.entries()].map(([sid, s]) => ({ sid, cwd: s.cwd })), kids, cwds)
   return Health.group(metrics, owners, claude)
 })
 ipcMain.handle('health:sleep-panel', (_e, sid: string) => sessions.get(sid)?.sleep() ?? false)
