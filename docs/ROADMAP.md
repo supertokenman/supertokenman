@@ -58,6 +58,13 @@ References to read before choosing (what they did, not claims about us):
   to the panel, reply from the app. "Open on GitHub" for anything not covered. Every endpoint goes in
   `docs/NETWORK.md`, and nothing is called until the user turns it on.
 - Issue to panel for GitLab, Linear and Jira, with a comment back.
+- Trace: a tab per panel that lays the session out step by step (each tool call, its tokens, cost and
+  time), so it is clear where the money and the minutes went. Local only. Idea from MLflow tracing.
+- The app's own MCP server, local only: costs, tasks, memory and CI status, so Claude in a panel can
+  ask "what did this project cost today?" or "which tasks are open?". Idea from OpenSEO's MCP.
+- An `stm` command line with JSON output and documented exit codes (open a panel, list sessions,
+  costs), for people and agents. Google Workspace through the `gws` CLI and the login already on the
+  Mac, the same way GitHub uses `gh`. Idea from googleworkspace/cli.
 - MCP: OAuth, per-persona servers, health check interval.
 - Check after edits on the touched files; fan-out lint and typecheck.
 - Compression: correctness.
