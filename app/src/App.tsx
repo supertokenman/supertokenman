@@ -136,7 +136,7 @@ import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 import { FilePickerHost } from './FilePicker'
-import { ContextMenuHost, DialogHost } from './ui'
+import { alertDialog, confirmDialog, ContextMenuHost, DialogHost } from './ui'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
 
@@ -597,12 +597,12 @@ export function App() {
       const u = await window.stm.updateCheck()
       setUpdate({ behind: u.behind, subjects: u.subjects ?? [], source: u.source })
       if (!u.source) {
-        alert('This copy runs from the source folder (npm run dev). Update it with git pull in the terminal.')
+        await alertDialog({ title: 'Update', message: 'This copy runs from the source folder (npm run dev). Update it with git pull in the terminal.' })
         return
       }
       if (u.source === 'release') {
-        if (!u.behind) return void alert('SuperTokenMan is up to date.')
-        if (confirm(`Install ${u.subjects?.[0] ?? 'the new version'}?\n\n${(u.subjects ?? []).slice(1).join('\n')}\n\nIt downloads, quits and opens the new version.`)) {
+        if (!u.behind) return void (await alertDialog({ title: 'Update', message: 'SuperTokenMan is up to date.' }))
+        if (await confirmDialog({ title: `Install ${u.subjects?.[0] ?? 'the new version'}?`, message: `${(u.subjects ?? []).slice(1).join('\n')}\n\nIt downloads, quits and opens the new version.`.trim(), confirm: 'Install' })) {
           setUpd({ state: 'busy', step: 'Starting' })
           await window.stm.updateRun()
         }
@@ -611,12 +611,12 @@ export function App() {
       const ask = u.behind
         ? `Update SuperTokenMan? ${u.behind} new change${u.behind > 1 ? 's' : ''}:\n\n${(u.subjects ?? []).join('\n')}\n\nIt pulls, rebuilds (a few minutes), quits and opens the new version.`
         : 'Already up to date. Rebuild and reinstall anyway?'
-      if (confirm(ask)) {
+      if (await confirmDialog({ title: 'Update', message: ask, confirm: u.behind ? 'Update' : 'Rebuild' })) {
         setUpd({ state: 'busy', step: 'Starting' })
         await window.stm.updateRun()
       }
     } catch (e) {
-      alert(`Could not check for updates: ${(e as Error).message}`)
+      await alertDialog({ title: 'Update', message: `Could not check for updates: ${(e as Error).message}` })
     } finally {
       setUpdating(false)
     }

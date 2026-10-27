@@ -4,7 +4,7 @@ import { clean, friendly } from './errors'
 import { threadsText, type Inbox, type PrDetail, type PrItem } from '../electron/prs'
 import { Mark } from './CiView'
 import { Markdown } from './markdown'
-import { Select } from './ui'
+import { Select, confirmDialog } from './ui'
 
 const ago = (iso: string) => {
   const m = Math.round((Date.now() - Date.parse(iso)) / 60000)
@@ -247,7 +247,7 @@ export function PullRequests(props: { focusSid: string | null; onAsk: (text: str
                           <option value="merge">Merge commit</option>
                           <option value="rebase">Rebase</option>
                         </Select>
-                        <button className="primary small" disabled={!!busy || d.draft || d.mergeable === false} onClick={() => confirm(`Merge #${d.number} into ${d.base}?`) && void act('merge', () => window.stm.pr.merge(d.repo, d.number, method), 'Merged')}>
+                        <button className="primary small" disabled={!!busy || d.draft || d.mergeable === false} onClick={async () => (await confirmDialog({ message: `Merge #${d.number} into ${d.base}?`, confirm: 'Merge' })) && void act('merge', () => window.stm.pr.merge(d.repo, d.number, method), 'Merged')}>
                           {busy === 'merge' ? 'Merging...' : 'Merge'}
                         </button>
                       </div>

@@ -10,7 +10,7 @@ import { IntegrationMark } from './IntegrationMark'
 import { Content } from './Content'
 import type { Piece } from '../electron/content/pieces'
 import type { StorageConfig } from '../electron/content/storage'
-import { Checkbox, DateTimeField, Select } from './ui'
+import { Checkbox, DateTimeField, Select, confirmDialog } from './ui'
 
 type Tab = 'content' | 'feed' | 'overview' | 'comments' | 'queue' | 'accounts'
 const n0 = (v?: number) => (v == null ? '–' : v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e4 ? `${Math.round(v / 1e3)}k` : v.toLocaleString(undefined))
@@ -188,7 +188,7 @@ function Comments(props: { nets: SocialStatus[]; onErr: (e: string) => void }) {
                     className="primary small"
                     disabled={!draft[c.id]?.trim() || busy === c.id}
                     onClick={async () => {
-                      if (!confirm(`Reply publicly as your account?\n\n${draft[c.id]}`)) return
+                      if (!(await confirmDialog({ title: 'Reply publicly as your account?', message: draft[c.id] ?? '', confirm: 'Reply' }))) return
                       setBusy(c.id)
                       try {
                         await window.stm.social.reply(net!, c.id, draft[c.id]!, post?.id)
@@ -345,7 +345,7 @@ function Accounts(props: { nets: SocialStatus[]; onChange: () => void; onErr: (e
             </span>
             <span className="spacer-flex" />
             {x.connected ? (
-              <button className="ghost small pcard-del" onClick={async () => { if (confirm(`Disconnect ${x.name}? Its token is deleted from this Mac.`)) { try { await window.stm.social.disconnect(x.id); props.onChange() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
+              <button className="ghost small pcard-del" onClick={async () => { if (await confirmDialog({ message: `Disconnect ${x.name}? Its token is deleted from this Mac.`, confirm: 'Disconnect', danger: true })) { try { await window.stm.social.disconnect(x.id); props.onChange() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
             ) : (
               <button className={open === x.id ? 'ghost small' : 'primary small'} onClick={() => setOpen(open === x.id ? null : x.id)}>{open === x.id ? 'Cancel' : 'Connect'}</button>
             )}
@@ -413,7 +413,7 @@ function VoiceCard(props: { onErr: (e: string) => void }) {
         </span>
         <span className="spacer-flex" />
         {st.connected ? (
-          <button className="ghost small pcard-del" onClick={async () => { if (confirm('Disconnect ElevenLabs? Its key is deleted from this Mac.')) { try { await window.stm.voice.disconnect(); load() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
+          <button className="ghost small pcard-del" onClick={async () => { if (await confirmDialog({ message: 'Disconnect ElevenLabs? Its key is deleted from this Mac.', confirm: 'Disconnect', danger: true })) { try { await window.stm.voice.disconnect(); load() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
         ) : (
           <button className={open ? 'ghost small' : 'primary small'} onClick={() => setOpen(!open)}>{open ? 'Cancel' : 'Connect'}</button>
         )}

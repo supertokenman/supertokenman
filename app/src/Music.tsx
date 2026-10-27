@@ -139,7 +139,7 @@ export function MusicSheet(props: { np: NowPlaying | null; position: number; ref
             {saved.length === 0 && <div className="faint">Paste the link of a playlist you play while you work (Share, Copy link in Spotify).</div>}
             {saved.map((p) => (
               <div key={p.uri} className={`playlist ${np?.uri && p.uri.split(':')[2] && np.uri.includes(p.uri.split(':')[2]!) ? 'on' : ''}`}>
-                <button className="playlist-cover" onClick={() => void cmd({ kind: 'play', uri: p.uri })} data-tip={`Play ${p.title}`}>
+                <button className="playlist-cover" onClick={() => void cmd({ kind: 'play', uri: p.uri })} data-tip={`Play ${p.title}`} aria-label={`Play ${p.title}`}>
                   {p.image ? <img src={p.image} alt="" /> : <span className="blank" />}
                   <span className="playlist-play">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11L13 8z" /></svg>

@@ -4,12 +4,12 @@ import { StateMark } from './StateMark'
 import { clean, friendly } from './errors'
 import type { Container, Image, Volume } from '../electron/docker'
 import { hostLabel, type Host } from '../shared/dockerhosts'
-import { Checkbox, Select } from './ui'
+import { Checkbox, Select, confirmDialog } from './ui'
 
 type Tab = 'containers' | 'images' | 'volumes'
 
 /** One container's logs, refreshed every 2 s, with a one-off command box and Ask Claude. */
-function Detail(props: { c: Container; onAsk: (text: string) => void; gate: (q: string) => boolean | null; remote: boolean; canAct: boolean }) {
+function Detail(props: { c: Container; onAsk: (text: string) => void; gate: (q: string) => Promise<boolean>; remote: boolean; canAct: boolean }) {
   const { c } = props
   const [log, setLog] = useState('')
   const [cmd, setCmd] = useState('')
@@ -39,7 +39,7 @@ function Detail(props: { c: Container; onAsk: (text: string) => void; gate: (q: 
   }, [log])
 
   const run = async () => {
-    if (!cmd.trim() || !props.gate(`run "${cmd}" in ${c.name}?`)) return
+    if (!cmd.trim() || !(await props.gate(`run "${cmd}" in ${c.name}?`))) return
     setBusy(true)
     try {
       setOut({ cmd, ...(await window.stm.docker.exec(c.id, cmd, props.remote)) })
@@ -103,11 +103,11 @@ export function Docker(props: { onClose: () => void; onAsk: (text: string) => vo
   const remote = Boolean(host?.remote)
   const canAct = !remote || Boolean(host && writable[host.name])
   // a remote host asks every time, naming it; this machine keeps the screen's own asks
-  const gate = (q: string) => (remote ? confirm(`On ${host!.name} (${hostLabel(host!)}): ${q}`) : true)
+  const gate = async (q: string) => (remote ? confirmDialog({ title: `On ${host!.name} (${hostLabel(host!)})`, message: q.charAt(0).toUpperCase() + q.slice(1) }) : true)
   const ro = canAct ? undefined : 'Read-only host: turn on actions for it first'
   useEffect(() => void window.stm.docker.hosts().then((r) => (setHosts(r.hosts), setSel(r.selected), setWritable(r.writable)), () => undefined), [])
   const pickHost = (name: string) => void window.stm.docker.setHost(name).then((n) => (setSel(n), setCs(null), setImgs(null), setVols(null), setOpen(null), setErr('')), (e) => setErr(clean(e)))
-  const toggleWrite = (on: boolean) => host && (!on || confirm(`Allow start, stop, remove and commands on ${host.name} (${hostLabel(host)})? Each one still asks.`)) && void window.stm.docker.setWritable(host.name, on).then(setWritable, (e) => setErr(clean(e)))
+  const toggleWrite = async (on: boolean) => host && (!on || (await confirmDialog({ message: `Allow start, stop, remove and commands on ${host.name} (${hostLabel(host)})? Each one still asks.`, confirm: 'Allow' }))) && void window.stm.docker.setWritable(host.name, on).then(setWritable, (e) => setErr(clean(e)))
 
   const refresh = async () => {
     try {
@@ -163,13 +163,13 @@ export function Docker(props: { onClose: () => void; onAsk: (text: string) => vo
         <span className="dk-btns">
           {on ? (
             <>
-              <button className="icon" data-tip={ro ?? 'Restart'} disabled={!!busy || !canAct} onClick={() => gate(`restart ${c.name}?`) && void act(`restart-${c.id}`, () => window.stm.docker.act('restart', c.id, remote))}>{busy === `restart-${c.id}` ? '…' : '↻'}</button>
-              <button className="icon" data-tip={ro ?? 'Stop'} disabled={!!busy || !canAct} onClick={() => gate(`stop ${c.name}?`) && void act(`stop-${c.id}`, () => window.stm.docker.act('stop', c.id, remote))}>{busy === `stop-${c.id}` ? '…' : <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" rx="1.5" fill="currentColor" /></svg>}</button>
+              <button className="icon" data-tip={ro ?? 'Restart'} aria-label={ro ?? 'Restart'} disabled={!!busy || !canAct} onClick={async () => (await gate(`restart ${c.name}?`)) && void act(`restart-${c.id}`, () => window.stm.docker.act('restart', c.id, remote))}>{busy === `restart-${c.id}` ? '…' : '↻'}</button>
+              <button className="icon" data-tip={ro ?? 'Stop'} aria-label={ro ?? 'Stop'} disabled={!!busy || !canAct} onClick={async () => (await gate(`stop ${c.name}?`)) && void act(`stop-${c.id}`, () => window.stm.docker.act('stop', c.id, remote))}>{busy === `stop-${c.id}` ? '…' : <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" rx="1.5" fill="currentColor" /></svg>}</button>
             </>
           ) : (
             <>
-              <button className="icon" data-tip={ro ?? 'Start'} disabled={!!busy || !canAct} onClick={() => gate(`start ${c.name}?`) && void act(`start-${c.id}`, () => window.stm.docker.act('start', c.id, remote))}>{busy === `start-${c.id}` ? '…' : <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2.5 1.5v7l6-3.5z" fill="currentColor" /></svg>}</button>
-              <button className="icon" data-tip={ro ?? 'Remove'} aria-label={ro ?? 'Remove'} disabled={!!busy || !canAct} onClick={() => (remote ? gate(`remove ${c.name}?`) : confirm(`Remove ${c.name}?`)) && void act(`rm-${c.id}`, () => window.stm.docker.act('rm', c.id, remote))}>×</button>
+              <button className="icon" data-tip={ro ?? 'Start'} aria-label={ro ?? 'Start'} disabled={!!busy || !canAct} onClick={async () => (await gate(`start ${c.name}?`)) && void act(`start-${c.id}`, () => window.stm.docker.act('start', c.id, remote))}>{busy === `start-${c.id}` ? '…' : <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2.5 1.5v7l6-3.5z" fill="currentColor" /></svg>}</button>
+              <button className="icon" data-tip={ro ?? 'Remove'} aria-label={ro ?? 'Remove'} disabled={!!busy || !canAct} onClick={async () => (await (remote ? gate(`remove ${c.name}?`) : confirmDialog({ message: `Remove ${c.name}?`, confirm: 'Remove', danger: true }))) && void act(`rm-${c.id}`, () => window.stm.docker.act('rm', c.id, remote))}>×</button>
             </>
           )}
         </span>
@@ -237,7 +237,7 @@ export function Docker(props: { onClose: () => void; onAsk: (text: string) => vo
                 <span className="dk-ports">{i.size}</span>
                 <span className="faint dk-stat">{i.created}{i.inUse ? ` · used by ${i.inUse}` : ''}</span>
               </span>
-              <span className="dk-btns"><button className="icon" data-tip={ro ?? 'Remove image'} aria-label={ro ?? 'Remove image'} disabled={!!busy || !canAct} onClick={() => (remote ? gate(`remove image ${i.repo}:${i.tag}?`) : confirm(`Remove ${i.repo}:${i.tag}?`)) && void act(`rmi-${i.id}`, () => window.stm.docker.removeImage(i.repo === '<none>' ? i.id : `${i.repo}:${i.tag}`, remote))}>×</button></span>
+              <span className="dk-btns"><button className="icon" data-tip={ro ?? 'Remove image'} aria-label={ro ?? 'Remove image'} disabled={!!busy || !canAct} onClick={async () => (await (remote ? gate(`remove image ${i.repo}:${i.tag}?`) : confirmDialog({ message: `Remove ${i.repo}:${i.tag}?`, confirm: 'Remove', danger: true }))) && void act(`rmi-${i.id}`, () => window.stm.docker.removeImage(i.repo === '<none>' ? i.id : `${i.repo}:${i.tag}`, remote))}>×</button></span>
             </div>
           ))}
           {tab === 'volumes' && (vols ?? []).map((v) => (
@@ -248,7 +248,7 @@ export function Docker(props: { onClose: () => void; onAsk: (text: string) => vo
                 <span />
                 <span className="faint dk-stat">{v.driver}</span>
               </span>
-              <span className="dk-btns"><button className="icon" data-tip={ro ?? 'Remove volume (its data is lost)'} aria-label={ro ?? 'Remove volume (its data is lost)'} disabled={!!busy || !canAct} onClick={() => (remote ? gate(`remove volume ${v.name}? Its data is deleted.`) : confirm(`Remove volume ${v.name}? Its data is deleted.`)) && void act(`rmv-${v.name}`, () => window.stm.docker.removeVolume(v.name, remote))}>×</button></span>
+              <span className="dk-btns"><button className="icon" data-tip={ro ?? 'Remove volume (its data is lost)'} aria-label={ro ?? 'Remove volume (its data is lost)'} disabled={!!busy || !canAct} onClick={async () => (await (remote ? gate(`remove volume ${v.name}? Its data is deleted.`) : confirmDialog({ message: `Remove volume ${v.name}? Its data is deleted.`, confirm: 'Remove', danger: true }))) && void act(`rmv-${v.name}`, () => window.stm.docker.removeVolume(v.name, remote))}>×</button></span>
             </div>
           ))}
           {tab !== 'containers' && ((tab === 'images' ? imgs : vols)?.length === 0) && <div className="note">None.</div>}
