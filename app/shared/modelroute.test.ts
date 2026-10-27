@@ -6,7 +6,7 @@ describe('model router', () => {
     const s = suggest('rename getUser to fetchUser in api.ts', 'opus', 50_000)!
     expect(s).toMatchObject({ tier: 'haiku', costsMore: false })
     expect(s.why).toMatch(/rename/)
-    expect(s.deltaUsd).toBeCloseTo(-0.2)
+    expect(s.deltaUsd).toBeCloseTo(-0.195, 4) // (0.10 - 4) per M on 50K
   })
   it('suggests the strongest only with a reason, flagged as costing more', () => {
     expect(suggest('we need a migration plan from REST to gRPC with trade-offs', 'sonnet', 10_000)).toMatchObject({ tier: 'opus', costsMore: true })

@@ -9,7 +9,7 @@ const fresh = () => ledger(join(mkdtempSync(join(tmpdir(), 'ledger-')), 'savings
 describe('ledger', () => {
   it('prices cache reads against full input price', () => {
     const l = fresh()
-    l.turn('claude-sonnet-4', 0.5, 1000, 1_000_000)
+    l.turn('claude-sonnet-4-6', 0.5, 1000, 1_000_000)
     const s = summarize(l.read(), '0000')
     expect(s.billedUsd).toBe(0.5)
     expect(s.bySource[0]).toMatchObject({ id: 'cache', tokens: 1_000_000 })

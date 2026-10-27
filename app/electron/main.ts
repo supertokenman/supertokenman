@@ -2977,7 +2977,7 @@ ipcMain.handle('overhead:panels', () => [...sessions].map(([sid, s]) => ({ sid, 
 ipcMain.handle('overhead:get', async (_e, sid: string) => {
   const o = await sessions.get(String(sid))?.overhead()
   if (!o) return null
-  const [, input, cached] = priceOf(o.model)
+  const [, input, cached] = priceOf(o.model, o.fixed)
   // warm: read from the prompt cache; cold (first turn, or after the cache lapsed): written at 1.25x input
   return { ...o, warmUsd: (o.fixed * cached) / 1e6, coldUsd: (o.fixed * input * 1.25) / 1e6 }
 })

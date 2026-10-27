@@ -1,13 +1,14 @@
 // Model router: a suggestion, per message, of the model that fits it, with the reason and what it would
 // save or cost. It never switches by itself: the person clicks. Idea from AgentScope's model router.
+import { priceOf } from './prices.js'
 import { kindOf, presetOf, type Tally } from './arena.js'
 
 export type Tier = 'haiku' | 'sonnet' | 'opus'
 export const MODEL_OF: Record<Tier, string> = { haiku: 'claude-haiku-5-5', sonnet: 'claude-sonnet-5-5', opus: 'claude-opus-5-5' }
 export const LABEL: Record<Tier, string> = { haiku: 'Haiku 5.5', sonnet: 'Sonnet 5.5', opus: 'Opus 5.5' }
 const RANK: Record<Tier, number> = { haiku: 0, sonnet: 1, opus: 2 }
-/** US$ per million input tokens, for the estimate only (list prices; the plan may differ). */
-export const PRICE_IN: Record<Tier, number> = { haiku: 1, sonnet: 3, opus: 5 }
+/** US$ per million input tokens at this context size, for the estimate only (list prices; the plan may differ). */
+export const priceIn = (t: Tier, tokens = 0) => priceOf(MODEL_OF[t], tokens)[1]
 
 export const tierOf = (model: string | null | undefined): Tier => (/haiku/i.test(model ?? '') ? 'haiku' : /opus/i.test(model ?? '') ? 'opus' : 'sonnet')
 
@@ -40,4 +41,7 @@ export function suggest(prompt: string, current: Tier, contextTokens: number, ta
 }
 
 /** What the switch changes on one turn, input only: negative saves, positive costs. */
-export const delta = (from: Tier, to: Tier, tokens: number) => ((PRICE_IN[to] - PRICE_IN[from]) * Math.max(tokens, 2000)) / 1_000_000
+export function delta(from: Tier, to: Tier, tokens: number) {
+  const n = Math.max(tokens, 2000)
+  return ((priceIn(to, n) - priceIn(from, n)) * n) / 1_000_000
+}

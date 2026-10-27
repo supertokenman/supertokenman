@@ -47,7 +47,7 @@ export function ledger(file: string) {
     read,
     /** A billed turn: what it cost, and what the cache read saved against full input price. */
     turn(model: string, costUsd: number, tokens: number, cacheRead: number, t = Date.now()) {
-      const [, input, cached] = priceOf(model)
+      const [, input, cached] = priceOf(model, tokens)
       change((d) => {
         d.billedUsd += costUsd
         d.billedTokens += tokens
