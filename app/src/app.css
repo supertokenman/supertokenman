@@ -2407,10 +2407,19 @@ button { white-space: nowrap; }
 .sbx-row.deleted b { color: var(--danger, #e5484d); }
 
 /* the update while it runs, and why it stopped */
-.update-bar { position: fixed; right: 16px; bottom: 16px; z-index: 70; width: min(560px, calc(100vw - 32px)); display: grid; gap: 8px; padding: 10px 12px; background: var(--surface); border: 1px solid rgba(var(--accent-rgb), 0.5); box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4); font-size: 12.5px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); animation: cut-in 260ms var(--cut, ease) both; }
+.update-bar { position: fixed; right: 12px; top: 56px; z-index: 70; width: min(340px, calc(100vw - 24px)); display: grid; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28); font-size: 12.5px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); animation: cut-in 260ms var(--cut, ease) both; }
+.update-bar.down { width: min(560px, calc(100vw - 24px)); }
 .update-bar.down { border-color: var(--danger, #e5484d); }
 .update-head { display: flex; align-items: center; gap: 10px; }
 .update-head > span:not(.sm-mark) { flex: 1; min-width: 0; }
+.update-text { display: grid; gap: 2px; }
+.update-text b { font-weight: 600; }
+.update-text .faint { font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.update-track { position: relative; height: 3px; overflow: hidden; background: rgba(var(--overlay-rgb), 0.1); }
+.update-track i { position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(0); transition: transform 400ms var(--ease, ease); }
+.update-track.wait i { transform: none; width: 30%; animation: update-wait 1.2s var(--ease, ease) infinite; }
+@keyframes update-wait { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+@media (prefers-reduced-motion: reduce) { .update-track i { transition: none; } .update-track.wait i { animation: none; width: 100%; opacity: 0.4; } }
 .update-tail { margin: 0; max-height: 220px; overflow: auto; padding: 8px; background: var(--bg); font: 11.5px/1.5 var(--mono, ui-monospace, monospace); white-space: pre-wrap; color: var(--text); }
 
 /* a message held by the budget, or a turn stopped for going in circles */

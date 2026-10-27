@@ -588,7 +588,7 @@ export function App() {
   const [update, setUpdate] = useState<{ behind: number; subjects: string[]; source: string | null } | undefined>()
   const [updating, setUpdating] = useState(false)
   // the update as it runs: its current step, or why it stopped
-  const [upd, setUpd] = useState<{ state: 'busy' | 'down'; step: string; tail?: string } | null>(null)
+  const [upd, setUpd] = useState<{ state: 'busy' | 'down'; step: string; pct?: number; tail?: string } | null>(null)
   useEffect(() => window.stm.onUpdateProgress?.(setUpd), [])
   // the Update button: checks right now, then rebuilds and reopens (or says there is nothing new)
   const runUpdate = async () => {
@@ -1286,7 +1286,10 @@ export function App() {
           <div className={`update-bar ${upd.state}`} role="status">
             <div className="update-head">
               <StateMark state={upd.state} label={upd.state === 'busy' ? 'Updating' : 'Update failed'} />
-              <span>{upd.state === 'busy' ? `Updating: ${upd.step}. The app reopens by itself when it is done.` : upd.step}</span>
+              <span className="update-text">
+                <b>{upd.state === 'busy' ? `Updating${update?.subjects[0] ? ` to ${update.subjects[0].replace(/^Version /, '')}` : ''}` : upd.step}</b>
+                {upd.state === 'busy' && <span className="faint">{upd.step}{upd.pct != null ? ` · ${upd.pct}%` : ''}. Reopens by itself.</span>}
+              </span>
               {upd.state === 'down' && (
                 <>
                   <button className="ghost small" onClick={() => void navigator.clipboard.writeText(upd.tail ?? '')}>Copy log</button>
@@ -1294,6 +1297,11 @@ export function App() {
                 </>
               )}
             </div>
+            {upd.state === 'busy' && (
+              <div className={`update-track${upd.pct == null ? ' wait' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={upd.pct}>
+                <i style={upd.pct != null ? { transform: `scaleX(${upd.pct / 100})` } : undefined} />
+              </div>
+            )}
             {upd.tail && <pre className="update-tail">{upd.tail}</pre>}
           </div>
         )}
