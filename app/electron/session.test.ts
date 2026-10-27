@@ -178,6 +178,32 @@ describe('Session', () => {
     s.close()
   })
 
+  it('changes the model of a sleeping panel without reaching its ended process, and wakes with it', async () => {
+    const models: (string | undefined)[] = []
+    const q = fakeQuery(async function* () {
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0, usage: {} } as unknown as SDKMessage
+    })
+    const s = new Session(() => {}, {
+      cwd: '/p',
+      model: 'claude-sonnet-4-5',
+      query: (p) => {
+        models.push(p.options?.model)
+        // the ended process of a sleeping panel answers no control request
+        return Object.assign(q.fn(p), { setModel: () => Promise.reject(new Error('Query closed before response received')) })
+      },
+    })
+    s.start()
+    s.send('first')
+    await settle()
+    s.sleep()
+    await expect(s.setModel('claude-opus-4-5')).resolves.toBeUndefined()
+    expect(s.model).toBe('claude-opus-4-5')
+    s.send('second')
+    await settle()
+    expect(models).toEqual(['claude-sonnet-4-5', 'claude-opus-4-5'])
+    s.close()
+  })
+
   it('keeps the same system prompt after a sleep, so the conversation cache is read, not written again', async () => {
     const prompts: unknown[] = []
     const q = fakeQuery(async function* () {
