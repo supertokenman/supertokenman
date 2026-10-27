@@ -32,6 +32,25 @@ export function descendants(rows: Child[], root: number): Child[] {
 }
 
 /**
+ * Claude Code processes per working folder. Several panels can share one folder, and a process's folder
+ * cannot tell them apart, so they share one row: each process is counted once, never once per panel.
+ */
+export function claudeByFolder(sessions: { sid: string; cwd: string }[], kids: Child[], cwds: Map<number, string>): { sid: string; label: string; pids: number[]; rssKb: number; cpu: number }[] {
+  const out: { sid: string; label: string; pids: number[]; rssKb: number; cpu: number }[] = []
+  const seen = new Set<string>()
+  for (const s of sessions) {
+    if (seen.has(s.cwd)) continue
+    seen.add(s.cwd)
+    const panels = sessions.filter((x) => x.cwd === s.cwd).length
+    const mine = kids.filter((k) => cwds.get(k.pid) === s.cwd)
+    if (!mine.length) continue
+    const name = s.cwd.split('/').filter(Boolean).slice(-2).join('/')
+    out.push({ sid: s.sid, label: `Claude: ${name}${panels > 1 ? ` (${panels} panels)` : ''}`, pids: mine.map((k) => k.pid), rssKb: mine.reduce((n, k) => n + k.rssKb, 0), cpu: mine.reduce((n, k) => n + k.cpu, 0) })
+  }
+  return out
+}
+
+/**
  * Electron's processes grouped by what they show; the rest of the app's own processes (GPU, network,
  * the main process) as "SuperTokenMan"; Claude Code processes per panel, matched by working folder.
  */

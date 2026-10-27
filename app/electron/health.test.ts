@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { descendants, group, parsePs } from './health'
+import { claudeByFolder, descendants, group, parsePs } from './health'
 
 describe('health', () => {
   it('reads ps and walks descendants', () => {
@@ -19,5 +19,14 @@ describe('health', () => {
     )
     expect(parts.map((p) => [p.label, p.memMb])).toEqual([['YouTube', 320], ['SuperTokenMan (main, GPU, network)', 300], ['Claude: engine', 180], ['Window', 150]])
     expect(parts[0]!.app).toBe('youtube')
+  })
+  it('counts each Claude process once when panels share a folder', () => {
+    const kids = parsePs('  20  10 1048576  40.0 claude\n  21  20 524288  10.0 node mcp\n  22  10 262144  5.0 claude\n')
+    const cwds = new Map([[20, '/w/dev/acme'], [21, '/w/dev/acme'], [22, '/w/other']])
+    const sessions = [{ sid: 'a', cwd: '/w/dev/acme' }, { sid: 'b', cwd: '/w/dev/acme' }, { sid: 'c', cwd: '/w/dev/acme' }, { sid: 'd', cwd: '/w/other' }]
+    const rows = claudeByFolder(sessions, kids, cwds)
+    expect(rows.map((r) => [r.label, r.rssKb / 1024 / 1024, r.cpu])).toEqual([['Claude: dev/acme (3 panels)', 1.5, 50], ['Claude: w/other', 0.25, 5]])
+    const total = group([], [], rows).reduce((n, p) => n + p.memMb, 0)
+    expect(total).toBe(1792)
   })
 })
