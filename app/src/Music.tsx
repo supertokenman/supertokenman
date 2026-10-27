@@ -17,13 +17,16 @@ export function useSpotify(open: boolean) {
     })
   useEffect(() => {
     poll.current()
-    const t = setInterval(() => poll.current(), open ? 1500 : 8000)
-    return () => clearInterval(t)
+    // no one sees the player while the window is hidden: ask again the moment it shows
+    const t = setInterval(() => !document.hidden && poll.current(), open ? 1500 : 8000)
+    const show = () => !document.hidden && poll.current()
+    document.addEventListener('visibilitychange', show)
+    return () => (clearInterval(t), document.removeEventListener('visibilitychange', show))
   }, [open])
   const [, tick] = useState(0)
   useEffect(() => {
     if (np?.state !== 'playing') return
-    const t = setInterval(() => tick((n) => n + 1), 1000)
+    const t = setInterval(() => !document.hidden && tick((n) => n + 1), 1000)
     return () => clearInterval(t)
   }, [np?.state])
   const position = np ? Math.min(np.durationMs, np.positionMs + (np.state === 'playing' ? Date.now() - at : 0)) : 0

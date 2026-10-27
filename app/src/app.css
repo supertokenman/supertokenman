@@ -802,6 +802,7 @@ button.danger:hover { --btn-bg: color-mix(in srgb, var(--red) 85%, black); --btn
 .dk-btns { display: flex; gap: 2px; padding-right: 6px; }
 .dk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .dk-dot.running { background: var(--green); box-shadow: 0 0 0 3px rgba(var(--green-rgb), 0.16); animation: dk-breathe 2.4s ease-in-out infinite; }
+html[data-blurred] .dk-dot.running { animation-play-state: paused; }
 .dk-dot.paused { background: var(--gold); }
 .dk-dot.restarting { background: var(--gold); animation: dk-breathe 0.8s ease-in-out infinite; }
 .dk-dot.dead, .dk-dot.exited { background: var(--faint); }

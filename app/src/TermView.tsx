@@ -229,7 +229,8 @@ export function TermView(props: { sid: string; active: boolean; onAttach: (note:
   // a running command's clock
   useEffect(() => {
     if (!proc) return
-    const t = setInterval(() => setNow(Date.now()), 200)
+    // nothing to see while the window is hidden; the next tick after it shows catches up
+    const t = setInterval(() => !document.hidden && setNow(Date.now()), 200)
     return () => clearInterval(t)
   }, [proc])
 

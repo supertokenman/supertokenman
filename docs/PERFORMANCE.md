@@ -109,6 +109,59 @@ leak; which process differs between the two Mac runs is not proven here.
 Held in CI: the `network` job checks the start-up JS (`app/scripts/startup-size.mjs --max-js-kb 215`)
 and fails over it; raise it in `ci.yml` with the reason when a change needs more.
 
+## Idle (2026-10-27)
+
+Four panels open, the window focused and visible, 8 s to settle, then 20 s of nothing, measured by
+`app/scripts/perf-idle.mjs` on the built app under xvfb (Linux container, no GPU). Layouts and style
+recalcs are CDP `Performance.getMetrics` deltas; timers and rAF callbacks are counted by call site
+from the page's first script on (an init script, installed by reloading once); IPC is counted in the
+main process both ways (`send`, `ipc-message`, and every `invoke` handler); main CPU is
+`process.cpuUsage()` over the window.
+
+| Per second, idle | Before | After |
+|---|---|---|
+| Layouts | 0 | 0 |
+| Style recalcs | 0 | 0 |
+| rAF callbacks | 0 | 0 |
+| setTimeout callbacks | 0 | 0 |
+| setInterval callbacks | 0.25 | 0.25 |
+| IPC, renderer to main | 0.15 (`spotify:now`) | 0.15 (`spotify:now`) |
+| IPC, main to renderer | 0 | 0 |
+| Renderer task time | 4.5 ms | 3.9 to 4.4 ms |
+| Main process CPU | 0.73 % | 0.39 to 0.61 % |
+
+The focused, empty idle window was already at zero layouts and recalcs (the start-up pass above
+removed the big sources). What is left firing is three slow intervals that do not render: the
+Spotify poll (every 8 s), the agenda clock (every 20 s) and the round clock (every 30 s). What this
+pass fixed are the states the empty measure does not reach:
+
+- **Agenda clock** re-rendered the agenda every 20 s although it shows minutes; it now renders only
+  when the minute changes. It still ticks while hidden, so the notice before a meeting still fires.
+- **Spotify poll** (`spotify:now`, an AppleScript run in main on macOS) now skips while the window
+  is hidden and asks again the moment it shows; the playing position ticks only while visible.
+- **Prompt cache chip** in each panel re-rendered every 15 s while hidden; now frozen while hidden and
+  caught up on show.
+- **Fan-out clock** ticked every second for as long as the fan-out view was open, even with no attempt
+  running (the time it shows only moves for a running attempt); now ticks only while one runs, and
+  not while hidden.
+- **Terminal command clock** (every 200 ms while a command runs) skips while hidden.
+- **Running container dot** in Docker breathed forever (a `box-shadow` animation, a style recalc each
+  frame) for as long as a container ran; it holds still while the window is out of focus. Busy marks
+  (spinners, a panel's pulse, the streaming caret) keep moving: they say work is going on.
+
+Left as it is: main's 1 s `cuts.poll` tick already slows to 30 s when nobody looks (`quiet()`), CI
+polls slow to 5 min, the terminal's 500 ms foreground-process check runs only while a terminal is
+open, and the mini player's 1 s time read only while it is open. Chromium already stops rAF and CSS
+animations in a hidden window.
+
+Not shown by this measure: under xvfb `win.hide()` leaves `document.visibilityState` at `visible`,
+so the hidden-window paths were read in code, not measured; on a Mac they want a `perf-mac` run.
+
+Held in CI: the `network` job runs `perf-idle.mjs --max-layouts-per-s 0.5` (4 panels, 20 s). A
+count, not a time; anything that animates or polls into the DOM shows up at 1 per second or more.
+
+    cd app && npm run build && xvfb-run -a node scripts/perf-idle.mjs [--panels 4] [--seconds 20]
+
 ## Measured on each release
 
 `.github/workflows/perf-mac.yml` runs after each published release, and by hand from the Actions tab

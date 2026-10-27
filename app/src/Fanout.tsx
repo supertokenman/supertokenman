@@ -42,10 +42,14 @@ export function FanoutSheet(props: { byId: Record<string, State | undefined>; gr
   useEffect(() => {
     for (const sid of sids) void window.stm.worktree.stat(sid).then((st) => st && setStats((o) => ({ ...o, [sid]: st })))
   }, [group, idle])
+  // the clock only moves a running attempt's time: still while none runs or the window is hidden
+  const anyBusy = sids.some((s) => props.byId[s]?.busy)
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000)
+    setNow(Date.now())
+    if (!anyBusy) return
+    const t = setInterval(() => !document.hidden && setNow(Date.now()), 1000)
     return () => clearInterval(t)
-  }, [])
+  }, [anyBusy])
   const start = cur ? parseInt(cur.group.slice(1), 36) : 0
   const rows: Attempt[] = sids.map((sid) => {
     const s = props.byId[sid]!
