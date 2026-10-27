@@ -104,3 +104,5 @@ jobs:
           npm ci
           npm run build
           npm run netwatch:check
+          # typing in the composer must not lay out the window more than once per key (a count, not a time)
+          xvfb-run -a node scripts/perf-typing.mjs --max-layouts-per-key 1.5
