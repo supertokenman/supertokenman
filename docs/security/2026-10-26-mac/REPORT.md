@@ -97,6 +97,32 @@ The same script without `--mitm`, so Claude Code worked (a panel answered). Dest
   They are not claimed as Anthropic until their names are known.
 - Decoy: not found on disk. Traffic content was not read in this run.
 
+## Fourth run: 0.1.5 with `--names`, 2026-10-27 11:35 UTC
+
+Traffic through mitmproxy without opening TLS, so Claude Code kept working and each host name was
+logged. lsof outside loopback: none, so nothing went around the proxy.
+
+| Host | Connections | Whose | Why |
+|---|---|---|---|
+| api.anthropic.com | 2 | Anthropic | Claude Code: the messages |
+| mcp-proxy.anthropic.com | 5 | Anthropic | Claude Code: MCP connectors of the claude.ai account it is signed in with |
+| mcp.context7.com | 3 | Context7 | an MCP server in the owner's own Claude Code settings |
+| docs.mcp.cloudflare.com | 3 | Cloudflare | an MCP server in the owner's own Claude Code settings |
+| registry.npmjs.org | 1 | npm | `npx` starting one of those MCP servers |
+| github.com, release-assets.githubusercontent.com | 2 | GitHub | the app's update check |
+| play.googleapis.com | 2 | Google | **not identified**: two connections of about 0.13 s each at 08:33:46 local time, too short for the lsof sample; not called by the app's code |
+
+This names the Cloudflare and Amazon addresses of the third run: they are the MCP servers the owner
+set up in Claude Code (Context7, Cloudflare docs) and Anthropic's MCP proxy. Those are the user's
+choices, not the app's; a fresh Claude Code login with no MCP servers would not make them.
+
+Decoy: this time the panel ran `echo hello` with DECOY_KEY readable by commands, and the value was
+not found on disk afterwards. Content was not readable in this mode.
+
+To tell whether play.googleapis.com comes from the window (Chromium) or from a process it starts, the
+script now also records Chromium's net log (`--log-net-log`) and lists the hosts in it: a host there
+is the window's; a host only in the proxy log is a child process's.
+
 ## Next run
 
 To name the four addresses: `bash app/scripts/proof-mac.sh --names --minutes 5`, which sends traffic through mitmproxy without opening TLS, so Claude Code keeps working and every host name is logged. To read content too, once the certificate question is answered: `bash app/scripts/proof-mac.sh --mitm --minutes 5`. Or, to
