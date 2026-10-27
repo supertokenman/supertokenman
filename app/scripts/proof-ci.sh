@@ -5,7 +5,7 @@
 #   bash scripts/proof-ci.sh <tag or "latest"> <run dir>
 #
 # Needs mitmdump on PATH and gh signed in (GH_TOKEN) for the attestation. ANTHROPIC_API_KEY, when set,
-# goes to the app only; without it the Claude turn is skipped and the report says so. Exits non-zero
+# goes to the app only; without it Claude Code talks to the local mock in proof-mock-api.mjs. Exits non-zero
 # when a download check fails; the report step decides the rest.
 set -euo pipefail
 
@@ -46,6 +46,21 @@ MITM_PID=$!
 sleep 3
 export STM_USER_DATA="$OUT/profile" CLAUDE_CONFIG_DIR="$OUT/claude"
 export HTTPS_PROXY="http://127.0.0.1:8899" HTTP_PROXY="http://127.0.0.1:8899" NO_PROXY="127.0.0.1,localhost"
+# without a real key, Claude Code talks to a local stand-in of the Anthropic API that records every
+# request; proof-mock-key is a fixed fake, not a credential
+MOCK_PID=""
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  node "$HERE/proof-mock-api.mjs" "$OUT" > mock.log 2>&1 &
+  MOCK_PID=$!
+  for _ in $(seq 1 20); do [ -s mock-port.txt ] && break; sleep 0.5; done
+  [ -s mock-port.txt ] || { note "the mock Anthropic API did not start"; exit 1; }
+  MOCK_PORT="$(cat mock-port.txt)"
+  export ANTHROPIC_BASE_URL="http://127.0.0.1:$MOCK_PORT" ANTHROPIC_API_KEY="proof-mock-key" STM_PROOF_MODE="mock"
+  note "Claude: mock Anthropic API on $ANTHROPIC_BASE_URL (no real key)"
+else
+  export STM_PROOF_MODE="real"
+  note "Claude: real Anthropic API (key from the proof environment)"
+fi
 node "$HERE/proof-drive.mjs" --app "$APP" --out "$OUT" -- \
   --proxy-server=127.0.0.1:8899 --log-net-log="$OUT/netlog.json" > drive.log 2>&1 &
 DRIVE=$!
@@ -78,5 +93,6 @@ if [ -n "$ROOT" ]; then for _ in $(seq 1 20); do kill -0 "$ROOT" 2>/dev/null || 
 [ -n "$ROOT" ] && kill "$ROOT" 2>/dev/null || true
 [ -n "$WATCH" ] && kill "$WATCH" 2>/dev/null || true
 kill "$MITM_PID" 2>/dev/null || true
+[ -n "$MOCK_PID" ] && kill "$MOCK_PID" 2>/dev/null || true
 sleep 1
 rm -rf "$APP" dl
