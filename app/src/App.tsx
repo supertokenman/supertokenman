@@ -1,6 +1,7 @@
 import { SandboxButton } from './Sandbox'
 
-import { effortsOf, MAIN_MODELS, MODEL_LIST, MORE_MODELS, type Effort } from '../shared/models'
+import { effortsOf, MODEL_LIST, type Effort } from '../shared/models'
+import { ModelMenu } from './ModelMenu'
 import { BranchMark, TryWaysSheet } from './Worktree'
 
 import { FanoutSheet } from './Fanout'
@@ -205,7 +206,6 @@ const SecretsSheet = lazy(() => import('./Secrets').then((m) => ({ default: m.Se
 const CloudSheet = lazy(() => import('./Cloud').then((m) => ({ default: m.CloudSheet })))
 
 const MODELS = [{ id: '', label: 'Default model' }, ...MODEL_LIST.map(({ id, label }) => ({ id, label }))]
-const EFFORT_LABEL: Record<Effort, string> = { low: 'low', medium: 'medium', high: 'high', xhigh: 'extra high', max: 'max' }
 
 
 /** The time, refreshed every second while a round runs and every 30 s otherwise; frozen while hidden. */
@@ -1235,28 +1235,7 @@ export function App() {
           <span className="brand-name">SuperTokenMan</span>
         </div>
         <div className="top-actions">
-          <label className="select">
-            <span className="select-label">New panels</span>
-            <select value={model} onChange={(e) => setModel(e.target.value)}>
-              <option value="">Default model</option>
-              {MAIN_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-              <optgroup label="More models">
-                {MORE_MODELS.map((m) => (
-                  <option key={m.id} value={m.id}>{m.label}</option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
-          <label className="select" title="How hard new panels think. Lower spends less of your plan on simple work; higher for hard problems.">
-            <select value={effortsOf(model).includes(effort as Effort) ? effort : ''} disabled={effortsOf(model).length === 0} onChange={(e) => setEffort(e.target.value)} aria-label="Effort for new panels">
-              <option value="">{effortsOf(model).length ? 'Effort: default' : 'Effort: n/a'}</option>
-              {effortsOf(model).map((e) => (
-                <option key={e} value={e}>Effort: {EFFORT_LABEL[e]}</option>
-              ))}
-            </select>
-          </label>
+          <ModelMenu model={model} effort={effort} onModel={setModel} onEffort={setEffort} />
           <button className="ghost" onClick={() => void open(p.focus ? p.byId[p.focus]?.cwd : undefined)} title="New panel in the same folder (Cmd+T)">
             <IconPanel />
           </button>
