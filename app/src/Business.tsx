@@ -10,6 +10,7 @@ import { IntegrationMark } from './IntegrationMark'
 import { Content } from './Content'
 import type { Piece } from '../electron/content/pieces'
 import type { StorageConfig } from '../electron/content/storage'
+import { Checkbox, DateTimeField, Select, confirmDialog } from './ui'
 
 type Tab = 'content' | 'feed' | 'overview' | 'comments' | 'queue' | 'accounts'
 const n0 = (v?: number) => (v == null ? '–' : v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e4 ? `${Math.round(v / 1e3)}k` : v.toLocaleString(undefined))
@@ -182,12 +183,12 @@ function Comments(props: { nets: SocialStatus[]; onErr: (e: string) => void }) {
                 <div className="biz-c-text">{c.text}</div>
                 <div className="biz-c-reply">
                   <input placeholder="Reply..." value={draft[c.id] ?? ''} onChange={(e) => setDraft({ ...draft, [c.id]: e.target.value })} />
-                  <button className="ghost small" disabled={busy === c.id} onClick={async () => { setBusy(c.id); try { setDraft({ ...draft, [c.id]: await window.stm.social.suggest(c.text, post?.text ?? '') }) } catch (e) { props.onErr(clean(e)) } setBusy('') }} title="One short call to the smallest model; you edit before sending">Suggest</button>
+                  <button className="ghost small" disabled={busy === c.id} onClick={async () => { setBusy(c.id); try { setDraft({ ...draft, [c.id]: await window.stm.social.suggest(c.text, post?.text ?? '') }) } catch (e) { props.onErr(clean(e)) } setBusy('') }} data-tip="One short call to the smallest model; you edit before sending">Suggest</button>
                   <button
                     className="primary small"
                     disabled={!draft[c.id]?.trim() || busy === c.id}
                     onClick={async () => {
-                      if (!confirm(`Reply publicly as your account?\n\n${draft[c.id]}`)) return
+                      if (!(await confirmDialog({ title: 'Reply publicly as your account?', message: draft[c.id] ?? '', confirm: 'Reply' }))) return
                       setBusy(c.id)
                       try {
                         await window.stm.social.reply(net!, c.id, draft[c.id]!, post?.id)
@@ -251,8 +252,8 @@ function Queue(props: { nets: SocialStatus[]; onErr: (e: string) => void }) {
             const p = on && (draftItem.text.trim() || draftItem.mediaUrl) ? problem(draftItem, x.id) : ''
             const lim = LIMIT[x.id]
             return (
-              <label key={x.id} className={`pe-int ${on ? 'on' : ''} ${p ? 'warn' : ''}`} title={!x.connected ? 'Not connected' : p || x.can.note}>
-                <input type="checkbox" disabled={!x.connected} checked={Boolean(on)} onChange={() => setD({ ...d, networks: on ? d.networks!.filter((y) => y !== x.id) : [...(d.networks ?? []), x.id] })} />
+              <label key={x.id} className={`pe-int ${on ? 'on' : ''} ${p ? 'warn' : ''}`} data-tip={!x.connected ? 'Not connected' : p || x.can.note}>
+                <Checkbox disabled={!x.connected} checked={Boolean(on)} onChange={() => setD({ ...d, networks: on ? d.networks!.filter((y) => y !== x.id) : [...(d.networks ?? []), x.id] })} />
                 <IntegrationMark id={x.id} name={x.name} size={16} />
                 {x.name}
                 {on && lim && <span className={`biz-count ${(d.text ?? '').length > lim ? 'over' : ''}`}>{(d.text ?? '').length}/{lim}</span>}
@@ -262,7 +263,7 @@ function Queue(props: { nets: SocialStatus[]; onErr: (e: string) => void }) {
         </div>
         <div className="biz-row">
           <span className="faint">When</span>
-          <input type="datetime-local" className="trig-time" value={local(d.when)} onChange={(e) => setD({ ...d, when: e.target.value ? new Date(e.target.value).getTime() : null })} />
+          <DateTimeField className="trig-time" value={local(d.when)} onChange={(e) => setD({ ...d, when: e.target.value ? new Date(e.target.value).getTime() : null })} />
           <span className="faint">{d.when ? '' : 'as soon as you approve it'}</span>
           <span className="spacer-flex" />
           <button className="primary small" disabled={!d.text?.trim() || !d.networks?.length} onClick={() => void run(async () => { const r = await window.stm.social.save(d); setD(blank); return r })}>Add to queue</button>
@@ -288,7 +289,7 @@ function Queue(props: { nets: SocialStatus[]; onErr: (e: string) => void }) {
                 {i.networks.map((n) => {
                   const r = i.results[n]
                   return (
-                    <span key={n} className={`biz-res ${r ? (r.ok ? 'ok' : 'bad') : ''}`} title={r?.error ?? r?.url ?? ''}>
+                    <span key={n} className={`biz-res ${r ? (r.ok ? 'ok' : 'bad') : ''}`} data-tip={r?.error ?? r?.url ?? ''}>
                       <IntegrationMark id={n} size={14} />
                       {r ? (r.ok ? 'posted' : 'failed') : 'waiting'}
                       {r?.url && <button className="ghost small" onClick={() => void window.stm.setupOpen(r.url!)}>Open</button>}
@@ -344,7 +345,7 @@ function Accounts(props: { nets: SocialStatus[]; onChange: () => void; onErr: (e
             </span>
             <span className="spacer-flex" />
             {x.connected ? (
-              <button className="ghost small pcard-del" onClick={async () => { if (confirm(`Disconnect ${x.name}? Its token is deleted from this Mac.`)) { try { await window.stm.social.disconnect(x.id); props.onChange() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
+              <button className="ghost small pcard-del" onClick={async () => { if (await confirmDialog({ message: `Disconnect ${x.name}? Its token is deleted from this Mac.`, confirm: 'Disconnect', danger: true })) { try { await window.stm.social.disconnect(x.id); props.onChange() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
             ) : (
               <button className={open === x.id ? 'ghost small' : 'primary small'} onClick={() => setOpen(open === x.id ? null : x.id)}>{open === x.id ? 'Cancel' : 'Connect'}</button>
             )}
@@ -412,7 +413,7 @@ function VoiceCard(props: { onErr: (e: string) => void }) {
         </span>
         <span className="spacer-flex" />
         {st.connected ? (
-          <button className="ghost small pcard-del" onClick={async () => { if (confirm('Disconnect ElevenLabs? Its key is deleted from this Mac.')) { try { await window.stm.voice.disconnect(); load() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
+          <button className="ghost small pcard-del" onClick={async () => { if (await confirmDialog({ message: 'Disconnect ElevenLabs? Its key is deleted from this Mac.', confirm: 'Disconnect', danger: true })) { try { await window.stm.voice.disconnect(); load() } catch (e) { props.onErr(clean(e)) } } }}>Disconnect</button>
         ) : (
           <button className={open ? 'ghost small' : 'primary small'} onClick={() => setOpen(!open)}>{open ? 'Cancel' : 'Connect'}</button>
         )}
@@ -480,9 +481,9 @@ function StorageCard(props: { onErr: (e: string) => void }) {
       {open && (
         <div className="biz-setup">
           <div className="biz-row">
-            <select value={c.provider} onChange={(e) => setC({ ...c, provider: e.target.value as StorageConfig['provider'] })}>
+            <Select value={c.provider} onChange={(e) => setC({ ...c, provider: e.target.value as StorageConfig['provider'] })}>
               {Object.entries(st.providers).map(([id, p]) => <option key={id} value={id}>{p.name}</option>)}
-            </select>
+            </Select>
             <input placeholder="Bucket" value={c.bucket ?? ''} onChange={(e) => setC({ ...c, bucket: e.target.value })} />
             {prov.needs.includes('accountId') && <input placeholder="Account ID" value={c.accountId ?? ''} onChange={(e) => setC({ ...c, accountId: e.target.value })} />}
             {prov.needs.includes('region') && <input placeholder="Region" value={c.region ?? ''} onChange={(e) => setC({ ...c, region: e.target.value })} />}

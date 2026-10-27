@@ -369,8 +369,8 @@ export function TermView(props: { sid: string; active: boolean; onAttach: (note:
           <StateMark state={shell ? 'up' : 'off'} size="md" label={shell ? 'Ready' : 'Starting'} />
         )}
         <span className="term-shell">{shell?.shell ?? 'shell'}</span>
-        <span className="term-where" title={shell?.cwd}>{where}</span>
-        {shell?.headroom && <span className="term-via" title="claude, aider and other tools started here go through Headroom's proxy, like headroom wrap">via Headroom</span>}
+        <span className="term-where" data-tip={shell?.cwd}>{where}</span>
+        {shell?.headroom && <span className="term-via" data-tip="claude, aider and other tools started here go through Headroom's proxy, like headroom wrap">via Headroom</span>}
         {remote ? (
           <span className={`term-remote ${remote.kind}`} key={remote.name}>
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 8h9M8 4l4 4-4 4" /></svg>
@@ -387,12 +387,12 @@ export function TermView(props: { sid: string; active: boolean; onAttach: (note:
         ) : null}
         <span className="spacer-flex" />
         {ended !== null && <button className="small" onClick={() => void start()}>Restart shell</button>}
-        <button className={`ghost small term-cmd-btn ${bar ? 'on' : ''}`} onClick={() => setBar(!bar)} aria-expanded={bar} title="Command bar: past commands by meaning, plain words to a command (Ctrl+Space)">
+        <button className={`ghost small term-cmd-btn ${bar ? 'on' : ''}`} onClick={() => setBar(!bar)} aria-expanded={bar} data-tip="Command bar: past commands by meaning, plain words to a command (Ctrl+Space)">
           <svg viewBox="0 0 16 16" aria-hidden><path d="M2 4l4 4-4 4M8 12h6" /></svg>
           Command
         </button>
         <div className="term-connect-wrap">
-          <button className={`ghost small term-connect-btn ${picker ? 'on' : ''}`} onClick={() => setPicker(!picker)} aria-expanded={picker} title="Open a shell in a container, an SSH host or a cloud machine">
+          <button className={`ghost small term-connect-btn ${picker ? 'on' : ''}`} onClick={() => setPicker(!picker)} aria-expanded={picker} data-tip="Open a shell in a container, an SSH host or a cloud machine">
             <svg viewBox="0 0 16 16" aria-hidden><rect x="1.5" y="4" width="5" height="8" /><path d="M6.5 8h4M9 5.5 11.5 8 9 10.5" /><circle cx="13" cy="8" r="1.6" /></svg>
             Connect
           </button>
@@ -402,19 +402,19 @@ export function TermView(props: { sid: string; active: boolean; onAttach: (note:
             term.current?.focus()
           }} onClose={() => setPicker(false)} />}
         </div>
-        <button className="ghost small term-explain" onClick={() => setExplain(grab())} title="The local model explains the error in the selection or the last lines; free, nothing leaves the Mac">
+        <button className="ghost small term-explain" onClick={() => setExplain(grab())} data-tip="The local model explains the error in the selection or the last lines; free, nothing leaves the Mac">
           <svg viewBox="0 0 16 16" aria-hidden><path d="M8 1.5 14.5 13H1.5Z" /><path d="M8 6v3.5M8 11.2v.1" /></svg>
           Explain
         </button>
-        <button className={`ghost small ${find ? 'on' : ''}`} onClick={() => (find ? closeFind() : setFind({ q: '', n: 0, of: 0 }))} title="Search the scrollback (Cmd+F)"><IconSearch />Find</button>
-        <button className={`ghost small ${copy ? 'on' : ''}`} onClick={() => (copy ? endCopy() : (startCopy(), host.current?.focus()))} title="Copy mode: move with h j k l w b, v to select, y to copy, Esc to leave (Cmd+Shift+C)"><IconCopy />Copy mode</button>
-        <button className="ghost small" onClick={() => term.current?.clear()} title="Clear (Cmd+K)"><IconClear />Clear</button>
-        <button className="ghost small term-send" onClick={send} title="Adds the selection, or the last lines, to your message">
+        <button className={`ghost small ${find ? 'on' : ''}`} onClick={() => (find ? closeFind() : setFind({ q: '', n: 0, of: 0 }))} data-tip="Search the scrollback (Cmd+F)"><IconSearch />Find</button>
+        <button className={`ghost small ${copy ? 'on' : ''}`} onClick={() => (copy ? endCopy() : (startCopy(), host.current?.focus()))} data-tip="Copy mode: move with h j k l w b, v to select, y to copy, Esc to leave (Cmd+Shift+C)"><IconCopy />Copy mode</button>
+        <button className="ghost small" onClick={() => term.current?.clear()} data-tip="Clear (Cmd+K)"><IconClear />Clear</button>
+        <button className="ghost small term-send" onClick={send} data-tip="Adds the selection, or the last lines, to your message">
           <svg viewBox="0 0 16 16" aria-hidden><path d="M2 2h6M2 2v6M14 14H8M14 14V8" /></svg>
           {hasSel ? 'Send selection' : 'Send output'}
           {toks > 0 && <span className="term-toks">~{toks >= 1000 ? `${(toks / 1000).toFixed(1)}k` : toks}</span>}
         </button>
-        {longToks > 2000 && <button className="ghost small" disabled={shrinking} onClick={() => void sendShorter()} title={`${hasSel ? 'The selection' : 'The last 400 lines'} (~${longToks.toLocaleString('en-US')} tokens), shortened first by the local model, keeping errors, paths and numbers (free)`}>{shrinking ? 'Shortening…' : hasSel ? 'Send shorter' : 'Send more, shorter'}</button>}
+        {longToks > 2000 && <button className="ghost small" disabled={shrinking} onClick={() => void sendShorter()} data-tip={`${hasSel ? 'The selection' : 'The last 400 lines'} (~${longToks.toLocaleString('en-US')} tokens), shortened first by the local model, keeping errors, paths and numbers (free)`}>{shrinking ? 'Shortening…' : hasSel ? 'Send shorter' : 'Send more, shorter'}</button>}
       </div>
       {bar && <CmdBar sid={props.sid} history={hist} onClose={() => { setBar(false); term.current?.focus() }} onRan={(cmd) => cwdRef.current && void window.stm.term.remember(cwdRef.current, cmd).then(setHist)} />}
       {hold && (
@@ -502,7 +502,7 @@ function ConnectPicker(props: { onPick: (t: Target) => void; onClose: () => void
           <div key={k} className="term-connect-group">
             <div className="sp-label">{KIND[k]}</div>
             {items.map((t) => (
-              <button key={t.command} role="menuitem" className={`term-target ${k}`} onClick={() => props.onPick(t)} title={t.command}>
+              <button key={t.command} role="menuitem" className={`term-target ${k}`} onClick={() => props.onPick(t)} data-tip={t.command}>
                 <svg viewBox="0 0 10 10" aria-hidden>{k === 'docker' ? <rect x="1.2" y="1.2" width="7.6" height="7.6" /> : k === 'ssh' ? <circle cx="5" cy="5" r="3.8" /> : <path d="M5 1 9.2 9H.8Z" />}</svg>
                 <span className="term-target-name">{t.name}</span>
                 <span className="term-target-detail">{t.detail}</span>

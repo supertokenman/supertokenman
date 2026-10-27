@@ -5,6 +5,7 @@ import type { Persona } from '../shared/personas'
 import type { WbState } from './bridge'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox } from './ui'
 
 const close = (
   <IconClose />
@@ -155,7 +156,7 @@ function Filters(props: { st: WbState; act: (p: Promise<WbState>) => void }) {
               <tr key={r.id}>
                 <td>{r.name}</td>
                 {names.map(([k]) => (
-                  <td key={k}><input type="checkbox" aria-label={`${props.st.filterNames[k]} for ${r.name}`} checked={on.includes(k)} onChange={(e) => props.act(window.stm.wb.setFilters(r.id, e.target.checked ? [...on, k] : on.filter((x) => x !== k)))} /></td>
+                  <td key={k}><Checkbox aria-label={`${props.st.filterNames[k]} for ${r.name}`} checked={on.includes(k)} onChange={(e) => props.act(window.stm.wb.setFilters(r.id, e.target.checked ? [...on, k] : on.filter((x) => x !== k)))} /></td>
                 ))}
               </tr>
             )

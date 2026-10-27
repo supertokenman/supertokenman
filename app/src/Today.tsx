@@ -55,7 +55,7 @@ export function TodaySheet(props: {
 
         <div className="td-strip" aria-label="Today from 8 to 20">
           {today.map((e) => (
-            <span key={e.id} className="td-block" style={{ left: `${x(e.start)}%`, width: `${Math.max(1.2, x(e.end) - x(e.start))}%` }} title={`${hm(e.start)} ${e.title}`} />
+            <span key={e.id} className="td-block" style={{ left: `${x(e.start)}%`, width: `${Math.max(1.2, x(e.end) - x(e.start))}%` }} data-tip={`${hm(e.start)} ${e.title}`} role="img" aria-label={`${hm(e.start)} ${e.title}`} />
           ))}
           <span className="td-now" style={{ left: `${x(now)}%` }} />
           {[8, 10, 12, 14, 16, 18, 20].map((h) => <span key={h} className={`td-tick${h === 8 ? ' first' : h === 20 ? ' last' : ''}`} style={{ left: `${((h - 8) / 12) * 100}%` }}>{h}</span>)}

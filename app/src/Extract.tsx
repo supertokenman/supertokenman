@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { asJson, estimate, type Extracted, type FieldSpec } from '../shared/extract'
+import { Checkbox } from './ui'
+import { pickFile } from './FilePicker'
 
 const KEY = 'stm.extract.fields'
 const load = (): FieldSpec[] => {
@@ -73,7 +75,7 @@ export function ExtractSheet(props: { project?: string; onClose: () => void }) {
               <div key={i} className="ex-field">
                 <input value={f.name} placeholder="name" aria-label="Field name" onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} />
                 <input value={f.description} placeholder="what it is" aria-label="Field description" onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, description: e.target.value } : x)))} />
-                <label className="ex-many" title="Can appear many times"><input type="checkbox" checked={Boolean(f.many)} onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, many: e.target.checked } : x)))} />many</label>
+                <label className="ex-many" data-tip="Can appear many times"><Checkbox checked={Boolean(f.many)} onChange={(e) => setFields(fields.map((x, k) => (k === i ? { ...x, many: e.target.checked } : x)))} />many</label>
                 <button className="icon" aria-label={`Remove ${f.name || 'field'}`} onClick={() => setFields(fields.filter((_, k) => k !== i))}><IconClose /></button>
               </div>
             ))}
@@ -82,7 +84,7 @@ export function ExtractSheet(props: { project?: string; onClose: () => void }) {
             <span className="chart-name">Text</span>
             <textarea className="ex-text" rows={10} value={text} onChange={(e) => (setText(e.target.value), setItems(null))} placeholder="Paste a log, a spec or an issue, or open a file" aria-label="Text" spellCheck={false} />
             <div className="ob-row">
-              <label className="btn ex-file">Open a file<input type="file" accept=".txt,.log,.md,.json,.csv,.yaml,.yml,.xml,.html" onChange={(e) => void e.target.files?.[0]?.text().then((t) => (setText(t), setItems(null)))} hidden /></label>
+              <button type="button" className="btn ex-file" onClick={() => void pickFile({ title: 'Open a file', accept: ['txt', 'log', 'md', 'json', 'csv', 'yaml', 'yml', 'xml', 'html'], action: 'Open' }).then((f) => f?.text().then((t) => (setText(t), setItems(null))))}>Open a file</button>
               {est && <span className="faint">{est.chunks} part{est.chunks === 1 ? '' : 's'} · about {(est.tokensIn / 1000).toFixed(1)}k tokens in</span>}
               <span className="spacer-flex" />
               {busy ? <button onClick={() => void window.stm.extract.stop()}>Stop ({busy.done}/{busy.of})</button> : <button className="primary" disabled={!text.trim() || !fields.some((f) => f.name.trim())} onClick={run}>Extract</button>}

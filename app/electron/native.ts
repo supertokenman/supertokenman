@@ -1,7 +1,7 @@
 // The Mac feel (phase 79): an application menu with the app's real shortcuts, a right-click menu in the
 // window (spelling, cut, copy, paste, links), the window put back where it was, and a dock badge for
 // pending approvals. Shortcuts in the menu are shown, not captured: the window keeps handling its keys.
-import { app, BrowserWindow, clipboard, Menu, screen, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, Menu, screen, shell, type MenuItemConstructorOptions } from 'electron'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { clampBounds, parseState, type WinState } from '../shared/winstate.js'
@@ -31,20 +31,36 @@ export function menuTemplate(go: (id: string) => void, opts: { mac: boolean; dev
   ]
 }
 
-/** Right click in the app's window: what fits where the click was. Inspect only in development. */
+/**
+ * Right click in the app's window: what fits where the click was. Inspect only in development. The rows
+ * are drawn by the app (src/ui/ContextMenu.tsx, not the system's menu); the chosen one runs here.
+ */
+type Row = { label: string; enabled?: boolean; run: () => void } | 'sep'
+export function contextRows(win: BrowserWindow, p: Electron.ContextMenuParams, dev: boolean): Row[] {
+  const wc = win.webContents
+  const t: Row[] = []
+  if (p.misspelledWord) {
+    for (const s of p.dictionarySuggestions.slice(0, 5)) t.push({ label: s, run: () => wc.replaceMisspelling(s) })
+    t.push({ label: 'Add to dictionary', run: () => wc.session.addWordToSpellCheckerDictionary(p.misspelledWord) }, 'sep')
+  }
+  if (p.linkURL && /^https?:\/\//.test(p.linkURL)) t.push({ label: 'Open link in browser', run: () => void shell.openExternal(p.linkURL) }, { label: 'Copy link', run: () => clipboard.writeText(p.linkURL) }, 'sep')
+  if (p.isEditable) t.push({ label: 'Cut', enabled: p.editFlags.canCut, run: () => wc.cut() }, { label: 'Copy', enabled: p.editFlags.canCopy, run: () => wc.copy() }, { label: 'Paste', enabled: p.editFlags.canPaste, run: () => wc.paste() }, 'sep', { label: 'Select all', run: () => wc.selectAll() })
+  else if (p.selectionText.trim()) t.push({ label: 'Copy', run: () => wc.copy() })
+  if (dev) t.push('sep', { label: 'Inspect', run: () => wc.inspectElement(p.x, p.y) })
+  while (t.length && t[t.length - 1] === 'sep') t.pop()
+  return t
+}
 export function contextMenu(win: BrowserWindow, dev: boolean) {
+  let rows: Row[] = []
   win.webContents.on('context-menu', (_e, p) => {
-    const t: MenuItemConstructorOptions[] = []
-    if (p.misspelledWord) {
-      for (const s of p.dictionarySuggestions.slice(0, 5)) t.push({ label: s, click: () => win.webContents.replaceMisspelling(s) })
-      t.push({ label: 'Add to dictionary', click: () => win.webContents.session.addWordToSpellCheckerDictionary(p.misspelledWord) }, { type: 'separator' })
-    }
-    if (p.linkURL && /^https?:\/\//.test(p.linkURL)) t.push({ label: 'Open link in browser', click: () => void shell.openExternal(p.linkURL) }, { label: 'Copy link', click: () => clipboard.writeText(p.linkURL) }, { type: 'separator' })
-    if (p.isEditable) t.push({ role: 'cut', enabled: p.editFlags.canCut }, { role: 'copy', enabled: p.editFlags.canCopy }, { role: 'paste', enabled: p.editFlags.canPaste }, { type: 'separator' }, { role: 'selectAll' })
-    else if (p.selectionText.trim()) t.push({ role: 'copy' })
-    if (dev) t.push({ type: 'separator' }, { label: 'Inspect', click: () => win.webContents.inspectElement(p.x, p.y) })
-    while (t.length && t[t.length - 1]!.type === 'separator') t.pop()
-    if (t.length) Menu.buildFromTemplate(t).popup({ window: win })
+    rows = contextRows(win, p, dev)
+    if (rows.length) win.webContents.send('ctx:open', { x: p.x, y: p.y, items: rows.map((r) => (r === 'sep' ? { sep: true } : { label: r.label, enabled: r.enabled !== false })) })
+  })
+  ipcMain.on('ctx:pick', (e, i: unknown) => {
+    if (e.sender !== win.webContents || typeof i !== 'number') return
+    const r = rows[i]
+    rows = []
+    if (r && r !== 'sep' && r.enabled !== false) r.run()
   })
 }
 /** Bounds to open with, from the saved state, kept on a screen that exists now. */

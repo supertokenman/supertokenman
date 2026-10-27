@@ -4,6 +4,7 @@ import type { DbColumn, DbConn, DbResult } from '../electron/db'
 import { StateMark } from './StateMark'
 import { IconAdd, IconCheck, IconTrash } from './icons'
 import './bridge'
+import { Select } from './ui'
 
 const show = (v: unknown) => (v === null || v === undefined ? null : typeof v === 'string' ? v : String(v))
 
@@ -140,7 +141,7 @@ export function DataGrid(props: { conn: DbConn; table: { schema: string; name: s
             <tr>{editable && <th className="grd-x" />}{cols.map((c, i) => {
               const s0 = props.view?.sort?.col === c.name ? (props.view.sort.desc ? ' ↓' : ' ↑') : ''
               const sortBy = () => props.view && props.onView?.({ ...props.view, page: 0, sort: props.view.sort?.col === c.name && !props.view.sort.desc ? { col: c.name, desc: true } : props.view.sort?.col === c.name ? undefined : { col: c.name, desc: false } })
-              return <th key={i} className={`${typeof res.rows[0]?.[i] === 'number' ? 'num' : ''} ${props.onView ? 'grd-sortable' : ''}`} title={`${c.type}${c.nullable ? '' : ', not null'}${props.onView ? ' · click to sort' : ''}`} onClick={sortBy}>{c.pk && <span className="grd-pk">PK</span>}{c.name}<span className="grd-sort">{s0}</span></th>
+              return <th key={i} className={`${typeof res.rows[0]?.[i] === 'number' ? 'num' : ''} ${props.onView ? 'grd-sortable' : ''}`} data-tip={`${c.type}${c.nullable ? '' : ', not null'}${props.onView ? ' · click to sort' : ''}`} onClick={sortBy}>{c.pk && <span className="grd-pk">PK</span>}{c.name}<span className="grd-sort">{s0}</span></th>
             })}</tr>
           </thead>
           <tbody>
@@ -164,7 +165,7 @@ export function DataGrid(props: { conn: DbConn; table: { schema: string; name: s
                     const s = show(v)
                     const open = cell && cell.r === i && cell.c === j
                     return (
-                      <td key={j} className={`${typeof v === 'number' ? 'num' : s === null ? 'null' : ''} ${p ? 'grd-changed' : ''} ${sel?.r === i && sel.c === j ? 'grd-sel' : ''}`} title={p ? `was: ${show(v0) ?? 'NULL'}` : s ?? 'NULL'} onClick={() => setSel({ r: i, c: j })} onDoubleClick={() => editable && !gone && setCell({ r: i, c: j, text: editorFor(cols[j]!.type) === 'datetime' && s ? s.slice(0, 16).replace(' ', 'T') : s ?? '' })}>
+                      <td key={j} className={`${typeof v === 'number' ? 'num' : s === null ? 'null' : ''} ${p ? 'grd-changed' : ''} ${sel?.r === i && sel.c === j ? 'grd-sel' : ''}`} data-tip={p ? `was: ${show(v0) ?? 'NULL'}` : s ?? 'NULL'} onClick={() => setSel({ r: i, c: j })} onDoubleClick={() => editable && !gone && setCell({ r: i, c: j, text: editorFor(cols[j]!.type) === 'datetime' && s ? s.slice(0, 16).replace(' ', 'T') : s ?? '' })}>
                         {open ? (
                           <CellEditor col={cols[j]!} text={cell.text} onText={(t) => setCell({ ...cell, text: t })} onDone={commit} onCancel={() => (setCell(null), setCellErr(''))} />
                         ) : s === null ? (isNew ? '' : 'NULL') : s.length > 120 ? `${s.slice(0, 120)}…` : s}
@@ -193,13 +194,13 @@ function CellEditor(props: { col: DbColumn; text: string; onText: (t: string) =>
   const label = `${col.name} value`
   if (ed === 'bool')
     return (
-      <select autoFocus className="grd-input" value={props.text === '' ? (col.nullable ? '' : 'false') : /^(1|true)$/i.test(props.text) ? 'true' : 'false'} onChange={(e) => props.onText(e.target.value)} onBlur={props.onDone} onKeyDown={keys} aria-label={label}>
+      <Select autoFocus className="grd-input" value={props.text === '' ? (col.nullable ? '' : 'false') : /^(1|true)$/i.test(props.text) ? 'true' : 'false'} onChange={(e) => props.onText(e.target.value)} onBlur={props.onDone} onKeyDown={keys} aria-label={label}>
         <option value="true">true</option>
         <option value="false">false</option>
         {col.nullable && <option value="">NULL</option>}
-      </select>
+      </Select>
     )
-  if (ed === 'json') return <textarea autoFocus className="grd-input grd-json" value={props.text} onChange={(e) => props.onText(e.target.value)} onBlur={props.onDone} onKeyDown={keys} aria-label={label} spellCheck={false} title="Cmd+Enter keeps it" />
+  if (ed === 'json') return <textarea autoFocus className="grd-input grd-json" value={props.text} onChange={(e) => props.onText(e.target.value)} onBlur={props.onDone} onKeyDown={keys} aria-label={label} spellCheck={false} data-tip="Cmd+Enter keeps it" />
   const type = ed === 'date' ? 'date' : ed === 'datetime' ? 'datetime-local' : 'text'
   return <input autoFocus className="grd-input" type={type} inputMode={ed === 'number' ? 'decimal' : undefined} value={props.text} onChange={(e) => props.onText(e.target.value)} onBlur={props.onDone} onKeyDown={keys} aria-label={label} />
 }
@@ -218,8 +219,8 @@ function GridNav(props: { view: View; total: number | null; shown: number; colum
     <div className="grd-nav">
       <form className="grd-filter" onSubmit={(e) => (e.preventDefault(), add())}>
         <span className="grd-tag">WHERE</span>
-        <select value={props.fcol} onChange={(e) => props.setFcol(e.target.value)} aria-label="Filter column">{props.columns.map((c) => <option key={c}>{c}</option>)}</select>
-        <select value={props.fop} onChange={(e) => props.setFop(e.target.value as Op)} aria-label="Filter operator">{OPS.map((o) => <option key={o} value={o}>{o === 'null' ? 'is null' : o === 'not null' ? 'is not null' : o}</option>)}</select>
+        <Select value={props.fcol} onChange={(e) => props.setFcol(e.target.value)} aria-label="Filter column">{props.columns.map((c) => <option key={c}>{c}</option>)}</Select>
+        <Select value={props.fop} onChange={(e) => props.setFop(e.target.value as Op)} aria-label="Filter operator">{OPS.map((o) => <option key={o} value={o}>{o === 'null' ? 'is null' : o === 'not null' ? 'is not null' : o}</option>)}</Select>
         {props.fop !== 'null' && props.fop !== 'not null' && <input value={props.fval} onChange={(e) => props.setFval(e.target.value)} placeholder="value" aria-label="Filter value" />}
         <button className="ghost small" type="submit">Add filter</button>
         {view.filters.map((f, i) => (
@@ -231,7 +232,7 @@ function GridNav(props: { view: View; total: number | null; shown: number; colum
       </form>
       <span className="spacer-flex" />
       <span className="grd-count">{props.shown ? `${(from + 1).toLocaleString()}–${(from + props.shown).toLocaleString()}` : '0'}{total !== null ? ` of ${total.toLocaleString()}` : ''}</span>
-      <select value={view.size} onChange={(e) => props.onView({ ...view, page: 0, size: Number(e.target.value) })} aria-label="Rows per page">{[50, 100, 250, 500].map((n) => <option key={n} value={n}>{n} / page</option>)}</select>
+      <Select value={view.size} onChange={(e) => props.onView({ ...view, page: 0, size: Number(e.target.value) })} aria-label="Rows per page">{[50, 100, 250, 500].map((n) => <option key={n} value={n}>{n} / page</option>)}</Select>
       <button className="ghost small" disabled={view.page === 0} onClick={() => props.onView({ ...view, page: view.page - 1 })} aria-label="Previous page">‹</button>
       <button className="ghost small" disabled={last} onClick={() => props.onView({ ...view, page: view.page + 1 })} aria-label="Next page">›</button>
     </div>

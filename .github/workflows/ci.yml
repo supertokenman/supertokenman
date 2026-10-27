@@ -27,6 +27,8 @@ jobs:
           npm ci
           npm run typecheck
           npm test
+          # own controls, no macOS defaults (docs/BRAND.md): no <select>, raw checkbox and friends, title= or confirm() in src
+          node scripts/no-native-ui.mjs
       - name: token-kit
         working-directory: token-kit
         run: |

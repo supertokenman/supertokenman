@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 /** One row action: an icon button whose words are its tooltip (src/tips.ts) and its accessible name. */
 export function RowAct(props: { label: string; icon: ReactNode; onClick: () => void; danger?: boolean; disabled?: boolean }) {
   return (
-    <button type="button" className={`icon ${props.danger ? 'danger' : ''}`} title={props.label} aria-label={props.label} disabled={props.disabled} onClick={props.onClick}>
+    <button type="button" className={`icon ${props.danger ? 'danger' : ''}`} data-tip={props.label} aria-label={props.label} disabled={props.disabled} onClick={props.onClick}>
       {props.icon}
     </button>
   )

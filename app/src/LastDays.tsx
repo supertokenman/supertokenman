@@ -5,6 +5,7 @@ import { EmptyState } from './EmptyState'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, Select } from './ui'
 
 const SOURCES: BriefSource[] = ['reddit', 'youtube', 'hn', 'github']
 const TAG: Record<BriefSource, string> = { reddit: 'Reddit', youtube: 'YouTube', hn: 'HN', github: 'GitHub' }
@@ -59,14 +60,14 @@ export function LastDays(props: { cwd?: string; onDraft: (title: string, brief: 
     <div className="dsg-body">
       <div className="dep-row">
         <input id="l30-query" value={query} placeholder="A topic, e.g. Bun 2, or a public handle, e.g. @simonw" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && query.trim().length >= 3 && !busy && void run()} />
-        <label className="rs-num">Days<select value={days} onChange={(e) => setDays(Number(e.target.value))}>{[7, 14, 30, 60, 90].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+        <label className="rs-num">Days<Select value={days} onChange={(e) => setDays(Number(e.target.value))}>{[7, 14, 30, 60, 90].map((n) => <option key={n} value={n}>{n}</option>)}</Select></label>
         <button className="primary small" disabled={busy || query.trim().length < 3 || picked.length === 0} onClick={() => void run()}>{busy ? <><StateMark state="busy" label="Working" /> Gathering…</> : 'Make the brief'}</button>
       </div>
       <div className="rs-opts">
         {SOURCES.map((s) => (
           <span key={s} className="rs-kind">
-            <label title={ready(s) ? '' : 'Skipped until connected'}>
-              <input type="checkbox" checked={picked.includes(s)} onChange={(e) => setPicked(e.target.checked ? [...picked, s] : picked.filter((x) => x !== s))} />
+            <label data-tip={ready(s) ? '' : 'Skipped until connected'}>
+              <Checkbox checked={picked.includes(s)} onChange={(e) => setPicked(e.target.checked ? [...picked, s] : picked.filter((x) => x !== s))} />
               {SOURCE_LABEL[s]}
             </label>
             {!ready(s) && <button className="ghost small" onClick={() => (setConnecting(s as 'reddit' | 'youtube'), setCred({ a: '', b: '' }))}>{s === 'reddit' ? 'Connect Reddit' : 'Add API key'}</button>}
@@ -101,7 +102,7 @@ export function LastDays(props: { cwd?: string; onDraft: (title: string, brief: 
       {err && <div className="notice error">{err}</div>}
       {states.length > 0 && (
         <div className="rs-reads">
-          {states.map((s) => <span key={s.source} className={`rs-read ${s.error ? 'bad' : s.skipped ? '' : 'ok'}`} title={s.error ?? s.skipped ?? ''}>{TAG[s.source]} {s.skipped ? 'skipped' : s.error ? '!' : s.found}</span>)}
+          {states.map((s) => <span key={s.source} className={`rs-read ${s.error ? 'bad' : s.skipped ? '' : 'ok'}`} data-tip={s.error ?? s.skipped ?? ''}>{TAG[s.source]} {s.skipped ? 'skipped' : s.error ? '!' : s.found}</span>)}
         </div>
       )}
       {res && 'stopped' in res && <div className="notice">{res.stopped}</div>}

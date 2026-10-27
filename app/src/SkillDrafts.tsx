@@ -8,6 +8,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconCheck, IconClose, IconSpark, IconTrash } from './icons'
 import './bridge'
+import { Checkbox, Select } from './ui'
 
 /** The panel's conversation as turns for a draft: the last few, each with the tools it used. */
 export function turnsOfLines(lines: Line[], max = 8): DraftTurn[] {
@@ -59,7 +60,7 @@ export function SkillDraftsSheet(props: { focus?: string; cwd?: string; onClose:
         <div className="sd-import">
           <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Import a skill from a link (GitHub file or raw SKILL.md)" aria-label="Skill link" spellCheck={false} />
           <button disabled={!url.trim() || ibusy} onClick={importUrl}>{ibusy ? 'Reading...' : 'Import as a draft'}</button>
-          <button className="ghost" title="obsidian-markdown and json-canvas from kepano/obsidian-skills (MIT), shipped with the app at a fixed commit. They wait here until you approve them." onClick={() => void window.stm.sdraft.factory(props.cwd ?? '').then((n) => (load(), setIerr(n ? '' : 'The vault format skills are already in your drafts.')), (e) => setIerr(clean(e)))}>Add vault format skills</button>
+          <button className="ghost" data-tip="obsidian-markdown and json-canvas from kepano/obsidian-skills (MIT), shipped with the app at a fixed commit. They wait here until you approve them." onClick={() => void window.stm.sdraft.factory(props.cwd ?? '').then((n) => (load(), setIerr(n ? '' : 'The vault format skills are already in your drafts.')), (e) => setIerr(clean(e)))}>Add vault format skills</button>
           {ierr && <div className="notice error">{ierr}</div>}
         </div>
         {rows && !rows.length ? (
@@ -141,7 +142,7 @@ function Editor(props: { row: SkillDraftRow; onDone: () => void }) {
                 const bi = blocks.indexOf(f)
                 return (
                   <li key={i} className={f.level}>
-                    {f.level === 'block' ? <label><input type="checkbox" checked={acks.includes(bi)} onChange={(e) => setAcks(e.target.checked ? [...acks, bi] : acks.filter((x) => x !== bi))} /> {f.text}</label> : f.text}
+                    {f.level === 'block' ? <label><Checkbox checked={acks.includes(bi)} onChange={(e) => setAcks(e.target.checked ? [...acks, bi] : acks.filter((x) => x !== bi))} /> {f.text}</label> : f.text}
                   </li>
                 )
               })}
@@ -157,7 +158,7 @@ function Editor(props: { row: SkillDraftRow; onDone: () => void }) {
       <div className="fld-grid">
         <label className="fld"><span className="fld-label">Name</span><input value={d.name} onChange={(e) => set({ name: e.target.value.toLowerCase() })} onBlur={save} /></label>
         <label className="fld"><span className="fld-label">Goes to</span>
-          <select value={scope} onChange={(e) => (setScope(e.target.value as 'project' | 'personal'), setConfirm(false), setExists(''))}><option value="project">This project ({props.row.project})</option><option value="personal">My skills, every project</option></select>
+          <Select value={scope} onChange={(e) => (setScope(e.target.value as 'project' | 'personal'), setConfirm(false), setExists(''))}><option value="project">This project ({props.row.project})</option><option value="personal">My skills, every project</option></Select>
         </label>
         <label className="fld wide"><span className="fld-label">When Claude should use it</span><input value={d.description} onChange={(e) => set({ description: e.target.value.replace(/\n/g, ' ') })} onBlur={save} /><span className="fld-help">Claude reads this line to decide when the skill applies.</span></label>
         <label className="fld wide"><span className="fld-label">Instructions</span><textarea rows={14} value={d.body} onChange={(e) => set({ body: e.target.value })} onBlur={save} spellCheck={false} /></label>
@@ -168,7 +169,7 @@ function Editor(props: { row: SkillDraftRow; onDone: () => void }) {
       {confirm && !exists && <div className="notice">Approving writes {where}. From then on Claude Code may use it when a task matches the line above.</div>}
       <div className="ob-row">
         <button className="ghost small" disabled={!!busy} onClick={() => void window.stm.sdraft.discard(props.row.id).then(props.onDone)}><IconTrash />Discard</button>
-        <button className="small" disabled={!!busy} onClick={() => void polish()} title="Make the steps general with the local model; free, nothing leaves the Mac">{busy === 'polish' ? <StateMark state="busy" label="Polishing" /> : <IconSpark />}Polish with the local model</button>
+        <button className="small" disabled={!!busy} onClick={() => void polish()} data-tip="Make the steps general with the local model; free, nothing leaves the Mac">{busy === 'polish' ? <StateMark state="busy" label="Polishing" /> : <IconSpark />}Polish with the local model</button>
         {prev !== null && <button className="ghost small" onClick={() => (set({ body: prev }), setPrev(null))}>Undo polish</button>}
         <span className="spacer-flex" />
         {exists ? <button className="danger small" disabled={!!busy} onClick={() => void approve(true)}>Replace it</button>

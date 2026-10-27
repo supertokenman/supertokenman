@@ -4,6 +4,7 @@ import { IconClose } from './icons'
 import type { Config, Entry, Filter } from '../shared/mcpcat'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, Select } from './ui'
 
 const close = (
   <IconClose />
@@ -55,11 +56,11 @@ export function McpCatalogSheet(props: { cwd?: string; onClose: () => void }) {
                 <input className="ob-grow" placeholder="Search servers" value={f.q ?? ''} onChange={(e) => setF({ ...f, q: e.target.value })} />
               </div>
               <div className="ob-row">
-                <select className="ob-grow" value={f.category ?? ''} onChange={(e) => setF({ ...f, category: e.target.value || undefined })}><option value="">All categories</option>{st.categories.map((c) => <option key={c}>{c}</option>)}</select>
-                <select value={f.lang ?? ''} onChange={(e) => setF({ ...f, lang: e.target.value || undefined })}><option value="">Any language</option>{['TypeScript', 'Python', 'Go', 'Rust', 'C#', 'Java', 'C/C++', 'Ruby'].map((l) => <option key={l}>{l}</option>)}</select>
-                <select value={f.scope ?? ''} onChange={(e) => setF({ ...f, scope: e.target.value || undefined })}><option value="">Local or cloud</option><option value="local">Local</option><option value="cloud">Cloud</option></select>
+                <Select className="ob-grow" value={f.category ?? ''} onChange={(e) => setF({ ...f, category: e.target.value || undefined })}><option value="">All categories</option>{st.categories.map((c) => <option key={c}>{c}</option>)}</Select>
+                <Select value={f.lang ?? ''} onChange={(e) => setF({ ...f, lang: e.target.value || undefined })}><option value="">Any language</option>{['TypeScript', 'Python', 'Go', 'Rust', 'C#', 'Java', 'C/C++', 'Ruby'].map((l) => <option key={l}>{l}</option>)}</Select>
+                <Select value={f.scope ?? ''} onChange={(e) => setF({ ...f, scope: e.target.value || undefined })}><option value="">Local or cloud</option><option value="local">Local</option><option value="cloud">Cloud</option></Select>
               </div>
-              <label className="check"><input type="checkbox" checked={!!f.official} onChange={(e) => setF({ ...f, official: e.target.checked || undefined })} /> Official only</label>
+              <label className="check"><Checkbox checked={!!f.official} onChange={(e) => setF({ ...f, official: e.target.checked || undefined })} /> Official only</label>
               {list.map((e) => (
                 <button key={e.repo} className={`ob-turn ${e.repo === pick ? 'on' : ''}`} onClick={() => setPick(e.repo)}>
                   <span className="ob-turn-top"><span>{e.name}{e.official ? <span className="mc-off">official</span> : null}</span><span className="faint">{[...e.langs, ...e.scope].join(' · ')}</span></span>
@@ -107,7 +108,7 @@ function ReviewView(props: { d: Details; cwd?: string; installedKeys: Record<str
       <div className="ob-label">How it runs {d.config ? '(from its README; check it)' : '(not in its README; write it)'}</div>
       <div className="mn-form">
         <label>Name<input value={cfg.name} onChange={(e) => setCfg({ ...cfg, name: e.target.value })} /></label>
-        <label>Type<select value={cfg.url != null ? 'remote' : 'stdio'} onChange={(e) => setCfg(e.target.value === 'remote' ? { ...cfg, url: cfg.url ?? 'https://', type: 'http', command: undefined } : { ...cfg, url: undefined, type: 'stdio', command: cfg.command ?? '' })}><option value="stdio">Program on this machine</option><option value="remote">Remote URL</option></select></label>
+        <label>Type<Select value={cfg.url != null ? 'remote' : 'stdio'} onChange={(e) => setCfg(e.target.value === 'remote' ? { ...cfg, url: cfg.url ?? 'https://', type: 'http', command: undefined } : { ...cfg, url: undefined, type: 'stdio', command: cfg.command ?? '' })}><option value="stdio">Program on this machine</option><option value="remote">Remote URL</option></Select></label>
         {cfg.url != null ? (
           <label className="wide">URL<input value={cfg.url} onChange={(e) => setCfg({ ...cfg, url: e.target.value })} /></label>
         ) : (

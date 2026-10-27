@@ -44,7 +44,7 @@ export function HealthSheet({ onClose }: { onClose: () => void }) {
             <span className="hl-big"><b>{parts?.filter((p) => p.kind === 'webapp').length ?? 0}</b>web apps awake</span>
           </div>
           <div className="sp-bar hl-bar">
-            {(parts ?? []).map((p) => <span key={p.id} style={{ flexGrow: p.memMb, background: COLOR[p.kind] }} title={`${p.label}: ${fmt(p.memMb)}`} />)}
+            {(parts ?? []).map((p) => <span key={p.id} style={{ flexGrow: p.memMb, background: COLOR[p.kind] }} data-tip={`${p.label}: ${fmt(p.memMb)}`} role="img" aria-label={`${p.label}: ${fmt(p.memMb)}`} />)}
           </div>
           <div className="hl-legend">
             {(Object.keys(KIND) as Part['kind'][]).filter((k) => parts?.some((p) => p.kind === k)).map((k) => <span key={k}><i style={{ background: COLOR[k] }} />{KIND[k]}</span>)}
@@ -59,7 +59,7 @@ export function HealthSheet({ onClose }: { onClose: () => void }) {
                 <span className={`hl-num ${p.cpu > 25 ? 'hot' : ''}`}>{p.cpu.toFixed(1)}%</span>
                 <span className="hl-act">
                   {p.kind === 'webapp' && p.app && <button className="ghost small" onClick={() => window.dispatchEvent(new CustomEvent('stm:webapp-sleep', { detail: { app: p.app } }))}>Sleep</button>}
-                  {p.kind === 'claude' && p.sid && <button className="ghost small" title="Ends its Claude Code process; the next message resumes the conversation" onClick={() => void window.stm.sleepPanel(p.sid!)}>Sleep</button>}
+                  {p.kind === 'claude' && p.sid && <button className="ghost small" data-tip="Ends its Claude Code process; the next message resumes the conversation" onClick={() => void window.stm.sleepPanel(p.sid!)}>Sleep</button>}
                 </span>
               </div>
             ))}

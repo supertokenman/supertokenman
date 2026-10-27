@@ -5,6 +5,7 @@ import type { Persona } from '../shared/personas'
 import { DAYS, describe, EVERY, nextRun, type Trigger, type When } from '../shared/triggers'
 import { clean } from './errors'
 import type { Run } from '../shared/runs'
+import { Checkbox, Select, TimeField } from './ui'
 
 const ago = (t?: number) => {
   if (!t) return 'Never ran'
@@ -83,8 +84,8 @@ export function Triggers(props: { cwd: string; onClose: () => void }) {
                 const next = t.enabled ? nextRun(t.when, Math.max(Date.now(), t.lastRun ?? 0, t.armedAt ?? 0)) : null
                 return (
                   <div key={t.id} className={`trig-row ${t.enabled ? '' : 'off'}`} style={{ '--pc': p?.color ?? 'var(--border-strong)' } as React.CSSProperties}>
-                    <label className="switch" title={t.enabled ? 'On' : 'Off'}>
-                      <input type="checkbox" checked={t.enabled} onChange={(e) => void run(() => window.stm.triggers.save({ ...t, enabled: e.target.checked }))} />
+                    <label className="switch" data-tip={t.enabled ? 'On' : 'Off'} role="img" aria-label={t.enabled ? 'On' : 'Off'}>
+                      <Checkbox checked={t.enabled} onChange={(e) => void run(() => window.stm.triggers.save({ ...t, enabled: e.target.checked }))} />
                       <span />
                     </label>
                     <div className="trig-main">
@@ -125,12 +126,12 @@ function Editor(props: { t: Trigger; personas: Persona[]; onSave: (t: Trigger) =
     <div className="persona-edit">
       <div className="pe-row">
         <input className="pe-name" placeholder="Name, e.g. Morning check" value={t.name} onChange={(e) => set({ name: e.target.value })} autoFocus />
-        <select value={t.persona} onChange={(e) => set({ persona: e.target.value })} aria-label="Persona">
+        <Select value={t.persona} onChange={(e) => set({ persona: e.target.value })} aria-label="Persona">
           <option value="">No persona</option>
           {props.personas.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="trig-folder">
         <span className="faint">Folder</span>
@@ -138,12 +139,12 @@ function Editor(props: { t: Trigger; personas: Persona[]; onSave: (t: Trigger) =
         <button className="ghost small" onClick={() => void pickProjectFolder('Folder the trigger runs in').then((f) => f && set({ cwd: f }))}>Change</button>
       </div>
       <label className="trig-gate">
-        <input type="checkbox" checked={t.gate === true} onChange={(e) => set({ gate: e.target.checked })} />
+        <Checkbox checked={t.gate === true} onChange={(e) => set({ gate: e.target.checked })} />
         Ask me before it starts
         <span className="faint">Split the work into steps with a line holding only ---. A step that starts with [ask] waits for your go.</span>
       </label>
       <label className="trig-gate">
-        <input type="checkbox" checked={t.hoursOnly === true} onChange={(e) => set({ hoursOnly: e.target.checked })} />
+        <Checkbox checked={t.hoursOnly === true} onChange={(e) => set({ hoursOnly: e.target.checked })} />
         Only in business hours
         <span className="faint">Waits until the hours set in the Inbox open; Run now still runs at once.</span>
       </label>
@@ -163,15 +164,15 @@ function Editor(props: { t: Trigger; personas: Persona[]; onSave: (t: Trigger) =
                 </button>
               ))}
             </div>
-            <input type="time" className="trig-time" value={t.when.time} onChange={(e) => setWhen({ kind: 'schedule', days, time: e.target.value })} />
+            <TimeField className="trig-time" value={t.when.time} onChange={(e) => setWhen({ kind: 'schedule', days, time: e.target.value })} />
           </>
         )}
         {t.when.kind === 'every' && (
-          <select value={t.when.minutes} onChange={(e) => setWhen({ kind: 'every', minutes: Number(e.target.value) })}>
+          <Select value={t.when.minutes} onChange={(e) => setWhen({ kind: 'every', minutes: Number(e.target.value) })}>
             {EVERY.map((m) => (
               <option key={m} value={m}>{m < 60 ? `${m} min` : `${m / 60} h`}</option>
             ))}
-          </select>
+          </Select>
         )}
         {t.when.kind === 'pr-review' && <span className="faint">Checks GitHub every 5 minutes; the pull request is added to the prompt.</span>}
       </div>

@@ -87,7 +87,7 @@ function Style(props: { onSend: (text: string) => void }) {
             </div>
             <div className="sp-label">Radii · spacing</div>
             <div className="dsg-shapes">
-              {out.tokens.radii.map((r) => <i key={r} className="dsg-r" style={{ borderRadius: Math.min(r, 24) }} title={`${r >= 9999 ? 'pill' : `${r}px`}`}>{r >= 9999 ? 'pill' : r}</i>)}
+              {out.tokens.radii.map((r) => <i key={r} className="dsg-r" style={{ borderRadius: Math.min(r, 24) }} data-tip={`${r >= 9999 ? 'pill' : `${r}px`}`}>{r >= 9999 ? 'pill' : r}</i>)}
               <span className="faint">{out.tokens.spacing.join(' · ')} px</span>
             </div>
           </div>
@@ -144,7 +144,7 @@ function Components(props: { cwd?: string; onSend: (text: string) => void }) {
                 <td><b>{c.name}</b></td>
                 <td className="dsg-props">{c.props.join(', ') || <span className="faint">none</span>}</td>
                 <td className="num">{c.uses}{c.refs ? <span className="faint"> +{c.refs}</span> : null}</td>
-                <td className="dsg-file" title={c.usedIn.join('\n')}>{c.file}:{c.line}</td>
+                <td className="dsg-file" data-tip={c.usedIn.join('\n')}>{c.file}:{c.line}</td>
               </tr>
             ))}
           </tbody>

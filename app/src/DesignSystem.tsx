@@ -5,6 +5,7 @@ import { Chart, Meter, Sparkline, Stat } from './Chart'
 import './bridge'
 import { appliedColors, matrix } from './themeContrast'
 import { checkIcon, type Finding } from '../shared/iconcheck'
+import { Checkbox, Select } from './ui'
 
 const MOVING = new Set(['IconSearch', 'IconCopy', 'IconCheck', 'IconMerge', 'IconDeploy', 'IconExternal', 'IconHistory', 'IconTest'])
 const TOKENS = ['--bg', '--surface', '--raised', '--sunken', '--hover', '--border-strong', '--text', '--muted', '--faint', '--accent', '--accent-hover', '--deep', '--green', '--red', '--gold', '--blue', '--s0', '--s1', '--s2', '--s3', '--s4', '--s5']
@@ -102,10 +103,10 @@ export function DesignSystemSheet(props: { onClose: () => void }) {
             <div className="fld-grid">
               <label className="fld"><span className="fld-label">Text</span><input placeholder="Placeholder" /></label>
               <label className="fld"><span className="fld-label">Filled</span><input defaultValue="~/code/app" /></label>
-              <label className="fld"><span className="fld-label">Select</span><select defaultValue="b"><option value="a">This project</option><option value="b">Every project</option></select></label>
+              <label className="fld"><span className="fld-label">Select</span><Select defaultValue="b"><option value="a">This project</option><option value="b">Every project</option></Select></label>
               <label className="fld"><span className="fld-label">Disabled</span><input disabled defaultValue="read only" /></label>
               <label className="fld wide"><span className="fld-label">Textarea <span className="fld-kind">markdown</span></span><textarea rows={3} defaultValue={'## Steps\n1. Run `npm test`'} /><span className="fld-help">Help text under a field says what it is for.</span></label>
-              <label className="check wide"><input type="checkbox" defaultChecked /> A checkbox, label in plain text</label>
+              <label className="check wide"><Checkbox defaultChecked /> A checkbox, label in plain text</label>
             </div>
             <div className="faint">Cut corner with the border drawn along it; focus is a 3px accent bar on the left, never an outline.</div>
           </section>
@@ -114,11 +115,11 @@ export function DesignSystemSheet(props: { onClose: () => void }) {
             <h3 className="ds-h">Icons <span className="faint">{icons.length} · 16px grid, 1.5px stroke, currentColor</span></h3>
             <div className="ds-row">
               <input className="ds-filter" placeholder="Filter icons" value={q} onChange={(e) => setQ(e.target.value)} />
-              <label className="check"><input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} /> Play the motion on all</label>
+              <label className="check"><Checkbox checked={force} onChange={(e) => setForce(e.target.checked)} /> Play the motion on all</label>
             </div>
             <div className={`ds-icons ${force ? 'ds-force' : ''}`} ref={iconsRef}>
               {icons.filter(([n]) => n.toLowerCase().includes(q.toLowerCase())).map(([n, C]) => (
-                <button key={n} className={`ds-icon ${MOVING.has(n) ? 'moving' : ''} ${checks[n]?.length ? 'flag' : ''}`} title={[MOVING.has(n) ? `${n}: moves on hover` : n, ...(checks[n] ?? []).map((f) => f.detail)].join('\n')} data-icon={n}>
+                <button key={n} className={`ds-icon ${MOVING.has(n) ? 'moving' : ''} ${checks[n]?.length ? 'flag' : ''}`} data-tip={[MOVING.has(n) ? `${n}: moves on hover` : n, ...(checks[n] ?? []).map((f) => f.detail)].join('\n')} data-icon={n}>
                   <C />
                   {(checks[n]?.length ?? 0) > 0 && <i className="ds-flag">{checks[n]!.length}</i>}
                   <span>{n.replace(/^Icon/, '')}</span>

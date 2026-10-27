@@ -13,6 +13,7 @@
     "guide": "npm run build:electron && node scripts/guide.mjs",
     "build:electron": "tsc -p tsconfig.electron.json && cp electron/preload.cjs electron/passkey-preload.cjs dist-electron/electron/ && node scripts/bundle-main.mjs",
     "start": "npm run build && electron .",
+    "no-native-ui": "node scripts/no-native-ui.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "test": "vitest run",
     "netwatch": "electron scripts/netwatch.mjs",

@@ -5,6 +5,7 @@ import type { LogTurn } from '../shared/sessionlog'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox } from './ui'
 
 const close = (
   <IconClose />
@@ -133,7 +134,7 @@ function Registry(props: { cwd: string }) {
         const on = !(kind === 'mcp' ? p.mcpOff : p.skillsOff).includes(n)
         return (
           <td key={p.id} className="cf-cell">
-            <input type="checkbox" aria-label={`${label} for ${p.name}`} checked={on} onChange={(e) => void window.stm.registry.toggle(p.id, kind, n, e.target.checked).then(load, (x) => setErr(clean(x)))} />
+            <Checkbox aria-label={`${label} for ${p.name}`} checked={on} onChange={(e) => void window.stm.registry.toggle(p.id, kind, n, e.target.checked).then(load, (x) => setErr(clean(x)))} />
           </td>
         )
       })}
@@ -185,7 +186,7 @@ function Sessions(props: { cwd: string }) {
         {turns?.map((t, i) => (
           <div key={i} className="cf-turn">
             <div className="cf-turn-head"><span className="cf-n">{i + 1}</span><b>{t.prompt}</b><span className="faint">{t.tools} tool call{t.tools === 1 ? '' : 's'} · {t.outputTokens.toLocaleString('en-US')} tokens out</span></div>
-            {t.files.length > 0 && <div className="cf-files">{t.files.map((f) => <code key={f} title={f}>{name(f)}</code>)}</div>}
+            {t.files.length > 0 && <div className="cf-files">{t.files.map((f) => <code key={f} data-tip={f}>{name(f)}</code>)}</div>}
             {t.failed.map((f, k) => <Fragment key={k}><div className="cf-failed"><StateMark state="down" label="Failed" /><b>{f.tool}</b><span>{f.error}</span></div></Fragment>)}
           </div>
         ))}

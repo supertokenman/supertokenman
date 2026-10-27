@@ -6,6 +6,7 @@ import { byDay, LIMITS, moveToDay, nextFreeSlot, slotAt, weekOf, type Slot } fro
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, DateTimeField, Select, TimeField } from './ui'
 
 const NAMES: Record<NetworkId, string> = { instagram: 'Instagram', facebook: 'Facebook', threads: 'Threads', youtube: 'YouTube', linkedin: 'LinkedIn', x: 'X', tiktok: 'TikTok', bluesky: 'Bluesky', mastodon: 'Mastodon' }
 const SHORT: Record<NetworkId, string> = { instagram: 'IG', facebook: 'FB', threads: 'TH', youtube: 'YT', linkedin: 'IN', x: 'X', tiktok: 'TT', bluesky: 'BS', mastodon: 'MA' }
@@ -129,7 +130,7 @@ function Card(props: { i: Item; on: boolean; onPick: () => void; onDrag: () => v
   const st = stateOf(props.i)
   const done = st === 'done' || st === 'partly'
   return (
-    <button className={`pc-card ${st} ${props.on ? 'on' : ''}`} draggable={!done} onDragStart={props.onDrag} onClick={props.onPick} title={done ? 'Posted; it stays where it went out' : 'Drag to another day or a free slot'}>
+    <button className={`pc-card ${st} ${props.on ? 'on' : ''}`} draggable={!done} onDragStart={props.onDrag} onClick={props.onPick} data-tip={done ? 'Posted; it stays where it went out' : 'Drag to another day or a free slot'}>
       <span className="pc-card-top">
         {props.i.when != null && <b className="pc-time">{hhmm(props.i.when)}</b>}
         <span className="pc-nets">{props.i.networks.map((n) => <span key={n} className="pc-net">{SHORT[n]}</span>)}</span>
@@ -164,7 +165,7 @@ function Editor(props: { it: Item; nets: NetworkId[]; slots: Slot[]; queue: Item
       </div>
       <div className="pc-nets-pick">
         {all.map((n) => (
-          <label key={n} className="ib-check"><input type="checkbox" checked={d.networks.includes(n)} onChange={(e) => setD({ ...d, networks: e.target.checked ? [...d.networks, n] : d.networks.filter((x) => x !== n) })} />{NAMES[n]}{!props.nets.includes(n) && <span className="faint"> (not connected)</span>}</label>
+          <label key={n} className="ib-check"><Checkbox checked={d.networks.includes(n)} onChange={(e) => setD({ ...d, networks: e.target.checked ? [...d.networks, n] : d.networks.filter((x) => x !== n) })} />{NAMES[n]}{!props.nets.includes(n) && <span className="faint"> (not connected)</span>}</label>
         ))}
       </div>
       <div className="segmented small pc-tabs" role="tablist">
@@ -195,7 +196,7 @@ function Editor(props: { it: Item; nets: NetworkId[]; slots: Slot[]; queue: Item
       <input id="pc-link" value={d.link ?? ''} placeholder="Link (optional)" onChange={(e) => setD({ ...d, link: e.target.value || undefined })} />
       <input id="pc-media" value={d.mediaUrl ?? ''} placeholder="Photo or video address, https:// (needed for Instagram and TikTok)" onChange={(e) => setD({ ...d, mediaUrl: e.target.value || undefined })} />
       <div className="dep-row">
-        <input id="pc-when" type="datetime-local" value={localInput(d.when)} onChange={(e) => setD({ ...d, when: e.target.value ? new Date(e.target.value).getTime() : null })} />
+        <DateTimeField id="pc-when" value={localInput(d.when)} onChange={(e) => setD({ ...d, when: e.target.value ? new Date(e.target.value).getTime() : null })} />
         <button className="ghost small" disabled={!props.slots.length} onClick={() => setD({ ...d, when: nextFreeSlot(props.slots, props.queue.filter((x) => x.id !== d.id).map((x) => x.when), new Date()) })}>Next free slot</button>
         <button className="ghost small" onClick={() => setD({ ...d, when: null })}>No time</button>
       </div>
@@ -234,10 +235,10 @@ function Slots(props: { slots: Slot[]; onSave: (s: Slot[]) => void }) {
   return (
     <div className="pc-slots">
       <span className="sp-label">Preferred times</span>
-      {s.map((x, i) => <button key={`${x.day}${x.time}`} className="dc-tag on" title="Remove" onClick={() => setS(s.filter((_, k) => k !== i))}>{DAYS[x.day]} {x.time} ×</button>)}
+      {s.map((x, i) => <button key={`${x.day}${x.time}`} className="dc-tag on" data-tip="Remove" onClick={() => setS(s.filter((_, k) => k !== i))}>{DAYS[x.day]} {x.time} ×</button>)}
       {s.length === 0 && <span className="faint">None yet.</span>}
-      <select aria-label="Day" value={day} onChange={(e) => setDay(Number(e.target.value))}>{DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}</select>
-      <input id="pc-slot-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+      <Select aria-label="Day" value={day} onChange={(e) => setDay(Number(e.target.value))}>{DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}</Select>
+      <TimeField id="pc-slot-time" value={time} onChange={(e) => setTime(e.target.value)} />
       <button className="ghost small" onClick={() => setS([...s.filter((x) => !(x.day === day && x.time === time)), { day, time }])}>Add</button>
       <span className="spacer-flex" />
       <button className="primary small" onClick={() => props.onSave(s)}>Save</button>

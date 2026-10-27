@@ -6,6 +6,7 @@ import type { State } from './state'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Select } from './ui'
 
 const close = (
   <IconClose />
@@ -82,7 +83,7 @@ export function FanoutSheet(props: { byId: Record<string, State | undefined>; gr
       <div className={`sheet config observe fo ${cur ? '' : 'fit'}`} role="dialog" aria-label="Fan-out scoreboard">
         <header className="sheet-head">
           <div className="sheet-title">Scoreboard</div>
-          {groups.length > 1 && <select value={cur?.group} onChange={(e) => setGroup(e.target.value)} aria-label="Fan-out">{groups.map((g) => <option key={g.group} value={g.group}>{g.prompt.slice(0, 50) || g.group}</option>)}</select>}
+          {groups.length > 1 && <Select value={cur?.group} onChange={(e) => setGroup(e.target.value)} aria-label="Fan-out">{groups.map((g) => <option key={g.group} value={g.group}>{g.prompt.slice(0, 50) || g.group}</option>)}</Select>}
           <span className="spacer-flex" />
           {cur && <button className="small" disabled={rows.some((r) => r.busy) || Object.values(tests).includes('running')} onClick={() => rows.forEach((r) => runTests(r.sid))}><IconTest />Run all tests</button>}
           <button className="icon" aria-label="Close" onClick={props.onClose}>{close}</button>
@@ -106,8 +107,8 @@ export function FanoutSheet(props: { byId: Record<string, State | undefined>; gr
                       <span className="fo-model">{r.busy ? <StateMark state="busy" label="Working" /> : <StateMark state="up" label="Done" />}<button className="link" onClick={() => props.onFocus(r.sid)}>{short(r.model)}</button></span>
                       <span className="fo-tests">
                         {t === 'running' ? <span className="faint"><StateMark state="busy" label="Running" /> running</span>
-                          : t && 'error' in t ? <span className="pm-err" title={t.error}>no run</span>
-                          : t ? <span className={t.ok ? 'fo-pass' : 'fo-fail'} title={`${t.cmd} · ${secs(t.ms)}\n\n${t.tail}`}>{t.ok ? <IconCheck /> : null}{t.ok ? 'pass' : 'fail'} · {t.passed}/{t.passed + t.failed}</span>
+                          : t && 'error' in t ? <span className="pm-err" data-tip={t.error}>no run</span>
+                          : t ? <span className={t.ok ? 'fo-pass' : 'fo-fail'} data-tip={`${t.cmd} · ${secs(t.ms)}\n\n${t.tail}`}>{t.ok ? <IconCheck /> : null}{t.ok ? 'pass' : 'fail'} · {t.passed}/{t.passed + t.failed}</span>
                           : <button className="ghost small" disabled={r.busy || !r.files} onClick={() => runTests(r.sid)}><IconTest />Run</button>}
                       </span>
                       <span className="fo-diff">

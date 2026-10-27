@@ -66,7 +66,7 @@ export function DevicesButton() {
   const low = lowestOf(first)
   return (
     <div className="dv" ref={root}>
-      <button className={`ghost icon dv-btn ${tone(low)}`} onClick={() => setOpen(!open)} aria-expanded={open} title={`${first.name}: ${low}%${first.charging ? ', charging' : ''}`}>
+      <button className={`ghost icon dv-btn ${tone(low)}`} onClick={() => setOpen(!open)} aria-expanded={open} data-tip={`${first.name}: ${low}%${first.charging ? ', charging' : ''}`}>
         <DeviceGlyph kind={first.kind} />
         <Cell percent={low} charging={first.charging} />
         {low !== null && low <= 20 && <span className="dv-pct">{low}%</span>}
@@ -80,7 +80,7 @@ export function DevicesButton() {
               <div key={d.name} className={`dv-row ${tone(l)}`}>
                 <DeviceGlyph kind={d.kind} />
                 <div className="dv-info">
-                  <div className="dv-name" title={d.name}>{d.name}</div>
+                  <div className="dv-name" data-tip={d.name}>{d.name}</div>
                   {d.levels.length ? (
                     <div className="dv-parts">
                       {d.levels.map((p) => (

@@ -5,6 +5,9 @@ import { DEFAULT_SCHEDULE, type FeedItem, type FeedRule, type RuleAction, type S
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, Select, TimeField } from './ui'
+import { chooseFiles } from './FilePicker'
+import { pickProjectFolder } from './FolderPicker'
 
 type Setup = Awaited<ReturnType<typeof window.stm.news.setup>>
 const ACTIONS: Record<RuleAction, string> = { hide: 'Hide it', star: 'Star it', summarize: 'Summarize it', notify: 'Notify me' }
@@ -17,8 +20,8 @@ function Cited(props: { text: string; used: FeedItem[] }) {
       {props.text.split(/(\[\d+\])/g).map((p, i) => {
         const n = /^\[(\d+)\]$/.exec(p)?.[1]
         const it = n ? props.used[Number(n) - 1] : undefined
-        if (it) return <a key={i} className="rs-cite" href={it.link || undefined} title={`${it.title} (${it.source})`} target="_blank" rel="noreferrer">{n}</a>
-        return n ? <span key={i} className="rs-cite bad" title="No such source">{n}</span> : <span key={i}>{p}</span>
+        if (it) return <a key={i} className="rs-cite" href={it.link || undefined} data-tip={`${it.title} (${it.source})`} target="_blank" rel="noreferrer">{n}</a>
+        return n ? <span key={i} className="rs-cite bad" data-tip="No such source">{n}</span> : <span key={i}>{p}</span>
       })}
     </>
   )
@@ -104,9 +107,9 @@ export function SetupView(props: { onChanged: () => void }) {
           {s.rules.length === 0 && <div className="faint">No rules yet.</div>}
         </div>
         <div className="fd-rule-form">
-          <select aria-label="Where to look" value={rule.field} onChange={(e) => setRule({ ...rule, field: e.target.value as FeedRule['field'] })}><option value="any">Anywhere</option><option value="title">In the title</option><option value="source">In the source</option></select>
+          <Select aria-label="Where to look" value={rule.field} onChange={(e) => setRule({ ...rule, field: e.target.value as FeedRule['field'] })}><option value="any">Anywhere</option><option value="title">In the title</option><option value="source">In the source</option></Select>
           <input id="fd-words" value={rule.words} placeholder="all these words, e.g. sponsored" onChange={(e) => setRule({ ...rule, words: e.target.value })} />
-          <select aria-label="What to do" value={rule.action} onChange={(e) => setRule({ ...rule, action: e.target.value as RuleAction })}>{(Object.keys(ACTIONS) as RuleAction[]).map((a) => <option key={a} value={a}>{ACTIONS[a]}</option>)}</select>
+          <Select aria-label="What to do" value={rule.action} onChange={(e) => setRule({ ...rule, action: e.target.value as RuleAction })}>{(Object.keys(ACTIONS) as RuleAction[]).map((a) => <option key={a} value={a}>{ACTIONS[a]}</option>)}</Select>
           <button className="primary small" disabled={!rule.words.trim()} onClick={() => (act(window.stm.news.rules([...s.rules, rule])), setRule({ ...rule, id: '', words: '' }))}>Add rule</button>
         </div>
         <div className="faint">Summaries come from the local model ({s.model || 'none picked'}), five per refresh at most.</div>
@@ -114,7 +117,7 @@ export function SetupView(props: { onChanged: () => void }) {
       <section>
         <div className="sp-label">Newsletters · they go to the reader, not the inbox</div>
         <div className="fd-senders">
-          {s.senders.map((x) => <button key={x} className="dc-tag on" title="Remove" onClick={() => act(window.stm.news.senders(s.senders.filter((y) => y !== x)))}>{x} ×</button>)}
+          {s.senders.map((x) => <button key={x} className="dc-tag on" data-tip="Remove" onClick={() => act(window.stm.news.senders(s.senders.filter((y) => y !== x)))}>{x} ×</button>)}
           {s.senders.length === 0 && <span className="faint">No newsletter senders yet.</span>}
         </div>
         <div className="dep-row">
@@ -136,18 +139,18 @@ export function SetupView(props: { onChanged: () => void }) {
         <div className="dep-row">
           <span className="faint">Bring feeds from another reader, or take yours along.</span>
           <span className="spacer-flex" />
-          <button className="ghost small" onClick={() => act(window.stm.news.opmlImport(), (r) => (r ? `Added ${(r as { added: number }).added} feed${(r as { added: number }).added === 1 ? '' : 's'}; ${(r as { skipped: number }).skipped} already here.` : ''))}>Import OPML…</button>
-          <button className="ghost small" onClick={() => act(window.stm.news.opmlExport(), (r) => (r ? `Saved ${(r as { count: number }).count} feeds to ${(r as { file: string }).file}.` : ''))}>Export OPML…</button>
+          <button className="ghost small" onClick={() => act(chooseFiles({ title: 'Import OPML', accept: ['opml', 'xml'], action: 'Import' }).then((c) => window.stm.news.opmlImport(c)), (r) => (r ? `Added ${(r as { added: number }).added} feed${(r as { added: number }).added === 1 ? '' : 's'}; ${(r as { skipped: number }).skipped} already here.` : ''))}>Import OPML…</button>
+          <button className="ghost small" onClick={() => act(pickProjectFolder('Export OPML to').then((dir) => window.stm.news.opmlExport(dir)), (r) => (r ? `Saved ${(r as { count: number }).count} feeds to ${(r as { file: string }).file}.` : ''))}>Export OPML…</button>
         </div>
       </section>
       <section>
         <div className="sp-label">Scheduled briefing</div>
         <div className="dep-row fd-sched">
-          <label className="ib-check"><input type="checkbox" checked={sched.on} onChange={(e) => setSched({ ...sched, on: e.target.checked })} />Make one</label>
-          <select aria-label="How often" disabled={!sched.on} value={sched.every} onChange={(e) => setSched({ ...sched, every: e.target.value as Schedule['every'] })}><option value="daily">every day</option><option value="weekly">every week</option></select>
-          {sched.every === 'weekly' && <select aria-label="Day" disabled={!sched.on} value={sched.day} onChange={(e) => setSched({ ...sched, day: Number(e.target.value) })}>{DAYS.map((d, i) => <option key={d} value={i}>on {d}</option>)}</select>}
+          <label className="ib-check"><Checkbox checked={sched.on} onChange={(e) => setSched({ ...sched, on: e.target.checked })} />Make one</label>
+          <Select aria-label="How often" disabled={!sched.on} value={sched.every} onChange={(e) => setSched({ ...sched, every: e.target.value as Schedule['every'] })}><option value="daily">every day</option><option value="weekly">every week</option></Select>
+          {sched.every === 'weekly' && <Select aria-label="Day" disabled={!sched.on} value={sched.day} onChange={(e) => setSched({ ...sched, day: Number(e.target.value) })}>{DAYS.map((d, i) => <option key={d} value={i}>on {d}</option>)}</Select>}
           <label className="faint" htmlFor="fd-time">at</label>
-          <input id="fd-time" type="time" disabled={!sched.on} value={sched.time} onChange={(e) => setSched({ ...sched, time: e.target.value })} />
+          <TimeField id="fd-time" disabled={!sched.on} value={sched.time} onChange={(e) => setSched({ ...sched, time: e.target.value })} />
           <span className="spacer-flex" />
           <button className="primary small" onClick={() => act(window.stm.news.schedule(sched), () => (sched.on ? 'Saved. It is kept under Briefings and in memory; nothing is sent anywhere.' : 'Scheduled briefings are off.'))}>Save</button>
         </div>

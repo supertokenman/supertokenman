@@ -4,6 +4,8 @@ import { incidents, strip, type Monitor, type MonitorKind } from '../shared/moni
 import type { MonitorRow } from './bridge'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, DateTimeField, NumberField, Select } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 const close = (
   <IconClose />
@@ -63,7 +65,7 @@ function Monitors() {
           <button className="primary" onClick={() => (setForm({ ...blank }), setPick(null), setErr(''))}>New monitor</button>
           <span className="spacer-flex" />
           <input className="mn-title" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Status page title" />
-          <button disabled={!rows.length} onClick={() => void window.stm.monitor.page(title).then((f) => f && setMsg(`Status page saved to ${f}.`))}>Save status page</button>
+          <button disabled={!rows.length} onClick={() => void pickProjectFolder('Save the status page to').then((dir) => window.stm.monitor.page(title, dir)).then((f) => f && setMsg(`Status page saved to ${f}.`))}>Save status page</button>
         </div>
         {!rows.length && !form && <div className="faint">No monitors yet. Add a site, an API health URL or a port.</div>}
         {rows.map((r) => (
@@ -72,7 +74,7 @@ function Monitors() {
               <span className="mn-name"><span className={`mn-dot ${r.state}`} />{r.monitor.name}</span>
               <span className={`mn-state ${r.state}`}>{WORD[r.state]}</span>
             </span>
-            <span className="mn-strip">{strip(r.beats).map((b, i) => <i key={i} className={b ? (b.ok ? (b.slow ? 'slow' : 'ok') : 'bad') : ''} title={b ? `${when(b.at)}: ${b.msg}, ${b.ms} ms` : ''} />)}</span>
+            <span className="mn-strip">{strip(r.beats).map((b, i) => <i key={i} className={b ? (b.ok ? (b.slow ? 'slow' : 'ok') : 'bad') : ''} data-tip={b ? `${when(b.at)}: ${b.msg}, ${b.ms} ms` : ''} role="img" aria-label={b ? `${when(b.at)}: ${b.msg}, ${b.ms} ms` : ''} />)}</span>
             <span className="faint">24 h {pct(r.day.ratio)}, 30 d {pct(r.month.ratio)}{r.day.avgMs != null ? `, avg ${r.day.avgMs} ms` : ''}{r.last ? `, ${r.last.msg}` : ''}</span>
           </button>
         ))}
@@ -83,17 +85,17 @@ function Monitors() {
             <div className="ob-label">{form.id ? 'Edit monitor' : 'New monitor'}</div>
             <div className="mn-form">
               <label>Name<input value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} /></label>
-              <label>Type<select value={form.kind} onChange={(e) => set('kind', e.target.value as MonitorKind)}><option value="http">HTTP status</option><option value="keyword">HTTP keyword</option><option value="json">HTTP JSON value</option><option value="tcp">TCP port</option><option value="promql">Prometheus query</option></select></label>
+              <label>Type<Select value={form.kind} onChange={(e) => set('kind', e.target.value as MonitorKind)}><option value="http">HTTP status</option><option value="keyword">HTTP keyword</option><option value="json">HTTP JSON value</option><option value="tcp">TCP port</option><option value="promql">Prometheus query</option></Select></label>
               <label className="wide">{form.kind === 'tcp' ? 'Host:port' : form.kind === 'promql' ? 'PromQL' : 'URL'}<input value={form.target ?? ''} onChange={(e) => set('target', e.target.value)} /></label>
               {form.kind === 'json' && <label>JSON path<input placeholder="status or checks.0.ok" value={form.path ?? ''} onChange={(e) => set('path', e.target.value)} /></label>}
               {(form.kind === 'keyword' || form.kind === 'json' || form.kind === 'promql') && <label>{form.kind === 'json' ? 'Expected value' : form.kind === 'promql' ? 'Down when (such as > 0.9)' : 'Keyword'}<input value={form.keyword ?? ''} onChange={(e) => set('keyword', e.target.value)} /></label>}
-              {form.kind === 'keyword' && <label className="check wide"><input type="checkbox" checked={!!form.invert} onChange={(e) => set('invert', e.target.checked)} /> Up when the keyword is not on the page</label>}
+              {form.kind === 'keyword' && <label className="check wide"><Checkbox checked={!!form.invert} onChange={(e) => set('invert', e.target.checked)} /> Up when the keyword is not on the page</label>}
               {form.kind !== 'tcp' && form.kind !== 'promql' && <label>Accepted codes<input placeholder="200-299" value={form.statuses ?? ''} onChange={(e) => set('statuses', e.target.value)} /></label>}
-              <label>Every (seconds)<input type="number" min={20} value={form.everySec ?? 60} onChange={(e) => set('everySec', Number(e.target.value))} /></label>
-              <label>Retries before down<input type="number" min={0} max={10} value={form.retries ?? 1} onChange={(e) => set('retries', Number(e.target.value))} /></label>
-              <label>Timeout (ms)<input type="number" value={form.timeoutMs ?? 10000} onChange={(e) => set('timeoutMs', Number(e.target.value))} /></label>
-              <label>Slow above (ms)<input type="number" placeholder="off" value={form.slowMs ?? ''} onChange={(e) => set('slowMs', Number(e.target.value))} /></label>
-              {form.kind !== 'tcp' && form.kind !== 'promql' && <label>Certificate warning (days)<input type="number" placeholder="off" value={form.certDays ?? ''} onChange={(e) => set('certDays', Number(e.target.value))} /></label>}
+              <label>Every (seconds)<NumberField min={20} value={form.everySec ?? 60} onChange={(e) => set('everySec', Number(e.target.value))} /></label>
+              <label>Retries before down<NumberField min={0} max={10} value={form.retries ?? 1} onChange={(e) => set('retries', Number(e.target.value))} /></label>
+              <label>Timeout (ms)<NumberField value={form.timeoutMs ?? 10000} onChange={(e) => set('timeoutMs', Number(e.target.value))} /></label>
+              <label>Slow above (ms)<NumberField placeholder="off" value={form.slowMs ?? ''} onChange={(e) => set('slowMs', Number(e.target.value))} /></label>
+              {form.kind !== 'tcp' && form.kind !== 'promql' && <label>Certificate warning (days)<NumberField placeholder="off" value={form.certDays ?? ''} onChange={(e) => set('certDays', Number(e.target.value))} /></label>}
             </div>
             <div className="ob-row">
               <button className="primary" onClick={() => act(window.stm.monitor.save(form).then((r) => (setForm(null), setPick(form.id ?? r[r.length - 1]?.monitor.id ?? null), r)), 'Saved. The first check runs in a few seconds.')}>Save</button>
@@ -120,8 +122,8 @@ function Monitors() {
             </div>
             <div className="ob-label">Maintenance</div>
             <div className="ob-row">
-              <input type="datetime-local" value={mFrom} onChange={(e) => setMFrom(e.target.value)} aria-label="Starts" />
-              <input className="mn-hours" type="number" min={1} value={mHours} onChange={(e) => setMHours(e.target.value)} aria-label="Hours" />
+              <DateTimeField value={mFrom} onChange={(e) => setMFrom(e.target.value)} aria-label="Starts" />
+              <NumberField className="mn-hours" min={1} value={mHours} onChange={(e) => setMHours(e.target.value)} aria-label="Hours" />
               <span className="faint">hours</span>
               <button disabled={!mFrom} onClick={() => { const from = new Date(mFrom).getTime(); act(window.stm.monitor.save({ ...row.monitor, maintenance: [...(row.monitor.maintenance ?? []).filter((w) => w.to > Date.now()), { from, to: from + Number(mHours) * 3_600_000 }] }), 'Maintenance window added: no alerts while it is on.') }}>Add window</button>
             </div>

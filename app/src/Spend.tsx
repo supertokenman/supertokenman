@@ -3,6 +3,7 @@ import { IconClose } from './icons'
 import { useEffect, useState } from 'react'
 import { ratesLabel, updateRates, useRates } from './rates'
 import { totalIn, type Fixed, type Source } from '../electron/billing'
+import { Select } from './ui'
 
 const COLORS = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--gold)', 'var(--red)', 'var(--accent-glow)', 'var(--muted)']
 const fmt = (n: number, c: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency: c, maximumFractionDigits: n >= 100 ? 0 : 2 }).format(n)
@@ -46,7 +47,7 @@ export function Spend(props: { onClose: () => void; onConnections: () => void })
         <header className="sheet-head">
           <div className="sheet-title">Spend</div>
           <span className="spacer-flex" />
-          <span className="faint" title="The day's rates come from frankfurter.dev, only when you ask">{rateNote ?? ratesLabel(r)}</span>
+          <span className="faint" data-tip="The day's rates come from frankfurter.dev, only when you ask">{rateNote ?? ratesLabel(r)}</span>
           <button className="ghost small" onClick={() => { setRateNote(null); updateRates().catch(() => setRateNote('Rates not updated, offline?')) }}>Update rates</button>
           <button className="ghost small" onClick={() => { setSources(null); void load() }}>Refresh</button>
           <button className="icon" aria-label="Close" onClick={props.onClose}>
@@ -62,7 +63,7 @@ export function Spend(props: { onClose: () => void; onConnections: () => void })
             </div>
             <div className="sp-bar" aria-label="Share of each source">
               {priced.map((s, i) => (
-                <span key={s.id} style={{ flexGrow: inBrl(s), background: COLORS[i % COLORS.length] }} title={`${s.name}: ${fmt(inBrl(s), 'BRL')}`} />
+                <span key={s.id} style={{ flexGrow: inBrl(s), background: COLORS[i % COLORS.length] }} data-tip={`${s.name}: ${fmt(inBrl(s), 'BRL')}`} role="img" aria-label={`${s.name}: ${fmt(inBrl(s), 'BRL')}`} />
               ))}
             </div>
             <div className="sp-legend">
@@ -97,9 +98,9 @@ export function Spend(props: { onClose: () => void; onConnections: () => void })
 
           <div className="sp-cards">
             {(sources ?? []).filter((s) => !s.missing).map((s) => (
-              <button key={s.id} className={`sp-card ${s.error ? 'bad' : ''}`} onClick={() => s.url && void window.stm.openUrl(s.url)} title={s.error ?? s.url}>
+              <button key={s.id} className={`sp-card ${s.error ? 'bad' : ''}`} onClick={() => s.url && void window.stm.openUrl(s.url)} data-tip={s.error ?? s.url}>
                 <span className="sp-card-head">
-                  <span className={`sp-src ${s.kind}`} title={s.kind === 'api' ? 'Read from the account' : 'Typed in by you'} />
+                  <span className={`sp-src ${s.kind}`} data-tip={s.kind === 'api' ? 'Read from the account' : 'Typed in by you'} role="img" aria-label={s.kind === 'api' ? 'Read from the account' : 'Typed in by you'} />
                   <b>{s.name}</b>
                 </span>
                 {s.month && <span className="sp-amount">{fmt(s.month.amount, s.month.currency)}<span className="faint"> /mo</span></span>}
@@ -107,7 +108,7 @@ export function Spend(props: { onClose: () => void; onConnections: () => void })
                 {s.usage?.map((u) => <span key={u.label} className="sp-usage"><b>{u.value}</b> {u.label}</span>)}
                 {s.error && <span className="sp-err">{s.error}</span>}
                 {s.kind === 'manual' && (
-                  <span className="sp-remove" role="button" title="Remove" onClick={(e) => { e.stopPropagation(); void saveFixed(fixed.filter((f) => f.id !== s.id)) }}>×</span>
+                  <span className="sp-remove" role="button" data-tip="Remove" aria-label="Remove" onClick={(e) => { e.stopPropagation(); void saveFixed(fixed.filter((f) => f.id !== s.id)) }}>×</span>
                 )}
               </button>
             ))}
@@ -120,10 +121,10 @@ export function Spend(props: { onClose: () => void; onConnections: () => void })
                 <input autoFocus placeholder="Claude Max, Vercel, domain..." value={adding.name} onChange={(e) => setAdding({ ...adding, name: e.target.value })} />
                 <span className="sp-add-row">
                   <input placeholder="100" inputMode="decimal" value={adding.amount} onChange={(e) => setAdding({ ...adding, amount: e.target.value })} />
-                  <select value={adding.currency} onChange={(e) => setAdding({ ...adding, currency: e.target.value })}>
+                  <Select value={adding.currency} onChange={(e) => setAdding({ ...adding, currency: e.target.value })}>
                     <option>USD</option><option>BRL</option><option>EUR</option>
-                  </select>
-                  <input placeholder="day" inputMode="numeric" value={adding.day} onChange={(e) => setAdding({ ...adding, day: e.target.value })} title="Day of the month it charges" />
+                  </Select>
+                  <input placeholder="day" inputMode="numeric" value={adding.day} onChange={(e) => setAdding({ ...adding, day: e.target.value })} data-tip="Day of the month it charges" />
                 </span>
                 <span className="sp-add-row"><button className="small" disabled={!adding.name.trim() || !adding.amount}>Add</button><button type="button" className="ghost small" onClick={() => setAdding(null)}>Cancel</button></span>
               </form>
@@ -138,7 +139,7 @@ export function Spend(props: { onClose: () => void; onConnections: () => void })
           {missing.length > 0 && (
             <div className="sp-missing">
               <span className="faint">Add a key in Connections to read:</span>
-              {missing.map((s) => <button key={s.id} className="chip" title={s.missing} onClick={props.onConnections}>{s.name}</button>)}
+              {missing.map((s) => <button key={s.id} className="chip" data-tip={s.missing} onClick={props.onConnections}>{s.name}</button>)}
             </div>
           )}
         </div>
@@ -180,14 +181,14 @@ function SmallTasks() {
         {st.models === null ? (
           <button className="ghost small" onClick={() => window.dispatchEvent(new CustomEvent('stm:local-model'))}>Set up Ollama, free</button>
         ) : (
-          <select value={st.model ?? ''} onChange={(e) => void pick(e.target.value || null)}>
+          <Select value={st.model ?? ''} onChange={(e) => void pick(e.target.value || null)}>
             <option value="">Claude Haiku (your plan)</option>
             {st.models.map((m) => (
               <option key={m.name} value={m.name}>
                 {m.name} · on this Mac{m.params ? ` · ${m.params}` : ''} · {gb(m.size)}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
       <div className="sp-small-note faint">

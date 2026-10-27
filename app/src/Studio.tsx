@@ -5,6 +5,8 @@ import { DESIGN_SYSTEMS, PALETTES, search } from './paletteLibrary'
 import type { Theme } from './themes'
 import { KITS, kitCss, kitPrompt, searchKits } from './designKits'
 import { KitPreview } from './KitPreview'
+import { ColorField } from './ui'
+import { pickFile } from './FilePicker'
 
 type Tab = 'kits' | 'generate' | 'library' | 'image' | 'systems'
 const TABS: [Tab, string][] = [
@@ -28,7 +30,6 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
   const [q, setQ] = useState('')
   const [copied, setCopied] = useState('')
   const [imgErr, setImgErr] = useState('')
-  const file = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (tab === 'generate') setPalette(harmony(/^#[0-9a-f]{6}$/i.test(seed) ? seed : '#d97757', mode))
@@ -92,8 +93,8 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
         <div className="sheet-body studio-body">
           {tab === 'generate' && (
             <div className="st-gen">
-              <label className="st-seed" title="Pick the seed color">
-                <input type="color" value={seed} onChange={(e) => setSeed(e.target.value)} />
+              <label className="st-seed" data-tip="Pick the seed color" role="img" aria-label="Pick the seed color">
+                <ColorField value={seed} onChange={(e) => setSeed(e.target.value)} />
                 <span style={{ background: seed }} />
               </label>
               <input className="st-hex" value={seed} onChange={(e) => setSeed(e.target.value.trim())} spellCheck={false} aria-label="Seed color" />
@@ -132,7 +133,7 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
                   <div className="st-export">
                     <span className="faint">Accent</span>
                     {[kit.t.accent, ...palette.slice(0, 5)].map((c, i) => (
-                      <button key={i} className={`st-acc ${(kitAccent ?? kit.t.accent) === c ? 'on' : ''}`} style={{ background: c }} aria-label={i ? `Use ${c} from the palette` : 'The kit’s own accent'} title={i ? `${c}, from your palette` : 'The kit’s own'} onClick={() => setKitAccent(i ? c : undefined)} />
+                      <button key={i} className={`st-acc ${(kitAccent ?? kit.t.accent) === c ? 'on' : ''}`} style={{ background: c }} aria-label={i ? `Use ${c} from the palette` : 'The kit’s own accent'} data-tip={i ? `${c}, from your palette` : 'The kit’s own'} onClick={() => setKitAccent(i ? c : undefined)} />
                     ))}
                   </div>
                   <div className="st-export">
@@ -168,12 +169,11 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
                 const f = e.dataTransfer.files[0]
                 if (f) fromImage(f)
               }}
-              onClick={() => file.current?.click()}
+              onClick={() => void pickFile({ title: 'An image', accept: ['png', 'jpg', 'jpeg', 'webp', 'gif'], action: 'Use' }).then((f) => f && fromImage(f))}
             >
               <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><rect x="4" y="8" width="36" height="28" rx="3" className="se-b" /><circle cx="15" cy="18" r="4" className="se-a" /><path d="M8 32l10-9 7 6 5-4 10 7" className="se-line" /></svg>
               <div className="se-title">Drop a screenshot, a photo or a logo</div>
               <div className="se-text">Its main colors become the palette. The image stays on this Mac.</div>
-              <input ref={file} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && fromImage(e.target.files[0])} />
               {imgErr && <div className="notice error">{imgErr}</div>}
             </div>
           )}
@@ -202,7 +202,7 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
                   const w = contrast(c, '#ffffff')
                   const b = contrast(c, '#141413')
                   return (
-                    <button key={i} className="st-swatch" style={{ background: c, color: inkOn(c) }} onClick={() => copy(c, c)} title="Copy">
+                    <button key={i} className="st-swatch" style={{ background: c, color: inkOn(c) }} onClick={() => copy(c, c)} data-tip="Copy">
                       <span className="st-hexl">{copied === c ? 'Copied' : c}</span>
                       <span className="st-aa">
                         <span style={{ color: '#fff' }}>Aa {grade(w)}</span>
@@ -223,7 +223,7 @@ export function Studio(props: { onClose: () => void; onApply: (t: Theme) => void
                 </div>
                 <div className="st-apply">
                   {[light, dark].map((t) => (
-                    <button key={t.scheme} className="st-preview" onClick={() => props.onApply(t)} title={`Wear it as the app's ${t.scheme} theme`} style={{ background: t.c.bg, color: t.c.text, borderColor: t.c.raised }}>
+                    <button key={t.scheme} className="st-preview" onClick={() => props.onApply(t)} data-tip={`Wear it as the app's ${t.scheme} theme`} style={{ background: t.c.bg, color: t.c.text, borderColor: t.c.raised }}>
                       <span className="st-pv-bar" style={{ background: t.c.surface }}>
                         <span style={{ background: t.c.accent }} />
                         <span style={{ background: t.c.faint }} />

@@ -146,8 +146,8 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
             <button aria-selected={!unreadOnly} onClick={() => setUnreadOnly(false)}>All</button>
             <button aria-selected={unreadOnly} onClick={() => setUnreadOnly(true)}>Unread</button>
           </div>
-          <button className="icon" title="Mark all read" aria-label="Mark all read" onClick={() => news.mark(shown.map((i) => i.id))}><IconCheckAll /></button>
-          <button className="icon" title="Refresh" aria-label="Refresh" onClick={() => void news.refresh()}>{news.loading ? <span className="spinner" /> : <IconRefresh />}</button>
+          <button className="icon" data-tip="Mark all read" aria-label="Mark all read" onClick={() => news.mark(shown.map((i) => i.id))}><IconCheckAll /></button>
+          <button className="icon" data-tip="Refresh" aria-label="Refresh" onClick={() => void news.refresh()}>{news.loading ? <span className="spinner" /> : <IconRefresh />}</button>
           <button className="icon" aria-label="Close" onClick={props.onClose}>
             <IconClose />
           </button>
@@ -162,12 +162,12 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
             </button>
             {feeds.map((f) => (
               <span key={f.url} className="nw-src-row">
-                <button className={`nw-src ${source === f.title ? 'on' : ''}`} onClick={() => setSource(f.title)} title={f.url}>
+                <button className={`nw-src ${source === f.title ? 'on' : ''}`} onClick={() => setSource(f.title)} data-tip={f.url}>
                   <span className="nw-tile" aria-hidden="true">{monogram(f.title)}</span>
                   <span className="nw-src-name">{f.title}</span>
                   <span className="nw-count">{counts.get(f.title) || ''}</span>
                 </button>
-                <button className="nw-x" title={`Remove ${f.title}`} aria-label={`Remove ${f.title}`} onClick={() => void window.stm.news.remove(f.url).then((x) => { setFeeds(x); void news.refresh() })}>×</button>
+                <button className="nw-x" data-tip={`Remove ${f.title}`} aria-label={`Remove ${f.title}`} onClick={() => void window.stm.news.remove(f.url).then((x) => { setFeeds(x); void news.refresh() })}>×</button>
               </span>
             ))}
             {news.errors.map((e) => <span key={e.feed} className="nw-err">{e.feed}: {e.error}</span>)}
@@ -197,7 +197,7 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
                 <div className="nw-offer">
                   <div className="nw-sugg-head faint">This page offers {offered.length} feeds. Pick the ones to add.</div>
                   {offered.map((f) => (
-                    <button key={f.url} className="nw-sugg-card" title={f.url} disabled={feeds.some((x) => x.url === f.url)} onClick={() => void window.stm.news.subscribe(f).then((x) => { setFeeds(x); setOffered(offered.filter((o) => o.url !== f.url)); if (offered.length === 1) setAdding(''); void news.refresh() })}>
+                    <button key={f.url} className="nw-sugg-card" data-tip={f.url} disabled={feeds.some((x) => x.url === f.url)} onClick={() => void window.stm.news.subscribe(f).then((x) => { setFeeds(x); setOffered(offered.filter((o) => o.url !== f.url)); if (offered.length === 1) setAdding(''); void news.refresh() })}>
                       <span className="nw-tile" aria-hidden="true">{f.type === 'json' ? 'JS' : f.type === 'atom' ? 'AT' : 'RS'}</span>
                       <span className="nw-sugg-text">
                         <b>{f.title}</b>
@@ -214,7 +214,7 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
                   <div className="nw-sugg-head faint">Suggested. Nothing is fetched until you add one.</div>
                   <div className="nw-sugg">
                     {suggested.filter((s) => !feeds.some((f) => f.url === s.url)).map((s) => (
-                      <button key={s.url} className="nw-sugg-card" title={s.url} onClick={() => void window.stm.news.add(s.url).then((x) => { setFeeds(x); void news.refresh() })}>
+                      <button key={s.url} className="nw-sugg-card" data-tip={s.url} onClick={() => void window.stm.news.add(s.url).then((x) => { setFeeds(x); void news.refresh() })}>
                         <span className="nw-tile" aria-hidden="true">{monogram(s.title)}</span>
                         <span className="nw-sugg-text">
                           <b>{s.title}</b>

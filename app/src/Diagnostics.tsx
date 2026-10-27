@@ -53,8 +53,8 @@ export function DiagnosticsSheet(props: { onClose: () => void }) {
                   <span className="pb-state failed">{e.level}</span>
                   <code>{e.where}</code>
                   <span className="dg-msg">{e.text.split('\n')[0]}</span>
-                  {count > 1 && <span className="dg-count" title={`${count} times`}>{count}x</span>}
-                  <span className="faint" title={count > 1 ? 'Latest' : undefined}>{new Date(latest).toLocaleTimeString()}</span>
+                  {count > 1 && <span className="dg-count" data-tip={`${count} times`}>{count}x</span>}
+                  <span className="faint" data-tip={count > 1 ? 'Latest' : undefined}>{new Date(latest).toLocaleTimeString()}</span>
                 </button>
                 {open === i && <pre className="ex-src">{e.text}</pre>}
               </li>

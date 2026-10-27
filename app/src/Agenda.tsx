@@ -61,7 +61,7 @@ export function NextChip({ agenda, onOpen }: { agenda: ReturnType<typeof useAgen
   const soon = n.inMin <= 5
   return (
     <span className={`next-chip ${soon ? 'soon' : ''} ${n.inMin <= 0 ? 'live' : ''}`}>
-      <button className="ghost next-main" onClick={onOpen} title={`${n.event.title} at ${hm(n.event.start)}`}>
+      <button className="ghost next-main" onClick={onOpen} data-tip={`${n.event.title} at ${hm(n.event.start)}`}>
         <span className="next-dot" />
         <span className="next-title">{n.event.title}</span>
         <span className="next-in">{n.inMin <= 0 ? 'now' : n.inMin < 60 ? `${n.inMin}m` : `${Math.floor(n.inMin / 60)}h${String(n.inMin % 60).padStart(2, '0')}`}</span>
@@ -116,7 +116,7 @@ export function AgendaSheet({ agenda, onClose }: { agenda: ReturnType<typeof use
             <button role="tab" aria-selected={day === 1} onClick={() => setDay(1)}>Tomorrow</button>
           </div>
           {agenda.calendars.length > 0 && (
-            <span className="ag-load" title={`${Math.round(busy)} min in meetings`}>
+            <span className="ag-load" data-tip={`${Math.round(busy)} min in meetings`} role="img" aria-label={`${Math.round(busy)} min in meetings`}>
               <span style={{ width: `${Math.min(100, (busy / 480) * 100)}%` }} />
             </span>
           )}
@@ -146,7 +146,7 @@ export function AgendaSheet({ agenda, onClose }: { agenda: ReturnType<typeof use
                     const past = Date.parse(e.end) < agenda.now.getTime()
                     const live = !past && Date.parse(e.start) <= agenda.now.getTime()
                     return (
-                      <div key={e.id} className={`ag-event ${past ? 'past' : ''} ${live ? 'live' : ''}`} style={{ top, height: h, left: `calc(56px + ${lanes[i]! * 46}%)`, width: shared[i] ? 'calc(46% - 30px)' : undefined, right: shared[i] ? 'auto' : undefined }} title={`${e.title}\n${hm(e.start)} to ${hm(e.end)}${e.where ? `\n${e.where}` : ''}`}>
+                      <div key={e.id} className={`ag-event ${past ? 'past' : ''} ${live ? 'live' : ''}`} style={{ top, height: h, left: `calc(56px + ${lanes[i]! * 46}%)`, width: shared[i] ? 'calc(46% - 30px)' : undefined, right: shared[i] ? 'auto' : undefined }} data-tip={`${e.title}\n${hm(e.start)} to ${hm(e.end)}${e.where ? `\n${e.where}` : ''}`}>
                         <span className="ag-time">{hm(e.start)}</span>
                         <span className="ag-title">{e.title}</span>
                         {e.join && !past && <button className="small ag-join" onClick={() => join(e.join!)}>Join</button>}

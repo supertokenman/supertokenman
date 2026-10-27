@@ -4,6 +4,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconClose, IconRemote } from './icons'
 import './bridge'
+import { Checkbox, Select } from './ui'
 
 type Check = Awaited<ReturnType<typeof window.stm.remote.check>>
 
@@ -64,11 +65,11 @@ export function RemotePanelSheet(props: { onClose: () => void; onOpen: (r: { hos
           <div className="fld-grid">
             <label className="fld"><span className="fld-label">Host, from ~/.ssh/config</span>
               {hosts && hosts.length ? (
-                <select value={host} onChange={(e) => (setHost(e.target.value), reset())}>{hosts.map((h) => <option key={h}>{h}</option>)}</select>
+                <Select value={host} onChange={(e) => (setHost(e.target.value), reset())}>{hosts.map((h) => <option key={h}>{h}</option>)}</Select>
               ) : <input value={host} placeholder="build-box" onChange={(e) => (setHost(e.target.value.trim()), reset())} />}
             </label>
             <label className="fld"><span className="fld-label">Folder there</span><input value={dir} onChange={(e) => (setDir(e.target.value), reset())} spellCheck={false} /><span className="fld-help">{dirErr ?? '/path or ~/path of a git checkout.'}</span></label>
-            <label className="check wide"><input type="checkbox" checked={wt} onChange={(e) => (setWt(e.target.checked), reset())} /> Work in a fresh worktree there (~/.stm-worktrees, its own branch), not in the folder itself</label>
+            <label className="check wide"><Checkbox checked={wt} onChange={(e) => (setWt(e.target.checked), reset())} /> Work in a fresh worktree there (~/.stm-worktrees, its own branch), not in the folder itself</label>
           </div>
           {chk && (
             <div className="rm-check">

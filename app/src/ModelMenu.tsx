@@ -142,7 +142,7 @@ export function ModelMenu({ model, effort, onModel, onEffort, defaultModel }: { 
         className={`mm-trigger${open ? ' on' : ''}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        title="Model and effort for new panels"
+        data-tip="Model and effort for new panels"
         onClick={() => (open ? close() : openMenu())}
         onKeyDown={(e) => {
           if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
