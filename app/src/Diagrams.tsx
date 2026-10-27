@@ -5,6 +5,7 @@ import type { DiagramVersion } from '../electron/diagrams'
 import { cells, diffCells, plain, styleMap, type Cell, type Geo } from '../shared/drawio'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
+import { chooseFiles } from './FilePicker'
 import './bridge'
 
 const close = (
@@ -185,7 +186,7 @@ export function DiagramsSheet(props: { cwd?: string; onClose: () => void; open?:
                 <input id="dg-name" value={name} placeholder="Name, e.g. checkout architecture" onChange={(e) => setName(e.target.value)} />
                 <textarea id="dg-ask" value={ask} rows={5} placeholder="Describe the diagram: the boxes, what talks to what, the flow. e.g. Browser calls the API; the API reads Postgres and caches in Redis; a worker sends e-mails from a queue." onChange={(e) => setAsk(e.target.value)} />
                 <div className="sbx-actions">
-                  <button className="ghost small" disabled={!!busy || !cwd} onClick={() => void run('Redrawing the image', () => window.stm.diagram.fromImage(cwd, name, ask))}>From an image or sketch…</button>
+                  <button className="ghost small" disabled={!!busy || !cwd} onClick={() => void run('Redrawing the image', async () => window.stm.diagram.fromImage(cwd, name, ask, await chooseFiles({ title: 'An image or sketch', cwd, accept: ['png', 'jpg', 'jpeg', 'webp', 'gif'], action: 'Use' })))}>From an image or sketch…</button>
                   <button className="primary small" disabled={!!busy || !cwd || ask.trim().length < 5} onClick={() => void run('Drawing', () => window.stm.diagram.create(cwd, name, ask).then((p) => (setAsk(''), setName(''), p)))}>{busy ? <><StateMark state="busy" label="Working" /> {busy}…</> : 'Draw it'}</button>
                 </div>
                 <div className="sp-label">Or start from a template</div>

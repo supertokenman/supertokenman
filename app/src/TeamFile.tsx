@@ -6,6 +6,8 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
 import { Checkbox } from './ui'
+import { chooseFiles } from './FilePicker'
+import { pickProjectFolder } from './FolderPicker'
 
 const STATUS: Record<Change['status'], string> = { new: 'New', changed: 'Changed', same: 'Same' }
 
@@ -45,7 +47,7 @@ export function TeamFileSheet(props: { onClose: () => void }) {
           <div className="dep-row">
             <input id="team-name" value={name} placeholder="Team name, e.g. Shop backend" onChange={(e) => setName(e.target.value)} />
             <button className="primary small" onClick={() => void run(async () => {
-              const r = await window.stm.team.exportFile(name)
+              const r = await window.stm.team.exportFile(name, await pickProjectFolder('Save the team file to'))
               if (r) setMsg({ text: `Saved ${r.file}: ${r.personas} persona${r.personas === 1 ? '' : 's'}, ${r.triggers} trigger${r.triggers === 1 ? '' : 's'}, ${r.evals} eval set${r.evals === 1 ? '' : 's'}.${r.dropped.length ? ` Left out because they hold a secret: ${r.dropped.join(', ')}.` : ''} Trigger folders are left out; each person picks their own.` })
             })}>Export…</button>
           </div>
@@ -54,7 +56,7 @@ export function TeamFileSheet(props: { onClose: () => void }) {
             <span className="faint">Open a .stmteam.json file to see what it would change first.</span>
             <span className="spacer-flex" />
             <button className="ghost small" onClick={() => void run(async () => {
-              const r = await window.stm.team.open()
+              const r = await window.stm.team.open(undefined, await chooseFiles({ title: 'Open a team file', accept: ['json'], action: 'Open' }))
               if (!r) return
               setIncoming(r)
               setPicked(r.changes.filter((c) => c.status === 'new').map((c) => c.key))

@@ -4,6 +4,7 @@ import { IconClose } from './icons'
 import { clean } from './errors'
 import type { Template } from '../shared/mdimages'
 import { Checkbox, Select } from './ui'
+import { chooseFiles } from './FilePicker'
 
 type Scan = Awaited<ReturnType<typeof window.stm.mdImages.scan>>
 type Result = Awaited<ReturnType<typeof window.stm.mdImages.publish>>
@@ -18,7 +19,7 @@ export function MdImages(props: { onClose: () => void }) {
   const [busy, setBusy] = useState(false)
   const [res, setRes] = useState<Result | null>(null)
   const [err, setErr] = useState('')
-  const open = () => void window.stm.mdImages.pick().then((f) => void (f && window.stm.mdImages.scan(f).then((s) => (setScan(s), setPick(new Set()), setRes(null)))), (e) => setErr(clean(e)))
+  const open = () => void chooseFiles({ title: 'Open a Markdown file', accept: ['md', 'markdown'], action: 'Open' }).then((c) => window.stm.mdImages.pick(c)).then((f) => void (f && window.stm.mdImages.scan(f).then((s) => (setScan(s), setPick(new Set()), setRes(null)))), (e) => setErr(clean(e)))
   const publish = () => {
     if (!scan) return
     setBusy(true)

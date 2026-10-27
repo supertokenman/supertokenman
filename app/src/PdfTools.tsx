@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { Checkbox, Slider } from './ui'
+import { chooseFiles } from './FilePicker'
 
 type Cfg = Awaited<ReturnType<typeof window.stm.pdfTools.config>>
 type Op = Cfg['ops'][number]['id']
@@ -25,7 +26,7 @@ export function PdfTools(props: { onClose: () => void }) {
   useEffect(() => void window.stm.pdfTools.config().then((c) => (setCfg(c), setUrl(c.url))), [])
   const many = cfg?.ops.find((o) => o.id === op)?.many
   const scan = (f: string) => (setBusy('Reading'), void window.stm.pdfTools.scan(f).then((r) => (setFound(r), setPick(new Set(r.map((x) => x.i)))), (e) => setErr(clean(e))).finally(() => setBusy('')))
-  const add = () => void window.stm.pdfTools.pick().then((fs) => {
+  const add = () => void chooseFiles({ title: 'Add PDFs', accept: ['pdf'], multiple: true, action: 'Add' }).then((c) => window.stm.pdfTools.pick(c)).then((fs) => {
     const next = [...files, ...fs.filter((f) => !files.some((x) => x.file === f.file))]
     setFiles(next)
     if (op === 'redact' && next[0]) scan(next[0].file)

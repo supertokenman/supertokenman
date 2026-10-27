@@ -6,6 +6,8 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
 import { Checkbox, Select, TimeField } from './ui'
+import { chooseFiles } from './FilePicker'
+import { pickProjectFolder } from './FolderPicker'
 
 type Setup = Awaited<ReturnType<typeof window.stm.news.setup>>
 const ACTIONS: Record<RuleAction, string> = { hide: 'Hide it', star: 'Star it', summarize: 'Summarize it', notify: 'Notify me' }
@@ -137,8 +139,8 @@ export function SetupView(props: { onChanged: () => void }) {
         <div className="dep-row">
           <span className="faint">Bring feeds from another reader, or take yours along.</span>
           <span className="spacer-flex" />
-          <button className="ghost small" onClick={() => act(window.stm.news.opmlImport(), (r) => (r ? `Added ${(r as { added: number }).added} feed${(r as { added: number }).added === 1 ? '' : 's'}; ${(r as { skipped: number }).skipped} already here.` : ''))}>Import OPML…</button>
-          <button className="ghost small" onClick={() => act(window.stm.news.opmlExport(), (r) => (r ? `Saved ${(r as { count: number }).count} feeds to ${(r as { file: string }).file}.` : ''))}>Export OPML…</button>
+          <button className="ghost small" onClick={() => act(chooseFiles({ title: 'Import OPML', accept: ['opml', 'xml'], action: 'Import' }).then((c) => window.stm.news.opmlImport(c)), (r) => (r ? `Added ${(r as { added: number }).added} feed${(r as { added: number }).added === 1 ? '' : 's'}; ${(r as { skipped: number }).skipped} already here.` : ''))}>Import OPML…</button>
+          <button className="ghost small" onClick={() => act(pickProjectFolder('Export OPML to').then((dir) => window.stm.news.opmlExport(dir)), (r) => (r ? `Saved ${(r as { count: number }).count} feeds to ${(r as { file: string }).file}.` : ''))}>Export OPML…</button>
         </div>
       </section>
       <section>

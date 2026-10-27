@@ -10,6 +10,7 @@ import { clean as cleanErr } from './errors'
 import { vectorColumns, vectorSql } from '../shared/tidb'
 import { browseSql, countSql, firstView, type View } from '../shared/gridsql'
 import { NumberField, Select } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 const fresh = (): DbConn => ({ id: `d${Date.now().toString(36)}`, name: '', kind: 'postgres', target: '', writes: false })
 const qi = (s: string, k?: DbKind) => (k === 'mysql' || k === 'tidb' ? `\`${s.replace(/`/g, '``')}\`` : `"${s.replace(/"/g, '""')}"`)
@@ -239,8 +240,8 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
                     <span className="spacer-flex" />
                     {res && res.columns.length > 0 && (
                       <>
-                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('csv', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'csv'); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>CSV</button>
-                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('json', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'json'); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>JSON</button>
+                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('csv', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'csv', await pickProjectFolder('Save the CSV to')); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>CSV</button>
+                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('json', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'json', await pickProjectFolder('Save the JSON to')); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>JSON</button>
                       </>
                     )}
                     {res && <button className="small" onClick={toClaude}>Send to Claude</button>}

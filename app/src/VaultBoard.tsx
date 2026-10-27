@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { board, filter, type Note } from '../shared/fmviews'
+import { chooseFiles } from './FilePicker'
 
 const KEY = 'stm.vaultBoard'
 const saved = (): { q: string; by: string; order: string; view: 'board' | 'table' } => {
@@ -31,7 +32,7 @@ export function VaultBoard(props: { onClose: () => void }) {
     if (!n || to === '(none)' || show(n.data[opts.by]) === to) return
     void window.stm.vaultBoard.set(file, opts.by, to, n.mtime ?? 0).then((mtime) => setNotes((all) => all.map((x) => (x.file === file ? { ...x, mtime, data: { ...x.data, [opts.by]: to } } : x))), (e) => setMsg(clean(e)))
   }
-  const importEnex = () => void window.stm.vaultBoard.importEnex().then((r) => r && (setMsg(`Imported ${r.notes} notes and ${r.files} attachments into ${r.folder}.`), load()), (e) => setMsg(clean(e)))
+  const importEnex = () => void chooseFiles({ title: 'Import an Evernote export', accept: ['enex'], action: 'Import' }).then((c) => window.stm.vaultBoard.importEnex(c)).then((r) => r && (setMsg(`Imported ${r.notes} notes and ${r.files} attachments into ${r.folder}.`), load()), (e) => setMsg(clean(e)))
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
       <div className="sheet config observe vb" role="dialog" aria-label="Vault board">

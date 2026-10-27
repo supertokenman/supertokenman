@@ -10,6 +10,7 @@ import { clean } from './errors'
 import { MAIN_MODELS, MORE_MODELS, modelLabel as sharedLabel } from '../shared/models'
 import { IntegrationMark } from './IntegrationMark'
 import { Checkbox, Select } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 const modelLabel = (id: string) => (id ? sharedLabel(id) : 'App default')
 
@@ -100,7 +101,7 @@ export function Personas(props: { onClose: () => void; onOpen: (id: string) => v
                   <div className="pcard-actions">
                     <button className="primary small" onClick={() => { props.onOpen(p.id); props.onClose() }}>Open panel</button>
                     <button className="ghost small" onClick={() => setEdit(p)}>Edit</button>
-                    <button className="ghost small" onClick={() => void run(() => window.stm.personas.exportFile(p.id), (r) => (typeof r === 'string' ? `Exported to ${r}` : undefined))}>Export</button>
+                    <button className="ghost small" onClick={() => void run(() => pickProjectFolder('Export the persona to').then((dir) => (dir ? window.stm.personas.exportFile(p.id, dir) : null)), (r) => (typeof r === 'string' ? `Exported to ${r}` : undefined))}>Export</button>
                     <button className="ghost small pcard-del" onClick={() => void run(() => window.stm.personas.remove(p.id))}>Delete</button>
                   </div>
                 </div>

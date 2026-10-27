@@ -33,6 +33,12 @@ export function pickPaths(opts: PickOptions): Promise<Result> {
   return new Promise((resolve) => (ask ? ask({ ...opts, resolve }) : resolve('finder')))
 }
 
+/** For a main-process call that opens files: the in-app choice, undefined for Finder ("Use Finder..."), [] when cancelled. */
+export async function chooseFiles(opts: PickOptions): Promise<string[] | undefined> {
+  const r = await pickPaths(opts)
+  return r === 'finder' ? undefined : r ?? []
+}
+
 /** The composer's attach button: files and folders, as attachments. */
 export async function pickAttachments(cwd?: string): Promise<Attachment[]> {
   const r = await pickPaths({ title: 'Attach files', cwd, multiple: true, folders: true, action: 'Attach' })

@@ -5,6 +5,7 @@ import { clean } from './errors'
 import { IconClose, IconFolder, IconRefresh } from './icons'
 import './bridge'
 import { DateField } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 const kb = (n: number) => (n >= 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`)
 
@@ -70,7 +71,7 @@ export function PhotosSheet(props: { onClose: () => void }) {
         <div className="ar-pad">
           {src === 'folder' ? (
             <div className="ob-row">
-              <button className="small" onClick={() => void window.stm.photos.pick().then((d) => setCfg((c) => (c ? { ...c, dir: d } : c)))}><IconFolder />{cfg?.dir ? 'Change folder' : 'Pick a folder'}</button>
+              <button className="small" onClick={() => void pickProjectFolder('Photos folder').then((d) => window.stm.photos.pick(d)).then((d) => setCfg((c) => (c ? { ...c, dir: d } : c)))}><IconFolder />{cfg?.dir ? 'Change folder' : 'Pick a folder'}</button>
               <span className="faint ob-grow">{cfg?.dir || 'No folder yet.'}</span>
               {cfg?.dir && <button className="ghost small" disabled={busy} onClick={scan}><IconRefresh />Read again</button>}
             </div>

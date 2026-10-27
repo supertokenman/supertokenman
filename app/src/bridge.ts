@@ -73,7 +73,7 @@ export type Bridge = {
     list: () => Promise<Persona[]>
     save: (p: Persona) => Promise<Persona[]>
     remove: (id: string) => Promise<Persona[]>
-    exportFile: (id: string) => Promise<string | null>
+    exportFile: (id: string, dir?: string | null) => Promise<string | null>
     importFiles: (paths?: string[]) => Promise<Persona[]>
     history: (id: string) => Promise<import('../shared/versions').Version[]>
     restore: (id: string, at: number) => Promise<Persona[]>
@@ -193,7 +193,7 @@ export type Bridge = {
     schema: (id: string) => Promise<import('../electron/db').DbSchema>
     explain: (id: string, sql: string) => Promise<import('../electron/db').PlanNode[]>
     history: (id: string) => Promise<{ sql: string; at: number; ok: boolean; ms: number }[]>
-    exportRows: (id: string, sql: string, format: 'csv' | 'json') => Promise<{ file: string; rows: number; cut: boolean } | null>
+    exportRows: (id: string, sql: string, format: 'csv' | 'json', dir?: string | null) => Promise<{ file: string; rows: number; cut: boolean } | null>
     ask: (id: string, request: string) => Promise<string>
     apply: (id: string, statements: string[]) => Promise<{ ok: true; changed: number; ms: number } | { ok: false; error: string; at: number }>
   }
@@ -251,7 +251,7 @@ export type Bridge = {
   web: { install: () => Promise<void>; onLog: (cb: (line: string) => void) => () => void }
   setIntegration: (id: string, on: boolean) => Promise<void>
   openUrl: (url: string) => Promise<void>
-  exportText: (name: string, text: string) => Promise<string | null>
+  exportText: (name: string, text: string, dir?: string | null) => Promise<string | null>
   setPanelModel: (sid: string, model: string) => Promise<boolean>
   routeTally: () => Promise<import('../shared/arena').Tally>
   faithJudge: (pairs: { claim: string; passages: string }[]) => Promise<{ verdicts: ('supported' | 'partial' | 'unsupported' | null)[]; costUsd: number }>
@@ -266,7 +266,7 @@ export type Bridge = {
   }
   photos: {
     get: () => Promise<{ dir: string; immich: string; immichKey: boolean }>
-    pick: () => Promise<string>
+    pick: (chosen?: string | null) => Promise<string>
     scan: () => Promise<import('../shared/photos').Photo[]>
     thumb: (source: 'folder' | 'immich', id: string) => Promise<string>
     open: (id: string) => Promise<string | void>
@@ -398,7 +398,7 @@ export type Bridge = {
   anomalySeries: (sid: string) => Promise<{ key: string; samples: import('../shared/anomaly').Sample[]; bands: Record<'cost' | 'tokens' | 'seconds', { median: number; low: number; high: number }> }>
   pdfTools: {
     config: (url?: string) => Promise<{ url: string; hasKey: boolean; ops: { id: import('../electron/stirling').Op; name: string; many: boolean }[] }>
-    pick: () => Promise<{ file: string; bytes: number }[]>
+    pick: (chosen?: string[]) => Promise<{ file: string; bytes: number }[]>
     scan: (file: string) => Promise<{ i: number; kind: string; shown: string }[]>
     run: (op: import('../electron/stirling').Op, files: string[], p: { pages?: string; level?: number; languages?: string[]; pick?: number[] }) => Promise<{ file: string; bytes: number }>
     reveal: (file: string) => Promise<void>
@@ -406,14 +406,14 @@ export type Bridge = {
   vaultBoard: {
     notes: () => Promise<{ vault: string; notes: import('../shared/fmviews').Note[] }>
     set: (file: string, key: string, value: string, mtime: number) => Promise<number>
-    importEnex: () => Promise<{ notes: number; files: number; folder: string } | null>
+    importEnex: (chosen?: string[]) => Promise<{ notes: number; files: number; folder: string } | null>
   }
   handoff: {
     write: (cwd: string, text: string, replace: boolean) => Promise<{ file: string; exists: boolean; written?: boolean }>
-    pickHtml: () => Promise<{ file: string; html: string } | null>
+    pickHtml: (chosen?: string[]) => Promise<{ file: string; html: string } | null>
   }
   mdImages: {
-    pick: () => Promise<string | null>
+    pick: (chosen?: string[]) => Promise<string | null>
     scan: (file: string) => Promise<{ file: string; storage: boolean; images: (import('../shared/mdimages').LocalImage & { abs: string; bytes: number; preview: string | null })[] }>
     publish: (file: string, refs: string[], template: import('../shared/mdimages').Template) => Promise<{ published: { ref: string; url: string }[]; errors: { ref: string; error: string }[]; changed: number }>
   }
@@ -597,8 +597,8 @@ export type Bridge = {
     rules: (r: import('../shared/feeds').FeedRule[]) => Promise<void>
     senders: (l: string[]) => Promise<string[]>
     newsletter: (id: string) => Promise<{ title: string; paragraphs: string[] }>
-    opmlImport: () => Promise<{ added: number; skipped: number } | null>
-    opmlExport: () => Promise<{ file: string; count: number } | null>
+    opmlImport: (chosen?: string[]) => Promise<{ added: number; skipped: number } | null>
+    opmlExport: (dir?: string | null) => Promise<{ file: string; count: number } | null>
     digest: (items: import('../shared/feeds').FeedItem[], save: boolean) => Promise<{ text: string; used: number; file: string }>
     briefing: (name: string) => Promise<string>
     schedule: (s: import('../shared/feeds').Schedule) => Promise<void>
@@ -807,7 +807,7 @@ export type Bridge = {
     save: (m: Partial<import('../shared/monitors').Monitor>) => Promise<MonitorRow[]>
     remove: (id: string) => Promise<MonitorRow[]>
     check: (id: string) => Promise<MonitorRow[]>
-    page: (title: string) => Promise<string | null>
+    page: (title: string, dir?: string | null) => Promise<string | null>
     pageTitle: () => Promise<string>
     netdataUrl: () => Promise<string>
     setNetdata: (url: string) => Promise<string>
@@ -854,7 +854,7 @@ export type Bridge = {
     open: (path: string) => Promise<{ model: string; versions: import('../electron/diagrams').DiagramVersion[] }>
     create: (cwd: string, name: string, text: string) => Promise<string>
     edit: (path: string, text: string, ids: string[]) => Promise<string>
-    fromImage: (cwd: string, name: string, hint: string) => Promise<string | null>
+    fromImage: (cwd: string, name: string, hint: string, chosen?: string[]) => Promise<string | null>
     er: (cwd: string, name: string, schema: import('../electron/db').DbSchema) => Promise<string>
     template: (cwd: string, name: string, id: string) => Promise<string>
     restore: (path: string, at: number) => Promise<void>
@@ -874,7 +874,7 @@ export type Bridge = {
   }
   docs: {
     state: () => Promise<{ queue: import('../electron/docstore').Job[]; docs: import('../electron/docstore').Doc[]; rules: import('../shared/docrules').Rule[]; template: string; folder: string; facts: number; tags: string[]; models: { small: string; embed: string } }>
-    setFolder: () => Promise<string>
+    setFolder: (chosen?: string | null) => Promise<string>
     addFiles: (paths?: string[]) => Promise<number>
     retry: (id: number) => Promise<void>
     doc: (id: number) => Promise<{ doc?: import('../electron/docstore').Doc; chunks: import('../electron/docstore').Chunk[]; facts: import('../electron/docstore').Fact[] }>
@@ -923,8 +923,8 @@ export type Bridge = {
     tryRead: (url: string, question: string, mode: 'page' | 'crawl') => Promise<{ page?: import('../electron/web/reader').Page; crawl?: import('../electron/web/reader').Crawl }>
   }
   team: {
-    exportFile: (name: string) => Promise<{ file: string; personas: number; triggers: number; evals: number; dropped: string[] } | null>
-    open: (path?: string) => Promise<{ team: import('../shared/team').Team; changes: import('../shared/team').Change[] } | null>
+    exportFile: (name: string, dir?: string | null) => Promise<{ file: string; personas: number; triggers: number; evals: number; dropped: string[] } | null>
+    open: (path?: string, chosen?: string[]) => Promise<{ team: import('../shared/team').Team; changes: import('../shared/team').Change[] } | null>
     apply: (team: import('../shared/team').Team, picked: string[]) => Promise<{ personas: number; triggers: number }>
   }
   design: {

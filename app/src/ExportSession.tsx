@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { IconClose } from './icons'
 import { toHtml, toMarkdown, turnsOf, type ExLine } from '../shared/sessionexport'
 import { Checkbox, NumberField } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 /** Export the conversation for a pull request or an issue: credentials masked, paths shortened, nothing sent. */
 export function ExportSessionSheet(props: { lines: ExLine[]; cwd: string; home: string; onClose: () => void }) {
@@ -38,7 +39,7 @@ export function ExportSessionSheet(props: { lines: ExLine[]; cwd: string; home: 
             <span className="faint ob-grow">Keys and tokens are masked and paths shortened (the project as ".", your home as "~"). Read it before you paste it.</span>
             {done && <span className="faint">{done}</span>}
             <button onClick={() => void navigator.clipboard.writeText(r.text).then(() => setDone('Copied'))}>Copy</button>
-            <button className="primary" onClick={() => void window.stm.exportText(`${title.replace(/\W+/g, '-').toLowerCase()}.${fmt}`, r.text).then((f) => f && setDone(`Saved ${f.split('/').pop()}`))}>Save</button>
+            <button className="primary" onClick={() => void pickProjectFolder('Save the export to').then((dir) => window.stm.exportText(`${title.replace(/\W+/g, '-').toLowerCase()}.${fmt}`, r.text, dir)).then((f) => f && setDone(`Saved ${f.split('/').pop()}`))}>Save</button>
           </div>
         </div>
       </div>

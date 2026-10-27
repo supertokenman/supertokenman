@@ -5,6 +5,7 @@ import type { MonitorRow } from './bridge'
 import { clean } from './errors'
 import './bridge'
 import { Checkbox, DateTimeField, NumberField, Select } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 const close = (
   <IconClose />
@@ -64,7 +65,7 @@ function Monitors() {
           <button className="primary" onClick={() => (setForm({ ...blank }), setPick(null), setErr(''))}>New monitor</button>
           <span className="spacer-flex" />
           <input className="mn-title" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Status page title" />
-          <button disabled={!rows.length} onClick={() => void window.stm.monitor.page(title).then((f) => f && setMsg(`Status page saved to ${f}.`))}>Save status page</button>
+          <button disabled={!rows.length} onClick={() => void pickProjectFolder('Save the status page to').then((dir) => window.stm.monitor.page(title, dir)).then((f) => f && setMsg(`Status page saved to ${f}.`))}>Save status page</button>
         </div>
         {!rows.length && !form && <div className="faint">No monitors yet. Add a site, an API health URL or a port.</div>}
         {rows.map((r) => (

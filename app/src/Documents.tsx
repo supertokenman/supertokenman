@@ -8,6 +8,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
 import { Select } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 // what the inbox reads (electron/docstore.ts ACCEPTED); the main process checks again
 const DOC_EXTS = ['txt', 'md', 'csv', 'json', 'eml', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp', 'pdf', 'docx', 'pptx', 'xlsx', 'html', 'epub']
@@ -62,7 +63,7 @@ export function DocumentsSheet(props: { onClose: () => void; onSend: (text: stri
                 <span className="sp-label">Watched folder</span>
                 <code className="dc-folder">{st.folder || 'none yet'}</code>
                 <span className="spacer-flex" />
-                <button className="ghost small" onClick={() => act(window.stm.docs.setFolder())}>{st.folder ? 'Change…' : 'Pick a folder…'}</button>
+                <button className="ghost small" onClick={() => act(pickProjectFolder('Folder to watch for documents').then((d) => window.stm.docs.setFolder(d)))}>{st.folder ? 'Change…' : 'Pick a folder…'}</button>
                 <button className="primary small" onClick={() => act(pickPaths({ title: 'Add documents', accept: DOC_EXTS, multiple: true, action: 'Add' }).then((r) => (r === 'finder' ? window.stm.docs.addFiles() : r ? window.stm.docs.addFiles(r) : 0)))}>Add files…</button>
               </div>
               <div className="faint">Files put there are read once and copied into the app's documents folder; the original stays where it is. PDFs, Office files, text, and photos or scans through OCR (Tesseract). {st.models.small ? `Tags and facts are suggested by ${st.models.small}.` : 'Pick a local model to get tag and fact suggestions.'}</div>
