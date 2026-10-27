@@ -77,9 +77,29 @@ can read it" ticked, and a panel was asked "run echo hello and tell me the date"
 So the vault path for commands is still not exercised. Why the bundled Claude Code does not take the
 extra certificate is open: being checked by running it alone through the proxy.
 
+## Third run: 0.1.5 without the proxy, 2026-10-27 11:25 UTC
+
+The same script without `--mitm`, so Claude Code worked (a panel answered). Destinations come from
+`lsof`; content was not read.
+
+| Address | Owner (whois) | Process | What it is |
+|---|---|---|---|
+| 160.79.104.10 | AP-2440 | claude | Anthropic's API range |
+| 2607:6bc0::10 (claude.ai) | ANTHROPIC-V6 | claude | Anthropic |
+| 104.18.24.159, 104.18.25.159, 2606:4700::6812:199f | Cloudflare | claude | not identified yet |
+| 98.91.39.95 | Amazon EC2 | claude | not identified yet |
+| 185.199.108.133 | GitHub | SuperTokenMan | update download host |
+| 4.228.31.150 | Microsoft (GitHub) | SuperTokenMan | update check |
+
+- The app itself (SuperTokenMan) connected to GitHub only: the update check in `docs/NETWORK.md`.
+- Everything else was Claude Code. Two of its destinations are Anthropic. Four addresses, on
+  Cloudflare and Amazon, have no name here: `lsof` shows addresses, not the host names asked for.
+  They are not claimed as Anthropic until their names are known.
+- Decoy: not found on disk. Traffic content was not read in this run.
+
 ## Next run
 
-Once the certificate question is answered: `bash app/scripts/proof-mac.sh --mitm --minutes 5`. Or, to
+To name the four addresses: `bash app/scripts/proof-mac.sh --names --minutes 5`, which sends traffic through mitmproxy without opening TLS, so Claude Code keeps working and every host name is logged. To read content too, once the certificate question is answered: `bash app/scripts/proof-mac.sh --mitm --minutes 5`. Or, to
 exercise a real turn now, without reading its content: the same without `--mitm` (destinations from
 lsof only). The script now also lists the hosts that refused the proxy's certificate. In the app, in this order: add
 DECOY_KEY in Connections > Vault with "Commands can read it" ticked, open a panel, send "run echo hello and tell me the date", approve
