@@ -93,7 +93,7 @@ export function ExtractSheet(props: { project?: string; onClose: () => void }) {
             {items ? (
               <>
                 <div className="ob-row"><span className="chart-name ob-grow">{items.length - bad} with a source{bad ? `, ${bad} rejected` : ''}</span>{cost > 0 && <span className="faint">US$ {cost.toFixed(4)}</span>}<button onClick={() => void navigator.clipboard.writeText(asJson(items))}>Copy JSON</button></div>
-                <table className="ex-table">
+                <table className="tbl ex-table">
                   <thead><tr><th>Field</th><th>Value</th><th>Source</th></tr></thead>
                   <tbody>
                     {items.map((it, i) => (

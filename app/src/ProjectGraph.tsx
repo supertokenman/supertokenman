@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import type { GNode, Graph, NKind } from '../shared/projgraph'
@@ -61,17 +62,17 @@ export function ProjectGraph(props: { cwd?: string; onClose: () => void; onAsk: 
 
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config pg" role="dialog" aria-label="Project graph">
+      <div className={`sheet config pg ${g?.nodes.length ? '' : 'fit'}`} role="dialog" aria-label="Project graph">
         <header className="sheet-head">
           <div className="sheet-title">Project graph</div>
           <span className="faint">{g?.nodes.length ? `${g.nodes.length} nodes · ${g.edges.length} links · built ${new Date(g.built).toLocaleString()}` : 'services, modules, tables, ADRs and decisions, from what the project already says'}</span>
           <span className="spacer-flex" />
           <form onSubmit={search} className="pg-find"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a node" aria-label="Find a node" spellCheck={false} /></form>
-          <button className={g?.nodes.length ? '' : 'primary'} disabled={busy || !props.cwd} onClick={build}>{busy ? 'Reading…' : g?.nodes.length ? 'Rebuild' : 'Build it'}</button>
+          {!!g?.nodes.length && <button disabled={busy || !props.cwd} onClick={build}>{busy ? 'Reading…' : 'Rebuild'}</button>}
           <button className="icon" aria-label="Close" onClick={props.onClose}><IconClose /></button>
         </header>
         {err && <div className="bg-err">{err}</div>}
-        {!props.cwd ? <div className="pg-empty faint">Open a panel in a project first.</div> : !g?.nodes.length ? <div className="pg-empty faint">Not built yet. Building reads imports, the backend map, SQL and ORM schemas, the ADRs in docs/adr and the decisions in this project's memory.</div> : (
+        {!props.cwd ? <EmptyState title="No project open" text="Open a panel in a project first; the graph is drawn for that project." /> : !g?.nodes.length ? <EmptyState title="Not built yet" text="Building reads imports, the backend map, SQL and ORM schemas, the ADRs in docs/adr and the decisions in this project's memory."><button className="primary" disabled={busy} onClick={build}>{busy ? 'Reading…' : 'Build it'}</button></EmptyState> : (
           <div className="pg-body">
             <div className="pg-canvas">
               <svg width={layout.w} height={layout.h} role="img" aria-label="Project graph">

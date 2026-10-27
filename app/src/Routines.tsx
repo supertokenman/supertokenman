@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { Markdown } from './markdown'
@@ -22,13 +23,16 @@ export function RoutinesSheet(props: { cwd?: string; onClose: () => void }) {
   const d = drafts.find((x) => x.id === open)
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="Routines">
+      <div className={`sheet config observe ${!routines.length && !drafts.length && !edit ? 'fit' : ''}`} role="dialog" aria-label="Routines">
         <header className="sheet-head">
           <div className="sheet-title">Routines</div>
           <span className="faint">skills on a schedule; they only read and leave a draft</span>
           <span className="spacer-flex" />
           <button className="icon" aria-label="Close" onClick={props.onClose}><IconClose /></button>
         </header>
+        {!routines.length && !drafts.length && !edit ? (
+          <EmptyState title="No routines yet" text="A routine runs a skill on a schedule. It reads the project and leaves a draft; it cannot run commands, edit or post."><button className="primary" onClick={() => setEdit(blank(props.cwd ?? ''))}>New routine</button></EmptyState>
+        ) : (
         <div className="ex-grid mf-grid">
           <div className="ex-col">
             {routines.map((r) => {
@@ -91,6 +95,7 @@ export function RoutinesSheet(props: { cwd?: string; onClose: () => void }) {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   )

@@ -490,3 +490,50 @@ export const IconSpeaker = () => (
     <path d="M1.75 5.5h2.5L7.5 2.75v8.5L4.25 8.5h-2.5zM9.75 5a2.5 2.5 0 0 1 0 4M11.25 3.25a5 5 0 0 1 0 7.5" />
   </Icon>
 )
+
+/** a pencil at 45 degrees: edit */
+export const IconEdit = () => (
+  <Icon>
+    <path d="M10.5 2.75l2.75 2.75L6 12.75H3.25V10z" />
+    <path d="M9 4.25l2.75 2.75" />
+  </Icon>
+)
+/** a box with a lid and a slot: archive */
+export const IconArchive = () => (
+  <Icon>
+    <rect x="1.75" y="2.5" width="12.5" height="3" rx="0.75" />
+    <path d="M2.75 5.5v7c0 .55.45 1 1 1h8.5c.55 0 1-.45 1-1v-7M6.5 8.25h3" />
+  </Icon>
+)
+
+// Catalog kinds: one shape each, read at 12 px in a filter chip.
+/** a puzzle piece: a plugin adds a piece to Claude Code */
+export const IconPluginKind = () => (
+  <Icon>
+    <path d="M2.5 5.5h2.75a1.5 1.5 0 1 1 3 0H11v2.75a1.5 1.5 0 1 1 0 3V13.5H2.5z" />
+  </Icon>
+)
+/** a page with a spark: a skill is written know-how */
+export const IconSkillKind = () => (
+  <Icon>
+    <path d="M9.5 1.75H4c-.55 0-1 .45-1 1v10.5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1V5.25z" />
+    <path d="M8 6.25l2.25 2.25L8 10.75 5.75 8.5z" />
+  </Icon>
+)
+/** two stacked server units with a link: an MCP server */
+export const IconServerKind = () => (
+  <Icon>
+    <rect x="2" y="2.25" width="12" height="4.5" rx="1" />
+    <rect x="2" y="9.25" width="12" height="4.5" rx="1" />
+    <path d="M4.75 4.5h.01M4.75 11.5h.01M8.5 4.5h3M8.5 11.5h3" />
+  </Icon>
+)
+/** a branch from a commit: a repository */
+export const IconRepoKind = () => (
+  <Icon>
+    <circle cx="4.5" cy="3.5" r="1.5" />
+    <circle cx="4.5" cy="12.5" r="1.5" />
+    <circle cx="11.5" cy="5.5" r="1.5" />
+    <path d="M4.5 5v6M11.5 7c0 2.5-3 2.5-7 4" />
+  </Icon>
+)

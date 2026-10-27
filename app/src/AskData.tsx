@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { chartOf, seriesOf, type BoardItem } from '../shared/askdata'
 import type { DbConn, DbResult } from '../electron/db'
 import { Chart } from './Chart'
@@ -44,7 +45,7 @@ function Answer(props: { res: DbResult; label: string; height?: number }) {
  * read and can change before it runs. It runs read-only, one statement, and the answer comes back as a
  * number, a chart or a table. Answers you keep form a dashboard that runs them again when you open it.
  */
-export function AskDataSheet(props: { onClose: () => void }) {
+export function AskDataSheet(props: { onClose: () => void; onDatabase?: () => void }) {
   const [conns, setConns] = useState<DbConn[]>([])
   const [conn, setConn] = useState('')
   const [tab, setTab] = useState<'ask' | 'board'>('ask')
@@ -88,7 +89,7 @@ export function AskDataSheet(props: { onClose: () => void }) {
   const name = (id: string) => conns.find((c) => c.id === id)?.name ?? id
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe ad" role="dialog" aria-label="Ask your data">
+      <div className={`sheet config observe ad ${conns.length ? '' : 'fit'}`} role="dialog" aria-label="Ask your data">
         <header className="sheet-head">
           <div className="sheet-title">Ask your data</div>
           <div className="segmented small" role="tablist">
@@ -101,7 +102,11 @@ export function AskDataSheet(props: { onClose: () => void }) {
         </header>
         {tab === 'ask' ? (
           <div className="ad-body">
-            {!conns.length ? <div className="faint">Add a connection in the Database screen first.</div> : (
+            {!conns.length ? (
+              <EmptyState title="No database connected" text="Ask in plain words and get a chart. It reads through a connection from the Database sheet, read-only unless you turn writes on.">
+                {props.onDatabase && <button className="primary" onClick={props.onDatabase}>Connect a database</button>}
+              </EmptyState>
+            ) : (
               <>
                 <div className="fld-grid">
                   <label className="fld"><span className="fld-label">Database</span><select value={conn} onChange={(e) => (setConn(e.target.value), setRes(null), setSql(''))}>{conns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>

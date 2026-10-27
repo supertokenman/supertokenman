@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconClose } from './icons'
+import { IconClose, IconEdit, IconTrash } from './icons'
+import { RowAct, RowActs } from './RowActs'
 import { ALL_VIEW, applyView, counts, expand, matchShortcut, snoozeChoices, variables, within, type Conversation, type Hours, type SavedReply, type Source, type Status, type View } from '../shared/inbox'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
@@ -224,12 +225,13 @@ function Replies(props: { replies: SavedReply[]; act: (p: Promise<unknown>) => v
       <div className="faint">Type /shortcut in a reply. Variables: {'{{name}}'}, {'{{first_name}}'}, {'{{handle}}'}, {'{{subject}}'}, {'{{my_name}}'}. A variable left unfilled blocks Send.</div>
       <div className="wr-rules">
         {props.replies.map((x) => (
-          <div key={x.shortcut} className="wr-rule">
+          <div key={x.shortcut} className="wr-rule row-host">
             <code>/{x.shortcut}</code>
             <span className="ib-reply-text">{x.text}</span>
-            <span className="spacer-flex" />
-            <button className="ghost small" onClick={() => setR(x)}>Edit</button>
-            <button className="ghost small" onClick={() => props.act(window.stm.inbox.replies(props.replies.filter((y) => y.shortcut !== x.shortcut)))}>Remove</button>
+            <RowActs>
+              <RowAct label={`Edit /${x.shortcut}`} icon={<IconEdit />} onClick={() => setR(x)} />
+              <RowAct label={`Remove /${x.shortcut}`} icon={<IconTrash />} danger onClick={() => props.act(window.stm.inbox.replies(props.replies.filter((y) => y.shortcut !== x.shortcut)))} />
+            </RowActs>
           </div>
         ))}
       </div>

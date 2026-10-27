@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { confirmText, type Act, type Service, type Stack } from '../shared/stacks'
@@ -70,14 +71,14 @@ export function ComposeStacks(props: { onClose: () => void }) {
 
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe stk" role="dialog" aria-label="Compose stacks">
+      <div className={`sheet config observe stk ${docker && stacks.length ? '' : 'fit'}`} role="dialog" aria-label="Compose stacks">
         <header className="sheet-head">
           <div className="sheet-title">Compose stacks</div>
           <span className="faint">docker compose on this machine; nothing starts or stops without your click</span>
           <span className="spacer-flex" />
           <button className="icon" aria-label="Close" onClick={props.onClose}><IconClose /></button>
         </header>
-        {!docker ? <div className="stk-empty faint">Docker is not answering on this machine.</div> : !stacks.length ? <div className="stk-empty faint">No compose stacks yet. Any stack started with docker compose shows here, running or stopped.</div> : (
+        {!docker ? <EmptyState title="Docker is not answering" text="Start Docker Desktop (or the Docker engine) on this machine, then open this again." /> : !stacks.length ? <EmptyState title="No compose stacks yet" text="Any stack started with docker compose shows here, running or stopped." /> : (
           <div className="stk-body">
             <nav className="stk-list" aria-label="Stacks">
               {stacks.map((s) => (
@@ -108,7 +109,7 @@ export function ComposeStacks(props: { onClose: () => void }) {
                   )}
                 </div>
                 {note && <pre className={`stk-note ${note.ok ? 'ok' : 'bad'}`}>{note.text}</pre>}
-                <table className="vb-table stk-svcs">
+                <table className="tbl vb-table stk-svcs">
                   <thead><tr><th>Service</th><th>State</th><th>Image</th><th>Ports</th><th /></tr></thead>
                   <tbody>
                     {services.map((s) => (

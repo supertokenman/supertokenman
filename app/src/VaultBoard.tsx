@@ -71,7 +71,7 @@ export function VaultBoard(props: { onClose: () => void }) {
           </div>
         ) : (
           <div className="vb-table-wrap">
-            <table className="vb-table">
+            <table className="tbl vb-table">
               <thead><tr><th>Note</th>{fields.map((f) => <th key={f}>{f}</th>)}</tr></thead>
               <tbody>{shown.map((n) => <tr key={n.file}><td title={n.file}>{n.title}</td>{fields.map((f) => <td key={f}>{show(n.data[f])}</td>)}</tr>)}</tbody>
             </table>

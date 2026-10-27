@@ -13,18 +13,23 @@ before and after when it is done. Systemic items first: one fix reaches many she
 - [x] Buttons stretched to the full width of a form (Team room: "Create and copy invite", "Join").
 - [x] Dashed-border fields (Filter in Markets, Add a site in News) next to solid ones: one field style.
 - [x] Error notes ("No connection right now"): a heavy box for a small message.
-- [ ] Tables: wrapping names ("Prompt cache" on two lines), status pills in two styles, row actions
-      (delete, edit) not visible.
+- [x] Tables: wrapping names ("Prompt cache" on two lines), status pills in two styles, row actions
+      (delete, edit) not visible. One `table.tbl` style and one `.status` pill in app.css; first column
+      on one line with an ellipsis and its full name as a tooltip; row actions are icon buttons with
+      tooltips (RowActs.tsx), brighter on row hover and keyboard focus.
 - [x] The panel id chip ("s46", dashed box) beside the folder name.
-- [ ] Badges in the top bar overlapping the next control ("Update" pill under the palette badge).
-- [ ] Filter chips with a count ("Plugins 3926"): no icons, the count reads as noise.
+- [x] Badges in the top bar overlapping the next control ("Update" pill under the palette badge).
+- [x] Filter chips with a count ("Plugins 3926"): no icons, the count reads as noise. Drawn icons per
+      kind (icons.tsx), count in quiet mono.
 
 - [x] Native selects, date and file inputs, resize grips: the app's caret and button.
 - [x] Plurals: "1 turns", "1 screens", "1 files" (shared/plural.ts).
 - [x] Secondary actions inside sheets read as loose text: a hairline edge.
 - [x] Sheets that cover the panel header's tabs: not a defect, a sheet is a modal over a dimmed window.
-- [ ] Mostly empty sheets with a sentence and no action (about 30 sheets): compact dialogs, or an
-      empty state with the action that fills them.
+- [x] Mostly empty sheets with a sentence and no action (about 30 sheets): compact dialogs, or an
+      empty state with the action that fills them. EmptyState.tsx and `.sheet.fit`; applied to API to MCP,
+      MCP catalog, MCP health, Prometheus, Analytics, Routines, Playbooks, Message filters, Ask your data,
+      Project graph, Compose stacks, Image X-ray, Markdown images, Scoreboard, Memory. The rest remain.
 - [ ] Commands, paths and env var names in sans and not copyable: mono with a Copy button.
 - [ ] Content clipped at the sheet bottom or truncated without an ellipsis or a tooltip.
 - [ ] Left edges out of line with the sheet title (149/157/165 against 159).
@@ -50,7 +55,7 @@ before and after when it is done. Systemic items first: one fix reaches many she
 - [ ] Database, new connection: a long form, five engines only. More engines (Supabase, Neon,
       PlanetScale, Turso, MongoDB, Redis, ClickHouse...) as cards with logos, and the connection string
       built from fields.
-- [ ] Savings table (Tool, Tokens, Kept off, How we know): layout and pills.
+- [x] Savings table (Tool, Tokens, Kept off, How we know): layout and pills.
 
 ## Flows
 
@@ -61,4 +66,6 @@ before and after when it is done. Systemic items first: one fix reaches many she
 - [ ] Folder picker: the macOS dialog; an in-app picker (recent projects, git repos found on disk,
       search) with the system dialog as a fallback.
 - [x] Panels: animate create, move and close.
-- [ ] Apps sidebar (WhatsApp and the rest): opening, closing and switching lag.
+- [x] Apps sidebar (WhatsApp and the rest): opening, closing and switching lag. The drawer slides on a
+      transform over the panels and takes its width once at rest; hidden apps stay laid out, not
+      display:none. Median open: p95 frame 83 to 17 ms, panel resizes 36 to 4.

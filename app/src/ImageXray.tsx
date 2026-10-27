@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import type { Report } from '../electron/imagexray'
@@ -23,7 +24,7 @@ export function ImageXray(props: { sid?: string; onClose: () => void }) {
   const max = Math.max(1, ...(rep?.layers ?? []).map((l) => l.size))
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe xr" role="dialog" aria-label="Image X-ray">
+      <div className={`sheet config observe xr ${rep ? '' : 'fit'}`} role="dialog" aria-label="Image X-ray">
         <header className="sheet-head">
           <div className="sheet-title">Image X-ray</div>
           <span className="faint">each layer of a local image, and the bytes later layers throw away</span>
@@ -47,7 +48,7 @@ export function ImageXray(props: { sid?: string; onClose: () => void }) {
                 <span className="spacer-flex" />
                 {props.sid && rep.wasted > 0 && <button onClick={ask}>Ask Claude to slim the Dockerfile</button>}
               </div>
-              <table className="vb-table">
+              <table className="tbl vb-table">
                 <thead><tr><th>#</th><th>Size</th><th /><th>Waste</th><th>Files</th><th>Made by</th></tr></thead>
                 <tbody>
                   {rep.layers.map((l, i) => (

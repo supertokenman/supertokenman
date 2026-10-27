@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { IconClose } from './icons'
+import { IconClose, IconTrash } from './icons'
+import { RowAct, RowActs } from './RowActs'
 import type { Chunk, Doc, Fact, Hit, Job, SearchStage } from '../electron/docstore'
 import type { Rule } from '../shared/docrules'
 import { StateMark } from './StateMark'
@@ -88,7 +89,7 @@ function DocList(props: { docs: Doc[]; onOpen: (id: number) => void }) {
   if (!props.docs.length) return <div className="faint">No documents yet. Put files in the watched folder or use Add files.</div>
   return (
     <div className="dc-table">
-      <table>
+      <table className="tbl">
         <thead><tr><th>Document</th><th>From</th><th className="num">Date</th><th>Tags</th><th className="num">Text</th></tr></thead>
         <tbody>
           {props.docs.map((d) => (
@@ -246,12 +247,11 @@ function Rules(props: { rules: Rule[]; template: string; act: (p: Promise<unknow
       {props.rules.length === 0 && <div className="faint">No rules yet.</div>}
       <div className="wr-rules">
         {props.rules.map((x) => (
-          <div key={x.id} className="wr-rule">
+          <div key={x.id} className="wr-rule row-host">
             <b>{x.name}</b>
             <code>{x.kind === 'regex' ? `/${x.value}/` : x.value}</code>
             <span className="faint">→ {x.tags.join(', ') || 'no tags'}{x.template ? ` · ${x.template}` : ''}</span>
-            <span className="spacer-flex" />
-            <button className="ghost small" onClick={() => props.act(window.stm.docs.dropRule(x.id))}>Remove</button>
+            <RowActs><RowAct label="Remove this rule" icon={<IconTrash />} danger onClick={() => props.act(window.stm.docs.dropRule(x.id))} /></RowActs>
           </div>
         ))}
       </div>
