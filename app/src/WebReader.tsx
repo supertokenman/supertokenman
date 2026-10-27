@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { IconClose } from './icons'
+import { IconClose, IconTrash } from './icons'
+import { RowAct, RowActs } from './RowActs'
 import type { CacheMode, CacheRule } from '../shared/leanfetch'
 import type { Crawl, Page, WebConfig } from '../electron/web/reader'
 import { StateMark } from './StateMark'
@@ -83,11 +84,10 @@ export function WebReaderSheet(props: { onClose: () => void }) {
           <div className="sp-label">Cache by address</div>
           <div className="wr-rules">
             {(cfg?.cache ?? []).map((r) => (
-              <div key={r.prefix} className="wr-rule">
+              <div key={r.prefix} className="wr-rule row-host">
                 <code>{r.prefix}</code>
                 <span className="faint">{MODES[r.mode]}</span>
-                <span className="spacer-flex" />
-                <button className="ghost small" onClick={() => save(window.stm.reader.setCache(cfg!.cache.filter((x) => x.prefix !== r.prefix)))}>Remove</button>
+                <RowActs><RowAct label={`Remove the rule for ${r.prefix}`} icon={<IconTrash />} danger onClick={() => save(window.stm.reader.setCache(cfg!.cache.filter((x) => x.prefix !== r.prefix)))} /></RowActs>
               </div>
             ))}
             <div className="dep-row">
@@ -110,13 +110,13 @@ export function WebReaderSheet(props: { onClose: () => void }) {
           <div className="wr-rules">
             {(cfg?.schemas ?? []).map((s) => (
               <div key={s.name} className="wr-schema">
-                <div className="wr-rule">
+                <div className="wr-rule row-host">
                   <b>{s.name}</b>
                   <code>{s.prefix}</code>
                   <span className="faint">{s.fields.map((f) => f.name).join(', ')} · run {s.runs} time{s.runs === 1 ? '' : 's'}</span>
                   <span className="spacer-flex" />
                   <button className="ghost small" disabled={!url.trim().startsWith(s.prefix)} title={url.trim().startsWith(s.prefix) ? `Run on ${url.trim()}` : `Put a page under ${s.prefix} in Try it to run it`} onClick={() => void window.stm.reader.extract(url.trim(), s.name).then((r) => (setRan({ ...ran, [s.name]: r.error ?? JSON.stringify(r.items, null, 1) }), load()), (e) => setErr(clean(e)))}>Run</button>
-                  <button className="ghost small" onClick={() => save(window.stm.reader.dropSchema(s.name))}>Forget</button>
+                  <RowActs><RowAct label={`Forget ${s.name}`} icon={<IconTrash />} danger onClick={() => save(window.stm.reader.dropSchema(s.name))} /></RowActs>
                 </div>
                 {ran[s.name] && <pre className="tr-text">{ran[s.name]}</pre>}
               </div>

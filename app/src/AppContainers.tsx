@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { IconClose } from './icons'
+import { IconClose, IconStop, IconTrash } from './icons'
+import { RowAct, RowActs } from './RowActs'
 import { clean } from './errors'
 import type { Ev, Row, Use } from '../shared/containers'
 
@@ -31,12 +32,12 @@ export function AppContainers(props: { onClose: () => void }) {
         </header>
         <div className="ac-body">
           {!docker ? <div className="faint">Docker is not answering on this machine.</div> : !rows.length ? <div className="faint">No containers from the app right now. Isolated panels and self-hosted apps show here.</div> : (
-            <table className="vb-table ac-table">
+            <table className="tbl vb-table ac-table">
               <thead><tr><th>Name</th><th>Kind</th><th>Image</th><th>State</th><th>CPU</th><th>Memory</th><th /></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td><code>{r.name}</code></td>
+                    <td title={r.name}><code>{r.name}</code></td>
                     <td><span className="pt-kind">{r.kind}</span></td>
                     <td className="faint">{r.image}</td>
                     <td><span className={`ac-state ${r.state}`}>{r.state}</span> <span className="faint">{r.status}</span></td>
@@ -51,8 +52,10 @@ export function AppContainers(props: { onClose: () => void }) {
                         </>
                       ) : (
                         <>
-                          {r.state === 'running' && <button className="ghost small" onClick={() => setAsk({ id: r.id, name: r.name, act: 'stop' })}>Stop</button>}
-                          <button className="ghost small" onClick={() => setAsk({ id: r.id, name: r.name, act: 'rm' })}>Remove</button>
+                          <RowActs>
+                            {r.state === 'running' && <RowAct label={`Stop ${r.name}`} icon={<IconStop />} onClick={() => setAsk({ id: r.id, name: r.name, act: 'stop' })} />}
+                            <RowAct label={`Remove ${r.name}`} icon={<IconTrash />} danger onClick={() => setAsk({ id: r.id, name: r.name, act: 'rm' })} />
+                          </RowActs>
                         </>
                       )}
                     </td>

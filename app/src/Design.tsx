@@ -136,7 +136,7 @@ function Components(props: { cwd?: string; onSend: (text: string) => void }) {
       {inv.unused.length > 0 && <div className="faint">Nothing uses: {inv.unused.join(', ')}. Check before deleting; something outside the project may.</div>}
       <input className="dsg-filter" id="dsg-filter" value={q} placeholder={`Filter ${inv.components.length} components`} onChange={(e) => setQ(e.target.value)} />
       <div className="dsg-table">
-        <table>
+        <table className="tbl">
           <thead><tr><th>Component</th><th>Props</th><th className="num">Uses</th><th>File</th></tr></thead>
           <tbody>
             {shown.slice(0, 300).map((c) => (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import type { Config, Entry, Filter } from '../shared/mcpcat'
 import { clean } from './errors'
@@ -34,7 +35,7 @@ export function McpCatalogSheet(props: { cwd?: string; onClose: () => void }) {
   const refresh = () => (setBusy(true), void window.stm.mcat.refresh().then(load, (e) => setErr(clean(e))).finally(() => setBusy(false)))
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="MCP catalog">
+      <div className={`sheet config observe ${st?.count ? '' : 'fit'}`} role="dialog" aria-label="MCP catalog">
         <header className="sheet-head">
           <div className="sheet-title">MCP catalog</div>
           <span className="faint">{st?.count ? `${st.count.toLocaleString()} servers from awesome-mcp-servers` : ''}</span>
@@ -43,11 +44,10 @@ export function McpCatalogSheet(props: { cwd?: string; onClose: () => void }) {
           <button className="icon" aria-label="Close" onClick={props.onClose}>{close}</button>
         </header>
         {!st ? <div className="dsg-body faint">Reading…</div> : !st.count ? (
-          <div className="dsg-body">
-            <div className="faint">The catalog comes from the awesome-mcp-servers list (MIT), downloaded once and updated when you ask. Each server in it is someone else's code with its own license: every install shows a review first.</div>
-            <div className="ob-row"><button className="primary" disabled={busy} onClick={refresh}>{busy ? 'Downloading…' : 'Download the list'}</button></div>
+          <EmptyState title="No catalog yet" text="The catalog comes from the awesome-mcp-servers list (MIT), downloaded once and updated when you ask. Each server is someone else's code: every install shows a review first.">
+            <button className="primary" disabled={busy} onClick={refresh}>{busy ? 'Downloading…' : 'Download the list'}</button>
             {err && <div className="notice error">{err}</div>}
-          </div>
+          </EmptyState>
         ) : (
           <div className="cf-body">
             <div className="cf-col ob-list">

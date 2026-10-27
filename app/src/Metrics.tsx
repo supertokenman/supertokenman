@@ -29,7 +29,7 @@ export function MetricsSheet(props: { onClose: () => void }) {
   useEffect(load, [])
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="Prometheus">
+      <div className={`sheet config observe ${!conf || tab === 'setup' ? 'fit' : ''}`} role="dialog" aria-label="Prometheus">
         <header className="sheet-head">
           <div className="sheet-title">Prometheus</div>
           <div className="segmented small" role="tablist">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { EXAMPLE, headerOf, type MsgFilter, type Stage } from '../shared/msgfilters'
@@ -53,13 +54,16 @@ export function MessageFiltersSheet(props: { project?: string; onClose: () => vo
   }
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="Message filters">
+      <div className={`sheet config observe ${!list.length && !d ? 'fit' : ''}`} role="dialog" aria-label="Message filters">
         <header className="sheet-head">
           <div className="sheet-title">Message filters</div>
           <span className="faint">your code, run in a sandbox with no network or files</span>
           <span className="spacer-flex" />
           <button className="icon" aria-label="Close" onClick={props.onClose}><IconClose /></button>
         </header>
+        {!list.length && !d ? (
+          <EmptyState title="No message filters yet" text="A filter is a short script that changes a message on its way in or out. It runs in a sandbox with no network or files."><button className="primary" onClick={() => (setD({ code: EXAMPLE, valves: JSON.stringify(headerOf(EXAMPLE).valves, null, 2), projects: '', on: false, order: 0 }), setOut(null))}>New filter</button></EmptyState>
+        ) : (
         <div className="ex-grid mf-grid">
           <div className="ex-col">
             <span className="chart-name">In order</span>
@@ -107,6 +111,7 @@ export function MessageFiltersSheet(props: { project?: string; onClose: () => vo
             <div className="ex-col faint">Pick a filter or start a new one.</div>
           )}
         </div>
+        )}
       </div>
     </div>
   )

@@ -632,15 +632,18 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 .ci-head .badge { text-transform: none; }
 
 /* whatsapp drawer */
-.body { display: flex; min-height: 0; }
+.body { display: flex; min-height: 0; overflow-x: clip; }
 .body > .grid { flex: 1; min-width: 0; }
-.wa { position: relative; flex: none; display: grid; grid-template-rows: 44px 1fr; grid-template-columns: minmax(0, 1fr); overflow: hidden; border-left: 1px solid var(--border); background: var(--surface); transition: width 420ms cubic-bezier(0.16, 1, 0.3, 1); will-change: width; }
-/* the drawer's contents slide and fade in behind the edge instead of being squeezed open */
-.wa > .wa-head, .wa > .wa-body { transform: translateX(32px); opacity: 0; transition: transform 460ms cubic-bezier(0.16, 1, 0.3, 1) 40ms, opacity 260ms ease 60ms; }
-.wa.open > .wa-head, .wa.open > .wa-body { transform: none; opacity: 1; }
-.wa.dragging, .wa.dragging > * { transition: none; }
-@media (prefers-reduced-motion: reduce) { .wa, .wa > * { transition: none !important; } }
-.wa:not(.open) { border-left: 0; }
+.wa { position: relative; flex: none; width: 0; z-index: 30; }
+/* the drawer itself: a fixed-width sheet that slides on transform over the panels; the aside only takes its width once at rest (WebApps.tsx) */
+.wa-sheet { position: absolute; top: 0; right: 0; bottom: 0; display: grid; grid-template-rows: 44px 1fr; grid-template-columns: minmax(0, 1fr); overflow: hidden; border-left: 1px solid var(--border); background: var(--surface); transform: translate3d(100%, 0, 0); transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1); box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18); }
+.wa-sheet.open { transform: none; }
+.wa.docked .wa-sheet { box-shadow: none; }
+.wa-sheet.gone { visibility: hidden; }
+.wa-sheet.dragging { transition: none; }
+@media (prefers-reduced-motion: reduce) { .wa-sheet { transition: none !important; } }
+/* an app not in front stays loaded and keeps its size, out of sight: no re-layout of the page when switching back */
+.wa-body .wa-view.hidden { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
 .wa-grip { position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 2; }
 .wa-head { display: flex; align-items: center; gap: 10px; padding: 0 8px; white-space: nowrap; overflow: hidden; }
 .wa-title { font-weight: 650; }
@@ -4090,3 +4093,58 @@ textarea::-webkit-resizer { background: transparent; border-right: 2px solid var
 /* a secondary action inside a sheet reads as a button, not as loose text */
 .sheet button.ghost:not(.icon):not([role='tab']):not(.segmented button) { box-shadow: inset 0 0 0 1px rgba(var(--overlay-rgb), 0.12); }
 .sheet button.ghost:not(.icon):not([role='tab']):hover { box-shadow: inset 0 0 0 1px rgba(var(--overlay-rgb), 0.22); }
+
+/* ---- One table style (docs/UI-BACKLOG.md, Tables). Add `tbl` to a <table>; data grids keep their own. */
+table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+table.tbl th { text-align: left; font: 500 10.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.tbl td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.tbl tbody tr:hover > td { background: var(--hover); }
+table.tbl .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* the first column is the name: one line, cut with an ellipsis, the full name in its tooltip */
+table.tbl td:first-child, table.tbl td.tbl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+table.tbl td:first-child > * { vertical-align: middle; }
+table.tbl tbody tr:last-child > td { border-bottom: 0; }
+
+/* ---- One status pill: a dot and a word, the same outline everywhere. ok, warn, bad, off. */
+.status { display: inline-flex; align-items: center; gap: 6px; height: 20px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: 11px; line-height: 1; color: var(--muted); white-space: nowrap; }
+.status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
+.status.ok { color: var(--text); }
+.status.ok::before { background: var(--green); }
+.status.warn::before { background: var(--accent); }
+.status.bad { color: var(--red); }
+.status.bad::before { background: var(--red); }
+.status.off::before { background: transparent; box-shadow: inset 0 0 0 1px var(--faint); }
+
+/* ---- Row actions: icon buttons with a tooltip, always there, brighter on row hover or keyboard focus. */
+.row-acts { display: inline-flex; align-items: center; gap: 2px; flex: none; margin-left: auto; }
+.row-acts button.icon { color: var(--faint); opacity: 0.7; transition: opacity 120ms var(--ease), color 120ms var(--ease); }
+:is(tr, li, .row-host):is(:hover, :focus-within) .row-acts button.icon { opacity: 1; color: var(--muted); }
+.row-acts button.icon:is(:hover, :focus-visible) { color: var(--text); opacity: 1; }
+.row-acts button.icon.danger:is(:hover, :focus-visible) { color: var(--red); }
+.nw-src-row:focus-within .nw-x, .mk-card:focus-within .nw-x { opacity: 1; }
+.nw-x { opacity: 0.45; }
+
+/* ---- Catalog filter chips: a drawn icon per kind, the count quiet */
+.filters .chip { display: inline-flex; align-items: center; gap: 6px; }
+.filters .chip .ico { width: 13px; height: 13px; color: var(--faint); }
+.filters .chip.on .ico { color: var(--accent); }
+.chip-count { font: 10.5px var(--mono); font-variant-numeric: tabular-nums; color: var(--faint); opacity: 0.85; }
+
+/* ---- Sheets that size to what is in them: a short sheet stays short */
+.sheet.sheet.fit { height: auto; max-height: min(640px, calc(100vh - 96px)); align-self: center; }
+.sheet.fit > .ar-pad, .sheet.fit > .sheet-body { flex: 0 1 auto; }
+
+/* ---- One empty state: a short title, one line, the button that fills it */
+.empty-state { display: grid; justify-items: center; gap: 8px; padding: 36px 24px 40px; text-align: center; }
+.empty-state .es-mark { width: 28px; height: 28px; display: grid; place-items: center; color: var(--accent); border: 1px solid rgba(var(--accent-rgb), 0.45); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); margin-bottom: 4px; }
+.empty-state .es-title { font-weight: 600; font-size: 14px; color: var(--text); }
+.empty-state .es-text { max-width: 420px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.empty-state .es-act { margin-top: 6px; display: flex; gap: 8px; }
+.dbv-conn-row { display: flex; align-items: center; min-width: 0; }
+.dbv-conn-row .dbv-conn { flex: 1; }
+.dbv-conn-row .row-acts { padding-right: 4px; }
+
+/* ---- Top bar badges sit in the flow of their button, never over the next control */
+.top .menu-btn, .top .wa-btn { display: inline-flex; align-items: center; gap: 4px; width: auto; min-width: 0; overflow: visible; }
+.top .menu-btn .count, .top .wa-btn .count { position: static; flex: none; margin: 0 0 0 2px; transform: none; }
+.top .update-pill { margin-left: 6px; flex: none; }

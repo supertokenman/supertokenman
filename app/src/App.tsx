@@ -1450,7 +1450,7 @@ export function App() {
       <Presence show={apiOpen}><ApiClientSheet onClose={() => setApiOpen(false)} onAttach={(note) => p.focus && window.dispatchEvent(new CustomEvent('stm:attach', { detail: { sid: p.focus, ...note } }))} /></Presence>
       <Presence show={localOpen}><LocalModelSheet onClose={() => setLocalOpen(false)} usdToBrl={rate} /></Presence>
       <Presence show={a2mOpen}><ApiToMcpSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setA2mOpen(false)} /></Presence>
-      <Presence show={mhOpen}><McpHealthSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMhOpen(false)} onInspect={() => (setMhOpen(false), setInspOpen(true))} onApprovals={() => (setMhOpen(false), setMpolOpen(true))} /></Presence>
+      <Presence show={mhOpen}><McpHealthSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMhOpen(false)} onInspect={() => (setMhOpen(false), setInspOpen(true))} onApprovals={() => (setMhOpen(false), setMpolOpen(true))} onCatalog={() => (setMhOpen(false), setMcatOpen(true))} /></Presence>
       <Presence show={mpolOpen}><McpApprovalsSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMpolOpen(false)} /></Presence>
       <Presence show={inspOpen}><McpInspectorSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setInspOpen(false)} /></Presence>
       <Presence show={mcatOpen}><McpCatalogSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMcatOpen(false)} /></Presence>
@@ -1560,7 +1560,7 @@ export function App() {
       <Presence show={pcOpen}><PhoneCompanionSheet onClose={() => setPcOpen(false)} /></Presence>
       <Presence show={caOpen}><ConnectAgentsSheet onClose={() => setCaOpen(false)} /></Presence>
       <Presence show={bmOpen}><BackendMapSheet cwd={p.focus ? (p.byId[p.focus]?.worktree?.repo ?? p.byId[p.focus]?.cwd) : undefined} onClose={() => setBmOpen(false)} onAttach={(note) => (p.focus && window.dispatchEvent(new CustomEvent('stm:attach', { detail: { sid: p.focus, ...note } })), setBmOpen(false))} /></Presence>
-      <Presence show={adOpen}><AskDataSheet onClose={() => setAdOpen(false)} /></Presence>
+      <Presence show={adOpen}><AskDataSheet onClose={() => setAdOpen(false)} onDatabase={() => (setAdOpen(false), setDbOpen(true))} /></Presence>
       <Presence show={dsOpen}><DesignSystemSheet onClose={() => setDsOpen(false)} /></Presence>
       <Presence show={stOpen}><ShortTerm sid={p.focus ?? undefined} onClose={() => setStOpen(false)} onAttach={(note) => (p.focus && window.dispatchEvent(new CustomEvent('stm:attach', { detail: { sid: p.focus, ...note } })), setStOpen(false))} /></Presence>
       <Presence show={pgOpen}><ProjectGraph cwd={p.focus ? (p.byId[p.focus]?.worktree?.repo ?? p.byId[p.focus]?.cwd) : undefined} onClose={() => setPgOpen(false)} onAsk={(text) => { setPgOpen(false); if (p.focus) window.dispatchEvent(new CustomEvent('stm:ask', { detail: { sid: p.focus, text } })) }} /></Presence>

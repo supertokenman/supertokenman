@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconCheck, IconClose, IconMerge, IconTest } from './icons'
 import { rank, whyFirst, type Attempt, type TestRun } from '../shared/fanout'
 import type { State } from './state'
@@ -74,7 +75,7 @@ export function FanoutSheet(props: { byId: Record<string, State | undefined>; gr
   const most = Math.max(1, ...rows.map((r) => r.added + r.removed))
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe fo" role="dialog" aria-label="Fan-out scoreboard">
+      <div className={`sheet config observe fo ${cur ? '' : 'fit'}`} role="dialog" aria-label="Fan-out scoreboard">
         <header className="sheet-head">
           <div className="sheet-title">Scoreboard</div>
           {groups.length > 1 && <select value={cur?.group} onChange={(e) => setGroup(e.target.value)} aria-label="Fan-out">{groups.map((g) => <option key={g.group} value={g.group}>{g.prompt.slice(0, 50) || g.group}</option>)}</select>}
@@ -84,7 +85,7 @@ export function FanoutSheet(props: { byId: Record<string, State | undefined>; gr
         </header>
         <div className="dsg-body">
           {!cur ? (
-            <div className="faint">No attempts open. Start one with Try several ways: the same prompt in two or three worktree panels, each with its own model.</div>
+            <EmptyState title="No attempts open" text="Start one with Try several ways: the same prompt in two or three worktree panels, each with its own model." />
           ) : (
             <>
               <div className="fo-prompt"><span className="fld-label">Prompt</span><div>{cur.prompt}</div></div>
