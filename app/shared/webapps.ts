@@ -20,8 +20,70 @@ export const WEB_APPS: WebApp[] = [
   { id: 'youtube', name: 'YouTube', url: 'https://www.youtube.com/', hosts: ['youtube.com', 'youtu.be', 'google.com', 'accounts.google.com', 'gstatic.com', 'ytimg.com', 'googlevideo.com'], hint: 'Keeps playing while the drawer is closed.' },
 ]
 
-/** The app that owns a storage partition, `persist:<id>`. */
-export const appOfPartition = (partition: string) => WEB_APPS.find((a) => `persist:${a.id}` === partition)
+/**
+ * A site the person added as an app (idea from tw93/Pake): its own kept storage, held to its own host
+ * (and any they list for sign-in), optional CSS put in on each load, optional user agent. Same
+ * hardening as the built-in apps: no Node, sandboxed, no preload.
+ */
+export type Site = { id: string; name: string; url: string; hosts: string[]; css?: string; ua?: string; icon?: string; custom: true }
+export type SiteInput = { name: string; url: string; css?: string; ua?: string; alsoHosts?: string }
+
+const HOST = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'site'
+
+/** A checked site, or why not. The id (and so the storage) stays the same on edit. */
+export function validateSite(input: SiteInput, taken: string[] = [], id?: string): Site {
+  const name = String(input.name ?? '').trim()
+  if (!name || name.length > 40) throw new Error('Give the app a name of up to 40 characters.')
+  let u: URL
+  try {
+    u = new URL(String(input.url ?? '').trim())
+  } catch {
+    throw new Error('The address starts with https://.')
+  }
+  if (u.protocol !== 'https:') throw new Error('Only https sites can be apps.')
+  if (u.username || u.password) throw new Error('Leave the login out of the address; sign in inside the app.')
+  const host = u.hostname.toLowerCase().replace(/^www\./, '')
+  if (!HOST.test(host)) throw new Error('Use the site\'s name, not an IP address or a local name.')
+  const also = String(input.alsoHosts ?? '').split(/[\s,]+/).map((h) => h.trim().toLowerCase().replace(/^\*\./, '')).filter(Boolean)
+  for (const h of also) if (!HOST.test(h)) throw new Error(`${h} is not a host name.`)
+  if (also.length > 10) throw new Error('Up to 10 extra hosts.')
+  const css = String(input.css ?? '').trim()
+  if (css.length > 20_000) throw new Error('Keep the custom CSS under 20,000 characters.')
+  // CSS that loads something (@import, url()) would reach other hosts on every page load
+  if (/@import|url\s*\(/i.test(css)) throw new Error('Custom CSS cannot load files (@import or url()); use it to hide or restyle elements.')
+  const ua = String(input.ua ?? '').trim()
+  if (ua && (ua.length > 300 || !/^[\x20-\x7e]+$/.test(ua))) throw new Error('The user agent is one line of plain text, up to 300 characters.')
+  const builtIn = WEB_APPS.map((a) => a.id)
+  let sid = id
+  if (!sid) {
+    const base = `site-${slug(name)}`
+    sid = base
+    for (let n = 2; [...builtIn, ...taken].includes(sid); n++) sid = `${base}-${n}`
+  }
+  if (!/^site-[a-z0-9-]{1,40}$/.test(sid)) throw new Error('Not a site id.')
+  return { id: sid, name, url: u.href, hosts: [...new Set([host, ...also])], ...(css ? { css } : {}), ...(ua ? { ua } : {}), custom: true }
+}
+
+/** The app that owns a storage partition, `persist:<id>`: a built-in one or a site the person added. */
+export const appOfPartition = (partition: string, sites: Site[] = []): WebApp | undefined => [...WEB_APPS, ...sites.map(siteApp)].find((a) => `persist:${a.id}` === partition)
+
+/** A site as a drawer app. */
+export const siteApp = (s: Site): WebApp & { css?: string; ua?: string; icon?: string; custom?: true } => ({ id: s.id, name: s.name, url: s.url, hosts: s.hosts, hint: `${new URL(s.url).hostname}, in its own storage.`, css: s.css, ua: s.ua, icon: s.icon, custom: true })
+
+/** The icon a page names (<link rel="icon">), else /favicon.ico, as an absolute https address. */
+export function iconHref(html: string, page: string): string {
+  const head = html.split(/<body[\s>]/i)[0] ?? ''
+  const links = [...head.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0])
+  const pick = links.find((l) => /rel=["']?(?:shortcut )?icon["'\s>]/i.test(l)) ?? links.find((l) => /rel=["']?apple-touch-icon/i.test(l))
+  const href = pick?.match(/href=["']([^"']+)["']/i)?.[1]
+  try {
+    const u = new URL(href ? href.replace(/&amp;/g, '&') : '/favicon.ico', page)
+    return u.protocol === 'https:' ? u.href : new URL('/favicon.ico', page).href
+  } catch {
+    return new URL('/favicon.ico', page).href
+  }
+}
 
 /** Whether a URL belongs to an app: https, on one of its hosts or their subdomains. */
 export function allows(app: WebApp, url: string): boolean {

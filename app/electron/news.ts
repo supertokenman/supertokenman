@@ -1,5 +1,6 @@
 // News from RSS and Atom: open, free, no account. Feeds are parsed here with no dependency; a site
 // address is enough, its feed is found from the page. Articles open in a plain reader made from the page.
+import { COMMON_PATHS, feedKind, feedLinks, rsshubUrl, type Found } from '../shared/rsshub.js'
 
 export type Feed = { url: string; title: string; /** what it covers, for the suggestions */ about?: string }
 export type Item = { id: string; feed: string; source: string; title: string; link: string; date: string; summary: string; image?: string }
@@ -28,8 +29,21 @@ const tag = (xml: string, name: string) => xml.match(new RegExp(`<${name}(?:\\s[
 const attr = (xml: string, name: string, a: string) => xml.match(new RegExp(`<${name}\\s[^>]*${a}=["']([^"']+)["']`, 'i'))?.[1]
 const hash = (s: string) => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) | 0, 7).toString(36)
 
-/** Items of an RSS 2.0 or Atom document, newest first. */
+/** Items of a JSON Feed (jsonfeed.org), newest first. */
+export function parseJsonFeed(body: string, feedUrl: string): { title: string; items: Item[] } {
+  const j = JSON.parse(body) as { title?: string; items?: { id?: string; url?: string; title?: string; content_text?: string; content_html?: string; summary?: string; date_published?: string; date_modified?: string; image?: string }[] }
+  const title = j.title || new URL(feedUrl).host
+  const items = (j.items ?? []).map((x): Item => {
+    const raw = x.date_published ?? x.date_modified ?? ''
+    const link = x.url ?? ''
+    return { id: hash(link || x.id || x.title || ''), feed: feedUrl, source: title, title: text(x.title ?? '(untitled)'), link, date: Number.isNaN(Date.parse(raw)) ? '' : new Date(raw).toISOString(), summary: text(x.summary ?? x.content_text ?? x.content_html ?? '').slice(0, 280), image: x.image?.startsWith('http') ? x.image : undefined }
+  })
+  return { title, items: items.sort((a, b) => b.date.localeCompare(a.date)) }
+}
+
+/** Items of an RSS 2.0, Atom or JSON Feed document, newest first. */
 export function parseFeed(xml: string, feedUrl: string): { title: string; items: Item[] } {
+  if (feedKind(xml) === 'json') return parseJsonFeed(xml, feedUrl)
   const atom = /<feed[\s>]/i.test(xml) && !/<rss[\s>]/i.test(xml)
   const head = xml.split(atom ? /<entry[\s>]/i : /<item[\s>]/i)[0] ?? ''
   const title = text(tag(head, 'title') ?? new URL(feedUrl).host)
@@ -46,9 +60,9 @@ export function parseFeed(xml: string, feedUrl: string): { title: string; items:
 }
 
 type Get = (url: string) => Promise<{ ok: boolean; status: number; text: () => Promise<string>; url: string }>
-const get: Get = (url) => fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 SuperTokenMan', Accept: 'application/rss+xml, application/atom+xml, text/xml, text/html;q=0.8' }, redirect: 'follow', signal: AbortSignal.timeout(12_000) })
+const get: Get = (url) => fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 SuperTokenMan', Accept: 'application/rss+xml, application/atom+xml, application/feed+json, text/xml, text/html;q=0.8' }, redirect: 'follow', signal: AbortSignal.timeout(12_000) })
 
-const isFeed = (body: string) => /<(rss|feed|rdf:RDF)[\s>]/i.test(body.slice(0, 2000))
+const isFeed = (body: string) => feedKind(body) !== null
 
 /** A feed from a feed address or from a site's address: the page's alternate link, then the usual paths. */
 export async function discover(input: string, g: Get = get): Promise<Feed> {
@@ -65,6 +79,37 @@ export async function discover(input: string, g: Get = get): Promise<Feed> {
       const x = await g(f)
       const xb = x.ok ? await x.text() : ''
       if (isFeed(xb)) return { url: f, title: parseFeed(xb, f).title }
+    } catch {
+      // try the next path
+    }
+  }
+  throw new Error('No feed found on that site.')
+}
+
+/**
+ * Every feed a site offers, for the person to pick: an RSSHub route on their instance, a feed address
+ * itself, the page's alternate links, or else the usual paths. Runs only on the add action.
+ */
+export async function discoverAll(input: string, instance: string, g: Get = get): Promise<Found[]> {
+  const hub = rsshubUrl(input, instance)
+  const url = hub ?? (/^https?:\/\//.test(input.trim()) ? input.trim() : `https://${input.trim()}`)
+  const r = await g(url)
+  if (!r.ok) throw new Error(`${new URL(url).host} answered ${r.status}${hub && r.status === 404 ? ' (no such route on this instance)' : ''}`)
+  const body = await r.text()
+  const kind = feedKind(body)
+  if (kind) return [{ url: hub ? url : r.url || url, title: parseFeed(body, url).title, type: kind }]
+  if (hub) throw new Error('The instance did not answer with a feed for that route.')
+  const page = r.url || url
+  const named = feedLinks(body, page)
+  const pageTitle = text(tag(body, 'title') ?? '') || new URL(page).host
+  if (named.length) return named.map((f) => ({ ...f, title: f.title || pageTitle }))
+  for (const c of COMMON_PATHS) {
+    const f = new URL(c, page).href
+    try {
+      const x = await g(f)
+      const xb = x.ok ? await x.text() : ''
+      const k = feedKind(xb)
+      if (k) return [{ url: f, title: parseFeed(xb, f).title, type: k }]
     } catch {
       // try the next path
     }

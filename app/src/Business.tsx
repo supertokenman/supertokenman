@@ -17,7 +17,7 @@ const when = (iso: string) => new Date(iso).toLocaleString(undefined, { day: '2-
 const LIMIT: Partial<Record<NetworkId, number>> = { x: 280, threads: 500, instagram: 2200, linkedin: 3000, facebook: 63206, tiktok: 2200 }
 
 /** Business: your social accounts through their official APIs, in the app's own interface. */
-export function Business(props: { onClose: () => void; project: string; usdToBrl: number; onScript: (piece: Piece, prompt: string) => void }) {
+export function Business(props: { onClose: () => void; seed?: { title: string; idea: string } | null; project: string; usdToBrl: number; onScript: (piece: Piece, prompt: string) => void }) {
   const [tab, setTab] = useState<Tab>('content')
   const [project, setProject] = useState(props.project)
   const [nets, setNets] = useState<SocialStatus[]>([])
@@ -51,7 +51,7 @@ export function Business(props: { onClose: () => void; project: string; usdToBrl
         <div className="sheet-body biz-body">
           {err && <div className="notice error">{err}</div>}
           {tab === 'accounts' && <Accounts nets={nets} onChange={load} onErr={setErr} />}
-          {tab === 'content' && <Content project={project} onProject={setProject} nets={nets} onScript={props.onScript} onErr={setErr} usdToBrl={props.usdToBrl} />}
+          {tab === 'content' && <Content seed={props.seed} project={project} onProject={setProject} nets={nets} onScript={props.onScript} onErr={setErr} usdToBrl={props.usdToBrl} />}
           {tab !== 'accounts' && tab !== 'content' && !live.length && (
             <div className="sheet-empty">
               <div className="se-title">No account connected yet</div>

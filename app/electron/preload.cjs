@@ -787,6 +787,17 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('docs:stage', l)
     },
   },
+  sites: {
+    list: () => ipcRenderer.invoke('sites:list'),
+    save: (input, id) => ipcRenderer.invoke('sites:save', input, id),
+    remove: (id) => ipcRenderer.invoke('sites:remove', id),
+  },
+  brief: {
+    sources: () => ipcRenderer.invoke('brief:sources'),
+    connectReddit: (id, secret) => unlocked('save a secret').then(() => ipcRenderer.invoke('brief:connectReddit', id, secret)),
+    youtubeKey: (key) => unlocked('save a secret').then(() => ipcRenderer.invoke('brief:youtubeKey', key)),
+    run: (r) => ipcRenderer.invoke('brief:run', r),
+  },
   research: {
     run: (r) => ipcRenderer.invoke('research:run', r),
     stop: () => ipcRenderer.invoke('research:stop'),
@@ -1002,6 +1013,9 @@ contextBridge.exposeInMainWorld('stm', {
     add: (input) => ipcRenderer.invoke('news:add', input),
     suggested: () => ipcRenderer.invoke('news:suggested'),
     remove: (url) => ipcRenderer.invoke('news:remove', url),
+    rsshub: (url) => ipcRenderer.invoke('news:rsshub', url),
+    discover: (input) => ipcRenderer.invoke('news:discover', input),
+    subscribe: (f) => ipcRenderer.invoke('news:subscribe', f),
     read: (url) => ipcRenderer.invoke('news:read', url),
     setup: () => ipcRenderer.invoke('news:setup'),
     rules: (r) => ipcRenderer.invoke('news:rules', r),

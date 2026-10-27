@@ -367,6 +367,15 @@ OpenSEO), and a JSON command line, plus Google Workspace through `gws` (from goo
 Planned for v1.2. Left out: Humanizer (a writing skill; people can add it from the Catalog) and
 CL4R1T4S (leaked system prompts of other companies: not something we build on).
 
+Later the same day, three more, again ideas and not code: a "Last 30 days" brief in Research (from
+mvanhorn/last30days-skill: what people posted on Reddit, YouTube, Hacker News and GitHub, ranked by
+each source's own engagement, through official APIs and the person's own credentials), RSSHub routes
+and feed discovery in News (from DIYgod/RSSHub and RSSHub Radar: the instance is the person's to set,
+empty by default), and any site as an app in the drawer (from tw93/Pake: its own storage, optional CSS
+and user agent, held to its own hosts). Left out: InstaPy. It automates likes, follows and comments on
+Instagram, which Instagram's terms forbid, and the app does not automate engagement on anyone's
+account.
+
 ## Money: direction (2026-10-27, on hold)
 
 Direction, not a plan yet: the app stays free and complete for one person, and a paid plan adds what

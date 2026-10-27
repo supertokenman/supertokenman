@@ -1065,6 +1065,8 @@ export function App() {
   const [triggersOpen, setTriggersOpen] = useState(false)
   const [studioOpen, setStudioOpen] = useState(false)
   const [bizOpen, setBizOpen] = useState(false)
+  // a brief from Research handed to Content as the new piece's context
+  const [draftSeed, setDraftSeed] = useState<{ title: string; idea: string } | null>(null)
   const [tourOpen, setTourOpen] = useState(firstRun)
   const [mailOpen, setMailOpen] = useState(false)
   // Outlook's unread count for the menu: read now and every few minutes while connected
@@ -1484,7 +1486,7 @@ export function App() {
       <Presence show={!!diagramsOpen}><DiagramsSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} open={diagramsOpen ? diagramsOpen.path : undefined} onClose={() => setDiagramsOpen(false)} /></Presence>
       <Presence show={inboxOpen}><InboxSheet onClose={() => setInboxOpen(false)} /></Presence>
       <Presence show={documentsOpen}><DocumentsSheet onClose={() => setDocumentsOpen(false)} onSend={(text) => void sendToTeam(null, text, 'Documents')} /></Presence>
-      <Presence show={researchOpen}><ResearchSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setResearchOpen(false)} onSend={(text) => void sendToTeam(null, text, 'Research')} /></Presence>
+      <Presence show={researchOpen}><ResearchSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setResearchOpen(false)} onSend={(text) => void sendToTeam(null, text, 'Research')} onDraft={(title, idea) => (setDraftSeed({ title, idea }), setBizOpen(true))} /></Presence>
       <Presence show={webReaderOpen}><WebReaderSheet onClose={() => setWebReaderOpen(false)} /></Presence>
       <Presence show={teamFileOpen}><TeamFileSheet onClose={() => setTeamFileOpen(false)} /></Presence>
       <Presence show={designOpen}><DesignSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setDesignOpen(false)} onSend={(text) => void sendToTeam(null, text, 'Design')} /></Presence>
@@ -1632,7 +1634,8 @@ export function App() {
       <Presence show={bizOpen}>
         <Suspense fallback={null}>
           <Business
-            onClose={() => setBizOpen(false)}
+            onClose={() => (setBizOpen(false), setDraftSeed(null))}
+            seed={draftSeed}
             project={(p.focus && p.byId[p.focus]?.cwd) || ''}
             usdToBrl={rate}
             onScript={async (piece, prompt) => {

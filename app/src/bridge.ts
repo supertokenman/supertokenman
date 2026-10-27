@@ -587,8 +587,11 @@ export type Bridge = {
     add: (input: string) => Promise<import('../electron/news').Feed[]>
     suggested: () => Promise<import('../electron/news').Feed[]>
     remove: (url: string) => Promise<import('../electron/news').Feed[]>
+    rsshub: (url: string) => Promise<string>
+    discover: (input: string) => Promise<import('../shared/rsshub').Found[]>
+    subscribe: (f: { url: string; title: string }) => Promise<import('../electron/news').Feed[]>
     read: (url: string) => Promise<{ title: string; paragraphs: string[]; image?: string }>
-    setup: () => Promise<{ rules: import('../shared/feeds').FeedRule[]; senders: string[]; briefing: import('../shared/feeds').Schedule; model: string; briefings: string[] }>
+    setup: () => Promise<{ rsshub: string; rules: import('../shared/feeds').FeedRule[]; senders: string[]; briefing: import('../shared/feeds').Schedule; model: string; briefings: string[] }>
     rules: (r: import('../shared/feeds').FeedRule[]) => Promise<void>
     senders: (l: string[]) => Promise<string[]>
     newsletter: (id: string) => Promise<{ title: string; paragraphs: string[] }>
@@ -890,6 +893,17 @@ export type Bridge = {
     remove: (id: number) => Promise<void>
     onChanged: (fn: () => void) => () => void
     onStage: (fn: (s: import('../electron/docstore').SearchStage) => void) => () => void
+  }
+  sites: {
+    list: () => Promise<import('../shared/webapps').Site[]>
+    save: (input: import('../shared/webapps').SiteInput, id?: string) => Promise<import('../shared/webapps').Site[]>
+    remove: (id: string) => Promise<import('../shared/webapps').Site[]>
+  }
+  brief: {
+    sources: () => Promise<{ reddit: boolean; youtube: boolean }>
+    connectReddit: (id: string, secret: string) => Promise<void>
+    youtubeKey: (key: string) => Promise<void>
+    run: (r: { query: string; days: number; sources: import('../shared/last30').BriefSource[]; cwd?: string }) => Promise<import('../electron/last30').BriefResult>
   }
   research: {
     run: (r: import('../electron/research').Run & { cwd?: string }) => Promise<import('../electron/research').ResearchEvent>

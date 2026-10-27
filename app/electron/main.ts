@@ -110,6 +110,9 @@ import * as PR from './prs.js'
 import * as N from './naming.js'
 import * as Bill from './billing.js'
 import * as News from './news.js'
+import * as L30 from './last30.js'
+import { cleanInstance } from '../shared/rsshub.js'
+import { parseQuery } from '../shared/last30.js'
 import * as Cal from './calendar.js'
 import * as Mkt from './markets.js'
 import * as Health from './health.js'
@@ -209,7 +212,8 @@ import { pushVersion, type Version } from '../shared/versions.js'
 import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
-import { allows, appOfPartition, isAppPage, WEB_APPS } from '../shared/webapps.js'
+import { allows, appOfPartition, isAppPage, siteApp, validateSite, WEB_APPS, type Site, type SiteInput } from '../shared/webapps.js'
+import { fetchIcon } from './sites.js'
 
 // STM_IPC_COUNT=1 logs, every 10 s, how often each IPC channel ran in both directions (performance checks)
 const ipcCount = new Map<string, number>()
@@ -275,7 +279,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -872,7 +876,7 @@ async function createWindow() {
   watchFailures(BROWSE)
   win.webContents.on('will-attach-webview', (e, prefs, params) => {
     if (isBrowse(params.partition ?? '')) watchFailures(params.partition!)
-    const webApp = appOfPartition(params.partition ?? '')
+    const webApp = appOfPartition(params.partition ?? '', settings().sites ?? [])
     // the panel's browser: localhost in its throwaway session, any other site in its own kept one
     const ok = webApp ? allows(webApp, params.src) : (params.partition === 'preview' && isLocalUrl(params.src)) || (isBrowse(params.partition ?? '') && /^https?:\/\//.test(params.src))
     if (!ok) return e.preventDefault()
@@ -882,6 +886,7 @@ async function createWindow() {
     prefs.sandbox = true
   })
   // camera and microphone only for the meeting apps; notifications for the web apps; nothing else
+  for (const site of settings().sites ?? []) guardSite(site)
   for (const a of WEB_APPS) {
     electronSession.fromPartition(`persist:${a.id}`).setPermissionRequestHandler((_wc, permission, done) => {
       const meets = ['meet', 'teams', 'slack', 'whatsapp', 'discord'].includes(a.id)
@@ -889,7 +894,8 @@ async function createWindow() {
     })
   }
   win.webContents.on('did-attach-webview', (_e, wc) => {
-    const webApp = WEB_APPS.find((a) => wc.session === electronSession.fromPartition(`persist:${a.id}`))
+    const site = (settings().sites ?? []).find((a) => wc.session === electronSession.fromPartition(`persist:${a.id}`))
+    const webApp = site ? siteApp(site) : WEB_APPS.find((a) => wc.session === electronSession.fromPartition(`persist:${a.id}`))
     const browsing = browseSessions.has(wc.session)
     const allowed = webApp ? (url: string) => allows(webApp, url) : browsing ? (url: string) => /^https?:\/\//.test(url) : isLocalUrl
     // in the panel's browser a link that wants a new window opens in place, like a single-tab browser
@@ -904,7 +910,7 @@ async function createWindow() {
       })
       return
     }
-    if (webApp) wc.setUserAgent(CHROME_UA)
+    if (webApp) wc.setUserAgent(site?.ua || CHROME_UA)
     // sign-in popups of the app's own sites open in place; other links go to the browser
     // sign-in flows (Microsoft, Google) open a popup, often blank first, and talk back to the page that
     // opened it: those become a real small window in the app's own storage, held to the app's sites
@@ -918,7 +924,7 @@ async function createWindow() {
       return { action: 'deny' }
     })
     wc.on('did-create-window', (popup) => {
-      popup.webContents.setUserAgent(CHROME_UA)
+      popup.webContents.setUserAgent(site?.ua || CHROME_UA)
       // signed in: the popup reached the app itself, so close it and open that page in the drawer
       popup.webContents.on('did-navigate', (_ev, url) => {
         if (webApp && isAppPage(webApp, url)) {
@@ -3831,7 +3837,7 @@ ipcMain.handle('radar:notify', async (_e, text: string) => {
   if (!r.ok) throw new Error(`ntfy answered ${r.status}`)
   return true
 })
-ipcMain.handle('news:setup', () => ({ rules: settings().feedRules ?? [], senders: settings().newsletterSenders ?? [], briefing: { ...FD.DEFAULT_SCHEDULE, ...settings().briefing }, model: settings().smallModel ?? '', briefings: listBriefings() }))
+ipcMain.handle('news:setup', () => ({ rsshub: settings().rsshub ?? '', rules: settings().feedRules ?? [], senders: settings().newsletterSenders ?? [], briefing: { ...FD.DEFAULT_SCHEDULE, ...settings().briefing }, model: settings().smallModel ?? '', briefings: listBriefings() }))
 ipcMain.handle('news:rules', (_e, rules: FD.FeedRule[]) => {
   for (const r of rules) {
     const bad = FD.checkFeedRule(r)
@@ -3918,6 +3924,52 @@ ipcMain.handle('news:add', async (_e, input: string) => {
   s.feeds = [...feeds().filter((x) => x.url !== f.url), f]
   saveSettings(s)
   return s.feeds
+})
+// RSSHub routes on the person's own instance, and every feed a page offers to pick from: fetched only
+// on the add action. The instance is empty by default.
+ipcMain.handle('news:rsshub', (_e, url: string) => {
+  const s = settings()
+  s.rsshub = cleanInstance(String(url ?? ''))
+  saveSettings(s)
+  return s.rsshub
+})
+ipcMain.handle('news:discover', (_e, input: string) => News.discoverAll(String(input ?? ''), settings().rsshub ?? ''))
+ipcMain.handle('news:subscribe', (_e, f: { url: string; title: string }) => {
+  const url = String(f?.url ?? '')
+  if (!/^https?:\/\/[^\s]+$/.test(url)) throw new Error('Not a feed address.')
+  const s = settings()
+  s.feeds = [...feeds().filter((x) => x.url !== url), { url, title: String(f.title || new URL(url).host).slice(0, 120) }]
+  saveSettings(s)
+  return s.feeds
+})
+// sites added as drawer apps: each in its own kept storage, held to its hosts, no permissions but the
+// clipboard and full screen; the icon is fetched once on add from the site itself
+function guardSite(site: Site) {
+  electronSession.fromPartition(`persist:${site.id}`).setPermissionRequestHandler((_wc, permission, done) => done(permission === 'clipboard-sanitized-write' || permission === 'fullscreen'))
+}
+ipcMain.handle('sites:list', () => settings().sites ?? [])
+ipcMain.handle('sites:save', async (_e, input: SiteInput, id?: string) => {
+  const s = settings()
+  const list = s.sites ?? []
+  const had = id ? list.find((x) => x.id === id) : undefined
+  if (id && !had) throw new Error('No such app.')
+  const site = validateSite(input, list.map((x) => x.id), had?.id)
+  site.icon = had && had.url === site.url ? had.icon : await fetchIcon(site.url)
+  if (!site.icon) delete site.icon
+  s.sites = had ? list.map((x) => (x.id === had.id ? site : x)) : [...list, site]
+  saveSettings(s)
+  guardSite(site)
+  return s.sites
+})
+ipcMain.handle('sites:remove', async (_e, id: string) => {
+  const s = settings()
+  const site = (s.sites ?? []).find((x) => x.id === id)
+  if (!site) return s.sites ?? []
+  s.sites = (s.sites ?? []).filter((x) => x.id !== id)
+  saveSettings(s)
+  // its login and cookies go with it
+  await electronSession.fromPartition(`persist:${site.id}`).clearStorageData().catch(() => undefined)
+  return s.sites
 })
 ipcMain.handle('news:remove', (_e, url: string) => {
   const s = settings()
@@ -6293,6 +6345,37 @@ ipcMain.handle('research:run', async (_e, run: ResearchRun & { cwd?: string }) =
   }
 })
 ipcMain.handle('research:stop', () => researchStop?.abort())
+// "Last 30 days": Reddit and YouTube on the person's own credentials from the vault, HN and GitHub
+// with none; one Claude call writes the brief, behind the budget brake. Nothing runs until they ask.
+const briefCreds = (): L30.Creds => {
+  const v = serviceVault()
+  return { redditId: v.get('REDDIT_CLIENT_ID') ?? undefined, redditSecret: v.get('REDDIT_CLIENT_SECRET') ?? undefined, youtubeKey: v.get('YOUTUBE_API_KEY') ?? undefined }
+}
+ipcMain.handle('brief:sources', () => {
+  const c = briefCreds()
+  return { reddit: Boolean(c.redditId && c.redditSecret), youtube: Boolean(c.youtubeKey) }
+})
+ipcMain.handle('brief:connectReddit', (_e, id: string, secret: string) => {
+  gate.guard()
+  const a = String(id ?? '').trim()
+  const b = String(secret ?? '').trim()
+  if (!/^[\w-]{10,40}$/.test(a) || !/^[\w-]{10,60}$/.test(b)) throw new Error('Paste the client id and secret of your own Reddit app (a "script" or "web app" at reddit.com/prefs/apps).')
+  serviceVault().set('REDDIT_CLIENT_ID', a, false)
+  serviceVault().set('REDDIT_CLIENT_SECRET', b, false)
+})
+ipcMain.handle('brief:youtubeKey', (_e, key: string) => {
+  gate.guard()
+  const k = String(key ?? '').trim()
+  if (!/^[\w-]{20,60}$/.test(k)) throw new Error('That does not look like a YouTube Data API key.')
+  serviceVault().set('YOUTUBE_API_KEY', k, false)
+})
+ipcMain.handle('brief:run', async (_e, input: { query: string; days: number; sources: import('../shared/last30.js').BriefSource[]; cwd?: string }) => {
+  const query = parseQuery(String(input?.query ?? ''))
+  if (!query) throw new Error('Say a topic in a few words, or a public handle like @name.')
+  const project = input.cwd || startDir
+  const stop = new AbortController()
+  return L30.lastDays({ query, days: Number(input.days) || 30, sources: (input.sources ?? []).filter((x) => ['reddit', 'youtube', 'hn', 'github'].includes(x)) }, { fetch, creds: briefCreds(), ask: (p) => claudeOnce(p, project, stop), allow: (t) => budgetAllows(project, t) })
+})
 ipcMain.handle('research:save', (_e, cwd: string, topic: string, report: string, sources: import('../shared/research.js').Source[]) => {
   const dir = join(cwd || startDir, 'research')
   mkdirSync(dir, { recursive: true })

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { youtubeId } from '../shared/video'
-import { unreadOf, WEB_APPS } from '../shared/webapps'
+import { siteApp, unreadOf, WEB_APPS, type Site, type SiteInput } from '../shared/webapps'
+import { EmptyState } from './EmptyState'
+import { clean } from './errors'
 import { hasSkin, SKINS } from '../shared/skins'
 import { DARKEN_CSS, isLight, PAGE_BG_JS } from '../shared/darken'
 import { IconBadge, IconCalendar, IconCamera, IconCar, IconChat, IconCrew, IconHash, IconPeople, IconFood, IconSpark, IconThreads, IconInbox, IconMail, IconPlay, IconClose } from './icons'
@@ -23,7 +25,7 @@ const loadKeep = (): string[] => {
 const IDLE_MS = 10 * 60_000
 
 /** One app's page. Mounted the first time it is picked and kept, so its session and playback go on. */
-function AppView(props: { id: string; url: string; shown: boolean; dark: boolean; skin: boolean; onTitle: (t: string) => void; viewRef: (v: View | null) => void }) {
+function AppView(props: { id: string; url: string; css?: string; shown: boolean; dark: boolean; skin: boolean; onTitle: (t: string) => void; viewRef: (v: View | null) => void }) {
   const ref = useRef<View>(null)
   const onTitle = useRef(props.onTitle)
   onTitle.current = props.onTitle
@@ -57,6 +59,31 @@ function AppView(props: { id: string; url: string; shown: boolean; dark: boolean
     void apply()
     return () => el.removeEventListener('dom-ready', reset)
   }, [props.skin, props.id])
+  // a site added as an app: the person's own CSS on each load (hide a banner, widen a column)
+  const cssKey = useRef<string | null>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !props.css) return
+    const css = props.css
+    const apply = async () => {
+      try {
+        if (cssKey.current) await el.removeInsertedCSS(cssKey.current).catch(() => undefined)
+        cssKey.current = await el.insertCSS(css)
+      } catch {
+        // still loading: dom-ready applies it
+      }
+    }
+    const reset = () => {
+      cssKey.current = null
+      void apply()
+    }
+    el.addEventListener('dom-ready', reset)
+    return () => {
+      el.removeEventListener('dom-ready', reset)
+      if (cssKey.current) void el.removeInsertedCSS(cssKey.current).catch(() => undefined)
+      cssKey.current = null
+    }
+  }, [props.css])
   // a light page is darkened to match the app; checked on each load and every 8 s, as pages switch themes
   const darkKey = useRef<string | null>(null)
   useEffect(() => {
@@ -100,6 +127,10 @@ function AppView(props: { id: string; url: string; shown: boolean; dark: boolean
  */
 export function WebAppsDrawer(props: { open: boolean; app: string; width: number; onApp: (id: string) => void; onUnread: (byApp: Record<string, number>) => void; onResize: (w: number) => void; onClose: () => void }) {
   const [mounted, setMounted] = useState<string[]>([props.app])
+  const [sites, setSites] = useState<Site[]>([])
+  const [editing, setEditing] = useState<Site | 'new' | null>(null)
+  useEffect(() => void window.stm.sites.list().then(setSites, () => undefined), [])
+  const apps = [...WEB_APPS, ...sites.map(siteApp)]
   // The slide is a transform over the panels; the panel grid gives up its width once, at rest.
   // Opening: slide in over the panels, then dock (one reflow, under a still drawer).
   // Closing: undock first (one reflow, hidden under the drawer), then slide out.
@@ -241,7 +272,8 @@ export function WebAppsDrawer(props: { open: boolean; app: string; width: number
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
   }
-  const current = WEB_APPS.find((a) => a.id === props.app) ?? WEB_APPS[0]!
+  const current = apps.find((a) => a.id === props.app) ?? WEB_APPS[0]!
+  const currentSite = sites.find((x) => x.id === current.id)
   const view = () => views.current[current.id]
   // the video on screen in the YouTube drawer, if any, for the mini player
   const [video, setVideo] = useState<string | null>(null)
@@ -287,19 +319,25 @@ export function WebAppsDrawer(props: { open: boolean; app: string; width: number
       <div className="wa-grip" onMouseDown={drag} />
       <header className="wa-head">
         <div className="wa-apps" role="tablist" aria-label="Apps">
-          {WEB_APPS.map((a) => {
-            const Ico = APP_ICONS[a.id]!
+          {apps.map((a) => {
+            const site = sites.find((x) => x.id === a.id)
+            const Ico = APP_ICONS[a.id] ?? (() => (site?.icon ? <img className="wa-site-icon" src={site.icon} alt="" /> : <span className="wa-site-mono" aria-hidden="true">{a.name.slice(0, 1).toUpperCase()}</span>))
             const n = unread[a.id] ?? 0
             return (
-              <button key={a.id} role="tab" aria-selected={a.id === current.id} className={`wa-app app-${a.id}`} title={a.name} onClick={() => props.onApp(a.id)}>
+              <button key={a.id} role="tab" aria-selected={a.id === current.id && !editing} className={`wa-app app-${a.id}`} title={a.name} onClick={() => (setEditing(null), props.onApp(a.id))}>
                 <Ico />
                 <span className="wa-app-name">{a.name}</span>
                 {n > 0 && <span className="count">{n > 99 ? '99+' : n}</span>}
               </button>
             )
           })}
+          <button className={`wa-app wa-add ${editing === 'new' ? 'on' : ''}`} title="Add a site as an app" aria-label="Add a site as an app" onClick={() => setEditing('new')}>
+            <span className="wa-site-mono" aria-hidden="true">+</span>
+            <span className="wa-app-name">Add site</span>
+          </button>
         </div>
         <span className="spacer-flex" />
+        {currentSite && !editing && <button className="ghost small" title={`Edit ${currentSite.name}: address, CSS, user agent`} onClick={() => setEditing(currentSite)}>Edit</button>}
         {current.id === 'youtube' && video && (
           <button className="wa-float" title="Keep this video in a small window above every app, even full-screen ones" onClick={() => void float()}>
             <svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="0.7" y="0.7" width="11.6" height="9.6" rx="1" /><rect x="6.2" y="5" width="5" height="4" fill="currentColor" stroke="none" /></svg>
@@ -327,15 +365,64 @@ export function WebAppsDrawer(props: { open: boolean; app: string; width: number
         </button>
       </header>
       <div className="wa-body">
+        {editing && (
+          <SiteForm
+            key={editing === 'new' ? 'new' : editing.id}
+            site={editing === 'new' ? null : editing}
+            count={sites.length}
+            onCancel={() => setEditing(null)}
+            onSaved={(list, id) => (setSites(list), setEditing(null), props.onApp(id))}
+            onRemoved={(list) => (setSites(list), setEditing(null), setMounted((m) => m.filter((x) => list.some((s) => s.id === x) || WEB_APPS.some((w) => w.id === x))), props.onApp(WEB_APPS[0]!.id))}
+          />
+        )}
         {mounted.map((id) => {
-          const a = WEB_APPS.find((x) => x.id === id)!
+          const a = apps.find((x) => x.id === id)
+          if (!a) return null
           return (
-            <AppView key={id} id={id} url={a.url} shown={id === current.id} dark={!lightApps.includes(id)} skin={!plainApps.includes(id)} viewRef={(v) => (views.current[id] = v)} onTitle={(t) => setUnread((u) => (u[id] === unreadOf(t) ? u : { ...u, [id]: unreadOf(t) }))} />
+            <AppView key={`${id}:${a.url}`} id={id} url={a.url} css={sites.find((x) => x.id === id)?.css} shown={id === current.id && !editing} dark={!lightApps.includes(id)} skin={!plainApps.includes(id)} viewRef={(v) => (views.current[id] = v)} onTitle={(t) => setUnread((u) => (u[id] === unreadOf(t) ? u : { ...u, [id]: unreadOf(t) }))} />
           )
         })}
         <div className="wa-foot faint">{current.hint} Claude does not read or send anything here.</div>
       </div>
       </div>
     </aside>
+  )
+}
+
+/** Add a site as an app, or edit one: name, address, optional icon, CSS and user agent. */
+function SiteForm(props: { site: Site | null; count: number; onCancel: () => void; onSaved: (list: Site[], id: string) => void; onRemoved: (list: Site[]) => void }) {
+  const [f, setF] = useState<SiteInput>(() => ({ name: props.site?.name ?? '', url: props.site?.url ?? 'https://', css: props.site?.css ?? '', ua: props.site?.ua ?? '', alsoHosts: (props.site?.hosts ?? []).slice(1).join(', ') }))
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const save = async () => {
+    setBusy(true)
+    setErr('')
+    try {
+      const list = await window.stm.sites.save(f, props.site?.id)
+      const id = props.site?.id ?? list[list.length - 1]!.id
+      props.onSaved(list, id)
+    } catch (e) {
+      setErr(clean(e))
+    }
+    setBusy(false)
+  }
+  return (
+    <div className="wa-siteform cutfields">
+      <div className="sheet-title">{props.site ? `Edit ${props.site.name}` : 'Add a site as an app'}</div>
+      {!props.site && props.count === 0 && <EmptyState title="No sites added yet" text="Any https site can live in the drawer like the apps above: its own storage and login, held to its own address. Its icon is fetched once, now, from the site." />}
+      {err && <div className="notice error">{err}</div>}
+      <label className="wa-field">Name<input id="site-name" value={f.name} placeholder="e.g. Linear" onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+      <label className="wa-field">Address<input id="site-url" value={f.url} spellCheck={false} placeholder="https://linear.app/" onChange={(e) => setF({ ...f, url: e.target.value })} /></label>
+      <label className="wa-field">Also allow these hosts <span className="faint">optional, e.g. the sign-in provider</span><input id="site-hosts" value={f.alsoHosts} spellCheck={false} placeholder="accounts.google.com, auth0.com" onChange={(e) => setF({ ...f, alsoHosts: e.target.value })} /></label>
+      <label className="wa-field">Custom CSS <span className="faint">optional, put in on each load</span><textarea id="site-css" value={f.css} spellCheck={false} placeholder={'.cookie-banner, .promo { display: none !important; }'} onChange={(e) => setF({ ...f, css: e.target.value })} /></label>
+      <label className="wa-field">User agent <span className="faint">optional; empty keeps the drawer default</span><input id="site-ua" value={f.ua} spellCheck={false} onChange={(e) => setF({ ...f, ua: e.target.value })} /></label>
+      <div className="faint">Each site keeps its own cookies and login, runs sandboxed without access to this Mac, and links to other hosts open in your browser. Claude does not read or send anything in it.</div>
+      <div className="dep-row">
+        {props.site && <button className="ghost small danger" disabled={busy} onClick={() => void window.stm.sites.remove(props.site!.id).then(props.onRemoved, (e) => setErr(clean(e)))}>Remove and sign out</button>}
+        <span className="spacer-flex" />
+        <button className="ghost small" onClick={props.onCancel}>Cancel</button>
+        <button className="primary small" disabled={busy || !f.name.trim() || f.url.trim().length < 10} onClick={() => void save()}>{busy ? <span className="spinner" /> : props.site ? 'Save' : 'Add app'}</button>
+      </div>
+    </div>
   )
 }
