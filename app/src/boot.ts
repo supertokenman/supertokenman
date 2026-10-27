@@ -33,7 +33,8 @@ export function playClosing(done: () => void) {
   tpl.id = 'boot'
   tpl.className = 'bye'
   tpl.setAttribute('aria-hidden', 'true')
-  tpl.innerHTML = '<div><span class="boot-name">SuperTokenMan</span><i class="boot-rule"></i></div>'
+  tpl.innerHTML =
+    '<div><svg class="boot-mark" viewBox="262 318 500 388" width="96" height="74"><path d="M262 318H704L762 376V406H262Z"/><rect x="262" y="468" width="340" height="88"/><rect class="acc" x="262" y="618" width="180" height="88"/></svg><span class="boot-name">SuperTokenMan</span></div>'
   document.getElementById('boot')?.remove()
   document.body.append(tpl)
   // on macOS the window only hides: the cover comes off once it is out of sight

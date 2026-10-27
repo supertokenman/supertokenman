@@ -395,14 +395,19 @@ Taken from how Halo pairs a free community edition with paid editions.
 
 - **Why dark.** The window paints `#0f0f0e` before anything loads (`electron/main.ts` backgroundColor). The
   old white film made every launch flash dark, white, dark. The opening (`#boot` in `app/index.html`, the
-  splash in `app/src/Splash.tsx` and the closing in `app/src/boot.ts`) now uses that exact dark in every
-  theme, so there is no flash anywhere between the window appearing and the app. The white also read as
-  generic; the dark is the app's own tone.
-- **Why product in motion.** Instead of a slogan, the centre shows what the app does: a token counter
-  climbing with its cost beside it (reais on *-BR locales, US dollars elsewhere, via `currency.ts`), which
-  then resolves into the name over the accent rule and dissolves into the app. The numbers are
-  illustrative motion, not a stat claim: they are fixed, never labelled as the person's usage, and never
-  read from real data.
-- **Timings.** Full version about 2 s (count ~1.15 s, name from 1.3 s), once a day. Every other launch a
-  short version of about 0.6 s with the name only. Hard cap 6 s whatever happens. Fade out 0.5 s.
-- **Reduced motion** (or motion turned off): a still frame with the name, nothing counts.
+  splash in `app/src/Splash.tsx` and the closing in `app/src/boot.ts`) uses that exact dark in every theme,
+  so nothing flashes between the window appearing and the app. The dark is the app's own tone.
+- **Why product in motion, built from the mark.** The opening is the mark (`app/build/icon.svg`) doing what
+  the product does: the three bars fill like meters while a token counter and its cost climb in step (reais
+  on *-BR locales, US dollars elsewhere, via `currency.ts`). Then the top bar takes the 45 degree cut (the
+  signature), the short bar lights in the accent `#d97757`, the mark settles, and the name is revealed
+  through a clip where the counter was, before everything dissolves into the app. Code-driven SVG + CSS, no
+  video, no dependency.
+- **Numbers are illustrative.** Fixed constants, labelled only "tokens" and a cost; never read from real
+  data and never presented as the person's usage.
+- **Timings.** Full, about 2 s, once a day: fill and count 0.1 to 1.0 s (staggered bars), cut and accent
+  1.0 to 1.4 s, name reveal 1.25 to 1.8 s, dissolve 0.5 s once the app is ready. Every other launch, about
+  0.6 s: the assembled mark, a quick accent sweep and the name. Hard cap 6 s whatever happens.
+- **Compositor only.** Only transform, opacity and clip-path animate; the counter writes text into two
+  fixed spans with no React render per frame.
+- **Reduced motion** (or motion turned off): the still mark and name, nothing counts.
