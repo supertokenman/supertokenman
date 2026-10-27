@@ -160,6 +160,13 @@ const known = {
   deeplink: { pending: async () => null, on: () => () => undefined },
   pr: { inbox: async () => ({ review: [], mine: [] }) },
   pickFiles: async () => [],
+  attachPaths: async () => [],
+  filePick: {
+    list: async () => ({ ok: true, entries: [], truncated: false }),
+    project: async () => ({ ok: true, entries: [], truncated: false }),
+    recent: async () => ({ entries: [], denied: [], home: '' }),
+    thumb: async () => null,
+  },
   isDir: async () => false,
 }
 

@@ -119,6 +119,7 @@ import * as Health from './health.js'
 import * as Env from './envScan.js'
 import * as Cloud from './cloud.js'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
+import { cleanPath, listDir, projectFiles, recentFiles } from './filepick.js'
 import { remember as rememberCmd, search as searchCmds, commandPrompt, cleanCommand, type HistItem } from '../shared/termhist.js'
 import { riskOf } from '../shared/cmdrisk.js'
 import { cleanStyles, styleRule, type StyleId } from '../shared/styles.js'
@@ -1009,9 +1010,9 @@ ipcMain.handle('personas:export', async (_e, id: string) => {
   writeFileSync(r.filePath, toMarkdown(p))
   return r.filePath
 })
-ipcMain.handle('personas:import', async () => {
+ipcMain.handle('personas:import', async (_e, chosen?: unknown) => {
   if (!win) return personas()
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Persona', extensions: ['md'] }] })
+  const r = chosen ? { filePaths: pickPaths(chosen).filter((f) => f.endsWith('.md')) } : await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Persona', extensions: ['md'] }] })
   let list = personas()
   for (const f of r.filePaths) {
     const p = fromMarkdown(readFileSync(f, 'utf8'))
@@ -1563,9 +1564,10 @@ ipcMain.handle('content:list', (_e, project?: string) => C().list(project))
 ipcMain.handle('content:engine', (_e, project: string) => C().engine(String(project)))
 ipcMain.handle('content:install', (_e, which?: string) => C().install(which === 'voice' ? 'voice' : 'video'))
 ipcMain.handle('content:voiceReady', () => C().voiceReady())
-ipcMain.handle('content:pickMusic', async (_e, id: string) => {
+ipcMain.handle('content:pickMusic', async (_e, id: string, chosen?: unknown) => {
   if (!win) return null
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'] }] })
+  const audio = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg']
+  const r = chosen ? { canceled: false, filePaths: pickPaths(chosen).filter((f) => audio.includes(extname(f).slice(1).toLowerCase())) } : await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Audio', extensions: audio }] })
   if (r.canceled || !r.filePaths[0]) return null
   return C().update(String(id), { music: r.filePaths[0] })
 })
@@ -2527,16 +2529,40 @@ ipcMain.handle('budget:set', (_e, limits: Limits) => {
   return clean
 })
 // the attach button: files and folders from the Finder; small images come as images Claude sees
+const attachmentsOf = (paths: string[]) =>
+  paths.slice(0, MAX_ATTACHMENTS).flatMap((path): Attachment[] => {
+    const name = path.split('/').pop() ?? path
+    let st
+    try {
+      st = statSync(path)
+    } catch {
+      return []
+    }
+    const type = st.isFile() ? imageTypeOf(name) : null
+    if (type && st.size <= MAX_IMAGE_BYTES) return [{ kind: 'image', name, mediaType: type, data: readFileSync(path).toString('base64') }]
+    return [{ kind: 'file', name, path, dir: st.isDirectory() }]
+  })
 ipcMain.handle('files:pick', async () => {
   const r = await dialog.showOpenDialog(win!, { properties: ['openFile', 'openDirectory', 'multiSelections'], buttonLabel: 'Attach' })
   if (r.canceled) return []
-  return r.filePaths.slice(0, MAX_ATTACHMENTS).map((path) => {
-    const name = path.split('/').pop() ?? path
-    const st = statSync(path)
-    const type = st.isFile() ? imageTypeOf(name) : null
-    if (type && st.size <= MAX_IMAGE_BYTES) return { kind: 'image', name, mediaType: type, data: readFileSync(path).toString('base64') }
-    return { kind: 'file', name, path, dir: st.isDirectory() }
-  })
+  return attachmentsOf(r.filePaths)
+})
+// the in-app file picker (src/FilePicker.tsx): the main process reads the disk, the window only gets listings
+const pickPaths = (paths: unknown) => (Array.isArray(paths) ? paths : []).map(cleanPath).filter((p): p is string => !!p)
+ipcMain.handle('files:attach', (_e, paths: unknown) => attachmentsOf(pickPaths(paths)))
+ipcMain.handle('filepick:list', (_e, dir: unknown, hidden?: boolean) => listDir(dir, { hidden: !!hidden }))
+ipcMain.handle('filepick:project', (_e, dir: unknown, hidden?: boolean) => projectFiles(dir, { hidden: !!hidden }))
+ipcMain.handle('filepick:recent', (_e, attached: unknown, hidden?: boolean) => recentFiles(attached, ['Downloads', 'Desktop', 'Documents'].map((d) => join(homedir(), d)), { hidden: !!hidden }).then((r) => ({ ...r, home: homedir() })))
+ipcMain.handle('filepick:thumb', async (_e, path: unknown) => {
+  const p = cleanPath(path)
+  if (!p || !imageTypeOf(p)) return null
+  try {
+    if (statSync(p).size > 20 * 1024 * 1024) return null
+    const img = nativeImage.createFromPath(p)
+    return img.isEmpty() ? null : img.resize({ height: 64 }).toDataURL()
+  } catch {
+    return null
+  }
 })
 ipcMain.handle('files:isDir', (_e, path: string) => {
   try {
@@ -6030,9 +6056,9 @@ ipcMain.handle('docs:setFolder', async () => {
   watchInbox(pick)
   return pick
 })
-ipcMain.handle('docs:addFiles', async () => {
+ipcMain.handle('docs:addFiles', async (_e, chosen?: unknown) => {
   if (!win) return 0
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Documents', extensions: DOC_ACCEPTED.map((e) => e.slice(1)) }] })
+  const r = chosen ? { filePaths: pickPaths(chosen).filter((f) => DOC_ACCEPTED.includes(extname(f).toLowerCase())) } : await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Documents', extensions: DOC_ACCEPTED.map((e) => e.slice(1)) }] })
   r.filePaths.forEach((f) => docs().enqueue(f))
   void docsWork()
   return r.filePaths.length

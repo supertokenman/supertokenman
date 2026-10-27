@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { pickAttachments } from './FilePicker'
 import { StateMark } from './StateMark'
 import { cacheLeft, coldExtraUsd } from '../shared/cache'
 import { Thinking } from './Thinking'
@@ -912,7 +913,7 @@ export function Panel(props: {
         {s.snapshot && !snapHidden && <SnapshotCard sid={sid} text={s.snapshot.text} inject={s.snapshot.inject} onDone={() => setSnapHidden(true)} />}
         <div className="composer">
           <button className="attach" title="Attach files, folders or images (or paste and drop them)" aria-label="Attach" onClick={async () => {
-            const picked = await window.stm.pickFiles()
+            const picked = await pickAttachments(s.cwd)
             if (picked.length) setAtts((a) => [...a, ...picked].slice(0, MAX_ATTACHMENTS))
           }}>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M8 3v10M3 8h10" /></svg>

@@ -74,7 +74,7 @@ export type Bridge = {
     save: (p: Persona) => Promise<Persona[]>
     remove: (id: string) => Promise<Persona[]>
     exportFile: (id: string) => Promise<string | null>
-    importFiles: () => Promise<Persona[]>
+    importFiles: (paths?: string[]) => Promise<Persona[]>
     history: (id: string) => Promise<import('../shared/versions').Version[]>
     restore: (id: string, at: number) => Promise<Persona[]>
   }
@@ -125,7 +125,7 @@ export type Bridge = {
     engine: (project: string) => Promise<{ id: string; label: string; ready: boolean; note: string }>
     install: (which?: 'video' | 'voice') => Promise<void>
     voiceReady: () => Promise<boolean>
-    pickMusic: (id: string) => Promise<Piece | null>
+    pickMusic: (id: string, paths?: string[]) => Promise<Piece | null>
     create: (p: Partial<Piece>) => Promise<Piece>
     update: (id: string, patch: Partial<Piece>) => Promise<Piece>
     remove: (id: string) => Promise<Piece[]>
@@ -873,7 +873,7 @@ export type Bridge = {
   docs: {
     state: () => Promise<{ queue: import('../electron/docstore').Job[]; docs: import('../electron/docstore').Doc[]; rules: import('../shared/docrules').Rule[]; template: string; folder: string; facts: number; tags: string[]; models: { small: string; embed: string } }>
     setFolder: () => Promise<string>
-    addFiles: () => Promise<number>
+    addFiles: (paths?: string[]) => Promise<number>
     retry: (id: number) => Promise<void>
     doc: (id: number) => Promise<{ doc?: import('../electron/docstore').Doc; chunks: import('../electron/docstore').Chunk[]; facts: import('../electron/docstore').Fact[] }>
     setTags: (id: number, tags: string[]) => Promise<void>
@@ -963,6 +963,14 @@ export type Bridge = {
     set: (limits: import('../shared/budget').Limits) => Promise<import('../shared/budget').Limits>
   }
   pickFiles: () => Promise<import('../shared/attach').Attachment[]>
+  /** Attachments for paths chosen in the in-app file picker. */
+  attachPaths: (paths: string[]) => Promise<import('../shared/attach').Attachment[]>
+  filePick: {
+    list: (dir: string, hidden?: boolean) => Promise<import('../electron/filepick').Listing>
+    project: (dir: string, hidden?: boolean) => Promise<import('../electron/filepick').Listing>
+    recent: (attached: string[], hidden?: boolean) => Promise<{ entries: import('../electron/filepick').PickEntry[]; denied: string[]; home: string }>
+    thumb: (path: string) => Promise<string | null>
+  }
   isDir: (path: string) => Promise<boolean>
   pathOf: (file: File) => string
   interrupt: (sid: string) => Promise<void>

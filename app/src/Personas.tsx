@@ -1,3 +1,4 @@
+import { pickPaths } from './FilePicker'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { RoleHero } from './RoleHero'
@@ -63,7 +64,7 @@ export function Personas(props: { onClose: () => void; onOpen: (id: string) => v
           <div className="sheet-title">Personas</div>
           <span className="faint">A role, a model and its integrations for a panel.</span>
           <span className="spacer-flex" />
-          <button className="ghost small" onClick={() => void run(() => window.stm.personas.importFiles(), () => 'Imported.')}>Import</button>
+          <button className="ghost small" onClick={() => void run(() => pickPaths({ title: 'Import personas', accept: ['md'], multiple: true, action: 'Import' }).then((r) => (r === 'finder' ? window.stm.personas.importFiles() : r ? window.stm.personas.importFiles(r) : window.stm.personas.list())), () => 'Imported.')}>Import</button>
           <button className="primary small" onClick={() => setEdit(blank())}>New persona</button>
           <button className="icon" aria-label="Close" onClick={props.onClose}>
             <IconClose />

@@ -1,3 +1,4 @@
+import { pickPaths } from './FilePicker'
 import { useEffect, useState } from 'react'
 import { IconClose, IconTrash } from './icons'
 import { RowAct, RowActs } from './RowActs'
@@ -6,6 +7,9 @@ import type { Rule } from '../shared/docrules'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
+
+// what the inbox reads (electron/docstore.ts ACCEPTED); the main process checks again
+const DOC_EXTS = ['txt', 'md', 'csv', 'json', 'eml', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'webp', 'pdf', 'docx', 'pptx', 'xlsx', 'html', 'epub']
 
 type State = Awaited<ReturnType<typeof window.stm.docs.state>>
 const JOB: Record<Job['status'], { state: 'busy' | 'up' | 'down' | 'off' | 'warn'; label: string }> = {
@@ -58,7 +62,7 @@ export function DocumentsSheet(props: { onClose: () => void; onSend: (text: stri
                 <code className="dc-folder">{st.folder || 'none yet'}</code>
                 <span className="spacer-flex" />
                 <button className="ghost small" onClick={() => act(window.stm.docs.setFolder())}>{st.folder ? 'Change…' : 'Pick a folder…'}</button>
-                <button className="primary small" onClick={() => act(window.stm.docs.addFiles())}>Add files…</button>
+                <button className="primary small" onClick={() => act(pickPaths({ title: 'Add documents', accept: DOC_EXTS, multiple: true, action: 'Add' }).then((r) => (r === 'finder' ? window.stm.docs.addFiles() : r ? window.stm.docs.addFiles(r) : 0)))}>Add files…</button>
               </div>
               <div className="faint">Files put there are read once and copied into the app's documents folder; the original stays where it is. PDFs, Office files, text, and photos or scans through OCR (Tesseract). {st.models.small ? `Tags and facts are suggested by ${st.models.small}.` : 'Pick a local model to get tag and fact suggestions.'}</div>
               {st.queue.length === 0 && <div className="faint">Nothing in the queue.</div>}
