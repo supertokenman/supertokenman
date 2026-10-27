@@ -32,6 +32,8 @@ jobs:
         run: |
           npm ci
           npm test
+      - name: Homebrew cask generator
+        run: bash packaging/homebrew/test-gen-cask.sh
       - name: Site builds
         working-directory: site
         run: |

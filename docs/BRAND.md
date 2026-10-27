@@ -373,3 +373,11 @@ Direction, not a plan yet: the app stays free and complete for one person, and a
 teams need (shared panels, cost by team, a team vault, support). Nothing free today becomes paid. On
 hold until a lawyer has read the Claude Agent SDK terms; no price, page or checkout before that.
 Taken from how Halo pairs a free community edition with paid editions.
+## Distribution and languages (decided 2026-10-27)
+
+- Homebrew: our own tap first (`supertokenman/homebrew-tap`, updated by a workflow on each published
+  release); the official `homebrew/cask` later, once the app qualifies under its notability rules. The
+  install line goes public only once the tap exists.
+- README languages: Portuguese (Brazil) and Spanish first (`README.pt-BR.md`, `README.es.md`), because
+  Brazil and Latin America are a natural audience. They translate README.md and add nothing; a change
+  to README.md is carried to both.

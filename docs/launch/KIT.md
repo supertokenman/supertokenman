@@ -15,6 +15,9 @@ line "Not affiliated with Anthropic" wherever there is room.
 - [ ] Handles reserved: X, Reddit, LinkedIn page, YouTube, Bluesky, Threads. Taken so far:
   `supertokenman_` (2026-10-26; `supertokenman` was not free there). Use the same name everywhere it
   is free, so people find one name.
+- [ ] Homebrew tap live (`supertokenman/homebrew-tap` and the `HOMEBREW_TAP_TOKEN` secret, see
+  docs/RELEASE.md) and `brew install --cask supertokenman/tap/supertokenman` tried on a Mac; only then
+  add that line to the site and README.
 - [ ] A 30-second screen recording of the real app (three panels, one approval, the meter).
 
 - [ ] An `awesome-supertokenman` list repo (community personas, skills, setups, videos), linked from the
