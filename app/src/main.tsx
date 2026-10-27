@@ -13,6 +13,12 @@ createRoot(document.getElementById('root')!).render(
 )
 requestAnimationFrame(() => handOver())
 installTips()
+// the window out of focus: steady-state ornaments (a running container's breathing dot) hold still,
+// so a window left open beside other work does no style work at all. Busy marks keep moving.
+const blurred = () => document.documentElement.toggleAttribute('data-blurred', !document.hasFocus())
+window.addEventListener('blur', blurred)
+window.addEventListener('focus', blurred)
+blurred()
 window.stm.onClosing?.(() => playClosing(() => window.stm.closeReady()))
 // errors in the window go to the local log too (masked there); nothing leaves the machine
 window.addEventListener('error', (e) => window.stm.diag.renderer(`${e.message}\n${e.error?.stack ?? ''}`))

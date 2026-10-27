@@ -33,7 +33,8 @@ export function useAgenda() {
     void refresh().catch(() => undefined)
     const a = setInterval(() => void refresh().catch(() => undefined), 5 * 60_000)
     // keeps ticking while hidden: the notice before a meeting must still fire
-    const b = setInterval(() => setNow(new Date()), 20_000)
+    // what it shows is in minutes: a new render only when the minute changes
+    const b = setInterval(() => setNow((d) => (Math.floor(d.getTime() / 60_000) === Math.floor(Date.now() / 60_000) ? d : new Date())), 20_000)
     return () => {
       clearInterval(a)
       clearInterval(b)
