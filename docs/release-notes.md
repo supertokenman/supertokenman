@@ -6,8 +6,8 @@ Fixes that were promised in 0.1.4 and missed, and clearer meters.
 - The update notice no longer covers the composer: a small card under the top bar, with the version
   and a progress bar.
 - The panel meter says "CONTEXT LEFT" and shows tokens of the window ("34k of 1.0M").
-- Each release is now checked on a Mac by CI: download, signature, a decoy secret and every host the
-  app reaches. The report is attached to the release.
+- A CI job on a Mac now checks each release: download, signature, a decoy secret and every host the
+  app reaches. This is its first release; its report is attached here once it passes.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
