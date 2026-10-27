@@ -282,7 +282,7 @@ function settings(): Settings {
   if (settingsCache) return settingsCache
   const file = settingsFile()
   const text = existsSync(file) ? readFileSync(file, 'utf8') : null
-  const r = SF.load(text, { integrations: ['context7', 'cloudflare-docs'] })
+  const r = SF.load(text, { integrations: [] })
   if (r.broken && text !== null) {
     // the broken file is kept beside it, never thrown away
     const bak = `${file}.broken-${Date.now()}`

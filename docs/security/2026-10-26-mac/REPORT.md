@@ -106,15 +106,20 @@ logged. lsof outside loopback: none, so nothing went around the proxy.
 |---|---|---|---|
 | api.anthropic.com | 2 | Anthropic | Claude Code: the messages |
 | mcp-proxy.anthropic.com | 5 | Anthropic | Claude Code: MCP connectors of the claude.ai account it is signed in with |
-| mcp.context7.com | 3 | Context7 | an MCP server in the owner's own Claude Code settings |
-| docs.mcp.cloudflare.com | 3 | Cloudflare | an MCP server in the owner's own Claude Code settings |
+| mcp.context7.com | 3 | Context7 | an MCP server the app turned on by default (see the correction below) |
+| docs.mcp.cloudflare.com | 3 | Cloudflare | an MCP server the app turned on by default (see the correction below) |
 | registry.npmjs.org | 1 | npm | `npx` starting one of those MCP servers |
 | github.com, release-assets.githubusercontent.com | 2 | GitHub | the app's update check |
 | play.googleapis.com | 2 | Google | **not identified**: two connections of about 0.13 s each at 08:33:46 local time, too short for the lsof sample; not called by the app's code |
 
-This names the Cloudflare and Amazon addresses of the third run: they are the MCP servers the owner
-set up in Claude Code (Context7, Cloudflare docs) and Anthropic's MCP proxy. Those are the user's
-choices, not the app's; a fresh Claude Code login with no MCP servers would not make them.
+This names the Cloudflare and Amazon addresses of the third run: the Context7 and Cloudflare docs MCP
+servers, and Anthropic's MCP proxy.
+
+**Correction (2026-10-27).** This run first put Context7 and Cloudflare docs down to the owner's own
+Claude Code settings. That was wrong. The first CI proof (0.1.6, a clean runner with a fresh Claude
+Code config) connected to both, too: the app turned these two integrations on by default for a new
+profile, while `docs/NETWORK.md` said integrations reach the network only once turned on in
+Connections. They are off by default from 0.1.7 on; a profile that already has them keeps its choice.
 
 Decoy: this time the panel ran `echo hello` with DECOY_KEY readable by commands, and the value was
 not found on disk afterwards. Content was not readable in this mode.
