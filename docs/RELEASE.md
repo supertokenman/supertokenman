@@ -83,6 +83,34 @@ gh attestation verify SuperTokenMan-arm64.dmg --repo supertokenman/supertokenman
 
 Not verified yet: the first run of this workflow in the public repository.
 
+## The proof after each release
+
+`.github/workflows/proof-mac.yml` runs by itself when a release is published, and by hand from the
+Actions tab (with a tag, or empty for the latest). On a macOS runner it downloads the released dmg,
+checks it (SHA256SUMS, the build attestation, `codesign`, `spctl`), opens it with its own profile through
+mitmproxy in `--names` mode, and drives it with nobody at the keyboard (`app/scripts/proof-drive.mjs`,
+over Chromium's debugging port on loopback): DECOY_KEY in the vault with "Commands can read it", a
+panel, "run echo hello and tell me the date", the command allowed. Then it writes REPORT.md.
+
+It fails when the decoy shows up in any file of the run, or when the app's own processes reach a host
+not written in `docs/NETWORK.md`. Claude Code and its MCP servers are listed, not judged. The report and
+the raw logs are kept as the `proof-mac` artifact for 30 days; after a release, the report is also
+attached to it as `proof-mac-<version>.md`.
+
+Claude needs a key. Once:
+
+1. Settings > Environments > New environment, named `proof`. No required reviewers: the run must
+   start by itself.
+2. In it, add the secret `ANTHROPIC_API_KEY`. A key of its own with a small monthly spend limit is
+   enough (console.anthropic.com > Settings > Limits): one run is one short turn.
+
+Without the secret the workflow still runs every other check, and the report says the Claude turn was
+skipped and why. The key goes to the app's process only; the run checks that no log carries it
+before uploading.
+
+To run the proof on your own Mac instead, with your own Claude login: `bash app/scripts/proof-mac.sh
+--names`.
+
 ## What changes in a signed build
 
 - In CI the workflow builds its own keychain from `MAC_CERT_P12_BASE64` and `MAC_CERT_PASSWORD`
