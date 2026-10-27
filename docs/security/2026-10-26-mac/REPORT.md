@@ -53,7 +53,7 @@ A value made for this run was put in the vault as DECOY_KEY.
 
 - **No Claude Code traffic was recorded**: no request to Anthropic at all. Either no message was sent
   in a panel during the run, or Claude Code's traffic did not go through the proxy. In both cases
-  the vault "for commands" path was not exercised, so the decoy result above covers only the app at
+  the "Commands can read it" path was not exercised, so the decoy result above covers only the app at
   rest.
 - A sample twice a second can miss a connection that opens and closes in between.
 - Traffic that refuses the proxy would show in `lsof` by address only; none did here.
@@ -61,5 +61,5 @@ A value made for this run was put in the vault as DECOY_KEY.
 ## Next run
 
 `bash app/scripts/proof-mac.sh --mitm --minutes 5` on 0.1.5, and in the app, in this order: add
-DECOY_KEY with "for commands" on, open a panel, send "run echo hello and tell me the date", approve
+DECOY_KEY in Connections > Vault with "Commands can read it" ticked, open a panel, send "run echo hello and tell me the date", approve
 the command. The report should then list api.anthropic.com, and the decoy check covers a real turn.

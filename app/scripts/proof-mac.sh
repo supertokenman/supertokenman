@@ -61,9 +61,10 @@ say "3/5 What to do in the app"
 cat <<EOF
 The app opens from $OUT with its own profile. While it runs for up to $MINUTES minutes:
 
-  1. Vault: add a secret named DECOY_KEY with this value (it is already in decoy.txt):
+  1. Cmd+K, "Connections", then the Vault tab: add a secret named DECOY_KEY with this value
+     (it is already in decoy.txt):
        $DECOY
-     Turn on "for commands" for it.
+     Tick "Commands can read it", then Save.
   2. Open a panel and ask Claude: "run echo hello and tell me the date".
      Approve the command.
   3. Use the app as you would: Memory, Tasks, a second panel. Do not paste the decoy anywhere else.
