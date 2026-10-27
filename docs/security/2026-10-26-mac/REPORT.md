@@ -110,13 +110,18 @@ logged. lsof outside loopback: none, so nothing went around the proxy.
 | docs.mcp.cloudflare.com | 3 | Cloudflare | an MCP server in the owner's own Claude Code settings |
 | registry.npmjs.org | 1 | npm | `npx` starting one of those MCP servers |
 | github.com, release-assets.githubusercontent.com | 2 | GitHub | the app's update check |
-| play.googleapis.com | 2 | Google | **not identified**: not called by the app's code; being traced to its process |
+| play.googleapis.com | 2 | Google | **not identified**: two connections of about 0.13 s each at 08:33:46 local time, too short for the lsof sample; not called by the app's code |
 
 This names the Cloudflare and Amazon addresses of the third run: they are the MCP servers the owner
 set up in Claude Code (Context7, Cloudflare docs) and Anthropic's MCP proxy. Those are the user's
 choices, not the app's; a fresh Claude Code login with no MCP servers would not make them.
 
-Decoy: not found on disk. Content was not readable in this mode.
+Decoy: this time the panel ran `echo hello` with DECOY_KEY readable by commands, and the value was
+not found on disk afterwards. Content was not readable in this mode.
+
+To tell whether play.googleapis.com comes from the window (Chromium) or from a process it starts, the
+script now also records Chromium's net log (`--log-net-log`) and lists the hosts in it: a host there
+is the window's; a host only in the proxy log is a child process's.
 
 ## Next run
 

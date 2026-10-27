@@ -91,6 +91,9 @@ if [ "$MITM" = 1 ]; then
   EXTRA=(--proxy-server=127.0.0.1:8899 --ignore-certificate-errors)
   note "mitm: traffic goes through mitmproxy on 127.0.0.1:8899; the window trusts its certificate for this run only"
 fi
+# Chromium's own record of every request the window and its web views make: tells the app's traffic
+# apart from that of the processes it starts
+EXTRA+=(--log-net-log="$OUT/netlog.json")
 STM_USER_DATA="$OUT/profile" "$APP/Contents/MacOS/SuperTokenMan" "${EXTRA[@]}" >app.log 2>&1 &
 ROOT=$!
 note "app started: pid $ROOT, version $VERSION"
@@ -147,6 +150,7 @@ if [ -f flows.mitm ]; then
   mitmdump -nr flows.mitm 2>/dev/null | grep -oE '^[0-9.:]+: [A-Z]+ https?://[^/ ]+' | cut -d' ' -f2- | sort | uniq -c | sort -rn > mitm-requests.txt || true
 fi
 # hosts whose client refused the proxy's certificate: their traffic was not read, only its destination
+chromium_hosts="$(grep -oE '"(https?|wss?)://[^/"]+' netlog.json 2>/dev/null | sed -E 's#^"[a-z]+://##' | sort | uniq -c | sort -rn || true)"
 names="$(grep -oE 'server connect [^ ]+' mitm.log 2>/dev/null | awk '{print $3}' | sort | uniq -c | sort -rn || true)"
 refused="$(grep -oE "does not trust the proxy's certificate for [^ ]+" mitm.log 2>/dev/null | awk '{print $NF}' | sort | uniq -c | sort -rn || true)"
 
@@ -184,6 +188,12 @@ Host names the app and its processes connected to through the proxy:
 
 \`\`\`
 $( [ -n "$names" ] && echo "$names" || echo "none (or not run with --mitm or --names)")
+\`\`\`
+
+Hosts the window itself (Chromium: the UI and its web views) asked for, from \`netlog.json\`:
+
+\`\`\`
+$( [ -n "$chromium_hosts" ] && echo "$chromium_hosts" || echo "none")
 \`\`\`
 
 Refused the proxy's certificate (sent, but not readable here):
