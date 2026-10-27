@@ -86,7 +86,7 @@ export function DialogHost() {
       done(true)
     } else if (e.key === 'Tab') {
       // focus stays inside the dialog
-      const f = [...(box.current?.querySelectorAll<HTMLElement>('button, input') ?? [])]
+      const f = Array.from(box.current?.querySelectorAll<HTMLElement>('button, input') ?? [])
       const i = f.indexOf(document.activeElement as HTMLElement)
       const n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : i === f.length - 1 ? 0 : i + 1
       e.preventDefault()

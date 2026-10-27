@@ -256,6 +256,8 @@ export type Bridge = {
   routeTally: () => Promise<import('../shared/arena').Tally>
   faithJudge: (pairs: { claim: string; passages: string }[]) => Promise<{ verdicts: ('supported' | 'partial' | 'unsupported' | null)[]; costUsd: number }>
   onClosing?: (fn: () => void) => void
+  /** The window's right-click menu: the main process sends the rows, the app draws them and answers with the row chosen. */
+  ctx?: { onOpen: (fn: (m: { x: number; y: number; items: { label?: string; enabled?: boolean; sep?: boolean }[] }) => void) => () => void; pick: (i: number) => void }
   closeReady: () => void
   /** which of these folders exist */
   existing: (paths: string[]) => Promise<string[]>

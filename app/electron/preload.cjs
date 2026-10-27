@@ -909,6 +909,14 @@ contextBridge.exposeInMainWorld('stm', {
   routeTally: () => ipcRenderer.invoke('route:tally'),
   faithJudge: (pairs) => ipcRenderer.invoke('faith:judge', pairs),
   onClosing: (fn) => ipcRenderer.on('app:closing', () => fn()),
+  ctx: {
+    onOpen: (fn) => {
+      const h = (_e, m) => fn(m)
+      ipcRenderer.on('ctx:open', h)
+      return () => ipcRenderer.removeListener('ctx:open', h)
+    },
+    pick: (i) => ipcRenderer.send('ctx:pick', i),
+  },
   closeReady: () => ipcRenderer.send('app:close-ready'),
   existing: (paths) => ipcRenderer.invoke('fs:existing', paths),
   remote: {

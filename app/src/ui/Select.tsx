@@ -47,7 +47,7 @@ function collect(children: ReactNode, out: Entry[] = []): Entry[] {
 }
 
 /** Moves to the next enabled index in a direction, wrapping. */
-export function nextEnabled(list: { disabled: boolean }[], from: number, dir: 1 | -1): number {
+export function nextEnabled(list: { disabled?: boolean }[], from: number, dir: 1 | -1): number {
   const n = list.length
   for (let k = 1; k <= n; k++) {
     const i = (((from + dir * k) % n) + n) % n
