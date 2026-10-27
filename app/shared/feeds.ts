@@ -100,3 +100,11 @@ export function briefingDue(s: Schedule, now: Date): boolean {
 export function newsletterItem(m: { id: string; subject: string; from: { name: string; address: string } | null; at: string; preview: string }, account: string): FeedItem {
   return { id: `nl-${account}-${m.id}`, feed: `mail:${account}`, source: m.from?.name || m.from?.address || 'Newsletter', title: m.subject || '(no subject)', link: '', date: m.at, summary: m.preview, newsletter: true }
 }
+
+/** Two letters for a feed's tile: the first of two words, or the first two of one (Hacker News is HN). */
+export function monogram(title: string): string {
+  const words = title.replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean)
+  if (!words.length) return '?'
+  const two = words.length > 1 ? words[0]![0]! + words[1]![0]! : words[0]!.slice(0, 2)
+  return two.toUpperCase()
+}

@@ -987,6 +987,7 @@ contextBridge.exposeInMainWorld('stm', {
   },
   health: () => ipcRenderer.invoke('health:get'),
   sleepPanel: (sid) => ipcRenderer.invoke('health:sleep-panel', sid),
+  searchSymbols: (q) => ipcRenderer.invoke('markets:search', q),
   predictions: (filter) => ipcRenderer.invoke('markets:predictions', filter),
   quotes: (symbols) => ipcRenderer.invoke('markets:quotes', symbols),
   calendar: {

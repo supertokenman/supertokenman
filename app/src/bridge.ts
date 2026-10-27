@@ -572,6 +572,7 @@ export type Bridge = {
   onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; tail?: string }) => void) => () => void
   health: () => Promise<import('../electron/health').Part[]>
   sleepPanel: (sid: string) => Promise<boolean>
+  searchSymbols: (q: string) => Promise<import('../shared/symbols').Sym[]>
   predictions: (filter: string) => Promise<import('../electron/markets').Prediction[]>
   quotes: (symbols: string[]) => Promise<{ quotes: import('../electron/markets').Quote[]; errors: { symbol: string; error: string }[] }>
   calendar: {

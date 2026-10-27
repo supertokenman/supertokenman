@@ -49,12 +49,14 @@ before and after when it is done. Systemic items first: one fix reaches many she
 
 - [x] Where the time went: zero-length bars still draw a tick; machine names as row labels
       (`yujiarima-panel-tcl4u`).
-- [ ] Markets: "Add: WEGE3, AAPL, SOL" needs a list to pick from (search with suggestions), not a
+- [x] Markets: "Add: WEGE3, AAPL, SOL" needs a list to pick from (search with suggestions), not a
       symbol from memory.
-- [ ] News: the feed sidebar is a plain list; suggested feeds are bare text links.
-- [ ] Database, new connection: a long form, five engines only. More engines (Supabase, Neon,
+- [x] News: the feed sidebar is a plain list; suggested feeds are bare text links.
+- [x] Database, new connection: a long form, five engines only. More engines (Supabase, Neon,
       PlanetScale, Turso, MongoDB, Redis, ClickHouse...) as cards with logos, and the connection string
       built from fields.
+      Done with the engines the app has drivers for (Postgres, MySQL, TiDB, SQLite, D1) and hosted
+      presets over them; drawn monograms, not logos. MongoDB, Redis, ClickHouse and Turso wait for drivers.
 - [x] Savings table (Tool, Tokens, Kept off, How we know): layout and pills.
 
 ## Flows

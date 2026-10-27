@@ -3279,9 +3279,9 @@ button.dc-tag.on { cursor: pointer; }
 /* branded form fields: Constructivist, a 45-degree cut on the top right, a mono label, an accent bar on focus.
    One set of rules for every sheet built on .observe; the cut is drawn with a gradient so the border follows it. */
 :root { --ui-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Helvetica Neue', sans-serif; --field: var(--sunken, var(--bg)); --line: var(--border-strong, var(--border)); --notch: 9px; }
-.sheet.observe input:not([type='checkbox']):not([type='radio']),
-.sheet.observe select,
-.sheet.observe textarea {
+.sheet.observe input:not([type='checkbox']):not([type='radio']), .cutfields input:not([type='checkbox']):not([type='radio']),
+.sheet.observe select, .cutfields select,
+.sheet.observe textarea, .cutfields textarea {
   -webkit-appearance: none;
   appearance: none;
   border: 0;
@@ -3295,17 +3295,17 @@ button.dc-tag.on { cursor: pointer; }
   clip-path: polygon(0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%);
   transition: box-shadow 120ms var(--ease, ease);
 }
-.sheet.observe input:not([type='checkbox']):not([type='radio']), .sheet.observe select { height: 32px; padding-block: 0; }
-.sheet.observe input::placeholder, .sheet.observe textarea::placeholder { color: var(--muted); opacity: 0.7; }
-.sheet.observe input:not([type='checkbox']):not([type='radio']):hover,
-.sheet.observe select:hover,
-.sheet.observe textarea:hover { --line: rgba(var(--accent-rgb), 0.45); }
-.sheet.observe input:not([type='checkbox']):not([type='radio']):focus,
-.sheet.observe select:focus,
-.sheet.observe textarea:focus { outline: none; --line: var(--accent); box-shadow: inset 0 0 0 1px var(--line), inset 3px 0 0 var(--accent); }
-.sheet.observe input:disabled, .sheet.observe select:disabled, .sheet.observe textarea:disabled { opacity: 0.45; }
+.sheet.observe input:not([type='checkbox']):not([type='radio']), .sheet.observe select, .cutfields input:not([type='checkbox']):not([type='radio']), .cutfields select { height: 32px; padding-block: 0; }
+.sheet.observe input::placeholder, .sheet.observe textarea::placeholder, .cutfields input::placeholder, .cutfields textarea::placeholder { color: var(--muted); opacity: 0.7; }
+.sheet.observe input:not([type='checkbox']):not([type='radio']):hover, .cutfields input:not([type='checkbox']):not([type='radio']):hover,
+.sheet.observe select:hover, .cutfields select:hover,
+.sheet.observe textarea:hover, .cutfields textarea:hover { --line: rgba(var(--accent-rgb), 0.45); }
+.sheet.observe input:not([type='checkbox']):not([type='radio']):focus, .cutfields input:not([type='checkbox']):not([type='radio']):focus,
+.sheet.observe select:focus, .cutfields select:focus,
+.sheet.observe textarea:focus, .cutfields textarea:focus { outline: none; --line: var(--accent); box-shadow: inset 0 0 0 1px var(--line), inset 3px 0 0 var(--accent); }
+.sheet.observe input:disabled, .sheet.observe select:disabled, .sheet.observe textarea:disabled, .cutfields input:disabled, .cutfields select:disabled, .cutfields textarea:disabled { opacity: 0.45; }
 /* the select's arrow: a small solid triangle, square to the grid, under the cut */
-.sheet.observe select {
+.sheet.observe select, .cutfields select {
   padding-right: 30px;
   background:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 16px top 50% / 5px 5px no-repeat,
@@ -4098,6 +4098,98 @@ textarea::-webkit-resizer { background: transparent; border-right: 2px solid var
 .sheet button.ghost:not(.icon):not([role='tab']):not(.segmented button) { box-shadow: inset 0 0 0 1px rgba(var(--overlay-rgb), 0.12); }
 .sheet button.ghost:not(.icon):not([role='tab']):hover { box-shadow: inset 0 0 0 1px rgba(var(--overlay-rgb), 0.22); }
 
+/* News sidebar: monogram tiles, counts in one column, the add field and suggestions as one group */
+.nw-body { grid-template-columns: 252px minmax(0, 1fr); }
+.nw-sources { gap: 1px; padding: 14px 10px 16px; background: var(--surface); }
+.nw-group-label { padding: 0 8px 6px; font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+.nw-src { gap: 10px; height: 34px; padding: 0 8px; border-radius: 0; color: var(--muted); }
+.nw-src:hover { background: var(--hover); color: var(--text); }
+.nw-src.on { background: var(--raised); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); }
+.nw-src-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nw-count { flex: none; min-width: 26px; text-align: right; font: 11px var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.nw-src.on .nw-count { color: var(--accent); }
+.nw-src-row { position: relative; }
+.nw-src-row .nw-x { position: absolute; right: 2px; top: 6px; background: var(--raised); }
+.nw-tile { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; font: 700 9.5px var(--mono); letter-spacing: 0.02em; color: var(--muted); background: var(--sunken, var(--bg)); box-shadow: inset 0 0 0 1px var(--border); clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%); }
+.nw-tile.all svg { width: 13px; height: 13px; }
+.nw-src.on .nw-tile { color: var(--accent); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.5); }
+.nw-addbox { display: grid; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.nw-addbox .nw-group-label { padding-bottom: 0; }
+.nw-add { margin-top: 0; padding: 0 2px; }
+.nw-add input { height: 32px; font-size: 12px; }
+.nw-sugg-head { padding: 4px 4px 0; font-size: 11px; line-height: 1.4; }
+.nw-sugg { display: grid; gap: 6px; padding: 0 2px; }
+.nw-sugg-card { display: flex; align-items: center; gap: 10px; height: auto; padding: 8px 10px; border: 0; border-radius: 0; text-align: left; color: var(--text); background: linear-gradient(225deg, transparent 4.95px, var(--border) 4.95px, var(--border) 5.95px, var(--raised) 5.95px); box-shadow: inset 0 0 0 1px var(--border); clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%); transition: box-shadow 120ms var(--ease, ease); }
+.nw-sugg-card:hover { box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.55); }
+.nw-sugg-card:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--border), inset 3px 0 0 var(--accent); }
+.nw-sugg-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.nw-sugg-text b { font-size: 12.5px; font-weight: 600; }
+.nw-sugg-text span { font-size: 11px; color: var(--muted); line-height: 1.35; }
+.nw-sugg-add { flex: none; font: 600 14px var(--mono); color: var(--faint); }
+.nw-sugg-card:hover .nw-sugg-add { color: var(--accent); }
+
+/* Markets: the add field with suggestions */
+.sym { position: relative; }
+.sym .mk-add { width: 260px; height: 30px; font-family: var(--ui-font); font-size: 12.5px; }
+.sym-list { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; width: 380px; display: grid; padding: 4px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border-strong), 0 12px 32px rgba(0, 0, 0, 0.28); clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%); animation: rise 140ms var(--ease, ease) both; }
+.sym-row { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 0; background: transparent; color: var(--text); text-align: left; }
+.sym-row.on { background: var(--raised); box-shadow: inset 2px 0 0 var(--accent); }
+.sym-ticker { font: 600 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sym-name { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sym-row.on .sym-name { color: var(--text); }
+.sym-tag { font: 600 9.5px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 6px; color: var(--muted); background: var(--hover); clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%); }
+.sym-tag.added { color: var(--green); background: rgba(var(--green-rgb), 0.12); }
+.sym-foot { padding: 7px 10px 5px; font-size: 11px; border-top: 1px solid var(--border); margin-top: 2px; }
+.sym-foot:only-child { border-top: 0; margin-top: 0; }
+
+/* Database: new connection */
+.dbc { display: grid; gap: 14px; max-width: 760px; padding-bottom: 24px; }
+.dbc-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.dbc-head .sp-label { margin: 0; }
+.dbc-head .faint { font-size: 12px; }
+.dbc-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 8px; }
+.dbc-card { position: relative; display: flex; align-items: center; gap: 10px; height: auto; min-height: 54px; padding: 9px 10px; border: 0; border-radius: 0; text-align: left; color: var(--text); background: linear-gradient(225deg, transparent 6.36px, var(--border) 6.36px, var(--border) 7.36px, var(--raised) 7.36px); box-shadow: inset 0 0 0 1px var(--border); clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%); transition: box-shadow 120ms var(--ease, ease); }
+.dbc-card:hover { box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.45); }
+.dbc-card.on { box-shadow: inset 0 0 0 1px var(--accent), inset 3px 0 0 var(--accent); background: linear-gradient(225deg, transparent 6.36px, var(--accent) 6.36px, var(--accent) 7.36px, var(--raised) 7.36px); }
+.dbc-card:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--border), inset 3px 0 0 var(--accent); }
+.dbc-card-text { display: grid; gap: 1px; min-width: 0; }
+.dbc-card-text b { font-size: 12.5px; font-weight: 600; }
+.dbc-card-text span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dbc-family { position: absolute; right: 12px; bottom: 6px; font: 600 8.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.dbc-mark { flex: none; }
+.dbc-mark .tile { fill: var(--sunken, var(--bg)); stroke: var(--border-strong); stroke-width: 1; }
+.dbc-mark .mono-mark { font: 700 11px var(--mono); fill: var(--text); letter-spacing: 0.02em; }
+.dbc-mark .rule { stroke-width: 2; stroke-linecap: square; stroke: var(--muted); }
+.dbc-mark .rule.postgres { stroke-dasharray: 20 0; }
+.dbc-mark .rule.mysql, .dbc-mark .rule.tidb { stroke-dasharray: 6 2; }
+.dbc-mark .rule.sqlite, .dbc-mark .rule.d1 { stroke-dasharray: 2 2; }
+.dbc-card.on .dbc-mark .tile { stroke: var(--accent); }
+.dbc-card.on .dbc-mark .rule { stroke: var(--accent); }
+.dbc-later { font-size: 11.5px; margin-top: -4px; }
+.dbc-form { display: grid; gap: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.dbc-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.dbc-grid .fld { grid-column: span 3; }
+.dbc-grid .fld.host { grid-column: span 5; }
+.dbc-grid .fld.port { grid-column: span 1; }
+.dbc-grid .fld.wide { grid-column: 1 / -1; }
+.dbc-ssl { grid-column: span 3; height: 32px; color: var(--text); font-size: 12.5px; }
+.dbc .fld input { width: 100%; }
+.dbc-where { margin-top: -4px; }
+.dbc-where b { font-weight: 600; color: var(--text); }
+.dbc-url { display: grid; gap: 5px; }
+.dbc-url .fld-label { font: 600 10.5px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.dbc-url code { display: block; padding: 8px 10px; font: 12px/1.45 var(--mono); color: var(--text); background: var(--sunken, var(--bg)); box-shadow: inset 2px 0 0 var(--border-strong); overflow-wrap: anywhere; }
+.dbc-switch { justify-self: start; margin-top: -8px; }
+.dbc-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; text-transform: none; letter-spacing: normal; font: 400 12px var(--ui-font); }
+.dbc-writes { color: var(--text); font-size: 12.5px; white-space: normal; }
+@media (max-width: 720px) { .dbc-grid .fld, .dbc-grid .fld.host, .dbc-ssl { grid-column: 1 / -1; } .dbc-grid .fld.port { grid-column: 1 / -1; } }
+.dbv-main > .dbc { flex: 1; min-height: 0; overflow: auto; align-content: start; }
+.nw-sources { overflow-x: hidden; }
+.nw-addbox, .nw-addbox > *, .nw-sugg-card { min-width: 0; }
+.nw-sugg-text span { white-space: normal; }
+.nw-sugg-head { white-space: normal; }
+.nw-empty { grid-column: 1 / -1; display: grid; gap: 6px; max-width: 360px; margin: 18vh auto 0; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.nw-empty b { color: var(--text); font-size: 14px; font-weight: 600; }
 /* Setup guides (Steps.tsx): compact step cards, one line and one action each, ticking as they happen. */
 .gs { display: grid; gap: 8px; min-width: 0; }
 .gs-head { display: flex; align-items: baseline; gap: 8px; }

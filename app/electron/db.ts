@@ -140,13 +140,14 @@ async function runPg(c: DbConn, vault: Vault, sql: string): Promise<Raw> {
   })
 }
 
-/** A MySQL or TiDB connection; TiDB gets verified TLS where it needs it (TiDB Cloud) and its port. */
+/** A MySQL or TiDB connection; verified TLS where it is needed (TiDB Cloud) or asked for (?ssl=true). */
 async function myConnect(c: DbConn, url: string, extra: Record<string, unknown> = {}) {
   if (c.kind === 'tidb') {
     const why = addressProblem(url)
     if (why) throw new Error(why)
   }
-  const ssl = c.kind === 'tidb' ? tlsFor(url) : undefined
+  // MySQL gets verified TLS when the string asks for it (?ssl=true), as PlanetScale requires
+  const ssl = tlsFor(url)
   const mysql = await mysqlLib()
   return mysql.createConnection({ uri: url, connectTimeout: 8000, multipleStatements: false, ...(ssl ? { ssl } : {}), ...extra })
 }

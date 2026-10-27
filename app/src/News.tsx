@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Feed } from '../electron/news'
-import type { FeedItem as Item } from '../shared/feeds'
+import { monogram, type FeedItem as Item } from '../shared/feeds'
 import { BriefingView, SetupView } from './FeedsSetup'
-import { IconCheckAll, IconRefresh, IconClose } from './icons'
+import { IconCheckAll, IconRefresh, IconClose, IconNews } from './icons'
 
 const READ_KEY = 'stm.news.read'
 const readSet = (): Set<string> => {
@@ -150,35 +150,56 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
           </button>
         </header>
         <div className="nw-body">
-          <nav className="nw-sources">
-            <button className={`nw-src ${!source ? 'on' : ''}`} onClick={() => setSource(null)}><span className="nw-dot all" />All<span className="faint">{news.unread || ''}</span></button>
+          <nav className="nw-sources cutfields">
+            <div className="nw-group-label">Feeds</div>
+            <button className={`nw-src ${!source ? 'on' : ''}`} onClick={() => setSource(null)}>
+              <span className="nw-tile all"><IconNews /></span>
+              <span className="nw-src-name">All feeds</span>
+              <span className="nw-count">{news.unread || ''}</span>
+            </button>
             {feeds.map((f) => (
               <span key={f.url} className="nw-src-row">
                 <button className={`nw-src ${source === f.title ? 'on' : ''}`} onClick={() => setSource(f.title)} title={f.url}>
-                  <span className="nw-dot" style={{ background: `hsl(${hue(f.title)} 70% 58%)` }} />
-                  {f.title}
-                  <span className="faint">{counts.get(f.title) || ''}</span>
+                  <span className="nw-tile" aria-hidden="true">{monogram(f.title)}</span>
+                  <span className="nw-src-name">{f.title}</span>
+                  <span className="nw-count">{counts.get(f.title) || ''}</span>
                 </button>
-                <button className="nw-x" title="Remove feed" onClick={() => void window.stm.news.remove(f.url).then((x) => { setFeeds(x); void news.refresh() })}>×</button>
+                <button className="nw-x" title={`Remove ${f.title}`} aria-label={`Remove ${f.title}`} onClick={() => void window.stm.news.remove(f.url).then((x) => { setFeeds(x); void news.refresh() })}>×</button>
               </span>
             ))}
-            <form className="nw-add" onSubmit={(e) => {
-              e.preventDefault()
-              setBusy(true)
-              setAddErr('')
-              window.stm.news.add(adding).then((x) => { setFeeds(x); setAdding(''); void news.refresh() }).catch((err: Error) => setAddErr(err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))).finally(() => setBusy(false))
-            }}>
-              <input value={adding} onChange={(e) => setAdding(e.target.value)} placeholder="Add a site or feed" spellCheck={false} />
-              {busy && <span className="spinner" />}
-            </form>
-            {addErr && <span className="nw-err">{addErr}</span>}
-            {suggested.some((s) => !feeds.some((f) => f.url === s.url)) && <span className="faint">Suggested: nothing is read until you add it</span>}
-            {suggested.filter((s) => !feeds.some((f) => f.url === s.url)).map((s) => (
-              <button key={s.url} className="ghost small" title={s.url} onClick={() => void window.stm.news.add(s.url).then((x) => { setFeeds(x); void news.refresh() })}>
-                Add {s.title}
-              </button>
-            ))}
             {news.errors.map((e) => <span key={e.feed} className="nw-err">{e.feed}: {e.error}</span>)}
+
+            <div className="nw-addbox">
+              <div className="nw-group-label">Add a feed</div>
+              <form className="nw-add" onSubmit={(e) => {
+                e.preventDefault()
+                if (!adding.trim()) return
+                setBusy(true)
+                setAddErr('')
+                window.stm.news.add(adding).then((x) => { setFeeds(x); setAdding(''); void news.refresh() }).catch((err: Error) => setAddErr(err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))).finally(() => setBusy(false))
+              }}>
+                <input value={adding} onChange={(e) => setAdding(e.target.value)} placeholder="A site or feed address" spellCheck={false} />
+                {busy && <span className="spinner" />}
+              </form>
+              {addErr && <span className="nw-err">{addErr}</span>}
+              {suggested.some((s) => !feeds.some((f) => f.url === s.url)) && (
+                <>
+                  <div className="nw-sugg-head faint">Suggested. Nothing is fetched until you add one.</div>
+                  <div className="nw-sugg">
+                    {suggested.filter((s) => !feeds.some((f) => f.url === s.url)).map((s) => (
+                      <button key={s.url} className="nw-sugg-card" title={s.url} onClick={() => void window.stm.news.add(s.url).then((x) => { setFeeds(x); void news.refresh() })}>
+                        <span className="nw-tile" aria-hidden="true">{monogram(s.title)}</span>
+                        <span className="nw-sugg-text">
+                          <b>{s.title}</b>
+                          {s.about && <span>{s.about}</span>}
+                        </span>
+                        <span className="nw-sugg-add" aria-hidden="true">+</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </nav>
 
           {view === 'brief' ? (
@@ -208,6 +229,12 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
             </article>
           ) : (
             <div className="nw-grid">
+              {!feeds.length && !news.loading && (
+                <div className="nw-empty">
+                  <b>No feeds yet</b>
+                  <span>Add a site or a feed address on the left, or pick one of the suggestions. Nothing is fetched before that.</span>
+                </div>
+              )}
               {!news.items.length && news.loading && Array.from({ length: 8 }, (_, i) => <div key={i} className="nw-card skeleton" />)}
               {shown.map((i, n) => (
                 <button key={i.id} className={`nw-card ${news.read.has(i.id) ? 'read' : ''} ${n === 0 && !source ? 'lead' : ''}`} onClick={() => void openItem(i)}>

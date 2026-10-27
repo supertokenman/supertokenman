@@ -2,6 +2,8 @@
 // indices in one shape; brapi answers for B3 when Yahoo does not; CoinGecko has crypto in reais. No key, no account. Neither is an
 // official feed: quotes can lag and the endpoints can change.
 
+import { fromYahoo, type Sym } from '../shared/symbols.js'
+
 export type Quote = { symbol: string; label: string; price: number; change: number; changePct: number; currency: string; points: number[]; time: number; source: 'yahoo' | 'brapi' | 'coingecko' }
 
 /** What the user types, as Yahoo spells it: PETR4 is PETR4.SA, BTC is BTC-BRL, USD is USDBRL=X. */
@@ -13,6 +15,7 @@ export function normalize(input: string): { symbol: string; label: string } {
   if (fx[s]) return { symbol: fx[s], label: `${s}/BRL` }
   if (index[s]) return { symbol: index[s], label: s === 'IBOVESPA' ? 'IBOV' : s }
   if (crypto.includes(s)) return { symbol: `${s}-BRL`, label: s }
+  if (/^[A-Z]{6}=X$/.test(s)) return { symbol: s, label: `${s.slice(0, 3)}/${s.slice(3, 6)}` }
   if (/^[A-Z]{4}\d{1,2}F?$/.test(s)) return { symbol: `${s}.SA`, label: s }
   return { symbol: s, label: s.replace(/\.SA$/, '') }
 }
@@ -85,6 +88,16 @@ export async function quotes(inputs: string[], get: Get = getJson): Promise<{ qu
     quotes: res.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])),
     errors: res.flatMap((r, i) => (r.status === 'rejected' ? [{ symbol: inputs[i]!, error: (r.reason as Error).message }] : [])),
   }
+}
+
+/**
+ * Symbols matching what the person typed, from Yahoo Finance's public search (the quotes' own source).
+ * Only called from the Markets add field, after a pause in typing, when the built-in list has too few.
+ */
+export async function searchSymbols(q: string, get: Get = getJson): Promise<Sym[]> {
+  const t = q.trim().slice(0, 40)
+  if (t.length < 2) return []
+  return fromYahoo(await get(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(t)}&quotesCount=8&newsCount=0&listsCount=0`))
 }
 
 export const DEFAULT_WATCH = ['IBOV', 'USD', 'EUR', 'BTC', 'ETH', 'PETR4', 'VALE3', 'ITUB4', 'NASDAQ']
