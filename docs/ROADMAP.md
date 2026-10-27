@@ -87,6 +87,18 @@ References to read before choosing (what they did, not claims about us):
   locally instead of fetching the web each turn. Runs only when asked; each host goes in
   `docs/NETWORK.md`. Idea from Crawlee.
 - Structure: one icon set, design tokens, typed IPC, branded fields.
+- Agents working together, in this order (ideas from Orca, Agent Orchestrator, Nodeterm, OpenCove,
+  Hivemind and Maestri, reviewed 2026-10-27; features as their own pages describe them, not tested by us):
+  1. One git worktree and branch per panel, so panels running in parallel never edit the same files,
+     and each ends in its own pull request.
+  2. Loops back to the panel: a failed CI check, a review comment or a merge conflict on a panel's pull
+     request goes to that panel. CI failures can go automatically; the rest ask first. Builds on
+     "GitHub inside the app" above.
+  3. Canvas view: panels, notes and previews loose on a pan and zoom canvas, next to today's grid.
+     Links between panels let one read another's summary (read only, sent when you press send unless
+     you turn on auto for that link). Every link shows its tokens and cost and has a spending cap, which
+     none of the apps above show. Each panel stays a real Claude Code session on the user's own login:
+     no API key and no new network calls.
 
 ## After v1.1: from the repo review of 2026-10-27
 
