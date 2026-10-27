@@ -31,8 +31,9 @@ measurement, then held in CI where a number can be measured there):
 
 Work:
 
-- Measure first: a `perf` script that launches the built app, records the marks above and writes
-  them to a file, so every change has a before and after.
+- Measure first: `app/scripts/perf-mac.mjs`, run on each release by the `perf-mac` workflow, records
+  the marks above to `perf.json` and compares with the previous release, so every change has a before
+  and after. How and where: docs/PERFORMANCE.md, "Measured on each release".
 - Start-up: V8 snapshot or code cache for the main process, defer every module the first panel does
   not need, show the window from a cached first frame.
 - Renderer: virtualize long transcripts and tables, move token counting and markdown parsing off the
