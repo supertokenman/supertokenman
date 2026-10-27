@@ -26,7 +26,9 @@ measurement, then held in CI where a number can be measured there):
 - Launch to a usable composer: under 1 s with a warm disk.
 - Idle window: 0 layouts and 0 style recalcs per second, and near 0% CPU, with four panels open.
 - Renderer start-up bundle: under 250 KB gzip.
-- Memory: a set number per open panel, measured and written here, then not allowed to grow.
+- Memory: about 280 MB of resident memory per open panel (Linux, 2026-10-27: 270 MB is the panel's
+  Claude Code process, 8 MB the app's own, 0.2 MB renderer JS heap), then not allowed to grow; CI fails
+  above 450 MB.
 - Typing, scrolling a long transcript, opening a sheet: no frame over 16 ms.
 
 Work:
