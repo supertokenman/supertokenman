@@ -58,7 +58,7 @@ export function TodaySheet(props: {
             <span key={e.id} className="td-block" style={{ left: `${x(e.start)}%`, width: `${Math.max(1.2, x(e.end) - x(e.start))}%` }} title={`${hm(e.start)} ${e.title}`} />
           ))}
           <span className="td-now" style={{ left: `${x(now)}%` }} />
-          {[8, 10, 12, 14, 16, 18, 20].map((h) => <span key={h} className="td-tick" style={{ left: `${((h - 8) / 12) * 100}%` }}>{h}</span>)}
+          {[8, 10, 12, 14, 16, 18, 20].map((h) => <span key={h} className={`td-tick${h === 8 ? ' first' : h === 20 ? ' last' : ''}`} style={{ left: `${((h - 8) / 12) * 100}%` }}>{h}</span>)}
         </div>
 
         <div className="sheet-body td-grid">
@@ -96,6 +96,7 @@ export function TodaySheet(props: {
           </section>
           <section>
             <div className="td-sub">Three stories</div>
+            {props.stories.length === 0 && <div className="faint td-none">No stories yet. Add feeds in News to see the top three here.</div>}
             {props.stories.slice(0, 3).map((i) => (
               <button key={i.id} className="td-row link" onClick={() => { props.onClose(); props.onStory() }}>
                 <span className="td-src">{i.source}</span>

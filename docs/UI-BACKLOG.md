@@ -13,18 +13,23 @@ before and after when it is done. Systemic items first: one fix reaches many she
 - [x] Buttons stretched to the full width of a form (Team room: "Create and copy invite", "Join").
 - [x] Dashed-border fields (Filter in Markets, Add a site in News) next to solid ones: one field style.
 - [x] Error notes ("No connection right now"): a heavy box for a small message.
-- [ ] Tables: wrapping names ("Prompt cache" on two lines), status pills in two styles, row actions
-      (delete, edit) not visible.
+- [x] Tables: wrapping names ("Prompt cache" on two lines), status pills in two styles, row actions
+      (delete, edit) not visible. One `table.tbl` style and one `.status` pill in app.css; first column
+      on one line with an ellipsis and its full name as a tooltip; row actions are icon buttons with
+      tooltips (RowActs.tsx), brighter on row hover and keyboard focus.
 - [x] The panel id chip ("s46", dashed box) beside the folder name.
-- [ ] Badges in the top bar overlapping the next control ("Update" pill under the palette badge).
-- [ ] Filter chips with a count ("Plugins 3926"): no icons, the count reads as noise.
+- [x] Badges in the top bar overlapping the next control ("Update" pill under the palette badge).
+- [x] Filter chips with a count ("Plugins 3926"): no icons, the count reads as noise. Drawn icons per
+      kind (icons.tsx), count in quiet mono.
 
 - [x] Native selects, date and file inputs, resize grips: the app's caret and button.
 - [x] Plurals: "1 turns", "1 screens", "1 files" (shared/plural.ts).
 - [x] Secondary actions inside sheets read as loose text: a hairline edge.
 - [x] Sheets that cover the panel header's tabs: not a defect, a sheet is a modal over a dimmed window.
-- [ ] Mostly empty sheets with a sentence and no action (about 30 sheets): compact dialogs, or an
-      empty state with the action that fills them.
+- [x] Mostly empty sheets with a sentence and no action (about 30 sheets): compact dialogs, or an
+      empty state with the action that fills them. EmptyState.tsx and `.sheet.fit`; applied to API to MCP,
+      MCP catalog, MCP health, Prometheus, Analytics, Routines, Playbooks, Message filters, Ask your data,
+      Project graph, Compose stacks, Image X-ray, Markdown images, Scoreboard, Memory. The rest remain.
 - [ ] Commands, paths and env var names in sans and not copyable: mono with a Copy button.
 - [ ] Content clipped at the sheet bottom or truncated without an ellipsis or a tooltip.
 - [ ] Left edges out of line with the sheet title (149/157/165 against 159).
@@ -32,13 +37,13 @@ before and after when it is done. Systemic items first: one fix reaches many she
 
 ## Found in the sweep, per sheet
 
-- Ports: port 9336 repeated on six rows; commands cut with no tooltip.
-- Health: implausible numbers (1877.5 GB, 7993% CPU) and identical rows: likely a bug.
-- Cloud: a toggle overlaps its label ("eck every 6 hours").
-- Diagnostics: the same GitHub error fourteen times; group with a count and an action.
-- Today: hour labels inside the timeline bar, "20" clipped; THREE STORIES heading with nothing under it.
-- Markets: prediction titles cut mid-word with no ellipsis.
-- Catalog, Personas, Connections, Appearance: last row clipped by the sheet edge.
+- [x] Ports: port 9336 repeated on six rows; commands cut with no tooltip.
+- [x] Health: implausible numbers (1877.5 GB, 7993% CPU) and identical rows: likely a bug.
+- [x] Cloud: a toggle overlaps its label ("eck every 6 hours").
+- [x] Diagnostics: the same GitHub error fourteen times; group with a count and an action.
+- [x] Today: hour labels inside the timeline bar, "20" clipped; THREE STORIES heading with nothing under it.
+- [x] Markets: prediction titles cut mid-word with no ellipsis.
+- [x] Catalog, Personas, Connections, Appearance: last row clipped by the sheet edge. Checked: each body scrolls and ends with padding; the cut is only the scroll position before scrolling.
 
 ## Sheets
 
@@ -52,15 +57,17 @@ before and after when it is done. Systemic items first: one fix reaches many she
       built from fields.
       Done with the engines the app has drivers for (Postgres, MySQL, TiDB, SQLite, D1) and hosted
       presets over them; drawn monograms, not logos. MongoDB, Redis, ClickHouse and Turso wait for drivers.
-- [ ] Savings table (Tool, Tokens, Kept off, How we know): layout and pills.
+- [x] Savings table (Tool, Tokens, Kept off, How we know): layout and pills.
 
 ## Flows
 
-- [ ] Integration guides (Connect Outlook and the rest): too much text, not "play-action". Steps as
+- [x] Integration guides (Connect Outlook and the rest): too much text, not "play-action". Steps as
       cards with one action each, copy buttons, progress.
-- [ ] External setup pages (Get Ollama and the like): bring the steps into the app's own look, with the
+- [x] External setup pages (Get Ollama and the like): bring the steps into the app's own look, with the
       source linked, instead of opening the vendor's site.
-- [ ] Folder picker: the macOS dialog; an in-app picker (recent projects, git repos found on disk,
+- [x] Folder picker: the macOS dialog; an in-app picker (recent projects, git repos found on disk,
       search) with the system dialog as a fallback.
 - [x] Panels: animate create, move and close.
-- [ ] Apps sidebar (WhatsApp and the rest): opening, closing and switching lag.
+- [x] Apps sidebar (WhatsApp and the rest): opening, closing and switching lag. The drawer slides on a
+      transform over the panels and takes its width once at rest; hidden apps stay laid out, not
+      display:none. Median open: p95 frame 83 to 17 ms, panel resizes 36 to 4.

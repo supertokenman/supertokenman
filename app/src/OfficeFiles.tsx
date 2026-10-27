@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
+import { Steps } from './Steps'
 
 type Status = Awaited<ReturnType<typeof window.stm.office.status>>
 
@@ -9,6 +10,12 @@ export function OfficeFiles(props: { onClose: () => void }) {
   const [sel, setSel] = useState<string | null>(null)
   const [img, setImg] = useState<string | null>(null)
   useEffect(() => void window.stm.office.status().then((s) => (setSt(s), setSel(s.built.at(-1)?.file ?? null))), [])
+  // not installed yet: check again every few seconds so the sheet moves on by itself
+  useEffect(() => {
+    if (!st || st.found.ok) return
+    const t = setInterval(() => void window.stm.office.status().then((s) => s.found.ok && setSt(s)), 3000)
+    return () => clearInterval(t)
+  }, [st])
   useEffect(() => void (sel ? window.stm.office.preview(sel).then(setImg) : setImg(null)), [sel])
   const cur = st?.built.filter((b) => b.file === sel).at(-1)
   return (
@@ -22,9 +29,14 @@ export function OfficeFiles(props: { onClose: () => void }) {
         </header>
         {!st ? null : !st.found.ok ? (
           <div className="of-empty">
-            <p>{st.found.why ?? 'OfficeCLI is not installed.'}</p>
-            <p className="faint">OfficeCLI (Apache-2.0) is a separate program that makes .docx, .xlsx and .pptx files. Install it yourself from its releases page; the app does not download it or run its installer. Once it is on the PATH, panels get a tool to build these files, and each one shows here with its checks and a preview.</p>
-            <code className="of-link">{st.found.releases}</code>
+            <Steps
+              title="Install OfficeCLI"
+              steps={[
+                { id: 'get', text: 'Download OfficeCLI from its releases page.', why: <>{st.found.why ?? 'OfficeCLI is not installed.'} It is a separate program (Apache-2.0) that makes .docx, .xlsx and .pptx files. The app does not download it or run its installer.</>, open: { url: st.found.releases, label: 'Releases (opens github.com)', browser: true } },
+                { id: 'path', text: 'Put it on your PATH. This sheet ticks when it is found.', why: 'Once it is on the PATH, panels get a tool to build these files, and each one shows here with its checks and a preview.', done: false },
+              ]}
+              source={{ label: 'Instructions from the OfficeCLI releases page', url: st.found.releases }}
+            />
           </div>
         ) : (
           <div className="of-body">

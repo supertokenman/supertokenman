@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import type { Playbook, PbRun } from '../shared/playbook'
@@ -23,13 +24,16 @@ export function PlaybooksSheet(props: { sid?: string; cwd?: string; onClose: () 
   }
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="Playbooks">
+      <div className={`sheet config observe ${!items.length && !runs.length ? 'fit' : ''}`} role="dialog" aria-label="Playbooks">
         <header className="sheet-head">
           <div className="sheet-title">Playbooks</div>
           <span className="faint">{props.cwd ? `${props.cwd.split('/').pop()}/.claude/playbooks` : 'focus a panel'}</span>
           <span className="spacer-flex" />
           <button className="icon" aria-label="Close" onClick={props.onClose}><IconClose /></button>
         </header>
+        {!items.length && !runs.length ? (
+          <EmptyState title="No playbooks in this project" text={<>A playbook is a YAML file in <code>.claude/playbooks</code>: a name, and steps with a prompt or a skill, an optional check command and an optional checkpoint.</>} />
+        ) : (
         <div className="ex-grid">
           <div className="ex-col">
             {items.length === 0 && <div className="faint">No playbooks in this project yet. A playbook is a YAML file: a name, and steps with a prompt or a skill, an optional check command and an optional checkpoint.</div>}
@@ -72,6 +76,7 @@ export function PlaybooksSheet(props: { sid?: string; cwd?: string; onClose: () 
             })}
           </div>
         </div>
+        )}
       </div>
     </div>
   )

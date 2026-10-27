@@ -1,14 +1,14 @@
 // Processes listening on TCP ports, from lsof and ps: what holds a port, where it runs, and a way to stop it.
 import { execFile } from 'node:child_process'
 
-export type Listener = { pid: number; name: string; port: number; host: string; command: string; cwd: string; cpu: number; memMb: number; uptime: string; mine: boolean }
+export type Listener = { pid: number; name: string; port: number; host: string; shared?: number[]; command: string; cwd: string; cpu: number; memMb: number; uptime: string; mine: boolean }
 
 const run = (cmd: string, args: string[]) =>
   new Promise<string>((resolve) => execFile(cmd, args, { timeout: 8000, maxBuffer: 8 * 1024 * 1024 }, (_err, out) => resolve(out ?? '')))
 
 /** `lsof -F pcn` output: one entry per pid and port. lsof exits 1 when nothing listens, so output is all that counts. */
-export function parseLsof(text: string): { pid: number; name: string; port: number; host: string }[] {
-  const out: { pid: number; name: string; port: number; host: string }[] = []
+export function parseLsof(text: string): { pid: number; name: string; port: number; host: string; shared?: number[] }[] {
+  const out: { pid: number; name: string; port: number; host: string; shared?: number[] }[] = []
   let pid = 0
   let name = ''
   for (const line of text.split('\n')) {
@@ -21,8 +21,16 @@ export function parseLsof(text: string): { pid: number; name: string; port: numb
       if (!m) continue
       const port = Number(m[2])
       const host = m[1] === '*' ? '*' : m[1]!.replace(/^\[|\]$/g, '')
-      // the same port on IPv4 and IPv6 is one row
-      if (!out.some((o) => o.pid === pid && o.port === port)) out.push({ pid, name, port, host })
+      // One row per port: IPv4 and IPv6 are the same listener, and child processes that inherit
+      // the listening socket (forked/spawned with the fd open) also show it. The lowest pid is
+      // the one that opened it; the others are listed as sharing it.
+      const prev = out.find((o) => o.port === port)
+      if (!prev) out.push({ pid, name, port, host })
+      else if (prev.pid !== pid) {
+        const all = [...new Set([prev.pid, pid, ...(prev.shared ?? [])])].sort((a, b) => a - b)
+        if (pid < prev.pid) Object.assign(prev, { pid, name })
+        prev.shared = all.filter((x) => x !== prev.pid)
+      }
     }
   }
   return out.sort((a, b) => a.port - b.port)

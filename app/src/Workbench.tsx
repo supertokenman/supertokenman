@@ -146,7 +146,7 @@ function Filters(props: { st: WbState; act: (p: Promise<WbState>) => void }) {
   return (
     <div className="dsg-body">
       <div className="faint">Filters add short rules to each message a panel sends, in this order. They show in Trace with the message. A persona's own list replaces the default one.</div>
-      <table className="ob-table wb-filters">
+      <table className="tbl ob-table wb-filters">
         <thead><tr><th>Panel</th>{names.map(([k, v]) => <th key={k}>{v}</th>)}</tr></thead>
         <tbody>
           {rows.map((r) => {

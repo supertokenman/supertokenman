@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { IconClose } from './icons'
+import { IconClose, IconEdit, IconArchive } from './icons'
+import { RowAct, RowActs } from './RowActs'
 import type { Hit, MemItem, Origin } from '../shared/memitems'
 
 const ORIGINS: [Origin, string][] = [['you', 'You'], ['agent', 'Claude'], ['session', 'A session']]
@@ -24,7 +25,7 @@ export function MemoryItemsSheet(props: { project: string; onClose: () => void }
   const shown = hits ? hits.map((h) => ({ item: h.item, via: h.via })) : items.filter((x) => !origins.length || origins.includes(x.origin)).map((item) => ({ item, via: [] as string[] }))
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="Memory items">
+      <div className={`sheet config observe ${shown.length ? "" : "fit"}`} role="dialog" aria-label="Memory items">
         <header className="sheet-head">
           <div className="sheet-title">Memory</div>
           <span className="faint">{props.project || 'all projects'} · nothing is overwritten</span>
@@ -63,8 +64,10 @@ export function MemoryItemsSheet(props: { project: string; onClose: () => void }
                   {via.length > 0 && <span>found by {via.join(' + ')}</span>}
                   {item.entities.slice(0, 4).map((e) => <code key={e}>{e}</code>)}
                   <span className="spacer-flex" />
-                  {!editing && <button className="ghost small" onClick={() => setEditing({ id: item.id, text: item.text })}>Edit</button>}
-                  <button className="ghost small" onClick={() => void window.stm.mi.archive(item.id, !item.archived)}>{item.archived ? 'Unarchive' : 'Archive'}</button>
+                  <RowActs>
+                    {!editing && <RowAct label="Edit: saves a new version" icon={<IconEdit />} onClick={() => setEditing({ id: item.id, text: item.text })} />}
+                    <RowAct label={item.archived ? 'Unarchive' : 'Archive'} icon={<IconArchive />} onClick={() => void window.stm.mi.archive(item.id, !item.archived)} />
+                  </RowActs>
                 </div>
               </li>
             ))}

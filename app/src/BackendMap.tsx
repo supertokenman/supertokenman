@@ -101,7 +101,7 @@ export function BackendMapSheet(props: { cwd?: string; onClose: () => void; onAt
                   <section className="bm-gw">
                     <div className="sp-label">Gateway · Kong · {scan.gateway.file}</div>
                     <div className="faint">{count(scan.gateway.services, 'service')}, {count(scan.gateway.routes.length, 'route')}{scan.gateway.global.length ? `; on every route: ${scan.gateway.global.join(', ')}` : ''}. Read from the file only; the running gateway is not asked.</div>
-                    <table className="vb-table">
+                    <table className="tbl vb-table">
                       <thead><tr><th>Route</th><th>Methods</th><th>Paths</th><th>Upstream</th><th>Plugins</th></tr></thead>
                       <tbody>{scan.gateway.routes.map((r) => <tr key={r.route}><td><code>{r.route}</code></td><td>{r.methods.join(' ') || 'any'}</td><td><code>{r.paths.join(', ') || '/'}</code></td><td className="faint">{r.upstream}</td><td>{r.plugins.map((p) => <span key={p} className="pt-kind bm-plugin">{p}</span>)}</td></tr>)}</tbody>
                     </table>

@@ -1,3 +1,4 @@
+import { Steps } from './Steps'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { paramsOf, READ_MIN_PARAMS } from '../shared/params'
@@ -121,7 +122,6 @@ export function LocalModelSheet(props: { onClose: () => void; usdToBrl: number }
           title: 'Ollama installed',
           state: st.installed ? 'up' : 'down',
           detail: st.installed ? (st.version ? `Version ${st.version}` : 'Found on this Mac') : 'Runs open models on this Mac, free.',
-          act: st.installed ? undefined : <button className="small" onClick={() => void window.stm.openUrl('https://ollama.com/download')}>Get Ollama</button>,
         },
         {
           shape: 'circle',
@@ -184,6 +184,26 @@ export function LocalModelSheet(props: { onClose: () => void; usdToBrl: number }
                 <span>{allUp ? 'Small tasks and panel chores run on this Mac.' : (() => { const n = chain.find((c) => c.state === 'down' || c.state === 'warn'); return n ? `${n.title}: ${n.detail}` : '' })()}</span>
               </div>
 
+              {(!st.installed || !running || !models.length) && (
+                <div className="lm-setup">
+                  <Steps
+                    title="Set up Ollama"
+                    steps={[
+                      {
+                        id: 'install',
+                        text: 'Install Ollama: run this command, or download the Mac app.',
+                        why: 'Ollama runs open models on this Mac, free. The command needs Homebrew. This sheet checks every few seconds and moves on when Ollama is found.',
+                        copy: 'brew install ollama',
+                        open: { url: 'https://ollama.com/download', label: 'Download (opens ollama.com)', browser: true },
+                        done: st.installed,
+                      },
+                      { id: 'start', text: 'Start the server.', done: running, action: st.installed && !running ? <button className="small" disabled={starting} onClick={() => void start()}>{starting ? 'Starting...' : 'Start Ollama'}</button> : undefined },
+                      { id: 'model', text: 'Download a model.', why: 'A 4B model reads long files and drafts short text well on most Macs. Or pick one from the list below once the server runs.', copy: PULL, done: models.length > 0 },
+                    ]}
+                    source={{ label: 'Instructions from ollama.com', url: 'https://ollama.com/download' }}
+                  />
+                </div>
+              )}
               <ol className={`lm-chain${allUp ? ' live' : ''}`}>
                 {chain.map((c) => (
                   <li key={c.title} className={`lm-link ${c.state}`}>

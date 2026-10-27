@@ -22,7 +22,7 @@ export function AnalyticsSheet(props: { cwd?: string; sid?: string; onClose: () 
   useEffect(load, [])
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="Product analytics">
+      <div className={`sheet config observe ${!st || tab === 'setup' ? 'fit' : ''}`} role="dialog" aria-label="Product analytics">
         <header className="sheet-head">
           <div className="sheet-title">Product analytics</div>
           <div className="segmented small" role="tablist">
@@ -93,7 +93,7 @@ function Ask() {
         {chart && <Chart kind={chart.kind} label={chart.label} time={chart.kind === 'line'} series={[{ name: chart.label, points: chart.x.map((x, i) => [chart.kind === 'line' ? Date.parse(x) : x, chart.y[i]!]) }]} />}
         {res && (
           <div className="ph-table">
-            <table className="ob-table">
+            <table className="tbl ob-table">
               <thead><tr>{res.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
               <tbody>{res.results.slice(0, 200).map((r, i) => <tr key={i}>{r.map((v, k) => <td key={k}>{cell(v)}</td>)}</tr>)}</tbody>
             </table>

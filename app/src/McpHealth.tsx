@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
 import { IconClose } from './icons'
 import type { HealthRow } from './bridge'
 import { clean } from './errors'
@@ -17,7 +18,7 @@ const ago = (t: number) => {
  * tool list takes on every turn, and the tools that are new or changed since you approved the server.
  * Those are held in panels until you look.
  */
-export function McpHealthSheet(props: { cwd?: string; onClose: () => void; onInspect: () => void; onApprovals: () => void }) {
+export function McpHealthSheet(props: { onCatalog?: () => void; cwd?: string; onClose: () => void; onInspect: () => void; onApprovals: () => void }) {
   const cwd = props.cwd ?? ''
   const [rows, setRows] = useState<HealthRow[] | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -28,7 +29,7 @@ export function McpHealthSheet(props: { cwd?: string; onClose: () => void; onIns
   const total = (rows ?? []).reduce((n, r) => n + (r.last?.ok ? r.last.tokens : 0), 0)
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config observe" role="dialog" aria-label="MCP health">
+      <div className={`sheet config observe ${rows && !rows.length ? 'fit' : ''}`} role="dialog" aria-label="MCP health">
         <header className="sheet-head">
           <div className="sheet-title">MCP health</div>
           <span className="faint">{rows?.length ? `${rows.length} servers · tool lists about ${total.toLocaleString()} tokens per turn` : ''}</span>
@@ -37,9 +38,9 @@ export function McpHealthSheet(props: { cwd?: string; onClose: () => void; onIns
           <button className="icon" aria-label="Close" onClick={props.onClose}>{close}</button>
         </header>
         <div className="dsg-body mh-body">
-          <div className="faint">A check starts each server, reads its tools and closes it; no tool is called. The first good check is taken as approved. After that, a tool that is new or whose description changed is held in panels until you look at it: a description reaches the model on every turn.</div>
+          {!!rows?.length && <div className="faint">A check starts each server, reads its tools and closes it; no tool is called. The first good check is taken as approved. After that, a tool that is new or whose description changed is held in panels until you look at it: a description reaches the model on every turn.</div>}
           {err && <div className="notice error">{err}</div>}
-          {rows && !rows.length && <div className="faint">No MCP servers installed for this folder. Add one from the MCP catalog.</div>}
+          {rows && !rows.length && <EmptyState title="No MCP servers here" text="This folder has no MCP servers installed. Find one in the catalog; every install shows a review first.">{props.onCatalog && <button className="primary" onClick={props.onCatalog}>Open the MCP catalog</button>}</EmptyState>}
           {rows?.map((r) => (
             <section key={r.name} className={`mh-row ${r.held.length ? 'held' : ''}`}>
               <div className="mh-top">

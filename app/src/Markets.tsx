@@ -87,7 +87,7 @@ function Predictions() {
           const top = [...m.outcomes].sort((a, b) => b.p - a.p).slice(0, 3)
           return (
             <button key={m.id} className="pm-card" onClick={() => void window.stm.openUrl(m.url)} title={m.question}>
-              <span className="pm-q">{m.question}</span>
+              <span className="pm-q" title={m.question}>{m.question}</span>
               {top.map((o, i) => (
                 <span key={o.name} className="pm-row">
                   <span className="pm-name">{o.name}</span>

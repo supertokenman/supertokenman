@@ -131,6 +131,7 @@ import { WEB_APPS } from '../shared/webapps'
 import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
 import { Appearance } from './Appearance'
+import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
 
@@ -553,6 +554,12 @@ export function App() {
     const open = () => setBudgetOpen(true)
     window.addEventListener('stm:budget', open)
     return () => window.removeEventListener('stm:budget', open)
+  }, [])
+  // the Small tasks card in Spend opens the Ollama setup
+  useEffect(() => {
+    const open = () => setLocalOpen(true)
+    window.addEventListener('stm:local-model', open)
+    return () => window.removeEventListener('stm:local-model', open)
   }, [])
   const [dbOpen, setDbOpen] = useState(false)
   const [askLocal, setAskLocal] = useState(false)
@@ -1012,7 +1019,7 @@ export function App() {
   menuRef.current = (id: string) => {
     if (id === 'menu:palette') return setPalette(true)
     if (id === 'menu:new-panel') return void open(p.focus ? p.byId[p.focus]?.cwd : undefined)
-    if (id === 'menu:open-folder') return void window.stm.pickFolder().then((dir) => dir && void open(dir))
+    if (id === 'menu:open-folder') return void pickProjectFolder().then((dir) => dir && void open(dir))
     if (id === 'menu:export') return void (p.focus && window.dispatchEvent(new CustomEvent('stm:export', { detail: { sid: p.focus } })))
     const e = paletteEntries().find((x) => x.id === id)
     if (e) e.run()
@@ -1215,9 +1222,11 @@ export function App() {
     }
   }
 
+  const recentDirs = dayLogs.flatMap((l) => l.stops).sort((a, b) => b.at - a.at).map((st) => st.cwd)
   return (
     <div className={`shell ${priv ? 'is-private' : ''} ${sceneFor(scene.id) ? 'has-scene' : ''}`}>
       <Backdrop id={scene.id} strength={scene.strength} theme={theme} />
+      <FolderPickerHost recents={recentDirs} />
       <header className={`top ${topFit === 'tightest' ? 'tight tighter tightest' : topFit === 'tighter' ? 'tight tighter' : topFit}`} ref={topRef}>
         <div className="brand">
           <BrandMark />
@@ -1258,7 +1267,7 @@ export function App() {
             className="ghost"
             title="Open a folder in a new panel"
             onClick={async () => {
-              const dir = await window.stm.pickFolder()
+              const dir = await pickProjectFolder('Open a folder in a new panel')
               if (dir) void open(dir)
             }}
           >
@@ -1450,7 +1459,7 @@ export function App() {
       <Presence show={apiOpen}><ApiClientSheet onClose={() => setApiOpen(false)} onAttach={(note) => p.focus && window.dispatchEvent(new CustomEvent('stm:attach', { detail: { sid: p.focus, ...note } }))} /></Presence>
       <Presence show={localOpen}><LocalModelSheet onClose={() => setLocalOpen(false)} usdToBrl={rate} /></Presence>
       <Presence show={a2mOpen}><ApiToMcpSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setA2mOpen(false)} /></Presence>
-      <Presence show={mhOpen}><McpHealthSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMhOpen(false)} onInspect={() => (setMhOpen(false), setInspOpen(true))} onApprovals={() => (setMhOpen(false), setMpolOpen(true))} /></Presence>
+      <Presence show={mhOpen}><McpHealthSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMhOpen(false)} onInspect={() => (setMhOpen(false), setInspOpen(true))} onApprovals={() => (setMhOpen(false), setMpolOpen(true))} onCatalog={() => (setMhOpen(false), setMcatOpen(true))} /></Presence>
       <Presence show={mpolOpen}><McpApprovalsSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMpolOpen(false)} /></Presence>
       <Presence show={inspOpen}><McpInspectorSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setInspOpen(false)} /></Presence>
       <Presence show={mcatOpen}><McpCatalogSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMcatOpen(false)} /></Presence>
@@ -1560,7 +1569,7 @@ export function App() {
       <Presence show={pcOpen}><PhoneCompanionSheet onClose={() => setPcOpen(false)} /></Presence>
       <Presence show={caOpen}><ConnectAgentsSheet onClose={() => setCaOpen(false)} /></Presence>
       <Presence show={bmOpen}><BackendMapSheet cwd={p.focus ? (p.byId[p.focus]?.worktree?.repo ?? p.byId[p.focus]?.cwd) : undefined} onClose={() => setBmOpen(false)} onAttach={(note) => (p.focus && window.dispatchEvent(new CustomEvent('stm:attach', { detail: { sid: p.focus, ...note } })), setBmOpen(false))} /></Presence>
-      <Presence show={adOpen}><AskDataSheet onClose={() => setAdOpen(false)} /></Presence>
+      <Presence show={adOpen}><AskDataSheet onClose={() => setAdOpen(false)} onDatabase={() => (setAdOpen(false), setDbOpen(true))} /></Presence>
       <Presence show={dsOpen}><DesignSystemSheet onClose={() => setDsOpen(false)} /></Presence>
       <Presence show={stOpen}><ShortTerm sid={p.focus ?? undefined} onClose={() => setStOpen(false)} onAttach={(note) => (p.focus && window.dispatchEvent(new CustomEvent('stm:attach', { detail: { sid: p.focus, ...note } })), setStOpen(false))} /></Presence>
       <Presence show={pgOpen}><ProjectGraph cwd={p.focus ? (p.byId[p.focus]?.worktree?.repo ?? p.byId[p.focus]?.cwd) : undefined} onClose={() => setPgOpen(false)} onAsk={(text) => { setPgOpen(false); if (p.focus) window.dispatchEvent(new CustomEvent('stm:ask', { detail: { sid: p.focus, text } })) }} /></Presence>

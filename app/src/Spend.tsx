@@ -178,7 +178,7 @@ function SmallTasks() {
         </div>
         <span className="spacer-flex" />
         {st.models === null ? (
-          <button className="ghost small" onClick={() => void window.stm.openUrl('https://ollama.com/download')}>Get Ollama, free</button>
+          <button className="ghost small" onClick={() => window.dispatchEvent(new CustomEvent('stm:local-model'))}>Set up Ollama, free</button>
         ) : (
           <select value={st.model ?? ''} onChange={(e) => void pick(e.target.value || null)}>
             <option value="">Claude Haiku (your plan)</option>

@@ -1,3 +1,4 @@
+import { Steps } from './Steps'
 import { useCallback, useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { StateMark } from './StateMark'
@@ -175,18 +176,12 @@ export function Connections(props: { onClose: () => void; exposures: (Exposure &
                       </div>
                     )}
                     {guide === it.id && it.steps && !it.ready && (
-                      <ol className="steps">
-                        {it.steps.map((st, n) => (
-                          <li key={n}>
-                            <span>{st.label}</span>
-                            <button className="ghost small" onClick={() => void window.stm.setupOpen(st.url)}>Open</button>
-                          </li>
-                        ))}
-                        <li>
-                          <span>Paste the ID and secret, separated by a space</span>
-                          <button className="small" onClick={() => startAdding((it.auth as { secret: string }).secret)}>Paste</button>
-                        </li>
-                      </ol>
+                      <Steps
+                        steps={[
+                          ...it.steps.map((st, n) => ({ id: String(n), text: st.label, open: { url: st.url } })),
+                          { id: 'paste', text: 'Paste the ID and secret, separated by a space.', done: secrets.some((s) => s.name === (it.auth as { secret: string }).secret), action: <button className="small" onClick={() => startAdding((it.auth as { secret: string }).secret)}>Paste here</button> },
+                        ]}
+                      />
                     )}
                     {it.commandSecret && (
                       <div className="card-foot">
