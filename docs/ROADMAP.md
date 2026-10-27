@@ -40,6 +40,9 @@ Work:
   main thread, keep heavy sheets lazy.
 - Processes: one utility process for background work instead of timers in the main process; batch
   IPC; stop polling where an event exists.
+- Paced work: fan-out attempts and trigger runs start as the Mac can take them (CPU and memory), with
+  retries that back off, instead of all at once. Only if the measurements show many panels at once
+  hurt. Idea from Crawlee's autoscaled queue.
 - Size: drop unused dependencies and locales, check the app bundle size per release.
 
 References to read before choosing (what they did, not claims about us):
@@ -79,9 +82,15 @@ References to read before choosing (what they did, not claims about us):
 - Check after edits on the touched files; fan-out lint and typecheck.
 - Compression: correctness.
 - Past sessions indexed and searchable.
+- Import docs: paste a docs site, the app crawls it (robots.txt respected, a page limit, identified as a
+  bot, no anti-bot evasion) and keeps the text in the project's Memory or Documents, so Claude reads it
+  locally instead of fetching the web each turn. Runs only when asked; each host goes in
+  `docs/NETWORK.md`. Idea from Crawlee.
 - Structure: one icon set, design tokens, typed IPC, branded fields.
 
 ## Later
+
+- New project from a template: persona, skills and CLAUDE.md set up in one step.
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
   after there are users.
