@@ -68,6 +68,59 @@ Held in CI: the `network` job types 200 characters into the built app and fails 
 key (`perf-typing.mjs --max-layouts-per-key 1.5`). It counts layouts, not time, so a slow runner does
 not fail it; on the old code it reads 3.02 and fails.
 
+## Scrolling (2026-10-27)
+
+Measured with `node app/scripts/perf-scroll.mjs`: a panel gets 2000 transcript lines (1000 prompts and
+replies with headings, lists, inline code, a code block and a table or quote each) the way a picked-up
+past session arrives, every "Show earlier" is opened, and the transcript is scrolled top to bottom
+120 px a frame (3449 frames, 411 000 px). `--trace` adds the main thread's time per frame by trace event.
+
+What was wrong: the panel kept every line it drew in the DOM. Nothing laid out while scrolling, but
+every frame painted, hit-tested (the hover under the pointer) and moved the scroll offset over the whole
+tree, so the cost grew with the transcript: paint was 2.8 ms a frame with 600 lines and 7 ms with 2000.
+
+What changed:
+
+- The transcript is windowed (`app/src/windowed.tsx`, no new dependency) once it has 300 items or
+  more: the lines within two screens above and three below the view are drawn, the rest is held as
+  space at each line's measured height (a ResizeObserver follows code blocks, images and folds; a line
+  not drawn yet counts 160 px, and scroll anchoring keeps the view still when one above it is
+  measured). It is drawn again about once a screen of scrolling, not each frame. Under 300 items,
+  which is every panel until "Show earlier" is opened (150 lines a step), nothing changes.
+- Folds of steps (and a step's full argument) keep their open state in the panel, so a run drawn
+  again after scrolling away is as it was left.
+- `Markdown` is memoized on its text, and parsed replies are kept (600, newest), so a panel redraw
+  does not parse the streaming reply again and a line drawn again is not parsed again. Markdown
+  parsing and token counting stay on the main thread: in the profile they were under 1% of the scroll
+  (parsing runs when a line is first drawn; token counts are not computed during scroll), so a Web
+  Worker would add a round trip and a height jump for nothing measurable.
+
+Before and after on the same Linux machine under xvfb (`perf-scroll.mjs`, two runs before):
+
+| | Drawn after the scroll | Paint / frame | Hit test / frame | Scroll offset / frame | Frames over 33 ms | Longest frame |
+|---|---|---|---|---|---|---|
+| Before | 2000 | 6.75 to 7.14 ms | 1.57 to 1.61 ms | 1.49 to 1.61 ms | 4 to 9 | 167 ms |
+| After | 13 | 1.25 to 1.38 ms | 0.52 to 0.60 ms | 0.10 ms | 3 to 9 | 33 to 67 ms |
+| Before, CPU 4x slower | 2000 | | | | 3332 of 3449 | 267 ms |
+| After, CPU 4x slower | 13 | | | | 72 | 83 ms |
+
+The windowing costs about 0.6 ms of layout a frame on average (one layout when a screen of lines is
+swapped in). Frames over 16.7 ms stay at about a third of frames before and after: under xvfb that is
+the display's own jitter, the same with 80 lines (319 of 809), so it says nothing here; on a Mac the
+next `perf-mac` run shows it. The default panel (150 lines, no "Show earlier") scrolls at that floor
+already (0 frames over 33 ms) and draws as before.
+
+Nothing lost: the lines are the same components; copy buttons, links and folds work in a drawn line;
+stick-to-bottom on a new line is checked by the script (from the top, a new note scrolls the view to
+the end and is drawn). There is no find in the transcript in the app today (Electron has no built-in
+find bar and the app wires none); a selection dragged across more than the drawn five screens copies
+only what is drawn, the export sheet copies the whole session.
+
+Held in CI: the `network` job runs `perf-scroll.mjs --max-drawn 300 --max-over-33 1000`: it fails
+when the transcript is drawn in full again (2000 on the old code), when a new line does not scroll to
+the bottom, or when nearly every frame is dropped. The frame bound is loose on purpose: a shared runner
+is slower than this machine, and the count is the guard.
+
 ## Launch (2026-10-27)
 
 0.1.9 on the signed app (`perf-mac`): window shown 1397 ms, composer usable 2385 ms, start-up chunks
