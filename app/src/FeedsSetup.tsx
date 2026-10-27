@@ -83,7 +83,8 @@ export function SetupView(props: { onChanged: () => void }) {
   const [rule, setRule] = useState<FeedRule>({ id: '', words: '', field: 'any', action: 'hide' })
   const [sender, setSender] = useState('')
   const [sched, setSched] = useState<Schedule>(DEFAULT_SCHEDULE)
-  const load = () => void window.stm.news.setup().then((x) => (setS(x), setSched(x.briefing)), (e) => setErr(clean(e)))
+  const [hub, setHub] = useState('')
+  const load = () => void window.stm.news.setup().then((x) => (setS(x), setSched(x.briefing), setHub(x.rsshub)), (e) => setErr(clean(e)))
   useEffect(load, [])
   const act = (p: Promise<unknown>, done?: (r: unknown) => string) => void p.then((r) => (setErr(''), setMsg(done ? done(r) : ''), load(), props.onChanged()), (e) => setErr(clean(e)))
   if (!s) return <div className="dsg-body faint">{err || 'Loading…'}</div>
@@ -121,6 +122,14 @@ export function SetupView(props: { onChanged: () => void }) {
           <button className="ghost small" disabled={!sender.includes('@')} onClick={() => (act(window.stm.news.senders([...s.senders, sender])), setSender(''))}>Add</button>
         </div>
         <div className="faint">Mail from these senders in a connected Outlook or Gmail shows here, read on this machine. Tip: subscribe with an address like you+news@gmail.com and add the senders once.</div>
+      </section>
+      <section>
+        <div className="sp-label">RSSHub instance</div>
+        <div className="dep-row">
+          <input id="fd-rsshub" value={hub} placeholder="Empty: routes are off. Self-host, or https://rsshub.app (public instance)" spellCheck={false} onChange={(e) => setHub(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && act(window.stm.news.rsshub(hub), (r) => (r ? `Routes go to ${r as string}.` : 'RSSHub routes are off.'))} />
+          <button className="ghost small" disabled={hub.trim() === s.rsshub} onClick={() => act(window.stm.news.rsshub(hub), (r) => (r ? `Routes go to ${r as string}.` : 'RSSHub routes are off.'))}>Save</button>
+        </div>
+        <div className="faint">With an instance set, the add field takes a route such as /github/trending/daily or rsshub:/youtube/user/@name and subscribes to the instance plus the route. Nothing is fetched until you add one; the instance sees which routes you read.</div>
       </section>
       <section>
         <div className="sp-label">OPML</div>

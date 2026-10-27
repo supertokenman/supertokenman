@@ -15,11 +15,12 @@ const media = (path: string) => `stmmedia://media${encodeURI(path)}`
  * Content: one piece at a time from idea to the queue, in the project's own engine, with what it cost.
  * The script is written by a panel (the plan's tokens); render and checks run on this Mac for free.
  */
-export function Content(props: { project: string; onProject: (dir: string) => void; nets: SocialStatus[]; onScript: (piece: Piece, prompt: string) => void; onErr: (e: string) => void; usdToBrl: number }) {
+export function Content(props: { seed?: { title: string; idea: string } | null; project: string; onProject: (dir: string) => void; nets: SocialStatus[]; onScript: (piece: Piece, prompt: string) => void; onErr: (e: string) => void; usdToBrl: number }) {
   const [list, setList] = useState<Piece[]>([])
   const [sel, setSel] = useState<string | null>(null)
   const [engine, setEngine] = useState<{ id: string; label: string; ready: boolean; note: string } | null>(null)
-  const [form, setForm] = useState({ title: '', idea: '', format: 'reel' as Piece['format'] })
+  // a brief from Research arrives as the new piece's context, as a post; nothing is saved until Create
+  const [form, setForm] = useState(() => (props.seed ? { title: `Post: ${props.seed.title}`.slice(0, 120), idea: props.seed.idea, format: 'post' as Piece['format'] } : { title: '', idea: '', format: 'reel' as Piece['format'] }))
   const [log, setLog] = useState<string[]>([])
   const [busy, setBusy] = useState('')
   const [pub, setPub] = useState<{ nets: string[]; url: string }>({ nets: [], url: '' })

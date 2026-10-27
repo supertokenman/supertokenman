@@ -4,6 +4,7 @@ import type { ResearchEvent } from '../electron/research'
 import type { Source, SourceKind } from '../shared/research'
 import { StateMark } from './StateMark'
 import { clean } from './errors'
+import { LastDays } from './LastDays'
 import './bridge'
 
 const KINDS: { id: SourceKind; label: string; note: string }[] = [
@@ -46,8 +47,8 @@ function Cited(props: { text: string; sources: Source[]; uncited: Set<string> })
  * where each claim cites its source. Uncited sentences are flagged; the report can go to a panel or
  * into the project's research folder.
  */
-export function ResearchSheet(props: { cwd?: string; onClose: () => void; onSend: (text: string) => void }) {
-  const [tab, setTab] = useState<'report' | 'extract'>('report')
+export function ResearchSheet(props: { cwd?: string; onClose: () => void; onSend: (text: string) => void; onDraft?: (title: string, brief: string) => void }) {
+  const [tab, setTab] = useState<'report' | 'last' | 'extract'>('report')
   const [topic, setTopic] = useState('')
   const [kinds, setKinds] = useState<SourceKind[]>(['web', 'hn', 'github'])
   const [breadth, setBreadth] = useState(3)
@@ -98,6 +99,7 @@ export function ResearchSheet(props: { cwd?: string; onClose: () => void; onSend
           <div className="sheet-title">Research</div>
           <div className="segmented small" role="tablist">
             <button role="tab" aria-selected={tab === 'report'} onClick={() => setTab('report')}>Report</button>
+            <button role="tab" aria-selected={tab === 'last'} onClick={() => setTab('last')}>Last 30 days</button>
             <button role="tab" aria-selected={tab === 'extract'} onClick={() => setTab('extract')}>Extract by schema</button>
           </div>
           <span className="spacer-flex" />
@@ -105,7 +107,7 @@ export function ResearchSheet(props: { cwd?: string; onClose: () => void; onSend
             <IconClose />
           </button>
         </header>
-        {tab === 'extract' ? <Extract /> : (
+        {tab === 'extract' ? <Extract /> : tab === 'last' ? <LastDays cwd={props.cwd} onDraft={(t, b) => (props.onDraft?.(t, b), props.onClose())} /> : (
           <div className="dsg-body">
             <div className="dep-row">
               <input id="rs-topic" value={topic} placeholder="A topic, company or project, e.g. Pix payments for small shops" onChange={(e) => setTopic(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && topic.trim() && !busy && void run()} />

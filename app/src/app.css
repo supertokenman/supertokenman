@@ -4313,3 +4313,16 @@ table.tbl tbody tr:last-child > td { border-bottom: 0; }
 .top .menu-btn, .top .wa-btn { display: inline-flex; align-items: center; gap: 4px; width: auto; min-width: 0; overflow: visible; }
 .top .menu-btn .count, .top .wa-btn .count { position: static; flex: none; margin: 0 0 0 2px; transform: none; }
 .top .update-pill { margin-left: 6px; flex: none; }
+
+/* ---- Sites added as drawer apps, the Last 30 days connect row, feeds a page offers */
+.wa-site-icon { width: 14px; height: 14px; flex: none; border-radius: 3px; object-fit: contain; }
+.wa-site-mono { display: inline-grid; place-items: center; width: 14px; height: 14px; flex: none; font-size: 10px; font-weight: 700; color: var(--muted); }
+.wa-app.wa-add.on { color: var(--text); background: var(--hover); }
+.wa-siteform { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: 10px; padding: 16px 14px; overflow: auto; background: var(--bg); }
+.wa-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text); }
+.wa-field .faint { font-size: 11px; }
+.wa-field textarea { min-height: 90px; font-family: var(--mono, ui-monospace, monospace); font-size: 12px; resize: vertical; }
+.l30-connect { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); background: var(--hover); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); }
+.rs-kind .ghost.small { margin-left: 4px; }
+.nw-offer { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.nw-offer .nw-sugg-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

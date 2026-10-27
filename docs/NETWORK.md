@@ -1,6 +1,6 @@
 # What talks to the network, and when
 
-The source for the Security & Privacy page. Last reviewed: 2026-10-25.
+The source for the Security & Privacy page. Last reviewed: 2026-10-27.
 
 ## How this was checked
 
@@ -45,10 +45,13 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | GitHub stars of integrations | api.github.com | Connections > Show GitHub stars |
 | Pull requests, CI, triggers, repo secrets (names) | api.github.com | the GitHub integration in Connections; signs in with the vault token or your `gh` login |
 | Feeds and briefing | the feeds you add | adding a feed; the briefing schedule is off by default |
+| Feed discovery and RSSHub routes | the page you paste (and its `/feed`, `/rss.xml`, `/atom.xml`, `/feed.xml`, `/index.xml`, `/rss`, `/feed.json` when it names no feed); a route goes to the RSSHub instance you set in News > Rules and more (empty by default; https://rsshub.app is the public one) | adding a feed or a route |
+| Research and the Last 30 days brief | hn.algolia.com, api.github.com; Reddit (www.reddit.com for the app-only token, oauth.reddit.com for search) with your own Reddit app's client id and secret from the vault; YouTube Data API v3 (www.googleapis.com) with your own YOUTUBE_API_KEY; Anthropic through Claude Code for the brief | running Research or Make the brief; Reddit and YouTube are skipped until you add their credentials |
 | Cloud resources | AWS, Google Cloud, DigitalOcean, Fly.io, Supabase, Neon (through their CLIs or vault tokens) | opening Cloud, "Look in the cloud" in the terminal, or the "Check every 6 hours" switch |
 | Integrations and MCP servers | the service each one names | turning it on in Connections (none is on by default since 0.1.7; up to 0.1.6 a new profile started with Context7 and Cloudflare docs on) |
 | Monitors, Prometheus, PostHog, local model servers, storage | the addresses you enter | adding them |
 | Web reader, embedded videos, web apps | the page you open | opening it |
+| Sites added as drawer apps | the site's own address and the extra hosts you list; its icon once, from the same site, when you add it | adding the site, then opening it |
 
 The release update check runs only in a packaged Mac build that carries `app-update.yml`; netwatch runs
 the unpackaged app, so it does not exercise it (not verified until the first signed release).

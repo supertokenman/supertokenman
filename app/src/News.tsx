@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { Found } from '../shared/rsshub'
 import type { Feed } from '../electron/news'
 import { monogram, type FeedItem as Item } from '../shared/feeds'
 import { BriefingView, SetupView } from './FeedsSetup'
@@ -95,6 +96,8 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
   const [articleErr, setArticleErr] = useState('')
   const [adding, setAdding] = useState('')
   const [addErr, setAddErr] = useState('')
+  // a page that names several feeds: the person picks; nothing more is fetched until they do
+  const [offered, setOffered] = useState<Found[]>([])
   const [busy, setBusy] = useState(false)
   const [view, setView] = useState<'grid' | 'brief' | 'setup'>('grid')
 
@@ -176,12 +179,36 @@ export function NewsSheet(props: { news: ReturnType<typeof useNews>; onAsk: (tex
                 if (!adding.trim()) return
                 setBusy(true)
                 setAddErr('')
-                window.stm.news.add(adding).then((x) => { setFeeds(x); setAdding(''); void news.refresh() }).catch((err: Error) => setAddErr(err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))).finally(() => setBusy(false))
+                setOffered([])
+                const fail = (err: Error) => setAddErr(err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+                window.stm.news.discover(adding).then(async (found) => {
+                  if (found.length === 1) {
+                    setFeeds(await window.stm.news.subscribe(found[0]!))
+                    setAdding('')
+                    void news.refresh()
+                  } else setOffered(found)
+                }).catch(fail).finally(() => setBusy(false))
               }}>
-                <input value={adding} onChange={(e) => setAdding(e.target.value)} placeholder="A site or feed address" spellCheck={false} />
+                <input id="nw-add" value={adding} onChange={(e) => setAdding(e.target.value)} placeholder="A site, a feed, or an RSSHub route like /github/trending/daily" spellCheck={false} />
                 {busy && <span className="spinner" />}
               </form>
               {addErr && <span className="nw-err">{addErr}</span>}
+              {offered.length > 0 && (
+                <div className="nw-offer">
+                  <div className="nw-sugg-head faint">This page offers {offered.length} feeds. Pick the ones to add.</div>
+                  {offered.map((f) => (
+                    <button key={f.url} className="nw-sugg-card" title={f.url} disabled={feeds.some((x) => x.url === f.url)} onClick={() => void window.stm.news.subscribe(f).then((x) => { setFeeds(x); setOffered(offered.filter((o) => o.url !== f.url)); if (offered.length === 1) setAdding(''); void news.refresh() })}>
+                      <span className="nw-tile" aria-hidden="true">{f.type === 'json' ? 'JS' : f.type === 'atom' ? 'AT' : 'RS'}</span>
+                      <span className="nw-sugg-text">
+                        <b>{f.title}</b>
+                        <span>{f.url}</span>
+                      </span>
+                      <span className="nw-sugg-add" aria-hidden="true">{feeds.some((x) => x.url === f.url) ? '✓' : '+'}</span>
+                    </button>
+                  ))}
+                  <button className="ghost small" onClick={() => setOffered([])}>Done</button>
+                </div>
+              )}
               {suggested.some((s) => !feeds.some((f) => f.url === s.url)) && (
                 <>
                   <div className="nw-sugg-head faint">Suggested. Nothing is fetched until you add one.</div>
