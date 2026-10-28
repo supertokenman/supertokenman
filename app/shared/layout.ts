@@ -1,8 +1,9 @@
-export type Layout = 'auto' | 'grid' | 'columns'
+export type Layout = 'auto' | 'grid' | 'columns' | 'canvas'
 export const LAYOUTS: { id: Layout; name: string; what: string }[] = [
   { id: 'auto', name: 'Auto', what: 'Side by side up to three; four make a 2 by 2 grid' },
   { id: 'grid', name: 'Grid', what: 'Always the squarest grid' },
   { id: 'columns', name: 'Columns', what: 'All side by side in one row' },
+  { id: 'canvas', name: 'Canvas', what: 'Cards you move, pan and zoom, with their links drawn' },
 ]
 
 /** The narrowest a panel gets before more columns stop helping: a chat column and its margins. */
