@@ -89,6 +89,7 @@ const Connections = lazy(() => import('./Connections').then((m) => ({ default: m
 const Catalog = lazy(() => import('./Catalog').then((m) => ({ default: m.Catalog })))
 const Memory = lazy(() => import('./Memory').then((m) => ({ default: m.Memory })))
 import { Splash } from './Splash'
+import { UpdateAsk } from './UpdateAsk'
 
 import { apply, CUSTOM, resolve, saveCustomTheme, type Theme } from './themes'
 
@@ -582,7 +583,12 @@ export function App() {
       )
     void check()
     const t = setInterval(check, 6 * 3_600_000)
-    return () => clearInterval(t)
+    // turned on from the first-run question: start the gated check now (it still waits a minute)
+    window.addEventListener('stm:update-enabled', check)
+    return () => {
+      clearInterval(t)
+      window.removeEventListener('stm:update-enabled', check)
+    }
   }, [])
   // the installed app checks its source checkout for new commits every 6 hours
   const [update, setUpdate] = useState<{ behind: number; subjects: string[]; source: string | null } | undefined>()
@@ -1078,6 +1084,9 @@ export function App() {
   // a brief from Research handed to Content as the new piece's context
   const [draftSeed, setDraftSeed] = useState<{ title: string; idea: string } | null>(null)
   const [tourOpen, setTourOpen] = useState(firstRun)
+  // the update question waits for the splash to finish and the Tour to close
+  const [splashOff, setSplashOff] = useState(false)
+  const splashGone = useCallback(() => setSplashOff(true), [])
   const [mailOpen, setMailOpen] = useState(false)
   // Outlook's unread count for the menu: read now and every few minutes while connected
   const [mailUnread, setMailUnread] = useState(0)
@@ -1735,7 +1744,8 @@ export function App() {
       </Suspense>
 
       {lock.locked && <LockScreen onUnlock={lock.unlock} touchId={Boolean(lock.state?.touchId)} />}
-      <Splash done={p.order.some((sid) => Boolean(p.byId[sid]?.model))} />
+      <Splash done={p.order.some((sid) => Boolean(p.byId[sid]?.model))} onGone={splashGone} />
+      <UpdateAsk ready={splashOff && !tourOpen && !lock.locked} />
 
       <div className="body">
       <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>

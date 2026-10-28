@@ -31,7 +31,7 @@ const ease = (t: number) => 1 - Math.pow(1 - t, 3)
  * the app. Full once a day; otherwise the assembled mark with an accent sweep. Reduced motion: still.
  * Only transform, opacity and clip-path animate.
  */
-export function Splash({ done }: { done: boolean }) {
+export function Splash({ done, onGone }: { done: boolean; onGone?: () => void }) {
   const [full] = useState(() => !seenToday() && bootOn())
   const [phase, setPhase] = useState<'on' | 'leaving' | 'gone'>('on')
   const [started] = useState(() => Date.now())
@@ -78,6 +78,9 @@ export function Splash({ done }: { done: boolean }) {
     const t = setTimeout(() => setPhase('gone'), 520)
     return () => clearTimeout(t)
   }, [phase])
+  useEffect(() => {
+    if (phase === 'gone') onGone?.()
+  }, [phase, onGone])
   if (phase === 'gone') return null
   return (
     <div className={`splash film ${full ? 'full' : 'short'} ${phase}`} aria-hidden="true">

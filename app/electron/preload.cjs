@@ -1016,6 +1016,7 @@ contextBridge.exposeInMainWorld('stm', {
   account: (sid) => ipcRenderer.invoke('session:account', sid),
   updateCheck: (auto) => ipcRenderer.invoke('update:check', Boolean(auto)),
   updateAuto: (on) => ipcRenderer.invoke('update:auto', on),
+  updateAsked: () => ipcRenderer.invoke('update:asked'),
   claudeUsageData: (on) => ipcRenderer.invoke('claude:usage-data', on),
   updateRun: () => ipcRenderer.invoke('update:run'),
   onUpdateProgress: (cb) => {

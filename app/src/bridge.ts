@@ -570,6 +570,8 @@ export type Bridge = {
   account: (sid: string) => Promise<{ email?: string; organization?: string; subscriptionType?: string; tokenSource?: string; apiKeySource?: string; apiProvider?: string }>
   updateCheck: (auto?: boolean) => Promise<{ behind: number; source: string | null; subjects?: string[] }>
   updateAuto: (on?: boolean) => Promise<boolean>
+  /** Has the person answered the update question (updateCheck set to true or false)? */
+  updateAsked: () => Promise<boolean>
   claudeUsageData: (on?: boolean) => Promise<boolean>
   updateRun: () => Promise<string>
   onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => void) => () => void
