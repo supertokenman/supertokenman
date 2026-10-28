@@ -186,7 +186,8 @@ panel" (in progress):
    goes back to the agent. (AgentUse, ADK) Done: Edit and run on Bash cards (the edited command is
    checked and isolated like the original), and Deny with a note.
 8. Learning from reviews: rejections and comments become a proposed change to CLAUDE.md, a persona or
-   a trigger, applied only when the user accepts. (AgentUse)
+   a trigger, applied only when the user accepts. (AgentUse) Started: notes sent with Deny with a note become
+   proposed CLAUDE.local.md lines (stm learn, --pick applies). Personas and triggers: not yet.
 9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the
    project, versioned with git. (AgentUse, ADK, PraisonAI) Done for personas and triggers: stm files
    export / import (plan first, --yes applies, imported triggers arrive off). Saved teams: not yet.
