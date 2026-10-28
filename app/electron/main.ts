@@ -134,6 +134,7 @@ import { inspect as inspectHeadroom } from './hrquality.js'
 import { startCli } from './cliserver.js'
 import * as PB from './panelbus.js'
 import { registerTranscripts } from './transcripts.js'
+import * as UG from './updategate.js'
 import * as Deploys from './deploys.js'
 import { applyTeam, diffTeam, exportTeam, readTeam, type Current as TeamCurrent, type Team } from '../shared/team.js'
 import { COLLECT, cssOf, tailwindOf, tokensOf, type Sample } from '../shared/styleExtract.js'
@@ -4103,8 +4104,8 @@ const sourceDir = (): string | undefined => {
     return undefined
   }
 }
-// Released builds update from GitHub Releases of supertokenman/supertokenman: checked at launch and every
-// 6 hours unless turned off (settings().updateCheck === false), downloaded and installed only when the
+// Released builds update from GitHub Releases of supertokenman/supertokenman: checked a minute after launch and every
+// 6 hours only when turned on (settings().updateCheck === true), downloaded and installed only when the
 // person says so. An app installed from a source checkout keeps the git pull and rebuild path below.
 let releaseUpdater: import('electron-updater').AppUpdater | null = null
 const updaterOf = async () => {
@@ -4116,15 +4117,38 @@ const updaterOf = async () => {
   }
   return releaseUpdater
 }
-const fromRelease = () => app.isPackaged && process.platform === 'darwin' && existsSync(join(process.resourcesPath, 'app-update.yml'))
+const fromRelease = () => UG.releaseMode({ packaged: app.isPackaged, platform: process.platform, hasUpdateYml: app.isPackaged && existsSync(join(process.resourcesPath, 'app-update.yml')), env: process.env })
+// opt-in (v0.1.12 fix): unset means off, so a fresh profile makes no GitHub request on its own
 ipcMain.handle('update:auto', (_e, on?: boolean) => {
   if (typeof on === 'boolean') saveSettings({ ...settings(), updateCheck: on })
-  return settings().updateCheck !== false
+  return settings().updateCheck === true
 })
 ipcMain.handle('update:check', async (_e, auto?: boolean) => {
   if (fromRelease()) {
-    if (auto && settings().updateCheck === false) return { behind: 0, source: 'release' }
-    const r = await (await updaterOf()).checkForUpdates()
+    if (!UG.checkAllowed(auto === true, settings().updateCheck)) return { behind: 0, source: 'release' }
+    // the automatic check never runs during launch: it waits, then looks at the setting again
+    if (auto) {
+      await new Promise((ok) => setTimeout(ok, UG.autoDelay(process.env)))
+      if (!UG.checkAllowed(true, settings().updateCheck)) return { behind: 0, source: 'release' }
+    }
+    // netwatch (unpackaged, release mode forced): electron-updater skips unpacked apps, so stand in with
+    // the request it would make first; netwatch sees it and fails if the gate above ever lets it through
+    if (!app.isPackaged) {
+      await net.fetch('https://github.com/supertokenman/supertokenman/releases.atom').catch(() => undefined)
+      return { behind: 0, source: 'release' }
+    }
+    const u = await updaterOf()
+    // electron-updater asks through its own new partition; settle its proxy config first, or the first
+    // request can go out before the configured proxy applies (v0.1.12 Mac proof: one direct connection)
+    try {
+      const { session } = await import('electron')
+      const ses = session.fromPartition('electron-updater', { cache: false })
+      await ses.forceReloadProxyConfig()
+      await ses.resolveProxy('https://github.com')
+    } catch {
+      /* the check still runs */
+    }
+    const r = await u.checkForUpdates()
     const info = r?.isUpdateAvailable ? r.updateInfo : null
     const notes = typeof info?.releaseNotes === 'string' ? info.releaseNotes.replace(/<[^>]+>/g, '').split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 5) : []
     return { behind: info ? 1 : 0, source: 'release', subjects: info ? [`Version ${info.version}`, ...notes] : [] }

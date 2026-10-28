@@ -16,7 +16,11 @@ const electron = createRequire(import.meta.url)('electron')
 const linux = process.platform === 'linux'
 const cmd = linux ? 'xvfb-run' : electron
 const args = [...(linux ? ['-a', electron, '--no-sandbox'] : []), join(here, 'netwatch.mjs')]
-spawnSync('timeout', [String(seconds), cmd, ...args], { env: { ...process.env, HOME: home, STM_NETWATCH_LOG: out }, stdio: 'ignore' })
+// the release update check only runs in a signed Mac build, so Linux CI never saw it (v0.1.12 Mac proof:
+// 35 github.com requests on a fresh profile). Force the app's release path, with the automatic check's
+// wait cut to 2 s, so a fresh profile that reaches GitHub on its own fails here too.
+const releaseEnv = { STM_UPDATE_RELEASE_MODE: '1', STM_UPDATE_DELAY_MS: '2000' }
+spawnSync('timeout', [String(seconds), cmd, ...args], { env: { ...process.env, HOME: home, STM_NETWATCH_LOG: out, ...releaseEnv }, stdio: 'ignore' })
 
 // what the app may do with nobody asking: run Claude Code for the first panel, and look at this Mac
 const allowed = [

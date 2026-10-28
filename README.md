@@ -48,8 +48,8 @@ Details, tests and the Mac install script: [app/README.md](app/README.md).
 - Your Claude login, API keys and passwords stay on your Mac, in the system keychain; panels get only
   the names you mark for commands.
 - Nothing posts, sends, deploys or publishes without your click and a confirm.
-- No telemetry. On its own the app reaches only Claude Code's endpoint and the update check; everything
-  else waits until you turn it on. The list: [docs/NETWORK.md](docs/NETWORK.md).
+- No telemetry. On its own the app reaches only Claude Code's endpoint; everything else, the update
+  check included, waits until you turn it on or ask. The list: [docs/NETWORK.md](docs/NETWORK.md).
 
 Reporting a security problem: [SECURITY.md](SECURITY.md).
 

@@ -3,8 +3,8 @@ title: Network and keys
 summary: What the app sends, when, and where your keys live.
 slug: privacy
 ---
-The app sends nothing on its own except Claude Code itself and the update check. Everything else waits
-until you turn it on. The full list, and how it was checked, is on [Security and privacy](/security/).
+The app sends nothing on its own except Claude Code itself. Everything else, the update check included,
+waits until you turn it on or ask. The full list, and how it was checked, is on [Security and privacy](/security/).
 
 ## The vault
 
@@ -13,5 +13,6 @@ The app shows their names, never the values.
 
 ## Updates
 
-The app checks GitHub Releases at launch and every 6 hours and installs only when you say so. Turn the
-check off in **Appearance**, Check for updates automatically.
+The app checks GitHub Releases when you press Update. Since 0.1.13 the automatic check is off on a new
+install; turn it on in **Appearance**, Check for updates automatically, and it runs a minute after launch
+and every 6 hours. It installs only when you say so.
