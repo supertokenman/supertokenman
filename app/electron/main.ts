@@ -673,6 +673,8 @@ const pendingSpans = new Map<string, SpanEvent[]>()
 const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; why?: string; tools: string[]; edits?: number }>()
 // a panel's goal, given with /goal: carried in front of each message until a reply says GOAL MET
 const goals = new Map<string, Goal>()
+// the panel whose message is waiting in (or was sent from) each panel's composer, so its turn is charged to the link
+const linkTurn = new Map<string, string>()
 let turnSeq = 0
 // each panel's answer styles and project, for the cost band of each task
 const bandOf = new Map<string, { project: string; styles: StyleId[] }>()
@@ -708,6 +710,12 @@ function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: {
     } catch {
       // the ledger is best effort
     }
+  }
+  // a turn started by a message from a linked panel: its cost counts against that link
+  const via = linkTurn.get(sid)
+  if (via && p.prompt.startsWith('From panel ')) {
+    linkTurn.delete(sid)
+    saveLinks(PB.charge(links(), via, sid, e.costUsd ?? 0, (e.inputTokens ?? 0) + (e.outputTokens ?? 0) + (e.cacheRead ?? 0), dayOf(new Date())))
   }
   const s = sessions.get(sid)
   traceTurns.set(sid, addTurn(traceTurns.get(sid) ?? [], { id: p.id, goal: goals.get(sid)?.text, at: p.at, persona: personaOf.get(sid), model: s?.model, why: p.why, prompt: p.prompt.slice(0, 600), tools: p.tools, costUsd: e.costUsd ?? 0, inputTokens: e.inputTokens ?? 0, outputTokens: e.outputTokens ?? 0, cacheRead: e.cacheRead ?? 0, isError: Boolean(e.isError), ms: e.durationMs, spans }))
@@ -5935,7 +5943,7 @@ const spawnLimit = new PB.RateLimit('stm spawn', () => stmLimits().spawnPerHour,
 const panelName = (sid: string) => hub.list('').find((p) => p.panel === sid)?.name ?? sid
 const panelDir = (sid: string) => shells.get(sid)?.cwd ?? sessions.get(sid)?.cwd ?? ''
 const links = () => settings().panelLinks ?? []
-const panelLinksView = () => Object.fromEntries([...sessions.keys()].map((sid) => [sid, PB.linksFor(links(), sid).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))]))
+const panelLinksView = () => Object.fromEntries([...sessions.keys()].map((sid) => [sid, PB.linksFor(links(), sid, dayOf(new Date())).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))]))
 const saveLinks = (l: PB.Link[]) => {
   saveSettings({ ...settings(), panelLinks: l })
   if (win && !win.isDestroyed()) win.webContents.send('panel:links', panelLinksView())
@@ -5987,7 +5995,11 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     if (!text.trim()) throw new Error('Nothing to send.')
     if (a.counted !== false) sendLimit.take(from)
     const body = PB.labelled(panelName(from), text)
-    const how = PB.deliveryOf(PB.linkOf(links(), from, to))
+    const link = PB.linkOf(links(), from, to)
+    const capped = PB.overCap(link, dayOf(new Date()))
+    if (capped) throw new Error(capped)
+    if (link) linkTurn.set(to, from)
+    const how = PB.deliveryOf(link)
     if (how === 'auto') {
       // the person turned auto on for this link: sent as if typed, with the same brake and approvals
       refuseSecrets(text)
@@ -6028,12 +6040,20 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
   },
   plinks: (a) => {
     const sid = asPanel(a, 'links')
-    return PB.linksFor(links(), sid).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))
+    return PB.linksFor(links(), sid, dayOf(new Date())).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))
   },
 }
 Object.assign(cliHandlers, panelHandlers)
 // the per-link "auto" switch, only from the window: an agent cannot turn it on for itself
 ipcMain.handle('panel:links', () => panelLinksView())
+// a link's daily spending cap, only from the window; 0 or empty removes it
+ipcMain.handle('panel:linkCap', (_e, a: string, b: string, usd: number) => {
+  const l = PB.linkOf(links(), String(a), String(b))
+  if (!l) throw new Error('Those panels are not linked.')
+  const cap = Number(usd) > 0 ? Math.min(1000, Number(usd)) : undefined
+  saveLinks(links().map((x) => (x === l ? { ...x, capUsd: cap } : x)))
+  return panelLinksView()
+})
 ipcMain.handle('panel:linkAuto', (_e, a: string, b: string, on: boolean) => {
   const l = PB.linkOf(links(), String(a), String(b))
   if (!l) throw new Error('Those panels are not linked.')
