@@ -105,15 +105,15 @@ References to read before choosing (what they did, not claims about us):
      STM_SOCKET, STM_PANEL_ID and a per-panel key, and can run stm whoami, panels, spawn, send
      (queued in the other composer unless the person turns on auto for that link), note and
      link/links; rate-limited and logged. See "Using stm from inside a panel" in docs/STM_GUIDE.md.
-     Still to come: the canvas itself (drawing the links), reading another panel's summary, and the
-     per-link token, cost and spending cap.
+     Step done (2026-10-28): stm read <panel> gives a linked panel's goal and the end of its last
+     reply, credentials masked; unlinked panels cannot read each other.
      Step done (2026-10-28): the Canvas layout. Layout: Canvas puts the panels as cards on a pan and
      zoom surface (drag a header to move a card, drag the background or Space+drag to pan, Ctrl/Cmd +
      wheel or pinch to zoom 30% to 150%, Fit frames all cards); spots and view are kept in local
      storage. Links are drawn under the cards, once per pair, labelled auto or waits and with today's
      cost when the link carries it. Geometry lives in app/shared/canvas.ts with tests.
-     Still to come: notes and previews as cards, resizing cards, reading another panel's summary,
-     and the per-link token count and spending cap.
+     Still to come: notes and previews as cards, resizing cards, and the per-link cost and cap
+     (its own pull request).
 
 ## After v1.1: from the repo review of 2026-10-27
 
@@ -192,7 +192,8 @@ panel" (in progress):
    goes back to the agent. (AgentUse, ADK) Done: Edit and run on Bash cards (the edited command is
    checked and isolated like the original), and Deny with a note.
 8. Learning from reviews: rejections and comments become a proposed change to CLAUDE.md, a persona or
-   a trigger, applied only when the user accepts. (AgentUse)
+   a trigger, applied only when the user accepts. (AgentUse) Started: notes sent with Deny with a note become
+   proposed CLAUDE.local.md lines (stm learn, --pick applies). Personas and triggers: not yet.
 9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the
    project, versioned with git. (AgentUse, ADK, PraisonAI) Done for personas and triggers: stm files
    export / import (plan first, --yes applies, imported triggers arrive off). Saved teams: not yet.
