@@ -51,6 +51,7 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | Integrations and MCP servers | the service each one names | turning it on in Connections (none is on by default since 0.1.7; up to 0.1.6 a new profile started with Context7 and Cloudflare docs on) |
 | Monitors, Prometheus, PostHog, local model servers, storage | the addresses you enter | adding them |
 | Web reader, embedded videos, web apps | the page you open | opening it |
+| Video transcripts | none from the app: it reads a subtitle or audio file you give, or text you paste. A link other than YouTube runs **your own** `yt-dlp` (not shipped by us) on this machine; that tool contacts the video's site under your responsibility, captions only, never with browser cookies. Audio goes to **your own** `whisper.cpp` (and `ffmpeg`) locally. YouTube links are not fetched at all | Settings > Appearance > Video transcripts (off by default), then Transcript or `stm transcript` |
 | Sites added as drawer apps | the site's own address and the extra hosts you list; its icon once, from the same site, when you add it | adding the site, then opening it |
 
 The release update check runs only in a packaged Mac build that carries `app-update.yml`; netwatch runs

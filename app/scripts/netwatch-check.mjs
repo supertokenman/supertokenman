@@ -26,12 +26,15 @@ const allowed = [
   /^process (openshell|officecli) --version$/,
   /^process (sw_vers|system_profiler|ioreg|pmset|which|sh -c command -v) /,
 ]
+// video transcripts are off by default and must start nothing on their own: the user's yt-dlp, whisper.cpp
+// and ffmpeg are never allowed here, even if another pattern grows to match them (docs/NETWORK.md)
+const never = /^process \S*(yt-dlp|whisper-cli|whisper-cpp|ffmpeg)(\s|$)/
 if (!existsSync(out)) {
   console.error('netwatch: the app wrote nothing; did it start?')
   process.exit(2)
 }
 const seen = readFileSync(out, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.kind !== 'ipc')
-const bad = [...new Set(seen.map((e) => `${e.kind} ${e.target}`).filter((s) => !allowed.some((re) => re.test(s))))]
+const bad = [...new Set(seen.map((e) => `${e.kind} ${e.target}`).filter((s) => never.test(s) || !allowed.some((re) => re.test(s))))]
 console.log(`netwatch: ${seen.length} attempts in ${seconds}s, ${bad.length} not allowed`)
 for (const b of bad) console.log('  ' + b)
 process.exit(bad.length ? 1 : 0)
