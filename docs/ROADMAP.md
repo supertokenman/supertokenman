@@ -205,6 +205,29 @@ panel" (in progress):
 Left out: hosted deployment, hosted observability consoles, inbound webhooks, chat-app connectors
 and drag-and-drop builders. They need a server of ours or fall outside a local Mac app.
 
+## From the Grok Bot alternatives review of 2026-10-28
+
+Read from the READMEs of OpenMausBot (milind-soni/OpenMausBot, Apache-2.0), Rakazo (elie222/rakazo,
+Apache-2.0), Codync (leepokai/Codync, Apache-2.0), OpenBot (nightly-labs/openbot, PolyForm
+Noncommercial: ideas only, its code is not to be read for reuse) and Noodle (pdparchitect/noodle,
+Apache-2.0). Features as their pages describe them, not tested by us. Ideas only, no code.
+
+Planned for 0.1.18, in this order:
+1. Group room on the canvas: one message to several linked panels; the panel named with @name
+   answers, the others in turn when asked, each turn charged to its link. (Codync, Noodle)
+2. Triggers from a local webhook: a receiver on 127.0.0.1 with a per-trigger token starts a trigger
+   run; nothing listens beyond this machine and no host is called. (OpenMausBot)
+3. A signed-in browser profile per panel, kept apart from the person's own browser. (Noodle)
+4. Usage limits per panel when more than one agent CLI is in use, from what each CLI reports
+   locally. (Codync)
+
+Needs a decision first:
+- Approvals from the phone anywhere, with push and end-to-end encryption through a relay. It needs a
+  new host (off by default, in docs/NETWORK.md) and a relay we run or the person runs. (Codync)
+
+Left out: a server with Postgres (Rakazo), against local-first; API keys kept in a plain config file
+(OpenMausBot), where our vault already does better.
+
 ## Later
 
 - New project from a template: persona, skills and CLAUDE.md set up in one step.
