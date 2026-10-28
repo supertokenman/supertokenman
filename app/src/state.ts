@@ -14,7 +14,7 @@ export type Line =
   | { kind: 'peer'; from: string; text: string }
   | { kind: 'shell'; id: string; command: string; out: string; code: number | null; ms: number; running: boolean }
 
-export type Ask = { id: string; tool: string; summary: string; edit?: FileEdit; risk?: import('../shared/cmdrisk').Risk; why?: string; cls?: 'read' | 'write' }
+export type Ask = { id: string; tool: string; summary: string; command?: string; edit?: FileEdit; risk?: import('../shared/cmdrisk').Risk; why?: string; cls?: 'read' | 'write' }
 
 export type State = {
   lines: Line[]
@@ -89,7 +89,7 @@ export function reduce(s: State, a: Action, now = Date.now()): State {
       return { ...s, streaming: '', lines }
     }
     case 'permission':
-      return { ...s, asks: [...s.asks, { id: a.id, tool: a.tool, summary: a.summary, edit: a.edit, risk: a.risk, why: a.why, cls: a.cls }] }
+      return { ...s, asks: [...s.asks, { id: a.id, tool: a.tool, summary: a.summary, command: a.command, edit: a.edit, risk: a.risk, why: a.why, cls: a.cls }] }
     case 'shell-start':
       // finished runs keep only their tail, so a long session does not hold every output in memory
       return {

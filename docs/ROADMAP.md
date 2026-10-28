@@ -179,7 +179,8 @@ panel" (in progress):
 6. Reviewer loop with a cap: a review panel sends work back to a build panel until tests pass, with a
    limit on rounds and on spend. Part of the canvas. (PraisonAI, ADK)
 7. Approve with a comment or an edit: an approval can change the command or add an instruction that
-   goes back to the agent. (AgentUse, ADK)
+   goes back to the agent. (AgentUse, ADK) Done: Edit and run on Bash cards (the edited command is
+   checked and isolated like the original), and Deny with a note.
 8. Learning from reviews: rejections and comments become a proposed change to CLAUDE.md, a persona or
    a trigger, applied only when the user accepts. (AgentUse)
 9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the

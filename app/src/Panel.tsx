@@ -480,10 +480,13 @@ export function Panel(props: {
     setTab('chat')
     void window.stm.runShell(sid, t)
   }
-  const answer = (id: string, allow: boolean) => {
+  const answer = (id: string, allow: boolean, extra?: { command?: string; note?: string }) => {
     dispatch({ kind: 'answered', id })
-    void window.stm.answer(sid, id, allow)
+    setReply(null)
+    void window.stm.answer(sid, id, allow, extra)
   }
+  // an approval with something added: the command edited before it runs, or a note sent back with a denial
+  const [reply, setReply] = useState<{ id: string; mode: 'edit' | 'note'; text: string } | null>(null)
 
   // a K.O. plays for a few seconds after each cut, then the HUD goes back to the numbers
   const [, setTick] = useState(0)
@@ -696,10 +699,34 @@ export function Panel(props: {
               {a.why && <div className="ask-why faint">Asks because it is {a.why}. Change this in MCP approvals.</div>}
               {a.edit ? <Diff edit={a.edit} cwd={s.cwd} /> : <pre className="ask-cmd">{a.summary}</pre>}
               {a.risk && <div className="ask-risk"><RiskChip risk={a.risk} /></div>}
-              <div className="ask-actions">
-                <button className="ghost" onClick={() => answer(a.id, false)}>Deny</button>
-                <button className="primary" onClick={() => answer(a.id, true)}>Allow</button>
-              </div>
+              {reply?.id === a.id ? (
+                <div className="ask-reply">
+                  <textarea
+                    className="ask-reply-text"
+                    aria-label={reply.mode === 'edit' ? 'Command to run instead' : 'Note for the agent'}
+                    placeholder={reply.mode === 'note' ? 'What to do instead, sent back to the agent' : undefined}
+                    value={reply.text}
+                    rows={reply.mode === 'edit' ? Math.min(8, reply.text.split('\n').length + 1) : 3}
+                    autoFocus
+                    onChange={(e) => setReply({ ...reply, text: e.target.value })}
+                  />
+                  <div className="ask-actions">
+                    <button className="ghost" onClick={() => setReply(null)}>Back</button>
+                    {reply.mode === 'edit' ? (
+                      <button className="primary" disabled={!reply.text.trim()} onClick={() => answer(a.id, true, { command: reply.text })}>Run this instead</button>
+                    ) : (
+                      <button className="primary" disabled={!reply.text.trim()} onClick={() => answer(a.id, false, { note: reply.text })}>Deny and send the note</button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="ask-actions">
+                  <button className="ghost" onClick={() => setReply({ id: a.id, mode: 'note', text: '' })}>Deny with a note</button>
+                  {a.command !== undefined && <button className="ghost" onClick={() => setReply({ id: a.id, mode: 'edit', text: a.command! })}>Edit and run</button>}
+                  <button className="ghost" onClick={() => answer(a.id, false)}>Deny</button>
+                  <button className="primary" onClick={() => answer(a.id, true)}>Allow</button>
+                </div>
+              )}
             </div>
           ))}
           {s.held && (
