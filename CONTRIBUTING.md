@@ -31,9 +31,9 @@ Details: [app/README.md](app/README.md).
 
 ## Releases
 
-Releases bundle work. A normal release goes out after 3 to 5 feature pull requests, or once a week,
-whichever comes first, with one changelog. A fix for security, privacy or network behavior, or for
-something broken for people already using the app, goes out on its own right away. Build and publish
+Releases bundle work. A normal release goes out after 5 feature pull requests, with one changelog.
+A fix for security, privacy or network behavior, or for something broken for people already using
+the app, goes out on its own right away. Build and publish
 in one go, with no merges in between, so the tag matches the binaries.
 
 ## License of contributions

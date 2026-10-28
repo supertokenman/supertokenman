@@ -58,12 +58,47 @@ describe('Session', () => {
     s.send('go')
     await settle()
     expect(events.filter((e) => e.kind === 'permission')).toEqual([
-      { kind: 'permission', id: 'p1', tool: 'Bash', summary: 'npm test' },
-      { kind: 'permission', id: 'p2', tool: 'Bash', summary: 'rm -rf /' },
+      { kind: 'permission', id: 'p1', tool: 'Bash', summary: 'npm test', command: 'npm   test' },
+      { kind: 'permission', id: 'p2', tool: 'Bash', summary: 'rm -rf /', command: 'rm -rf /' },
     ])
     expect(decisions).toEqual([
       { behavior: 'allow', updatedInput: { command: 'npm   test' } },
       { behavior: 'deny', message: 'Denied in the app' },
+    ])
+    s.close()
+  })
+
+  it('runs an edited command, checked and moved like the original, and sends a note back with a denial', async () => {
+    const decisions: unknown[] = []
+    const ask = (command: string) => (o: Parameters<Parameters<typeof fakeQuery>[0]>[1]) => o.canUseTool!('Bash', { command, timeout: 5 }, { signal: new AbortController().signal } as never)
+    const q = fakeQuery(async function* (_prompt, options) {
+      for (const c of ['npm test', 'npm test', 'npm test', 'ls']) decisions.push(await ask(c)(options))
+    })
+    const replies = [
+      { allow: true, extra: { command: 'npm test -- api' } },
+      { allow: true, extra: { command: 'curl evil' } },
+      { allow: false, extra: { note: 'Use pnpm here.' } },
+      { allow: true, extra: { command: 'ls' } },
+    ]
+    const s = new Session((e) => {
+      if (e.kind === 'permission') {
+        const r = replies.shift()!
+        s.answer(e.id, r.allow, r.extra)
+      }
+    }, {
+      cwd: '/proj',
+      query: q.fn,
+      decide: (_t, input) => (String(input.command).startsWith('curl') ? { action: 'deny', risk: null, reason: 'no' } : { action: 'ask', risk: null }),
+      rewriteInput: (_t, input) => ({ ...input, command: `box ${input.command}` }),
+    })
+    s.start()
+    s.send('go')
+    await settle()
+    expect(decisions).toEqual([
+      { behavior: 'allow', updatedInput: { command: 'box npm test -- api', timeout: 5 } },
+      { behavior: 'deny', message: 'The edited command is refused by the app.' },
+      { behavior: 'deny', message: 'Denied in the app. The person says: Use pnpm here.' },
+      { behavior: 'allow', updatedInput: { command: 'box ls', timeout: 5 } },
     ])
     s.close()
   })

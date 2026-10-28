@@ -14,7 +14,7 @@ export type UiEvent =
   | { kind: 'delta'; text: string }
   | { kind: 'assistant'; text: string; tools: { id: string; name: string; summary: string }[] }
   | { kind: 'span'; span: import('../shared/spans.js').SpanEvent }
-  | { kind: 'permission'; id: string; tool: string; summary: string; edit?: FileEdit; risk?: import('../shared/cmdrisk.js').Risk; why?: string; cls?: 'read' | 'write' }
+  | { kind: 'permission'; id: string; tool: string; summary: string; command?: string; edit?: FileEdit; risk?: import('../shared/cmdrisk.js').Risk; why?: string; cls?: 'read' | 'write' }
   | { kind: 'edit'; edit: FileEdit }
   | { kind: 'peer'; from: string; text: string }
   | { kind: 'cut'; tokens: number; at: number; cmd: string }
@@ -85,7 +85,7 @@ const textOf = (content: unknown) =>
 
 export class Session {
   private inbox = new Inbox<SDKUserMessage>()
-  private pending = new Map<string, { resolve: (r: PermissionResult) => void; input: Record<string, unknown> }>()
+  private pending = new Map<string, { resolve: (r: PermissionResult) => void; input: Record<string, unknown>; tool?: string; raw?: Record<string, unknown> }>()
   private q: Query | null = null
   private nextId = 0
   sessionId = ''
@@ -167,13 +167,13 @@ export class Session {
         if (d?.action === 'allow') return resolve({ behavior: 'allow', updatedInput: run })
         if (d?.action === 'deny') return resolve({ behavior: 'deny', message: d.reason ?? 'Refused by the app.' })
         const id = `p${++this.nextId}`
-        this.pending.set(id, { resolve, input: run })
+        this.pending.set(id, { resolve, input: run, tool, raw: input })
         signal.addEventListener('abort', () => {
           this.pending.delete(id)
           resolve({ behavior: 'deny', message: 'aborted' })
         })
         const edit = editOf(id, tool, input, this.read) ?? undefined
-        this.emit({ kind: 'permission', id, tool, summary: summarize(tool, input), edit, ...(d?.risk && d.risk.level !== 'safe' ? { risk: d.risk } : {}), ...(d?.why ? { why: d.why } : {}), ...(d?.cls ? { cls: d.cls } : {}) })
+        this.emit({ kind: 'permission', id, tool, summary: summarize(tool, input), ...(tool === 'Bash' && typeof input.command === 'string' ? { command: input.command } : {}), edit, ...(d?.risk && d.risk.level !== 'safe' ? { risk: d.risk } : {}), ...(d?.why ? { why: d.why } : {}), ...(d?.cls ? { cls: d.cls } : {}) })
       })
     this.q = this.opts.query({
       prompt: this.inbox,
@@ -532,11 +532,21 @@ export class Session {
     })
   }
 
-  answer(id: string, allow: boolean) {
+  /**
+   * The person's answer. `command` replaces a Bash command before it runs (checked again like the
+   * original, and moved into the container the same way); `note` goes back to the agent with a denial.
+   */
+  answer(id: string, allow: boolean, extra: { command?: string; note?: string } = {}) {
     const p = this.pending.get(id)
     if (!p) return
     this.pending.delete(id)
-    p.resolve(allow ? { behavior: 'allow', updatedInput: p.input } : { behavior: 'deny', message: 'Denied in the app' })
+    const note = extra.note?.trim().slice(0, 4000)
+    if (!allow) return p.resolve({ behavior: 'deny', message: note ? `Denied in the app. The person says: ${note}` : 'Denied in the app' })
+    const command = extra.command?.trim()
+    if (!command || p.tool !== 'Bash' || !p.raw || command === p.raw.command) return p.resolve({ behavior: 'allow', updatedInput: p.input })
+    const edited = { ...p.raw, command }
+    if (this.opts.decide?.('Bash', edited)?.action === 'deny') return p.resolve({ behavior: 'deny', message: 'The edited command is refused by the app.' })
+    p.resolve({ behavior: 'allow', updatedInput: this.opts.rewriteInput?.('Bash', edited) ?? edited })
   }
 
   /** A different model from the next turn on, at the person's click (the router only suggests). */

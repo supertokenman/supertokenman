@@ -2643,7 +2643,7 @@ ipcMain.handle('loop:quiet', (_e, sid: string) => {
   loopPaused.delete(String(sid))
   return Boolean(s)
 })
-ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean) => (phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow)))
+ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean, extra?: { command?: unknown; note?: unknown }) => (phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow, { command: typeof extra?.command === 'string' ? extra.command : undefined, note: typeof extra?.note === 'string' ? extra.note : undefined })))
 // Phone companion: what the phone sees of each panel (pending asks, the last reply), and the server
 const phoneAsks = new Map<string, Map<string, { id: string; tool: string; summary: string; risk?: string }>>()
 const phoneReply = new Map<string, string>()

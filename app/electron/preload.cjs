@@ -1111,7 +1111,7 @@ contextBridge.exposeInMainWorld('stm', {
   interrupt: (sid) => ipcRenderer.invoke('chat:interrupt', sid),
   loopSettings: (next) => ipcRenderer.invoke('loop:settings', next),
   loopQuiet: (sid) => ipcRenderer.invoke('loop:quiet', sid),
-  answer: (sid, id, allow) => ipcRenderer.invoke('perm:answer', sid, id, allow),
+  answer: (sid, id, allow, extra) => ipcRenderer.invoke('perm:answer', sid, id, allow, extra),
   onEvent: (fn) => {
     const listener = (_e, sid, ev) => fn(sid, ev)
     ipcRenderer.on('chat:event', listener)

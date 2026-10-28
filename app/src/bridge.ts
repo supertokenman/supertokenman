@@ -991,7 +991,8 @@ export type Bridge = {
   interrupt: (sid: string) => Promise<void>
   loopSettings: (next?: Partial<import('../shared/loopguard').LoopConfig>) => Promise<import('../shared/loopguard').LoopConfig>
   loopQuiet: (sid: string) => Promise<boolean>
-  answer: (sid: string, id: string, allow: boolean) => Promise<void>
+  /** `command` edits a Bash command before it runs; `note` goes back to the agent with a denial */
+  answer: (sid: string, id: string, allow: boolean, extra?: { command?: string; note?: string }) => Promise<void>
   onEvent: (fn: (sid: string, e: UiEvent | ShellEvent | Exposure) => void) => () => void
 }
 
