@@ -39,7 +39,7 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 
 | What | Where | Turned on by |
 |---|---|---|
-| Update check (released builds) | GitHub Releases of `supertokenman/supertokenman` (`releases.atom`, `latest-mac.yml`): github.com, release-assets.githubusercontent.com, objects.githubusercontent.com | off by default since 0.1.13: the Update button checks when you press it; with Appearance > Check for updates automatically on, a minute after launch (never during it) and every 6 hours; downloads only when you say Install |
+| Update check (released builds) | GitHub Releases of `supertokenman/supertokenman` (`releases.atom`, `latest-mac.yml`): github.com, release-assets.githubusercontent.com, objects.githubusercontent.com | off by default since 0.1.13: the Update button checks when you press it; with Appearance > Check for updates automatically on, a minute after launch (never during it) and every 6 hours; downloads only when you say Install. A fresh profile (or an upgrade with the setting unset) asks once after launch, after the splash and the Tour: "Check for updates" turns it on, "Not now" keeps it off; the question itself makes no request |
 | Exchange rate | api.frankfurter.dev | Spend > Update rates |
 | Market quotes and predictions | query1.finance.yahoo.com, brapi.dev, api.coingecko.com, gamma-api.polymarket.com | opening Markets (every minute while it is open) |
 | Symbol lookup | query1.finance.yahoo.com (`/v1/finance/search`, what you typed) | typing in Markets > Add, after a pause, only when the built-in list has fewer than five matches |

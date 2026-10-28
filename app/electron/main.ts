@@ -4123,6 +4123,8 @@ ipcMain.handle('update:auto', (_e, on?: boolean) => {
   if (typeof on === 'boolean') saveSettings({ ...settings(), updateCheck: on })
   return settings().updateCheck === true
 })
+// the first-run question asks once: it shows only while the setting is still unset (neither true nor false)
+ipcMain.handle('update:asked', () => typeof settings().updateCheck === 'boolean')
 ipcMain.handle('update:check', async (_e, auto?: boolean) => {
   if (fromRelease()) {
     if (!UG.checkAllowed(auto === true, settings().updateCheck)) return { behind: 0, source: 'release' }

@@ -541,3 +541,18 @@ Appearance > Video transcripts; when off it reads nothing, looks for no tool and
 netwatch fails if yt-dlp, whisper or ffmpeg ever start with nobody asking). Transcripts are cached per
 video (YouTube id, or a hash of the link or file) under the app's data folder, each cut at 200,000
 characters, the folder kept under 20 MB (oldest out first). Every result shows the route used.
+
+## First-run update question (decided 2026-10-28)
+
+Since 0.1.13 the automatic update check is opt-in, so someone who never opens Settings would stay on an
+old version without knowing. A small card in the top corner asks once, after the app is up (never over
+the splash or the Tour, never taking focus from the composer):
+
+> **Check for updates on GitHub?** A minute after launch and then every 6 hours, the app asks github.com
+> whether a new version is out and tells you. Nothing downloads until you choose Install.
+> You can change this in Settings > Appearance. [Check for updates] [Not now]
+
+Why this wording: it is what the code does (electron/main.ts: a check 60 s after launch, then every
+6 hours; `autoDownload` is off and the download starts only from the Install confirmation). It names the
+host, the frequency and the limit, and claims nothing more. Either answer is saved (`updateCheck` true or
+false), so the card never comes back; it is not a modal because the question can wait.

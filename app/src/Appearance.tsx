@@ -127,7 +127,7 @@ function LoginToggle() {
   )
 }
 
-/** Check for updates on its own: on by default for released builds, and listed on the privacy page. */
+/** Check for updates on its own: off until turned on here or in the first-run question; listed on the privacy page. */
 function UpdateToggle() {
   const [on, setOn] = useState<boolean | null>(null)
   useEffect(() => {
