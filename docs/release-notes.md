@@ -1,11 +1,9 @@
-A fix for 0.1.12: no network call at launch.
+Asks once whether to check for updates.
 
-- The update check is now off until you turn it on in Settings, and it never runs while the app is
-  starting. In 0.1.12 (and earlier) it ran at every launch; on our 0.1.12 Mac proof one of its
-  requests to github.com left before the test proxy was set, so the proof failed. The details are in
-  docs/security/2026-10-28-mac-0.1.12/REPORT.md. The Update button in Settings still checks when asked.
-- Everything else from 0.1.12 is unchanged: our own controls, `stm top`, `stm` inside panels and
-  video transcripts.
+- On first launch after the splash and the Tour, a small card asks whether the app may check
+  github.com for a new version: a minute after launch, then every 6 hours. Nothing downloads until you
+  choose Install. "Not now" keeps it off; you can change it any time in Settings > Appearance. The card
+  itself sends nothing.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
