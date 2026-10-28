@@ -1,16 +1,10 @@
-Panels that work together, with a price on every link.
+A fix for a black window after updating.
 
-- Canvas: a new layout where panels are cards you move, pan and zoom, with the links between them
-  drawn and labelled (auto or waits, and what the link cost today). Pick it with the layout button.
-- `stm read <panel>`: a panel reads a linked panel's goal and the end of its last reply, read only,
-  credentials masked. Unlinked panels cannot read each other.
-- What a link costs: turns started by messages over a link count against it today, in dollars,
-  tokens and turns. The linked: chip shows it and sets a daily cap; over the cap, the link refuses.
-- `stm loop <build> <review>`: a review loop. Each build reply goes to the review panel and the
-  review comes back, until APPROVED, a round limit (up to 10) or a spend cap (up to $50). Start it
-  from your own terminal; every step still asks before edits and commands.
-- `stm learn`: notes you send back with Deny with a note become proposed lines for the project's
-  CLAUDE.local.md, most repeated first. Nothing is written until you pick them.
+- Right after an update the app could start before its files were all in place and stay black, with
+  nothing in the log. It now shows "Starting SuperTokenMan...", tries again on its own a few times,
+  writes the miss to the log, and if it still cannot read its files, says to quit and open it again.
+- Everything else from 0.1.17 is unchanged: the canvas, stm read, link cost and cap, the review loop
+  and stm learn.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
