@@ -16,6 +16,7 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
                                      run .supertokenman/evals.txt on models and efforts; shows the plan, runs with --yes
   stm files export [--all]           write this project's triggers and their personas to .supertokenman/ (for git)
   stm files import [--yes]           show what the files there would change; --yes applies (triggers arrive off)
+  stm learn [--min 2] [--pick 1,3]   review notes from denials as proposed CLAUDE.local.md lines; --pick writes them
   stm send <panel|new> "text"        put a message in the panel's composer; the person sends it
                                      --now sends it at once and waits for the reply (--no-wait to return at once)
        [--cwd DIR] [--persona ID]    for "new": the folder and persona of the panel to open
@@ -197,6 +198,7 @@ try {
     if (!panel || !text) die('Usage: stm send <panel|new> "text"')
     print(await call('send', { panel, text, cwd: flags.cwd, persona: flags.persona, wait: !flags['no-wait'], queue: !flags.now }), (d) => (d.queued ? `Queued in ${d.panel}'s composer; press send there, or use --now.` : d.reply !== undefined ? d.reply : `Sent to ${d.panel}.`))
   } else if (cmd === 'eval') print(await call('evalRun', { cwd: flags.cwd || process.cwd(), models: flags.models, effort: flags.effort, maxUsd: flags['max-usd'], yes: Boolean(flags.yes) }), (d) => d.text)
+  else if (cmd === 'learn') print(await call('learn', { cwd: flags.cwd || process.cwd(), min: flags.min, pick: flags.pick }), (d) => d.text)
   else if (cmd === 'files') {
     const op = rest[0]
     if (op !== 'export' && op !== 'import') die('Usage: stm files export [--all]   or   stm files import [--yes]')
