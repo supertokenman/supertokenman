@@ -60,6 +60,8 @@ import { RouterBox } from './Router'
 
 import type { Persona } from '../shared/personas'
 // sheets that open only on a click load then, not at start
+// the canvas loads when it is first picked, so the first screen stays inside its size budget
+const Canvas = lazy(() => import('./Canvas').then((x) => ({ default: x.Canvas })))
 const OfficeFiles = lazy(() => import('./OfficeFiles').then((x) => ({ default: x.OfficeFiles })))
 const MdImages = lazy(() => import('./MdImages').then((x) => ({ default: x.MdImages })))
 const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ default: x.DesignHandoff })))
@@ -1104,7 +1106,7 @@ export function App() {
   const [cloudOpen, setCloudOpen] = useState(false)
   const ask = (text: string) => p.focus && window.dispatchEvent(new CustomEvent('stm:ask', { detail: { sid: p.focus, text } }))
   const paletteEntries = (): Entry[] => [
-    ...LAYOUTS.map((l) => ({ id: `layout-${l.id}`, group: 'Layout', label: `Layout: ${l.name}`, hint: l.what, keywords: 'layout grid columns panels arrange 2x2', run: () => setLayout(l.id) })),
+    ...LAYOUTS.map((l) => ({ id: `layout-${l.id}`, group: 'Layout', label: `Layout: ${l.name}`, hint: l.what, keywords: 'layout grid columns canvas panels arrange 2x2 move zoom', run: () => setLayout(l.id) })),
     ...p.order.map((sid) => ({ id: `panel-${sid}`, group: 'Panels', label: p.byId[sid]?.cwd.split('/').filter(Boolean).slice(-2).join('/') ?? sid, hint: sid, keywords: 'panel', run: () => dispatch({ kind: 'focus', sid }) })),
     ...[
       ['today', 'Today', 'brief morning day', () => setTodayOpen(true)],
@@ -1244,6 +1246,26 @@ export function App() {
   }
 
   const recentDirs = dayLogs.flatMap((l) => l.stops).sort((a, b) => b.at - a.at).map((st) => st.cwd)
+  const panelEl = (sid: string) => (
+          <Panel
+            key={sid}
+            sid={sid}
+            s={p.byId[sid]!}
+            focused={p.focus === sid}
+            theme={theme}
+            dim={Boolean(focus && focus.kind === 'focus' && focus.sid && focus.sid !== sid)}
+            coachExtra={{ stretch: stretch(activity.current, now), focus: Boolean(focus && focus.kind === 'focus') }}
+            money={money}
+            dispatch={(action) => dispatch({ kind: 'event', sid, action })}
+            onFocus={() => p.focus !== sid && dispatch({ kind: 'focus', sid })}
+            onClose={() =>
+              leave(sid, () => {
+                void window.stm.closeSession(sid)
+                dispatch({ kind: 'close', sid })
+              })
+            }
+          />
+  )
   return (
     <div className={`shell ${priv ? 'is-private' : ''} ${sceneFor(scene.id) ? 'has-scene' : ''}`}>
       <Backdrop id={scene.id} strength={scene.strength} theme={theme} />
@@ -1748,27 +1770,13 @@ export function App() {
       <UpdateAsk ready={splashOff && !tourOpen && !lock.locked} />
 
       <div className="body">
+      {layout === 'canvas' ? (
+        <Suspense fallback={null}>
+          <Canvas order={p.order} panel={panelEl} />
+        </Suspense>
+      ) : (
       <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
-        {p.order.map((sid) => (
-          <Panel
-            key={sid}
-            sid={sid}
-            s={p.byId[sid]!}
-            focused={p.focus === sid}
-            theme={theme}
-            dim={Boolean(focus && focus.kind === 'focus' && focus.sid && focus.sid !== sid)}
-            coachExtra={{ stretch: stretch(activity.current, now), focus: Boolean(focus && focus.kind === 'focus') }}
-            money={money}
-            dispatch={(action) => dispatch({ kind: 'event', sid, action })}
-            onFocus={() => p.focus !== sid && dispatch({ kind: 'focus', sid })}
-            onClose={() =>
-              leave(sid, () => {
-                void window.stm.closeSession(sid)
-                dispatch({ kind: 'close', sid })
-              })
-            }
-          />
-        ))}
+        {p.order.map(panelEl)}
         {p.order.length === 0 && (
           <div className="empty">
             <div className="empty-title">No panels open</div>
@@ -1776,6 +1784,7 @@ export function App() {
           </div>
         )}
       </div>
+      )}
       {waMounted && <WebAppsDrawer open={wa} app={waApp} onApp={setWaApp} width={waWidth} onResize={setWaWidth} onUnread={setWaUnread} onClose={() => setWa(false)} />}
       </div>
     </div>
@@ -1843,12 +1852,12 @@ function usePortrait() {
   return on
 }
 
-/** The three layouts, drawn as what they do. */
+/** The layouts, drawn as what they do. */
 function LayoutGlyph(props: { layout: Layout }) {
   const r = (x: number, y: number, w: number, h: number) => <rect x={x} y={y} width={w} height={h} rx="1" />
   return (
     <svg width="15" height="13" viewBox="0 0 15 13" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
-      {props.layout === 'columns' ? <>{r(0.65, 0.65, 3.9, 11.7)}{r(5.55, 0.65, 3.9, 11.7)}{r(10.45, 0.65, 3.9, 11.7)}</> : props.layout === 'grid' ? <>{r(0.65, 0.65, 6.3, 5.3)}{r(8.05, 0.65, 6.3, 5.3)}{r(0.65, 7.05, 6.3, 5.3)}{r(8.05, 7.05, 6.3, 5.3)}</> : <>{r(0.65, 0.65, 6.3, 11.7)}{r(8.05, 0.65, 6.3, 5.3)}{r(8.05, 7.05, 6.3, 5.3)}</>}
+      {props.layout === 'canvas' ? <>{r(0.65, 0.65, 6, 5)}{r(8.35, 6.85, 6, 5.5)}<path d="M6.65 3.15 Q 10 3.5 11.35 6.85" /></> : props.layout === 'columns' ? <>{r(0.65, 0.65, 3.9, 11.7)}{r(5.55, 0.65, 3.9, 11.7)}{r(10.45, 0.65, 3.9, 11.7)}</> : props.layout === 'grid' ? <>{r(0.65, 0.65, 6.3, 5.3)}{r(8.05, 0.65, 6.3, 5.3)}{r(0.65, 7.05, 6.3, 5.3)}{r(8.05, 7.05, 6.3, 5.3)}</> : <>{r(0.65, 0.65, 6.3, 11.7)}{r(8.05, 0.65, 6.3, 5.3)}{r(8.05, 7.05, 6.3, 5.3)}</>}
     </svg>
   )
 }

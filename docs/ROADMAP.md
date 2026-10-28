@@ -107,7 +107,13 @@ References to read before choosing (what they did, not claims about us):
      link/links; rate-limited and logged. See "Using stm from inside a panel" in docs/STM_GUIDE.md.
      Step done (2026-10-28): stm read <panel> gives a linked panel's goal and the end of its last
      reply, credentials masked; unlinked panels cannot read each other.
-     Still to come: the canvas itself (drawing the links) and the per-link token, cost and spending cap.
+     Step done (2026-10-28): the Canvas layout. Layout: Canvas puts the panels as cards on a pan and
+     zoom surface (drag a header to move a card, drag the background or Space+drag to pan, Ctrl/Cmd +
+     wheel or pinch to zoom 30% to 150%, Fit frames all cards); spots and view are kept in local
+     storage. Links are drawn under the cards, once per pair, labelled auto or waits and with today's
+     cost when the link carries it. Geometry lives in app/shared/canvas.ts with tests.
+     Still to come: notes and previews as cards, resizing cards, and the per-link cost and cap
+     (its own pull request).
 
 ## After v1.1: from the repo review of 2026-10-27
 
