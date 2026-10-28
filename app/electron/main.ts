@@ -213,11 +213,12 @@ import { fixMessage, type Kind as ScanKind } from '../shared/trivy.js'
 import * as WB from '../shared/workbench.js'
 import { parseEpModel, PRESETS, SHAPES, type VllmArgs } from '../shared/modelserver.js'
 import { addTurn, contextParts, type ContextPart, type TraceTurn } from '../shared/trace.js'
-import { modelLabel } from '../shared/models.js'
+import { modelLabel, type Effort } from '../shared/models.js'
 import { pushVersion, type Version } from '../shared/versions.js'
 import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
+import * as ME from '../shared/modeleval.js'
 import { allows, appOfPartition, isAppPage, siteApp, validateSite, WEB_APPS, type Site, type SiteInput } from '../shared/webapps.js'
 import { fetchIcon } from './sites.js'
 
@@ -5757,6 +5758,47 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
       return { shown: url }
     }
     throw new Error('Ask for: test, scan-deps, scan-secrets or preview.')
+  },
+  // `stm eval`: the project's cases on several models and efforts. Without yes it only shows the plan;
+  // with it, it runs one case at a time and stops before going over maxUsd. No tools, one turn each.
+  evalRun: async (a) => {
+    const cwd = String(a.cwd ?? '')
+    if (!cwd || !existsSync(cwd)) throw new Error('Run it from a project folder, or pass --cwd DIR.')
+    const file = join(cwd, ME.CASES_FILE)
+    const cases = ME.readCases(existsSync(file) ? readFileSync(file, 'utf8') : '')
+    const list = (v: unknown) => String(v ?? '').split(',').map((x) => x.trim()).filter(Boolean)
+    const all = ME.combos(list(a.models), list(a.effort) as Effort[])
+    const maxUsd = Number(a.maxUsd ?? 1)
+    if (!(maxUsd > 0)) throw new Error('--max-usd must be above 0.')
+    const plan = `${cases.length} case${cases.length === 1 ? '' : 's'} x ${all.length} setting${all.length === 1 ? '' : 's'} = ${cases.length * all.length} runs, stopping before $${maxUsd.toFixed(2)}:\n${all.map((c) => `  ${ME.comboLabel(c)}`).join('\n')}`
+    if (a.yes !== true) return { text: `${plan}\n\nNothing ran. Add --yes to run it; it is billed to your Claude account.` }
+    const runs: ME.Run[] = []
+    let spent = 0
+    let stopped: string | null = null
+    outer: for (const combo of all)
+      for (const c of cases) {
+        // the next run could cost what the dearest one so far did: stop before the cap, not after
+        const dearest = Math.max(0, ...runs.map((r) => r.costUsd))
+        if (spent + dearest > maxUsd) {
+          stopped = `Stopped at $${spent.toFixed(4)} to stay under $${maxUsd.toFixed(2)}; settings with "-" did not run.`
+          break outer
+        }
+        const t0 = Date.now()
+        let text = ''
+        let costUsd = 0
+        for await (const m of query({
+          prompt: (async function* () {
+            yield { type: 'user', message: { role: 'user', content: c.prompt }, parent_tool_use_id: null, session_id: '' } as never
+          })(),
+          options: { model: combo.model, ...(combo.effort ? { effort: combo.effort } : {}), maxTurns: 1, allowedTools: [], canUseTool: async () => ({ behavior: 'deny', message: 'no tools in an eval' }), settingSources: [], cwd },
+        }))
+          if (m.type === 'result') ((text = m.subtype === 'success' ? m.result : ''), (costUsd = m.total_cost_usd))
+        spent += costUsd
+        const g = grade(c, text, 'claude')
+        runs.push({ combo, id: c.id, pass: g.pass, costUsd, ms: Date.now() - t0, missing: g.missing, forbidden: g.forbidden })
+      }
+    logs().info('stm:eval', `${runs.length} runs, $${spent.toFixed(4)}`)
+    return { text: ME.table(ME.rows(runs, all), cases.length, stopped), runs }
   },
   // `stm top`: one read-only snapshot of what the app already holds in memory; nothing is fetched for it
   top: () => {

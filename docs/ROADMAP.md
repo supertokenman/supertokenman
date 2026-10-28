@@ -170,7 +170,7 @@ panel" (in progress):
    on the performance report. (Flameox)
 3. Model and effort evaluation: `stm eval` runs saved tasks from the project on several models and
    effort levels and shows cost, time and pass or fail, to find the cheapest setting that holds.
-   (ADK, VoltAgent)
+   (ADK, VoltAgent) Done: stm eval, plan first, runs with --yes under a spend cap.
 4. Secret guard on what leaves: before a prompt is sent, warn when a vault secret or a pasted key is
    in it; the user decides. (VoltAgent) Done: the composer also checks saved vault values; messages
    that skip the composer (auto-send links, stm send --now) are refused when they carry one.
