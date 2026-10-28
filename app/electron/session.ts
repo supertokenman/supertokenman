@@ -5,7 +5,7 @@ import { editOf, type FileEdit } from './diff.js'
 import { toOverhead } from './overhead.js'
 import { filesNote, type Attachment } from '../shared/attach.js'
 import { ttlOf } from '../shared/cache.js'
-import { LoopWatch } from '../shared/loop.js'
+import { LoopGuard, messageCost, tripHeadline, type LoopConfig, type LoopTrip } from '../shared/loopguard.js'
 import type { CanUseTool, Options, PermissionResult, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 
 export type UiEvent =
@@ -32,7 +32,7 @@ export type UiEvent =
   | { kind: 'note'; text: string; tone?: 'error' }
   | { kind: 'held'; reason: string; scope: 'panel' | 'project' | 'persona' | 'turn' | 'task'; spent: number; limit: number; estimate: number }
   | { kind: 'released' }
-  | { kind: 'loop'; reason: string }
+  | ({ kind: 'loop'; reason: string } & LoopTrip)
   | { kind: 'gate'; run: string; name: string; step: number; of: number; text: string }
   | { kind: 'gated' }
   | { kind: 'goal'; goal: string | null }
@@ -98,7 +98,7 @@ export class Session {
 
   constructor(
     private emit: (e: UiEvent) => void,
-    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null> },
+    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null>; loop?: () => LoopConfig },
   ) {}
 
   private read = (path: string) => {
@@ -133,15 +133,20 @@ export class Session {
     return this.appendText
   }
 
-  /** Repeated tool calls or errors in one turn: the panel stops and asks instead of going round. */
-  private loops = new LoopWatch()
+  /** Repeated tool calls or errors in one turn: the panel pauses and asks instead of going round. */
+  private loops = new LoopGuard()
+  /** "Continue and don't pause again in this session": this panel's agent is not paused for loops again */
+  loopQuiet = false
+  /** tool names by tool_use id, so an error can say which tool failed */
+  private toolNames = new Map<string, string>()
   /** the turn the app stopped itself: its interrupted result is not an error to show */
   private stoppedByApp = false
-  private stopLoop(reason: string | null) {
-    if (!reason || !this.busy) return
+  private stopLoop(t: LoopTrip | null) {
+    if (!t || !this.busy || this.loopQuiet) return
     this.loops.reset()
     this.stoppedByApp = true
-    this.emit({ kind: 'loop', reason })
+    this.emit({ kind: 'loop', reason: tripHeadline(t), ...t })
+    // the same as the Stop button: the turn ends, the process and the conversation stay
     void this.interrupt().catch(() => undefined)
   }
 
@@ -342,7 +347,7 @@ export class Session {
       if (path) this.emit({ kind: 'unchanged', path })
     } else if (m.type === 'user' && !m.parent_tool_use_id && Array.isArray((m.message as { content?: unknown }).content)) {
       for (const b of (m.message as { content: { type?: string; is_error?: boolean; content?: unknown }[] }).content)
-        if (b.type === 'tool_result' && b.is_error) this.stopLoop(this.loops.error(textOf(b.content) || String(b.content ?? '')))
+        if (b.type === 'tool_result' && b.is_error) this.stopLoop(this.loops.error(textOf(b.content) || String(b.content ?? ''), this.toolNames.get((b as { tool_use_id?: string }).tool_use_id ?? '')))
     } else if (m.type === 'stream_event') {
       const ev = m.event as { type?: string; delta?: { type?: string; text?: string } }
       if (!m.parent_tool_use_id && ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) this.emit({ kind: 'delta', text: ev.delta.text })
@@ -350,7 +355,13 @@ export class Session {
       const content = m.message.content as unknown as { type: string; id?: string; name?: string; input?: Record<string, unknown> }[]
       const tools = content.filter((b) => b.type === 'tool_use').map((b) => ({ id: b.id ?? '', name: b.name ?? '', summary: summarize(b.name ?? '', b.input ?? {}) }))
       this.emit({ kind: 'assistant', text: textOf(content), tools })
-      for (const t of tools) this.stopLoop(this.loops.tool(t.name, t.summary))
+      const msg = m.message as unknown as { id?: string; model?: string; usage?: Parameters<typeof messageCost>[1] }
+      if (msg.usage) {
+        const c = messageCost(msg.model ?? this.opts.model, msg.usage)
+        this.loops.spend(c.usd, c.tokens, msg.id)
+      }
+      for (const b of content) if (b.type === 'tool_use' && b.id && b.name) this.toolNames.set(b.id, b.name)
+      for (const b of content) if (b.type === 'tool_use') this.stopLoop(this.loops.call(b.name ?? '', b.input ?? {}, summarize(b.name ?? '', b.input ?? {})))
       // each file edit once, read before the tool runs (a Write's old text is still on disk)
       for (const b of content)
         if (b.type === 'tool_use' && b.id && !this.seen.has(b.id)) {
@@ -463,6 +474,8 @@ export class Session {
   send(text: string, attachments: Attachment[] = []) {
     this.lastActivity = Date.now()
     this.loops.reset()
+    this.toolNames.clear()
+    if (this.opts.loop) this.loops.config = this.opts.loop()
     this.wake()
     this.turns.push(() => {})
     this.busy = true

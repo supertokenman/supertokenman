@@ -51,7 +51,7 @@ const round = (n) => Math.round(Number(n ?? 0) * 1e6) / 1e6
 
 const ESC = '\x1b['
 const paint = (on) => (code, s) => (on ? `${ESC}${code}m${s}${ESC}0m` : s)
-const STATE_COLOR = { running: '32', 'needs-you': '33;1', waiting: '36', idle: '2' }
+const STATE_COLOR = { running: '32', 'needs-you': '33;1', 'paused: loop': '33', waiting: '36', idle: '2' }
 
 /** Cuts or pads to exactly n visible columns (input is plain text). */
 export function fit(s, n) {
@@ -94,10 +94,10 @@ export function render(snap, o) {
   }
   const wide = W >= 60
   const narrow = W < 40
-  // columns: marker 2, state 10, project, model 12, ctx 6, cost 11, ci 12
-  const fixed = narrow ? 2 + 10 : 2 + 10 + 6 + 11 + (wide ? 12 + 14 : 0)
+  // columns: marker 2, state 13, project, model 12, ctx 6, cost 11, ci 12
+  const fixed = narrow ? 2 + 13 : 2 + 13 + 6 + 11 + (wide ? 12 + 14 : 0)
   const proj = Math.max(6, W - fixed - 1)
-  const head = narrow ? `  ${fit('STATE', 10)}${fit('PROJECT', proj)}` : `  ${fit('STATE', 10)}${fit('PROJECT', proj)}${wide ? fit('MODEL', 12) + ' ' : ''}${fit('CTX', 6)}${fit('TODAY', 11)}${wide ? fit('CI', 13) : ''}`
+  const head = narrow ? `  ${fit('STATE', 13)}${fit('PROJECT', proj)}` : `  ${fit('STATE', 13)}${fit('PROJECT', proj)}${wide ? fit('MODEL', 12) + ' ' : ''}${fit('CTX', 6)}${fit('TODAY', 11)}${wide ? fit('CI', 13) : ''}`
   lines.push(c('2', fit(head, W)))
   if (!snap.panels.length) lines.push(fit('  No panels open. Open one in the app.', W))
   const room = Math.max(1, height - lines.length - 4)
@@ -105,7 +105,7 @@ export function render(snap, o) {
   snap.panels.slice(start, start + room).forEach((p, i) => {
     const sel = start + i === selected
     const ctx = p.contextTokens === null ? '-' : `${Math.round((p.contextTokens / p.contextWindow) * 100)}%`
-    const state = c(STATE_COLOR[p.state] ?? '0', fit(p.state, 10))
+    const state = c(STATE_COLOR[p.state] ?? '0', fit(p.state, 13))
     const rest = narrow ? fit(p.project || p.id, proj) : `${fit(p.project || p.id, proj)}${wide ? fit(p.modelLabel ?? p.model ?? '-', 12) + ' ' : ''}${fit(ctx, 6)}${fit(money(p.todayUsd), 11)}${wide ? fit(ciText(p, snap.githubOn), 13) : ''}`
     const row = `${sel ? '> ' : '  '}${state}${rest}`
     lines.push(sel ? c('7', row) : row)

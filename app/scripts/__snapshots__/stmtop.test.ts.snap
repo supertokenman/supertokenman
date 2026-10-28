@@ -5,10 +5,10 @@ exports[`stm top > degrades in narrow terminals and without GitHub 1`] = `
 Today $3.46  5h window 42%          
 Approvals 1  CI: not connected      
 
-  STATE     PROJECT                 
-> running   supertokenman          
-  needs-you website                
-  idle      notes                  
+  STATE        PROJECT              
+> running      supertokenman       
+  needs-you    website             
+  idle         notes               
 
 p1 /home/me/supertokenman           
 CI not connected  model Opus 4.1    
@@ -22,10 +22,10 @@ exports[`stm top > degrades in narrow terminals and without GitHub 2`] = `
 Today $3.46  5h window 42%                        
 Approvals 1  CI: GitHub                           
 
-  STATE     PROJECT             CTX   TODAY       
-> running   supertokenman       25%   $2.50      
-  needs-you website             60%   $0.90      
-  idle      notes               -     $0.00      
+  STATE        PROJECT          CTX   TODAY       
+> running      supertokenman    25%   $2.50      
+  needs-you    website          60%   $0.90      
+  idle         notes            -     $0.00      
 
 p1 /home/me/supertokenman                         
 CI success  model Opus 4.1                        
@@ -36,10 +36,10 @@ exports[`stm top > renders 80x24 with a selection 1`] = `
 "stm top  SuperTokenMan 1.1.0                                                    
 Today $3.46  5h window 42%  Approvals 1  CI: GitHub                             
 
-  STATE     PROJECT                 MODEL        CTX   TODAY      CI            
-  running   supertokenman           Opus 4.1     25%   $2.50      success      
-> needs-you website                 Sonnet 4.5   60%   $0.90      in_progress  
-  idle      notes                   -            -     $0.00      no repo      
+  STATE        PROJECT              MODEL        CTX   TODAY      CI            
+  running      supertokenman        Opus 4.1     25%   $2.50      success      
+> needs-you    website              Sonnet 4.5   60%   $0.90      in_progress  
+  idle         notes                -            -     $0.00      no repo      
 
 p2 /home/me/website  goal: ship the blog                                        
 Waits for you: Bash npm publish                                                 

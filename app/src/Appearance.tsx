@@ -9,7 +9,8 @@ import { hudMini } from './hudMini'
 import { AUTO, NONE, SCENES, sceneSvg } from './landscapes'
 import { DEFAULT_TYPO, FONTS, type Typo } from './typography'
 import { resolve, SYSTEM, themeSvg, THEMES, type Theme } from './themes'
-import { ColorField, Select, Slider, Switch } from './ui'
+import { ColorField, NumberField, Select, Slider, Switch } from './ui'
+import type { LoopConfig } from '../shared/loopguard'
 
 const SAMPLE: HudView = {
   ctxUsed: 34, ctxTokens: '68k', ctxWindow: '200k', five: { used: 23, resets: '23:00' }, seven: { used: 41, resets: '' },
@@ -157,6 +158,36 @@ function ClaudeUsageToggle() {
   )
 }
 
+/** Loop detection: on by default (it only pauses a turn, nothing is sent anywhere); thresholds editable. */
+function LoopGuardSettings() {
+  const [c, setC] = useState<LoopConfig | null>(null)
+  useEffect(() => {
+    void window.stm.loopSettings?.().then(setC, () => setC(null))
+  }, [])
+  if (!c) return null
+  const save = (next: Partial<LoopConfig>) => void window.stm.loopSettings(next).then(setC)
+  const num = (k: 'repeats' | 'window' | 'errors', label: string, min: number, max: number) => (
+    <div className="tid-row">
+      <span>{label}</span>
+      <NumberField min={min} max={max} value={c[k]} disabled={!c.on} aria-label={label} onChange={(e) => {
+        const v = Number(e.target.value)
+        if (Number.isFinite(v) && v >= min && v <= max) save({ [k]: v })
+      }} />
+    </div>
+  )
+  return (
+    <>
+      <div className="tid-row" data-tip="When a panel's agent repeats the same tool call or hits the same error, the turn is stopped like Stop and the panel says what the repeats cost. Nothing is sent anywhere.">
+        <span>Pause an agent that goes in circles</span>
+        <Switch checked={c.on} onChange={(e) => save({ on: e.target.checked })} />
+      </div>
+      {num('repeats', 'Same call this many times', 2, 20)}
+      {num('window', '...within the last this many calls', 2, 40)}
+      {num('errors', 'Same error this many times in a row', 2, 20)}
+    </>
+  )
+}
+
 /** Pick a theme, each previewed with the real HUD in its colors. */
 export function Appearance(props: { current: string; onPick: (id: string) => void; typo: Typo; onTypo: (t: Typo) => void; scene: SceneSetting; onScene: (v: SceneSetting) => void; onClose: () => void }) {
   useEffect(() => {
@@ -183,6 +214,7 @@ export function Appearance(props: { current: string; onPick: (id: string) => voi
             <LoginToggle />
             <UpdateToggle />
             <ClaudeUsageToggle />
+            <LoopGuardSettings />
             <TranscriptToggle />
             <TouchIdSettings />
           </div>

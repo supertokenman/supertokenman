@@ -1108,6 +1108,8 @@ contextBridge.exposeInMainWorld('stm', {
   // where a dropped or pasted file lives on disk (Electron no longer puts it on File)
   pathOf: (file) => webUtils.getPathForFile(file),
   interrupt: (sid) => ipcRenderer.invoke('chat:interrupt', sid),
+  loopSettings: (next) => ipcRenderer.invoke('loop:settings', next),
+  loopQuiet: (sid) => ipcRenderer.invoke('loop:quiet', sid),
   answer: (sid, id, allow) => ipcRenderer.invoke('perm:answer', sid, id, allow),
   onEvent: (fn) => {
     const listener = (_e, sid, ev) => fn(sid, ev)

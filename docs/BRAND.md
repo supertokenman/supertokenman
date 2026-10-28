@@ -556,3 +556,27 @@ Why this wording: it is what the code does (electron/main.ts: a check 60 s after
 6 hours; `autoDownload` is off and the download starts only from the Install confirmation). It names the
 host, the frequency and the limit, and claims nothing more. Either answer is saved (`updateCheck` true or
 false), so the card never comes back; it is not a modal because the question can wait.
+
+## Loop detection: wording and defaults (decided 2026-10-28)
+
+When a panel's agent goes in circles, the turn is interrupted (the same call as the Stop button; the
+process and the conversation stay) and the panel shows:
+
+> **Going in circles.** Paused: the same Bash call repeated 4 times. Those repeats cost about $0.04
+> (12,345 tokens). [Show the repeats] [Continue and don't pause again in this session] [Continue]
+
+Why this wording: "Paused" and "Continue" say that nothing is lost; the cost names only the repeats
+(the steps after the first one), because that is the part the loop wasted. "About" because the figure is
+estimated from the model messages' token usage and the price table (shared/prices.ts), not read from a
+bill. The amount uses the app's display currency (R$ on a Mac set to Brazil, US$ elsewhere), as every
+other cost in the app. No claim that the agent was "stuck" or "wrong": it repeated, and that is all the
+app knows.
+
+Defaults: on (it only stops a turn and sends nothing, so there is no privacy cost to having it on);
+same call 4 times within the last 6 tool calls, two calls taking turns for 3 rounds, or the same error
+3 times in a row. Four, not three, because legitimate retries (a test run after an edit, a second read)
+often come in threes. Inputs are compared after taking out spacing, key order, timestamps, temp folders
+and ids; errors also without numbers (line numbers, pids). The switch and the three thresholds live in
+Settings > Appearance; "Continue and don't pause again" is per panel and lasts until the panel closes.
+No trigger or fan-out run has a "do not interrupt" flag today, so there is nothing else to respect;
+if one is added it should skip the guard. Network: none (docs/NETWORK.md unchanged).

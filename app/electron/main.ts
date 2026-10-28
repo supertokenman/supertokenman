@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { readFile as readFileAsync } from 'node:fs/promises'
 import { guardIpc, lockPermissions, reportIpcErrors, UI_SCHEME, UI_URL, uiFile } from './hardening.js'
 import { errlog, report as diagReport } from './errlog.js'
+import { loopConfig } from '../shared/loopguard.js'
 import { badge, contextMenu, keepBounds, menuTemplate, savedBounds, windowStateFile } from './native.js'
 import { crashReporter, app, BrowserWindow, Menu, nativeImage, Tray, globalShortcut, net, Notification, protocol, dialog, ipcMain, nativeTheme, powerMonitor, safeStorage, systemPreferences, session as electronSession, shell as desktop, webContents as allWebContents } from 'electron'
 import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, symlinkSync, unlinkSync, watch, writeFileSync } from 'node:fs'
@@ -288,7 +289,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -711,6 +712,8 @@ const tracePrompt = (sid: string, prompt: string, why?: string) => pendingTurn.s
 const turnOf = (sid: string) => pendingTurn.get(sid)?.id
 // outlet filters change how a reply is shown (not what Claude saw); events of a panel keep their order
 const outletChain = new Map<string, Promise<void>>()
+// panels whose agent the loop guard paused, until the person sends again (shown by `stm top`)
+const loopPaused = new Set<string>()
 function send(sid: string, e: unknown) {
   const pending = outletChain.get(sid)
   const k = (e as { kind?: string }).kind
@@ -738,6 +741,11 @@ function sendNow(sid: string, e: unknown) {
   // spans go into the trace, not to the window
   if (ev.kind === 'span') return
   quotaWatch(sid, ev)
+  if (ev.kind === 'loop') {
+    const l = e as { reason: string; usd: number; tokens: number }
+    loopPaused.add(sid)
+    logs().info('loop', `${placeOf(sid)}: ${l.reason} The repeats cost about US$${l.usd.toFixed(4)} (${l.tokens} tokens). The turn was stopped like Stop does.`)
+  }
   const g = goals.get(sid)
   if (g && ev.kind === 'turn' && !ev.isError && goalMet(ev.text ?? '')) {
     goals.delete(sid)
@@ -1702,6 +1710,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     beforeEdit: (tool: string) => dgBeforeEdit(sid, tool),
     rewriteOutput: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => symRewrite(sid, tool, input, response, id),
     onStop: (again: boolean) => dgStop(sid, again),
+    loop: () => loopConfig(settings().loopGuard),
     afterTool: (tool: string, input: Record<string, unknown>, output: string) => {
       const edited = DC.touchedBy(tool, input)
       if (edited && !output.startsWith('error:')) dgTurn.get(sid)?.touched.add(edited)
@@ -2267,6 +2276,7 @@ ipcMain.handle('privacy:set', (_e, on: boolean) => {
 ipcMain.handle('chat:send', async (_e, sid: string, text: string, attachments?: unknown, why?: string) => {
   const s = get(sid)
   if (!s) return
+  loopPaused.delete(sid)
   dgStart(sid)
   // phase 121: an "@graph" line gets the project graph's answer under it
   const gcwd = shells.get(sid)?.cwd
@@ -2614,6 +2624,17 @@ ipcMain.handle('files:isDir', (_e, path: string) => {
   }
 })
 ipcMain.handle('chat:interrupt', (_e, sid: string) => get(sid)?.interrupt())
+// loop detection: settings (thresholds, on/off) and a panel's "don't pause again in this session"
+ipcMain.handle('loop:settings', (_e, next?: unknown) => {
+  if (next && typeof next === 'object') saveSettings({ ...settings(), loopGuard: loopConfig({ ...loopConfig(settings().loopGuard), ...(next as object) }) })
+  return loopConfig(settings().loopGuard)
+})
+ipcMain.handle('loop:quiet', (_e, sid: string) => {
+  const s = get(String(sid))
+  if (s) s.loopQuiet = true
+  loopPaused.delete(String(sid))
+  return Boolean(s)
+})
 ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean) => (phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow)))
 // Phone companion: what the phone sees of each panel (pending asks, the last reply), and the server
 const phoneAsks = new Map<string, Map<string, { id: string; tool: string; summary: string; risk?: string }>>()
@@ -5740,7 +5761,7 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
         cwd: shells.get(id)?.cwd ?? s.cwd ?? '',
         model,
         modelLabel: model ? modelLabel(model.replace(/\[1m\]$/i, '')) : null,
-        state: asks.length ? 'needs-you' : s.busy ? 'running' : goals.has(id) ? 'waiting' : 'idle',
+        state: asks.length ? 'needs-you' : s.busy ? 'running' : loopPaused.has(id) ? 'paused: loop' : goals.has(id) ? 'waiting' : 'idle',
         goal: goals.get(id)?.text ?? null,
         contextTokens: last ? last.inputTokens + last.cacheRead : null,
         contextWindow: model && /\[1m\]$/i.test(model) ? 1_000_000 : 200_000,

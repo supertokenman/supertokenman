@@ -57,7 +57,8 @@ export type State = {
   /** a message the budget is holding until the person lets it through */
   held?: { reason: string; scope: 'panel' | 'project' | 'persona' | 'turn' | 'task'; spent: number; limit: number; estimate: number } | null
   /** a turn stopped because it was going in circles */
-  loop?: string | null
+  /** the loop guard paused the agent: what repeated, what it cost, the repeated steps */
+  loop?: (Omit<Extract<UiEvent, { kind: 'loop' }>, 'kind'>) | null
   /** a trigger's step waiting for the person's go */
   gate?: { run: string; name: string; step: number; of: number; text: string } | null
   /** the panel's /goal, until a reply says it is met */
@@ -173,8 +174,11 @@ export function reduce(s: State, a: Action, now = Date.now()): State {
       return { ...s, busy: false, held: { reason: a.reason, scope: a.scope, spent: a.spent, limit: a.limit, estimate: a.estimate } }
     case 'released':
       return { ...s, held: null }
-    case 'loop':
-      return { ...s, loop: a.reason }
+    case 'loop': {
+      // an empty reason clears the notice (Continue / don't pause again)
+      const { kind: _k, ...l } = a
+      return { ...s, loop: a.reason ? l : null }
+    }
     case 'gate':
       return { ...s, gate: { run: a.run, name: a.name, step: a.step, of: a.of, text: a.text } }
     case 'gated':

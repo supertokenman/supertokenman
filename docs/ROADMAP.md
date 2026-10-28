@@ -160,6 +160,11 @@ panel" (in progress):
 
 1. Loop detection: when a panel repeats the same tool call or error several times, pause it and say
    what it has spent on the repeat. (PraisonAI)
+   Done (2026-10-28): app/shared/loopguard.ts. Same call 4 times within the last 6, A/B taking turns
+   three rounds, or the same error 3 times in a row; the turn is interrupted like Stop and the panel
+   shows the cost of the repeats with Continue / Continue and don't pause again / Show the repeats.
+   On by default, thresholds in Settings > Appearance, logged to main.log, "paused: loop" in stm top.
+   Local only: no new network calls.
 2. Evidence on claims: when Claude says "fixed" or "faster", the panel shows whether a test or a
    measurement ran in that turn, marked observed, derived or inferred. The same marks on Savings and
    on the performance report. (Flameox)
