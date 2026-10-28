@@ -502,9 +502,12 @@ Taken from how Halo pairs a free community edition with paid editions.
   - Notes stay on the machine, in the project's `.supertokenman/notes/` (added to the repository's local
     git exclude), 64 KB each, names limited to letters, digits, dot, dash and underscore.
   - Panels in a sandbox or on another machine do not get the variables: the path would mean nothing there.
-  - Known gap: the older `stm send` from your own terminal (no panel identity) still sends at once, as
-    before; an agent that removes its panel variables and reads `~/.supertokenman/cli.json` could use it.
-    Closing it would change the existing command; left for a follow-up decision.
+  - The older `stm send` from your own terminal (no panel identity) now queues too: the message waits in
+    the composer, marked "From the command line", until the person presses send. `--now` sends at once and
+    waits for the reply, as before. Decided 2026-10-28 to close the gap where an agent that dropped its
+    panel variables could still submit without a person. `--now` is still reachable that way; it is a
+    deliberate, documented flag, not the default. The phone and opt-in MCP routes keep sending at once:
+    the phone is the person, and MCP sending is off unless the person turns it on.
 - **Packaged builds.** The launcher is written to the app's data folder (`stm-bin/stm`) and runs the app's
   own binary with `--stm-cli` and the script from `app.asar.unpacked/cli/`, so no system Node is needed and
   the RunAsNode fuse stays off.

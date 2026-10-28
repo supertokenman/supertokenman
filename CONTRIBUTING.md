@@ -29,6 +29,13 @@ Details: [app/README.md](app/README.md).
 - A change to README.md is carried to README.pt-BR.md and README.es.md.
 - Never commit secrets, tokens or real customer data. CI runs gitleaks over the whole history.
 
+## Releases
+
+Releases bundle work. A normal release goes out after 3 to 5 feature pull requests, or once a week,
+whichever comes first, with one changelog. A fix for security, privacy or network behavior, or for
+something broken for people already using the app, goes out on its own right away. Build and publish
+in one go, with no merges in between, so the tag matches the binaries.
+
 ## License of contributions
 
 The code is under [FSL-1.1-ALv2](LICENSE.md). By opening a pull request you agree that your contribution

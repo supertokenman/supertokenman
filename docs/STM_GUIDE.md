@@ -167,7 +167,7 @@ The Database screen (Cmd+K, Database) connects to Postgres (Supabase through its
 
 Cmd+K, Install the stm command puts stm in ~/.local/bin. It talks to the running app over a socket only you can reach, with a token in ~/.supertokenman/cli.json that only you can read. Add --json to any command for machine-readable output.
 - stm status, stm panels, stm spend: the app, its panels and today's spend.
-- stm send <panel> "text" waits for the reply (--no-wait returns at once); stm send new --cwd DIR --persona ID "text" opens a panel first. Messages go through the same budget brake and show in the panel as From command line.
+- stm send <panel> "text" puts the message, marked From the command line, in that panel's composer; the person presses send. stm send --now <panel> "text" sends at once and waits for the reply (--no-wait returns at once); stm send new --cwd DIR --persona ID "text" opens a panel first. Messages go through the same budget brake and show in the panel as From command line.
 - stm goal <panel> "condition", stm trace <panel>, stm memory "query".
 - stm db list, stm db <connection> "select ...": always read-only from here.
 - stm triggers, stm triggers run <id>.
