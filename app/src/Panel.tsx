@@ -487,7 +487,7 @@ export function Panel(props: {
     setTab('chat')
     void window.stm.runShell(sid, t)
   }
-  const answer = (id: string, allow: boolean, extra?: { command?: string; note?: string }) => {
+  const answer = (id: string, allow: boolean, extra?: { command?: string; note?: string; tool?: string }) => {
     dispatch({ kind: 'answered', id })
     setReply(null)
     void window.stm.answer(sid, id, allow, extra)
@@ -722,7 +722,7 @@ export function Panel(props: {
                     {reply.mode === 'edit' ? (
                       <button className="primary" disabled={!reply.text.trim()} onClick={() => answer(a.id, true, { command: reply.text })}>Run this instead</button>
                     ) : (
-                      <button className="primary" disabled={!reply.text.trim()} onClick={() => answer(a.id, false, { note: reply.text })}>Deny and send the note</button>
+                      <button className="primary" disabled={!reply.text.trim()} onClick={() => answer(a.id, false, { note: reply.text, tool: a.tool })}>Deny and send the note</button>
                     )}
                   </div>
                 </div>

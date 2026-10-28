@@ -31,10 +31,15 @@ describe('stm panel commands: arguments', () => {
     expect(() => panelRequest('whoami', [], {}, {})).toThrow(/inside a SuperTokenMan panel/)
     expect(() => panelRequest('spawn', [], {}, {})).toThrow(/STM_PANEL_ID is not set/)
     expect(panelRequest('send', ['s2', 'x'], {}, {})).toBeNull()
+    expect(panelRequest('read', ['s2'], {}, env)).toEqual({ cmd: 'pread', args: { me: 's1', key: 'k1', panel: 's2' } })
+    expect(() => panelRequest('read', [], {}, env)).toThrow(/Usage: stm read/)
+    expect(() => panelRequest('read', ['s2'], {}, {})).toThrow(/inside a SuperTokenMan panel/)
     expect(panelRequest('status', [], {}, env)).toBeNull()
   })
   it('prints a queued send as queued', () => {
     expect(panelText('psend', { panel: 's2', delivery: 'queued' })).toMatch(/Queued in s2's composer/)
+    expect(panelText('pread', { panel: 's2', name: 'api', busy: false, goal: 'tests pass', reply: 'Done.', at: Date.UTC(2026, 9, 28, 12, 5) })).toBe('s2  api\ngoal: tests pass\nlast reply (12:05 UTC):\nDone.')
+    expect(panelText('pread', { panel: 's2', name: 'api', busy: true, goal: null, reply: null, at: null })).toBe('s2  api  (working)\nNo reply yet.')
   })
 })
 

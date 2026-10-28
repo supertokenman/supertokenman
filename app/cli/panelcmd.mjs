@@ -9,10 +9,11 @@ export const PANEL_HELP = `From inside a panel (STM_PANEL_ID is set; "$STM_CLI" 
   stm send <panel> "text"            put a labelled message in that panel's composer; the person sends it
   stm note get|set|append <name> [text]
                                      the project's shared notes (.supertokenman/notes, 64 KB each)
+  stm read <panel>                   a linked panel's goal and last reply (read only, credentials masked)
   stm link <panel>                   record a link between this panel and another
   stm links                          the panels linked to this one`
 
-const ONLY_IN_PANEL = new Set(['whoami', 'spawn', 'note', 'link', 'links'])
+const ONLY_IN_PANEL = new Set(['whoami', 'spawn', 'note', 'link', 'links', 'read'])
 
 /**
  * The request a panel command sends to the app, or null when `cmd` is not a panel command here
@@ -27,6 +28,10 @@ export function panelRequest(cmd, rest, flags, env) {
   const id = { me, key: env.STM_PANEL_KEY ?? '' }
   if (cmd === 'whoami') return { cmd: 'whoami', args: id }
   if (cmd === 'links') return { cmd: 'plinks', args: id }
+  if (cmd === 'read') {
+    if (!rest[0]) throw new Error('Usage: stm read <panel>')
+    return { cmd: 'pread', args: { ...id, panel: rest[0] } }
+  }
   if (cmd === 'link') {
     if (!rest[0]) throw new Error('Usage: stm link <panel>')
     return { cmd: 'plink', args: { ...id, panel: rest[0] } }
@@ -58,6 +63,7 @@ export function panelText(cmd, d) {
   if (cmd === 'plinks') return d.length ? d.map((l) => `${l.panel}  ${l.name}${l.auto ? '  (auto-send)' : ''}`).join('\n') : 'No linked panels.'
   if (cmd === 'plink') return `Linked ${d.linked.join(' and ')}.`
   if (cmd === 'pspawn') return d.id
+  if (cmd === 'pread') return [`${d.panel}  ${d.name}${d.busy ? '  (working)' : ''}`, d.goal ? `goal: ${d.goal}` : '', d.reply ? `last reply${d.at ? ` (${new Date(d.at).toISOString().slice(11, 16)} UTC)` : ''}:\n${d.reply}` : 'No reply yet.'].filter(Boolean).join('\n')
   if (cmd === 'psend') return d.delivery === 'auto' ? `Sent to ${d.panel} (auto-send is on for this link).` : `Queued in ${d.panel}'s composer; the person there sends it.`
   if (cmd === 'pnote') return d.text !== undefined ? d.text : `Saved ${d.name} (${d.size} bytes).`
   return JSON.stringify(d)

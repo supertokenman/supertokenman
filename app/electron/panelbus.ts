@@ -53,6 +53,8 @@ export class RateLimit {
 
 export const DEFAULT_LIMITS = { sendPerMin: 10, spawnPerHour: 5 }
 export const NOTE_MAX = 64 * 1024
+/** how much of a linked panel's last reply stm read returns (the end, where the conclusion is) */
+export const READ_MAX = 8000
 const NOTE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
 
 export const notesDir = (project: string) => join(project, '.supertokenman', 'notes')

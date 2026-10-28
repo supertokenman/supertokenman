@@ -105,9 +105,10 @@ References to read before choosing (what they did, not claims about us):
      STM_SOCKET, STM_PANEL_ID and a per-panel key, and can run stm whoami, panels, spawn, send
      (queued in the other composer unless the person turns on auto for that link), note and
      link/links; rate-limited and logged. See "Using stm from inside a panel" in docs/STM_GUIDE.md.
+     Step done (2026-10-28): stm read <panel> gives a linked panel's goal and the end of its last
+     reply, credentials masked; unlinked panels cannot read each other.
      Step done (2026-10-28): each link counts today's cost, tokens and turns of the turns its messages
-     started, with a daily cap set from the window. Still to come: the canvas itself, and reading
-     another panel's summary (stm read, its own pull request).
+     started, with a daily cap set from the window. Still to come: the canvas itself.
 
 ## After v1.1: from the repo review of 2026-10-27
 
@@ -186,7 +187,8 @@ panel" (in progress):
    goes back to the agent. (AgentUse, ADK) Done: Edit and run on Bash cards (the edited command is
    checked and isolated like the original), and Deny with a note.
 8. Learning from reviews: rejections and comments become a proposed change to CLAUDE.md, a persona or
-   a trigger, applied only when the user accepts. (AgentUse)
+   a trigger, applied only when the user accepts. (AgentUse) Started: notes sent with Deny with a note become
+   proposed CLAUDE.local.md lines (stm learn, --pick applies). Personas and triggers: not yet.
 9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the
    project, versioned with git. (AgentUse, ADK, PraisonAI) Done for personas and triggers: stm files
    export / import (plan first, --yes applies, imported triggers arrive off). Saved teams: not yet.

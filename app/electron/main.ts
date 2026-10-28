@@ -219,6 +219,7 @@ import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
 import * as ME from '../shared/modeleval.js'
+import * as RN from '../shared/reviewnotes.js'
 import * as PF from '../shared/projectfiles.js'
 import { outside as outsideScope, type Scope } from '../shared/triggerscope.js'
 // what each trigger's panel may touch, set when its run begins
@@ -294,7 +295,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -675,6 +676,8 @@ const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; w
 const goals = new Map<string, Goal>()
 // the panel whose message is waiting in (or was sent from) each panel's composer, so its turn is charged to the link
 const linkTurn = new Map<string, string>()
+// each panel's last reply, for a linked panel's stm read
+const lastReply = new Map<string, { text: string; at: number }>()
 let turnSeq = 0
 // each panel's answer styles and project, for the cost band of each task
 const bandOf = new Map<string, { project: string; styles: StyleId[] }>()
@@ -1788,6 +1791,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     onSessionStart: (source) => snapshotFor(sid, projectName(home), source),
     // decisions Claude marked in a reply go to the project's note
     onReply: (text) => {
+      // what a linked panel can read with stm read: the last reply, credentials masked
+      lastReply.set(sid, { text: redact(text, vault?.all() ?? []).text.slice(-PB.READ_MAX), at: Date.now() })
       try {
         const n = rememberDecisions(vaultDir(), projectName(home), decisions(redact(text, vault.all()).text))
         if (n) send(sid, { kind: 'note', text: n === 1 ? 'Saved a decision to memory.' : `Saved ${n} decisions to memory.` })
@@ -2660,7 +2665,14 @@ ipcMain.handle('loop:quiet', (_e, sid: string) => {
   loopPaused.delete(String(sid))
   return Boolean(s)
 })
-ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean, extra?: { command?: unknown; note?: unknown }) => (phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow, { command: typeof extra?.command === 'string' ? extra.command : undefined, note: typeof extra?.note === 'string' ? extra.note : undefined })))
+// a note sent back with a denial is kept for the project, so stm learn can propose it as a rule
+function keepNote(sid: string, allow: boolean, extra?: { note?: unknown; tool?: unknown }) {
+  const text = typeof extra?.note === 'string' ? extra.note : ''
+  const project = panelDir(sid)
+  if (allow || !text.trim() || !project) return
+  saveSettings({ ...settings(), reviewNotes: RN.addLesson(settings().reviewNotes ?? [], { project, text: redact(text, vault?.all() ?? []).text, tool: typeof extra?.tool === 'string' ? extra.tool.slice(0, 60) : '', at: Date.now() }) })
+}
+ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean, extra?: { command?: unknown; note?: unknown; tool?: unknown }) => (keepNote(sid, allow, extra), phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow, { command: typeof extra?.command === 'string' ? extra.command : undefined, note: typeof extra?.note === 'string' ? extra.note : undefined })))
 // Phone companion: what the phone sees of each panel (pending asks, the last reply), and the server
 const phoneAsks = new Map<string, Map<string, { id: string; tool: string; summary: string; risk?: string }>>()
 const phoneReply = new Map<string, string>()
@@ -5856,6 +5868,22 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     logs().info('stm:files', `imported ${todo.length} from ${cwd}`)
     return { text: `${head}\n\nApplied ${todo.length}. Imported triggers are off: turn them on in Triggers after a look.` }
   },
+  // `stm learn`: this project's review notes as proposed lines for CLAUDE.local.md; pick writes them
+  learn: (a) => {
+    const cwd = String(a.cwd ?? '')
+    if (!cwd || !existsSync(cwd)) throw new Error('Run it from a project folder, or pass --cwd DIR.')
+    const ps = RN.proposals(settings().reviewNotes ?? [], cwd, Math.max(1, Number(a.min ?? 1) || 1))
+    if (!ps.length) return { text: 'No review notes for this project yet. They come from Deny with a note on a permission card.' }
+    const list = ps.map((p, i) => `  ${String(i + 1).padStart(2)}. ${p.line}  (${p.count}x${p.tools.filter(Boolean).length ? `, ${p.tools.filter(Boolean).join(', ')}` : ''})`).join('\n')
+    const pick = String(a.pick ?? '').split(',').map((x) => Number(x.trim())).filter((n) => n >= 1 && n <= ps.length)
+    if (!pick.length) return { text: `Proposed for ${join(cwd, 'CLAUDE.local.md')}:\n${list}\n\nNothing written. Pick lines with --pick 1,3.` }
+    const file = join(cwd, 'CLAUDE.local.md')
+    const old = existsSync(file) ? readFileSync(file, 'utf8') : ''
+    const add = RN.block(old, pick.map((n) => ps[n - 1]!.line), dayOf(new Date()))
+    if (add) writeFileSync(file, old + add)
+    logs().info('stm:learn', `${cwd}: ${pick.length} picked`)
+    return { text: add ? `Added ${add.split('\n').filter((l) => l.startsWith('- ')).length} line(s) to ${file}. Claude Code reads it at the next panel start.` : 'Those lines are already in CLAUDE.local.md.' }
+  },
   // `stm top`: one read-only snapshot of what the app already holds in memory; nothing is fetched for it
   top: () => {
     const day = dayOf(new Date())
@@ -6037,6 +6065,15 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     const other = panelId(a.panel)
     saveLinks(PB.addLink(links(), sid, other))
     return { linked: [sid, other] }
+  },
+  // a linked panel's last reply and goal, read only; unlinked panels cannot read each other
+  pread: (a) => {
+    const sid = asPanel(a, 'read', String(a.panel ?? ''))
+    const other = panelId(a.panel)
+    if (!PB.linkOf(links(), sid, other)) throw new Error(`Not linked to ${other}. The person links panels, or run: stm link ${other}`)
+    const r = lastReply.get(other)
+    logs().info('stm:panel', `${sid} read ${other} (${r?.text.length ?? 0} chars)`)
+    return { panel: other, name: panelName(other), goal: goals.get(other)?.text ?? null, busy: Boolean(sessions.get(other)?.busy), reply: r?.text ?? null, at: r?.at ?? null }
   },
   plinks: (a) => {
     const sid = asPanel(a, 'links')
