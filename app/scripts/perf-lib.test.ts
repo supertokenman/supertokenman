@@ -45,6 +45,19 @@ describe('Mac performance run', () => {
     expect(md).toContain('| launch.composerMs | 1000.00 | 1050.00 | +5% |')
   })
 
+  it('leaves out a section measured another way, and says so', () => {
+    const prev = { version: '0.1.11', results: { launch: { runs: 5, composerMs: 3000 }, size: { dmgMb: 100 } } }
+    const launch = { method: 2, runs: 7, coldRuns: 2, windowMs: 1500, windowMin: 1300, windowMax: 1900, composerMs: 2000, composerMin: 1800, composerMax: 2500, coldWindowMs: 5000, coldComposerMs: 7000 }
+    const cur = { version: '0.1.12', system: 'macOS', chip: 'c', runner: 'r', date: 'now', results: { ...full(), launch } }
+    expect(L.changedMethod(prev, cur)).toEqual(['launch'])
+    const c = L.compare(prev, cur)
+    expect(c.map((x: { key: string }) => x.key)).toEqual(['size.dmgMb'])
+    const md = L.render(cur, c, '0.1.11', prev)
+    expect(md).toContain('not compared: launch')
+    expect(md).toContain('| Launch to composer usable (median) | 2000 ms (1800 to 2500) |')
+    expect(md).toContain('5000 / 7000 ms')
+  })
+
   it('says when there is nothing to compare with', () => {
     const md = L.render({ version: '0.1.8', system: 'macOS', chip: 'c', runner: 'r', date: 'now', results: full() }, [], undefined)
     expect(md).toMatch(/Launch to composer usable \(median\) \| 900 ms/)
