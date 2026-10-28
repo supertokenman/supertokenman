@@ -29,6 +29,7 @@ The source for the Security & Privacy page. Last reviewed: 2026-10-27.
 |---|---|---|
 | Claude Code | Anthropic, through the `claude` CLI and your own login or key: your messages and Claude's replies, under Anthropic's terms and privacy policy | when a panel runs |
 | Claude Code's own usage data and error reports | Anthropic | off: the app sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` for its panels; on with Appearance > Let Claude Code send usage data to Anthropic, or with your own value of that variable |
+| stm from inside a panel (`stm whoami`, `spawn`, `send`, `note`, `link`) | none: the app's local socket only (`cli.sock` in the app's data folder, or a named pipe on Windows); no new hosts | when a panel's Claude Code runs it |
 | Local checks | none (git, `docker ps`, `docker stats`, `openshell --version`, `officecli --version` on this Mac) | at launch and on timers |
 | Update check (released builds) | GitHub Releases of `supertokenman/supertokenman` (`latest-mac.yml`): github.com, release-assets.githubusercontent.com, objects.githubusercontent.com | at launch and every 6 hours; off with Appearance > Check for updates automatically; downloads only when you say Install |
 | Source update check | your git remote (`git fetch`) | every 6 hours, only in an app installed from a source checkout |

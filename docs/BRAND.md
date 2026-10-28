@@ -482,6 +482,33 @@ Taken from how Halo pairs a free community edition with paid editions.
     (and `pickFolder` when no picker is mounted). The system save sheet is no longer used.
   - Scrollbars were already ours.
 
+## stm from inside a panel (decided 2026-10-28)
+
+- **What.** A panel's Claude Code can drive the app through `stm`: `whoami`, `panels`, `spawn`, `send`,
+  `note`, `link`, `links`. First step of the v1.2 "Agents working together" item; the canvas comes later.
+- **Where the idea came from.** A competitor's public behaviour: its CLI is made available in each agent
+  terminal, with environment variables for the CLI's path, the socket and the terminal's id. We took only
+  that architecture idea. No code, names, wording or UI were copied; our variables are `STM_CLI`,
+  `STM_SOCKET`, `STM_PANEL_ID` and `STM_PANEL_KEY`, and our commands keep stm's own vocabulary.
+- **Safety decisions.**
+  - A panel can only act as itself: besides its id, each panel gets a random key only its own Claude Code
+    process sees; the app refuses an unknown id or a key that does not match.
+  - `stm send` never submits by default. The labelled message ("From panel <name>: ...") waits in the
+    receiving composer and the person presses send. Auto-send is per link, off by default, stored in the
+    app settings and switched only from the window (the "linked:" chip in the panel header), never from
+    stm. Auto-sent text goes through the same budget brake and tool approvals as typed text.
+  - Caps per panel: 10 sends a minute and 5 spawns an hour by default (`stmLimits` in the settings file);
+    every action and refusal goes to the app's log.
+  - Notes stay on the machine, in the project's `.supertokenman/notes/` (added to the repository's local
+    git exclude), 64 KB each, names limited to letters, digits, dot, dash and underscore.
+  - Panels in a sandbox or on another machine do not get the variables: the path would mean nothing there.
+  - Known gap: the older `stm send` from your own terminal (no panel identity) still sends at once, as
+    before; an agent that removes its panel variables and reads `~/.supertokenman/cli.json` could use it.
+    Closing it would change the existing command; left for a follow-up decision.
+- **Packaged builds.** The launcher is written to the app's data folder (`stm-bin/stm`) and runs the app's
+  own binary with `--stm-cli` and the script from `app.asar.unpacked/cli/`, so no system Node is needed and
+  the RunAsNode fuse stays off.
+
 ## Video transcripts (decided 2026-10-28)
 
 Transcripts of videos as text, for Claude and for the social pack (Research > Last 30 days). The idea

@@ -851,6 +851,20 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('deploy:event', l)
     },
   },
+  panelBus: {
+    onInbox: (fn) => {
+      const l = (_e, sid, text, sent) => fn(sid, text, sent)
+      ipcRenderer.on('panel:inbox', l)
+      return () => ipcRenderer.removeListener('panel:inbox', l)
+    },
+    links: () => ipcRenderer.invoke('panel:links'),
+    onLinks: (fn) => {
+      const l = (_e, v) => fn(v)
+      ipcRenderer.on('panel:links', l)
+      return () => ipcRenderer.removeListener('panel:links', l)
+    },
+    setAuto: (a, b, on) => ipcRenderer.invoke('panel:linkAuto', a, b, on),
+  },
   stmCli: {
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)

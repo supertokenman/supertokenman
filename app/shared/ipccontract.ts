@@ -36,6 +36,7 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'msgf:test': z.tuple([text(20_000), z.enum(['inlet', 'outlet']), text(1_000_000), z.record(z.string(), z.unknown())]),
   'phone:send': z.tuple([z.boolean()]),
   'mcpsrv:send': z.tuple([z.boolean()]),
+  'panel:linkAuto': z.tuple([sid, sid, z.boolean()]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
 }
 

@@ -216,6 +216,22 @@ export const MANUAL: Section[] = [
 - stm top --once --json: one snapshot for scripts, {ok, data: {at, version, currency, today {usd, amount}, fiveHour {percentUsed, resetsAt} or null, approvalsWaiting, ciConnected, panels [{id, project, cwd, model, state, contextTokens, contextPercent, today {usd, amount}, approvals [{tool, summary}], ci {repo, branch, status, conclusion, workflow} or null}]}}. Exit 0 when it worked, 2 when the app is not running.`,
   },
   {
+    id: 'stm-in-panel',
+    title: 'Using stm from inside a panel',
+    keys: 'stm panel whoami spawn send note link links agents together inside claude code env STM_CLI STM_PANEL_ID auto',
+    body: `Claude Code in a panel can use stm from its Bash, so panels can work together. When the app starts a panel's Claude Code it sets, for that process only: STM_CLI (the full path of a small stm launcher that runs with the app's own binary, no Node needed), STM_SOCKET (the app's socket), STM_PANEL_ID (this panel's id) and STM_PANEL_KEY (a secret only this panel gets). The launcher's folder goes first on PATH, so plain stm works; if a shell resets PATH, call "$STM_CLI" instead. Panels in a sandbox or on another machine do not get it.
+- stm whoami: this panel's id, project and model.
+- stm panels: the open panels (--json for scripts).
+- stm spawn [--cwd DIR] [--model ID] [--prompt "text"]: opens a new panel, linked to this one, and prints its id. --cwd is relative to this panel's folder; the model must be one the app lists. The prompt is queued in the new panel like any message from a panel.
+- stm send <panel> "text": puts "From panel <name>: text" in the front of that panel's composer and a note in the panel. It is never sent by itself: the person there reads it and presses send. Only when the person turns on auto-send for that link (click the "linked:" chip in the panel header) is it sent at once, through the same budget brake and the same tool approvals as typed text. An agent cannot turn auto-send on.
+- stm note get|set|append <name> [text]: notes shared by the panels of one project folder, kept on this machine in .supertokenman/notes/<name>.md (added to the repository's local git exclude), up to 64 KB each.
+- stm link <panel>, stm links: record and list links between panels. Data only for now: the header shows them, and a later canvas will draw them.
+- A panel can only act as itself: the app checks STM_PANEL_ID against STM_PANEL_KEY and refuses an unknown id or a key from another panel.
+- Limits per panel: stm send 10 a minute, stm spawn 5 an hour; over that, the command fails and says when to try again. They can be changed in the settings file (stmLimits: sendPerMin, spawnPerHour). Every action, and every refusal, is written to the app's log (Diagnostics).
+- Nothing here uses the network: it is the same local socket as the rest of stm.
+- For a project's CLAUDE.md: "Other SuperTokenMan panels can help. Run stm whoami to see who you are, stm spawn --prompt to hand off a task, stm send <panel> to message one, and stm note append <name> to leave shared notes. Use "$STM_CLI" if stm is not on PATH."`,
+  },
+  {
     id: 'deploys',
     title: 'Deploys: Coolify with checks and rollback, Supabase advisors',
     keys: 'deploy coolify rollback roll back health check production release supabase advisors security performance lint rls policy',

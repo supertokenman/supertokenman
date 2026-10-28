@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 import { connect } from 'node:net'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { PANEL_HELP, panelRequest, panelText } from './panelcmd.mjs'
 
 const HELP = `stm, SuperTokenMan from the command line (the app must be running)
 
@@ -48,7 +49,7 @@ const die = (msg, code = 1) => {
   process.exit(code)
 }
 if (flags.help || flags.h || !pos.length || pos[0] === 'help') {
-  process.stdout.write(`${HELP}\n`)
+  process.stdout.write(`${HELP}\n\n${PANEL_HELP}\n`)
   process.exit(0)
 }
 
@@ -61,7 +62,7 @@ try {
 
 function call(cmd, args) {
   return new Promise((ok, fail) => {
-    const s = connect(info.socket)
+    const s = connect(process.env.STM_SOCKET || info.socket)
     let buf = ''
     s.setEncoding('utf8')
     s.on('connect', () => s.write(`${JSON.stringify({ token: info.token, cmd, args })}\n`))
@@ -150,8 +151,16 @@ function mcpServe() {
   })
 }
 
+let panelReq = null
 try {
-  if (cmd === 'top') {
+  panelReq = panelRequest(cmd, rest, flags, process.env)
+} catch (e) {
+  die(e.message)
+}
+
+try {
+  if (panelReq) print(await call(panelReq.cmd, panelReq.args), (d) => panelText(panelReq.cmd, d))
+  else if (cmd === 'top') {
     const { runTop } = await import('./top.mjs')
     let code
     try {
