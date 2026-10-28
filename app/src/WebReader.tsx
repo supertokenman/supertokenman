@@ -115,7 +115,7 @@ export function WebReaderSheet(props: { onClose: () => void }) {
                   <code>{s.prefix}</code>
                   <span className="faint">{s.fields.map((f) => f.name).join(', ')} · run {s.runs} time{s.runs === 1 ? '' : 's'}</span>
                   <span className="spacer-flex" />
-                  <button className="ghost small" disabled={!url.trim().startsWith(s.prefix)} title={url.trim().startsWith(s.prefix) ? `Run on ${url.trim()}` : `Put a page under ${s.prefix} in Try it to run it`} onClick={() => void window.stm.reader.extract(url.trim(), s.name).then((r) => (setRan({ ...ran, [s.name]: r.error ?? JSON.stringify(r.items, null, 1) }), load()), (e) => setErr(clean(e)))}>Run</button>
+                  <button className="ghost small" disabled={!url.trim().startsWith(s.prefix)} data-tip={url.trim().startsWith(s.prefix) ? `Run on ${url.trim()}` : `Put a page under ${s.prefix} in Try it to run it`} onClick={() => void window.stm.reader.extract(url.trim(), s.name).then((r) => (setRan({ ...ran, [s.name]: r.error ?? JSON.stringify(r.items, null, 1) }), load()), (e) => setErr(clean(e)))}>Run</button>
                   <RowActs><RowAct label={`Forget ${s.name}`} icon={<IconTrash />} danger onClick={() => save(window.stm.reader.dropSchema(s.name))} /></RowActs>
                 </div>
                 {ran[s.name] && <pre className="tr-text">{ran[s.name]}</pre>}

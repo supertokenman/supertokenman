@@ -108,7 +108,7 @@ function CodeBlock({ info, text }: { info: string; text: string }) {
   return (
     <div className="md-pre">
       <div className="md-head">
-        {file ? <span className="md-file" title={file}>{file}</span> : <span className="md-lang">{lang || 'code'}</span>}
+        {file ? <span className="md-file" data-tip={file}>{file}</span> : <span className="md-lang">{lang || 'code'}</span>}
         {file && lang && <span className="md-lang">{lang}</span>}
         <button className={`md-copy ${copied ? 'done' : ''}`} onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
       </div>

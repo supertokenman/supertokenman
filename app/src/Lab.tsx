@@ -12,6 +12,7 @@ import { byStyles, versusNone, type Band } from '../shared/bands'
 import { pct, rougeL } from '../shared/rouge'
 import { clean } from './errors'
 import './bridge'
+import { Select } from './ui'
 
 type Tab = 'versions' | 'evals' | 'arena' | 'choices' | 'board' | 'memory' | 'learn'
 
@@ -248,7 +249,7 @@ function Arena(props: { money: (usd: number) => string; fail: (e: unknown) => vo
           </div>
           {out && (
             <div className="sbx-actions">
-              {'text' in out.local && 'text' in out.claude && <span className="faint" title="ROUGE-L between the two answers: how much of their wording they share">{pct(rougeL(out.local.text, out.claude.text).f)}% alike</span>}
+              {'text' in out.local && 'text' in out.claude && <span className="faint" data-tip="ROUGE-L between the two answers: how much of their wording they share">{pct(rougeL(out.local.text, out.claude.text).f)}% alike</span>}
               <span className="spacer-flex" />
               <span className="faint">{voted ? 'Counted.' : `Which was better for ${KIND_LABEL[out.kind].toLowerCase()}?`}</span>
               <button className="ghost small" disabled={voted} onClick={() => void pick('local')}>Local</button>
@@ -408,10 +409,10 @@ function MemoryLab(props: { cwd?: string; fail: (e: unknown) => void }) {
       <div className="faint">A local embedding model turns each memory entry into a vector, so memory_index also finds entries that mean the same thing in other words. On this machine, free; only changed entries are redone.</div>
       <div className="lab-row">
         <label htmlFor="lab-embed" className="faint">Embedding model</label>
-        <select id="lab-embed" value={st?.model ?? ''} onChange={(e) => void window.stm.vec.model(e.target.value || null).then(() => window.stm.vec.status(cwd).then(setSt))}>
+        <Select id="lab-embed" value={st?.model ?? ''} onChange={(e) => void window.stm.vec.model(e.target.value || null).then(() => window.stm.vec.status(cwd).then(setSt))}>
           <option value="">Off (words only)</option>
           {st?.models.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
+        </Select>
         <span className="faint">{st?.model ? `${st.size} of ${st.total} entries indexed` : 'Pull nomic-embed-text in Local model, then pick it here.'}</span>
         <span className="spacer-flex" />
         <button className="primary small" disabled={!st?.model || !!busy} onClick={() => void go('build', async () => { await window.stm.vec.build(cwd); setSt(await window.stm.vec.status(cwd)) })}>{busy === 'build' ? 'Indexing…' : 'Bring the index up to date'}</button>

@@ -55,7 +55,7 @@ export function RemoteChip(props: { sid: string; remote: Remote; onPreview: (url
       <button
         className="remote-chip"
         aria-expanded={open}
-        title={`Claude Code, git and the terminal of this panel run on ${remote.host} in ${remote.dir}${remote.branch ? `, on branch ${remote.branch}` : ''}.`}
+        data-tip={`Claude Code, git and the terminal of this panel run on ${remote.host} in ${remote.dir}${remote.branch ? `, on branch ${remote.branch}` : ''}.`}
         onClick={(e) => {
           const r = e.currentTarget.getBoundingClientRect()
           setAt({ x: Math.min(r.left, window.innerWidth - 376), y: r.bottom + 8 })

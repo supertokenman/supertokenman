@@ -4,6 +4,7 @@ import { chartOf, HOSTS, PRESETS, rolloutOf, type Flag, type Result } from '../s
 import { clean } from './errors'
 import { Chart } from './Chart'
 import './bridge'
+import { NumberField, Select } from './ui'
 
 const close = (
   <IconClose />
@@ -49,17 +50,17 @@ function Setup(props: { st: Awaited<ReturnType<typeof window.stm.ph.state>>; don
     <div className="dsg-body">
       <div className="faint">Reads your PostHog with a personal API key kept in the vault as POSTHOG_PERSONAL_API_KEY (PostHog: Settings, Personal API keys; read scopes, plus feature flag write if you want to change flags here). {props.st.hasKey ? 'The key is in the vault.' : 'The key is not in the vault yet.'}</div>
       <div className="ob-row">
-        <select value={Object.values(HOSTS).includes(host as never) ? host : 'own'} onChange={(e) => e.target.value !== 'own' && setHost(e.target.value)}>
+        <Select value={Object.values(HOSTS).includes(host as never) ? host : 'own'} onChange={(e) => e.target.value !== 'own' && setHost(e.target.value)}>
           <option value={HOSTS.us}>PostHog Cloud US</option>
           <option value={HOSTS.eu}>PostHog Cloud EU</option>
           <option value="own">Self-hosted</option>
-        </select>
+        </Select>
         <input className="ob-grow" value={host} onChange={(e) => setHost(e.target.value)} aria-label="Host" />
         <button className="primary" onClick={connect}>Connect</button>
       </div>
       {projects && (
         <div className="ob-row">
-          <select className="ob-grow" value={pid ?? ''} onChange={(e) => setPid(Number(e.target.value))}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+          <Select className="ob-grow" value={pid ?? ''} onChange={(e) => setPid(Number(e.target.value))}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select>
           <button className="primary" disabled={pid == null} onClick={() => void window.stm.ph.setConn({ host, projectId: pid }).then(props.done, (e) => setErr(clean(e)))}>Use this project</button>
         </div>
       )}
@@ -131,7 +132,7 @@ function Flags() {
             <span className="ph-flag-name"><b>{f.key}</b><span className="faint">{f.name || ''}</span></span>
             <span className={`mn-state ${f.active ? 'up' : ''}`}>{rolloutOf(f)}</span>
             <span className="ph-flag-act">
-              <input className="mn-hours" type="number" min={0} max={100} placeholder="%" disabled={/conditions/.test(rolloutOf(f))} title={/conditions/.test(rolloutOf(f)) ? 'This flag has conditions; change its rollout in PostHog.' : undefined} value={pct[f.id] ?? ''} onChange={(e) => setPct({ ...pct, [f.id]: e.target.value })} aria-label={`Rollout for ${f.key}`} />
+              <NumberField className="mn-hours" min={0} max={100} placeholder="%" disabled={/conditions/.test(rolloutOf(f))} data-tip={/conditions/.test(rolloutOf(f)) ? 'This flag has conditions; change its rollout in PostHog.' : undefined} value={pct[f.id] ?? ''} onChange={(e) => setPct({ ...pct, [f.id]: e.target.value })} aria-label={`Rollout for ${f.key}`} />
               <button disabled={pct[f.id] == null || pct[f.id] === ''} onClick={() => setConfirm({ f, change: { rollout: Number(pct[f.id]), active: true }, text: `roll out to ${Number(pct[f.id])}%` })}>Set</button>
               <button className="ph-toggle" onClick={() => setConfirm({ f, change: { active: !f.active }, text: f.active ? 'turn off' : 'turn on' })}>{f.active ? 'Turn off' : 'Turn on'}</button>
             </span>

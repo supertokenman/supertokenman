@@ -279,12 +279,16 @@ Anthropic API (`app/scripts/proof-mock-api.mjs`), so there is no key and no netw
 What it records, against the v1.1 budgets in docs/ROADMAP.md:
 
 - Launch to window shown, and to the composer usable (enabled and taking focus), from process spawn:
-  the median of 5 launches. Polled every 50 ms, so a number can be up to 50 ms late.
+  two cold launches recorded on their own, then the median, minimum and maximum of 7 more (since
+  0.1.12; before that, the median of 5 including the cold ones). Polled every 50 ms, so a number can be
+  up to 50 ms late.
 - Idle for 30 s with 1 panel, then with 4: layouts and style recalcs per second (CDP
   `Performance.getMetrics`), CPU and memory of the app and every process under it (`ps` once a
   second), and memory per added panel.
-- Typing 200 characters into the composer: the longest frame and the frames over 16 ms
-  (`requestAnimationFrame` gaps), and the longest input to paint (Event Timing).
+- Typing 200 characters into the composer, three rounds (since 0.1.12; one before): the median round's
+  longest frame and frames over 16 and 33 ms (`requestAnimationFrame` gaps), the worst round's longest
+  frame, and the longest input to paint (Event Timing). A section measured differently from the previous
+  release is left out of the comparison, and PERF.md says so.
 - Sizes: renderer JS and CSS in `app.asar`, gzip of the files `index.html` loads at start, the .app
   on disk and the dmg.
 
@@ -294,3 +298,56 @@ release's json and adds a comparison; changes over 10% are marked. Nothing fails
 budgets come once there are a few releases of numbers. A CI runner is a shared VM, so read single
 changes with care; a trend over releases says more.
 
+
+## Launch regression (2026-10-28)
+
+perf-mac on the signed 0.1.11 showed launch to window shown 2106 ms (0.1.10) to 2948 ms (+40%),
+composer usable 2944 to 3052 ms, and typing's longest frame 63 to 109 ms. Nothing in the app got slower;
+the measure did.
+
+**Cause: the median of 5 launches included the cold launches.** The per-launch lines in the perf-mac
+logs (window / composer, ms):
+
+| Release | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| 0.1.8 | 4680 / 6516 | 4636 / 5741 | 1327 / 2958 | 1167 / 1682 | 1184 / 1647 |
+| 0.1.9 | 5018 / 6713 | 4869 / 6143 | 1290 / 1961 | 1215 / 2317 | 1397 / 2385 |
+| 0.1.10 | 6561 / 9315 | 2349 / 3001 | 2106 / 2944 | 1778 / 2238 | 1290 / 2121 |
+| 0.1.11 | 5104 / 7239 | 5443 / 8356 | 2948 / 3052 | 1697 / 2254 | 1399 / 1912 |
+
+The first one or two launches of a just-installed signed app on a fresh runner take 4.6 to 6.6 s (the
+system's first checks of the bundle and a cold disk cache), then it settles. With five runs the median is
+run 3, which is wherever the warm-up happened to end: 0.1.10 had one cold run, 0.1.11 had two, so the
+median moved from a warm run to the tail of the warm-up. The warm runs 4 and 5 are the same in both
+(1778 / 1290 against 1697 / 1399 ms window; 2238 / 2121 against 2254 / 1912 ms composer).
+
+Checked and ruled out, Linux under xvfb:
+
+- Packaged builds (`electron-builder --linux dir`) of v0.1.10 and of main (0.1.11's launch path; PR 50
+  and 52 do not touch it), `perf-launch.mjs --runs 7 --app <binary>`, alternated twice: window 876 / 1014
+  ms against 966 / 851 ms, composer 1256 / 1131 ms against 1123 / 1131 ms. No difference.
+- The splash does not hold the composer: on every launch the composer is usable the same poll it first
+  exists (about 1.1 to 1.4 s), well before the full film ends (2 s); the film is `pointer-events: none`
+  and nothing disables the textarea. "Window shown" is `document.visibilityState`, which the splash does
+  not touch.
+- The main process does not wait for the shell PATH before the window: STM_PERF marks put
+  "window created" at about 430 to 610 ms and "panel path and office checked" within 1 ms of
+  "panel asked"; between 0.1.10 and 0.1.11 `electron/main.ts` changed by one line (prices).
+- Typing, `perf-typing.mjs --panels 4 --throttle 4`, three runs each: per key 1.02 layouts, 2.12 style
+  recalcs and 3.7 to 4.9 ms of script on both; longest frames 17 / 33 / 33 ms (0.1.10) and 17 / 17 /
+  50 ms (main). The same work per key; the longest frame of one run is a single sample of a shared
+  machine (0.1.9 had 17 frames over 33 ms, 0.1.10 13, 0.1.11 21).
+
+**Fix: the measure.** perf-mac now records two cold launches on their own (shown, never dropped), then
+takes the median, minimum and maximum of 7 more; typing runs three rounds and shows the median round
+and the worst round's longest frame. A section measured differently from the previous release is left
+out of the comparison and PERF.md names it, so 0.1.12 will not show a false improvement against 0.1.11.
+No app code changed.
+
+**Launch guard in CI:** `xvfb-run -a node scripts/perf-launch.mjs --runs 5 --max-composer-ms 4000`
+(unpackaged; here the median is about 1.05 s, min 1.0, max 1.1 s). It is loose on purpose for a shared
+runner: it catches a launch that starts waiting on something new, not a few percent.
+
+Only perf-mac can confirm: the macOS numbers with the new method (0.1.12's run), whether the cold
+launches are Gatekeeper's first check or the disk cache, and whether macOS on a virtual M1 has anything
+of its own in the 1.3 to 1.7 s warm launch.

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { failureReport, feed, type Job, type Run } from '../shared/act'
+import { Checkbox } from './ui'
 
 /** Phase 110: a GitHub Actions job run on this machine with act, before the push. */
 export function RunCi(props: { cwd?: string; sid?: string; onClose: () => void }) {
@@ -40,7 +41,7 @@ export function RunCi(props: { cwd?: string; sid?: string; onClose: () => void }
             {jobs.map((j) => <button key={`${j.file}#${j.id}`} className={`ib-filter ${job === j ? 'on' : ''}`} onClick={() => setJob(j)}><b>{j.name}</b><span className="faint">{j.workflow} · {j.file.split('/').pop()}</span></button>)}
             <div className="chart-name">Secrets for this run</div>
             <div className="faint">None go unless ticked. Ticked ones are read from the vault now, written to a file only act reads, and the file is removed when it ends.</div>
-            {secrets.map((n) => <label key={n} className="ca-toggle"><input type="checkbox" checked={ticked.has(n)} onChange={(e) => setTicked((t) => { const x = new Set(t); if (e.target.checked) x.add(n); else x.delete(n); return x })} /><code>{n}</code></label>)}
+            {secrets.map((n) => <label key={n} className="ca-toggle"><Checkbox checked={ticked.has(n)} onChange={(e) => setTicked((t) => { const x = new Set(t); if (e.target.checked) x.add(n); else x.delete(n); return x })} /><code>{n}</code></label>)}
           </aside>
           <main className="tr-main">
             <div className="ob-row">

@@ -9,7 +9,7 @@ import { clean } from './errors'
 export function RiskChip(props: { risk: Risk }) {
   if (props.risk.level === 'safe') return null
   return (
-    <span className={`risk-chip ${props.risk.level}`} title={props.risk.why}>
+    <span className={`risk-chip ${props.risk.level}`} data-tip={props.risk.why}>
       <StateMark state={props.risk.level === 'blocked' ? 'down' : 'warn'} label={props.risk.level === 'blocked' ? 'Dangerous' : 'Asks'} />
       {props.risk.level === 'blocked' ? 'Dangerous' : 'Careful'}: {props.risk.why}
     </span>
@@ -84,8 +84,8 @@ export function CmdBar(props: { sid: string; history: HistItem[]; onClose: () =>
             }}
           />
         </div>
-        <button className="ghost small" disabled={busy || !text.trim()} onClick={() => void write()} title="The local model turns your words into one command (free)">{busy ? <><StateMark state="busy" label="Writing" /> Writing…</> : 'Write it'}</button>
-        <button className="ghost small" disabled={!text.trim()} onClick={() => void run(false)} title="Types it into the terminal without running it (Alt+Enter)">Insert</button>
+        <button className="ghost small" disabled={busy || !text.trim()} onClick={() => void write()} data-tip="The local model turns your words into one command (free)">{busy ? <><StateMark state="busy" label="Writing" /> Writing…</> : 'Write it'}</button>
+        <button className="ghost small" disabled={!text.trim()} onClick={() => void run(false)} data-tip="Types it into the terminal without running it (Alt+Enter)">Insert</button>
         <button className="primary small" disabled={!text.trim()} onClick={() => void run(true)}>Run</button>
       </div>
       {(risk.level !== 'safe' || err) && (
@@ -104,7 +104,7 @@ export function CmdBar(props: { sid: string; history: HistItem[]; onClose: () =>
       {recipes.length > 0 && !RECIPE_HIT.has(text) && (
         <div className="cmdbar-found cmdbar-recipes" role="listbox" aria-label="Recipes">
           {recipes.map((r) => (
-            <button key={r.cmd} role="option" aria-selected={false} onClick={() => { RECIPE_HIT.add(r.cmd); setText(r.cmd); input.current?.focus() }} title={`${r.ask}. Goes into the bar; nothing runs until you press Run.`}>
+            <button key={r.cmd} role="option" aria-selected={false} onClick={() => { RECIPE_HIT.add(r.cmd); setText(r.cmd); input.current?.focus() }} data-tip={`${r.ask}. Goes into the bar; nothing runs until you press Run.`}>
               <span className="cmdbar-ask">{r.ask}</span>
               <code>{r.cmd}</code>
               {riskOf(r.cmd).level === 'ask' && <span className="pt-kind cmdbar-careful">careful</span>}

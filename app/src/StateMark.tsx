@@ -9,7 +9,7 @@ const DEFAULT_SHAPE: Record<MarkState, MarkShape> = { up: 'circle', busy: 'trian
 export function StateMark(props: { state: MarkState; label: string; shape?: MarkShape; size?: 'sm' | 'md' }) {
   const shape = props.shape ?? DEFAULT_SHAPE[props.state]
   return (
-    <span className={`sm-mark ${props.state} ${props.size ?? 'sm'}`} role="img" aria-label={props.label} title={props.label}>
+    <span className={`sm-mark ${props.state} ${props.size ?? 'sm'}`} role="img" aria-label={props.label} data-tip={props.label}>
       <svg viewBox="0 0 10 10" aria-hidden>
         {shape === 'square' && <rect x="1" y="1" width="8" height="8" />}
         {shape === 'circle' && <circle cx="5" cy="5" r="4" />}

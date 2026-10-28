@@ -209,6 +209,7 @@ import { fixMessage, type Kind as ScanKind } from '../shared/trivy.js'
 import * as WB from '../shared/workbench.js'
 import { parseEpModel, PRESETS, SHAPES, type VllmArgs } from '../shared/modelserver.js'
 import { addTurn, contextParts, type ContextPart, type TraceTurn } from '../shared/trace.js'
+import { modelLabel } from '../shared/models.js'
 import { pushVersion, type Version } from '../shared/versions.js'
 import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
@@ -1006,10 +1007,10 @@ ipcMain.handle('personas:delete', (_e, id: string) => {
   saveSettings({ ...settings(), personas: personas().filter((x) => x.id !== id) })
   return personas()
 })
-ipcMain.handle('personas:export', async (_e, id: string) => {
+ipcMain.handle('personas:export', async (_e, id: string, dir?: unknown) => {
   const p = personas().find((x) => x.id === id)
   if (!p || !win) return null
-  const r = await dialog.showSaveDialog(win, { defaultPath: `${p.id}.persona.md`, filters: [{ name: 'Persona', extensions: ['md'] }] })
+  const r = savePick(dir, `${p.id}.persona.md`)
   if (r.canceled || !r.filePath) return null
   writeFileSync(r.filePath, toMarkdown(p))
   return r.filePath
@@ -1388,8 +1389,8 @@ ipcMain.handle('pdf:config', (_e, url?: string) => {
   }
   return { url: settings().stirlingUrl ?? '', hasKey: Boolean(serviceVault().get('STIRLING_API_KEY')), ops: STIR.OPS.map(({ id, name, many }) => ({ id, name, many: Boolean(many) })) }
 })
-ipcMain.handle('pdf:pick', async () => {
-  const fs = process.env.STM_TEST_SECRETS && process.env.STM_TEST_PDFS ? process.env.STM_TEST_PDFS.split(',') : win ? (await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'PDF', extensions: ['pdf'] }] })).filePaths : []
+ipcMain.handle('pdf:pick', async (_e, chosen?: unknown) => {
+  const fs = process.env.STM_TEST_SECRETS && process.env.STM_TEST_PDFS ? process.env.STM_TEST_PDFS.split(',') : win ? (await openPick(chosen, ['pdf'], () => dialog.showOpenDialog(win!, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'PDF', extensions: ['pdf'] }] }))).filePaths : []
   for (const f of fs) pdfPicked.add(f)
   return fs.map((f) => ({ file: f, bytes: existsSync(f) ? statSync(f).size : 0 }))
 })
@@ -1436,10 +1437,10 @@ ipcMain.handle('fmv:set', (_e, rel: string, key: string, value: string, mtime: n
   writeAtomic(file, FMV.setField(readFileSync(file, 'utf8'), String(key), String(value)))
   return statSync(file).mtimeMs
 })
-ipcMain.handle('enex:import', async () => {
+ipcMain.handle('enex:import', async (_e, chosen?: unknown) => {
   const v = vaultDir()
   if (!v) throw new Error('Set up the vault first.')
-  const f = process.env.STM_TEST_SECRETS && process.env.STM_TEST_ENEX ? process.env.STM_TEST_ENEX : win ? (await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Evernote export', extensions: ['enex'] }] })).filePaths[0] : undefined
+  const f = process.env.STM_TEST_SECRETS && process.env.STM_TEST_ENEX ? process.env.STM_TEST_ENEX : win ? (await openPick(chosen, ['enex'], () => dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Evernote export', extensions: ['enex'] }] }))).filePaths[0] : undefined
   if (!f) return null
   const notes = ENEX.parseEnex(readFileSync(f, 'utf8'))
   const dir = join(v, 'Imported', ENEX.safeName(basename(f, extname(f))))
@@ -1465,15 +1466,15 @@ ipcMain.handle('design:write', (_e, cwd: string, text: string, replace: boolean)
   writeAtomic(file, String(text ?? '').slice(0, 200_000))
   return { file, exists: false, written: true }
 })
-ipcMain.handle('html:pick', async () => {
-  const f = process.env.STM_TEST_SECRETS && process.env.STM_TEST_HTML ? process.env.STM_TEST_HTML : win ? (await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'HTML', extensions: ['html', 'htm'] }] })).filePaths[0] : undefined
+ipcMain.handle('html:pick', async (_e, chosen?: unknown) => {
+  const f = process.env.STM_TEST_SECRETS && process.env.STM_TEST_HTML ? process.env.STM_TEST_HTML : win ? (await openPick(chosen, ['html', 'htm'], () => dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'HTML', extensions: ['html', 'htm'] }] }))).filePaths[0] : undefined
   if (!f || !/\.html?$/i.test(f)) return null
   return { file: f, html: readFileSync(f, 'utf8').slice(0, 5_000_000) }
 })
 // Phase 101: images in a Markdown file, published to the bucket only when picked one by one
 const mdPicked = new Set<string>()
-ipcMain.handle('mdimg:pick', async () => {
-  const f = process.env.STM_TEST_SECRETS && process.env.STM_TEST_MD ? process.env.STM_TEST_MD : win ? (await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }] })).filePaths[0] : undefined
+ipcMain.handle('mdimg:pick', async (_e, chosen?: unknown) => {
+  const f = process.env.STM_TEST_SECRETS && process.env.STM_TEST_MD ? process.env.STM_TEST_MD : win ? (await openPick(chosen, ['md', 'markdown'], () => dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }] }))).filePaths[0] : undefined
   if (!f) return null
   mdPicked.add(f)
   return f
@@ -2557,7 +2558,36 @@ ipcMain.handle('files:pick', async () => {
 })
 // the in-app file picker (src/FilePicker.tsx): the main process reads the disk, the window only gets listings
 const pickPaths = (paths: unknown) => (Array.isArray(paths) ? paths : []).map(cleanPath).filter((p): p is string => !!p)
+/**
+ * Opening files: what the in-app picker chose (src/FilePicker.tsx), of the kinds asked for; the system
+ * dialog only when the window asked for it ("Use Finder...", chosen undefined). An empty list is a cancel.
+ */
+const openPick = async (chosen: unknown, exts: string[] | undefined, native: () => Promise<Electron.OpenDialogReturnValue>): Promise<{ canceled: boolean; filePaths: string[] }> => {
+  if (chosen === undefined || chosen === null) return native()
+  const filePaths = pickPaths(chosen).filter((f) => !exts || exts.includes(extname(f).slice(1).toLowerCase()))
+  return { canceled: !filePaths.length, filePaths }
+}
+/**
+ * Saving: into a folder chosen in the app (src/FolderPicker.tsx), under the suggested name, never over a
+ * file that is there (a number is added). No folder is a cancel. The system save sheet is not used.
+ */
+const savePick = (dir: unknown, name: string): { canceled: boolean; filePath?: string } => {
+  const d = typeof dir === 'string' ? cleanPath(dir) : null
+  if (!d || !existsSync(d) || !statSync(d).isDirectory()) return { canceled: true }
+  const base = basename(name)
+  const ext = extname(base)
+  let filePath = join(d, base)
+  for (let i = 2; existsSync(filePath); i++) filePath = join(d, `${basename(base, ext)} ${i}${ext}`)
+  return { canceled: false, filePath }
+}
 ipcMain.handle('files:attach', (_e, paths: unknown) => attachmentsOf(pickPaths(paths)))
+// one file the in-app picker chose, read for the window (a CSV, a log, a reference image): up to 20 MB
+ipcMain.handle('files:read', (_e, path: unknown) => {
+  const p = pickPaths([path])[0]
+  if (!p || !statSync(p).isFile()) throw new Error('Not a file.')
+  if (statSync(p).size > 20 * 1024 * 1024) throw new Error('Files up to 20 MB.')
+  return { name: basename(p), data: readFileSync(p).toString('base64') }
+})
 ipcMain.handle('filepick:list', (_e, dir: unknown, hidden?: boolean) => listDir(dir, { hidden: !!hidden }))
 ipcMain.handle('filepick:project', (_e, dir: unknown, hidden?: boolean) => projectFiles(dir, { hidden: !!hidden }))
 ipcMain.handle('filepick:recent', (_e, attached: unknown, hidden?: boolean) => recentFiles(attached, ['Downloads', 'Desktop', 'Documents'].map((d) => join(homedir(), d)), { hidden: !!hidden }).then((r) => ({ ...r, home: homedir() })))
@@ -3890,8 +3920,8 @@ ipcMain.handle('news:newsletter', async (_e, id: string) => {
   const msg = await mail.get(m[1]!, m[2]!)
   return { title: msg.subject, paragraphs: News.text(msg.html.replace(/<\/(p|div|h\d|li|tr)>/gi, '\n\n').replace(/<br\s*\/?>/gi, '\n')).split(/\s{2,}|\n{2,}/).map((x) => x.trim()).filter((x) => x.length > 1).slice(0, 200) }
 })
-ipcMain.handle('news:opmlImport', async () => {
-  const file = process.env.STM_TEST_SECRETS && process.env.STM_TEST_OPML_IN ? process.env.STM_TEST_OPML_IN : win ? (await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'OPML', extensions: ['opml', 'xml'] }] })).filePaths[0] : undefined
+ipcMain.handle('news:opmlImport', async (_e, chosen?: unknown) => {
+  const file = process.env.STM_TEST_SECRETS && process.env.STM_TEST_OPML_IN ? process.env.STM_TEST_OPML_IN : win ? (await openPick(chosen, ['opml', 'xml'], () => dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'OPML', extensions: ['opml', 'xml'] }] }))).filePaths[0] : undefined
   if (!file) return null
   const found = FD.parseOpml(readFileSync(file, 'utf8'))
   if (!found.length) throw new Error('No feeds in that file.')
@@ -3900,8 +3930,8 @@ ipcMain.handle('news:opmlImport', async () => {
   saveSettings({ ...settings(), feeds: [...before, ...added] })
   return { added: added.length, skipped: found.length - added.length }
 })
-ipcMain.handle('news:opmlExport', async () => {
-  const file = process.env.STM_TEST_SECRETS && process.env.STM_TEST_OPML_OUT ? process.env.STM_TEST_OPML_OUT : win ? (await dialog.showSaveDialog(win, { defaultPath: 'feeds.opml', filters: [{ name: 'OPML', extensions: ['opml'] }] })).filePath : undefined
+ipcMain.handle('news:opmlExport', async (_e, dir?: unknown) => {
+  const file = process.env.STM_TEST_SECRETS && process.env.STM_TEST_OPML_OUT ? process.env.STM_TEST_OPML_OUT : win ? savePick(dir, 'feeds.opml').filePath : undefined
   if (!file) return null
   writeFileSync(file, FD.toOpml(feeds()))
   return { file, count: feeds().length }
@@ -4454,15 +4484,15 @@ ipcMain.handle('monitor:history', (_e, id: string) => mon.history(String(id)))
 ipcMain.handle('monitor:save', (_e, m) => mon.save(m))
 ipcMain.handle('monitor:remove', (_e, id: string) => mon.remove(String(id)))
 ipcMain.handle('monitor:check', (_e, id: string) => mon.checkNow(String(id)))
-ipcMain.handle('monitor:page', async (_e, title: string) => {
-  const r = await dialog.showSaveDialog({ defaultPath: 'status.html', filters: [{ name: 'HTML', extensions: ['html'] }] })
+ipcMain.handle('monitor:page', async (_e, title: string, dir?: unknown) => {
+  const r = savePick(dir, 'status.html')
   if (r.canceled || !r.filePath) return null
   writeFileSync(r.filePath, mon.statusPage(String(title ?? '')))
   return r.filePath
 })
 // a text the window made (a session export): saved where the person picks, nowhere else
-ipcMain.handle('export:text', async (_e, name: string, text: string) => {
-  const file = process.env.STM_TEST_SECRETS && process.env.STM_TEST_EXPORT_OUT ? join(process.env.STM_TEST_EXPORT_OUT, basename(String(name))) : win ? (await dialog.showSaveDialog(win, { defaultPath: basename(String(name)) })).filePath : undefined
+ipcMain.handle('export:text', async (_e, name: string, text: string, dir?: unknown) => {
+  const file = process.env.STM_TEST_SECRETS && process.env.STM_TEST_EXPORT_OUT ? join(process.env.STM_TEST_EXPORT_OUT, basename(String(name))) : win ? savePick(dir, String(name)).filePath : undefined
   if (!file) return null
   writeFileSync(file, String(text ?? ''))
   return file
@@ -5033,8 +5063,8 @@ ipcMain.handle('backtest:script', (_e, cwd: string, kind: string, text: string) 
 // the photo library: a local folder read here (date and camera from EXIF, never location), or your Immich
 const PHOTO_EXT = /\.(jpe?g|png|webp|heic|gif)$/i
 ipcMain.handle('photos:get', () => ({ dir: settings().photosDir ?? '', immich: settings().immichUrl ?? '', immichKey: Boolean(serviceVault().get('IMMICH_API_KEY')) }))
-ipcMain.handle('photos:pick', async () => {
-  const dir = process.env.STM_TEST_PHOTOS_DIR ?? (win ? (await dialog.showOpenDialog(win, { properties: ['openDirectory'] })).filePaths[0] : undefined)
+ipcMain.handle('photos:pick', async (_e, chosen?: unknown) => {
+  const dir = process.env.STM_TEST_PHOTOS_DIR ?? (win ? (await openPick(chosen === undefined ? undefined : [chosen], undefined, () => dialog.showOpenDialog(win!, { properties: ['openDirectory'] }))).filePaths[0] : undefined)
   if (!dir) return settings().photosDir ?? ''
   saveSettings({ ...settings(), photosDir: dir })
   return dir
@@ -5516,11 +5546,11 @@ ipcMain.handle('db:explain', async (_e, id: string, sql: string) => {
   return dbExplain(c, String(sql).slice(0, 100_000), vault)
 })
 ipcMain.handle('db:history', (_e, id: string) => settings().dbHistory?.[String(id)] ?? [])
-ipcMain.handle('db:export', async (_e, id: string, sql: string, format: 'csv' | 'json') => {
+ipcMain.handle('db:export', async (_e, id: string, sql: string, format: 'csv' | 'json', dir?: unknown) => {
   const c = connOf(String(id))
   if (!c || !win) return null
   const r = await dbAllRows(c, String(sql), vault)
-  const pick = await dialog.showSaveDialog(win, { defaultPath: `${c.name.replace(/[^\w.-]+/g, '-')}-${new Date().toISOString().slice(0, 10)}.${format}`, filters: [{ name: format.toUpperCase(), extensions: [format] }] })
+  const pick = savePick(dir, `${c.name.replace(/[^\w.-]+/g, '-')}-${new Date().toISOString().slice(0, 10)}.${format}`)
   if (pick.canceled || !pick.filePath) return null
   writeFileSync(pick.filePath, format === 'csv' ? toCsv(r.columns, r.rows) : toJson(r.columns, r.rows))
   return { file: pick.filePath, rows: r.rows.length, cut: r.cut }
@@ -5662,6 +5692,42 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
       return { shown: url }
     }
     throw new Error('Ask for: test, scan-deps, scan-secrets or preview.')
+  },
+  // `stm top`: one read-only snapshot of what the app already holds in memory; nothing is fetched for it
+  top: () => {
+    const day = dayOf(new Date())
+    const st = settings()
+    const spend = st.budgetSpend?.day === day ? st.budgetSpend : emptySpend(day)
+    const panels = [...sessions.entries()].map(([id, s]) => {
+      const turns = (traceTurns.get(id) ?? []).filter((t) => dayOf(new Date(t.at)) === day)
+      const last = (traceTurns.get(id) ?? []).at(-1)
+      const model = s.model ?? modelOf.get(id) ?? last?.model ?? null
+      const asks = [...(phoneAsks.get(id)?.values() ?? [])].map((a) => ({ tool: a.tool, summary: a.summary.slice(0, 200) }))
+      const c = ci.get(id)
+      const run = c?.runs[0]
+      return {
+        id,
+        project: basename(shells.get(id)?.cwd ?? s.cwd ?? ''),
+        cwd: shells.get(id)?.cwd ?? s.cwd ?? '',
+        model,
+        modelLabel: model ? modelLabel(model.replace(/\[1m\]$/i, '')) : null,
+        state: asks.length ? 'needs-you' : s.busy ? 'running' : goals.has(id) ? 'waiting' : 'idle',
+        goal: goals.get(id)?.text ?? null,
+        contextTokens: last ? last.inputTokens + last.cacheRead : null,
+        contextWindow: model && /\[1m\]$/i.test(model) ? 1_000_000 : 200_000,
+        todayUsd: turns.reduce((a, t) => a + (t.costUsd || 0), 0),
+        approvals: asks,
+        ci: c ? { repo: c.repo, branch: c.branch, status: run ? run.status : null, conclusion: run?.conclusion ?? null, workflow: run?.workflow ?? null, at: c.at } : null,
+      }
+    })
+    return {
+      at: Date.now(),
+      version: app.getVersion(),
+      todayUsd: Object.values(spend.project).reduce((a, b) => a + b, 0),
+      limits: (liveLimits ?? []).map((w) => ({ kind: w.kind, percentUsed: w.percentUsed, resetsAt: w.resetsAt ?? null })),
+      githubOn: settings().integrations.includes('github'),
+      panels,
+    }
   },
   triggers: () => triggers().map((t) => ({ id: t.id, name: t.name, enabled: t.enabled, persona: t.persona, when: t.when })),
   triggerRun: (a) => {
@@ -6057,8 +6123,8 @@ ipcMain.handle('docs:state', () => {
   const s = docs()
   return { queue: s.queue(), docs: s.docs(), rules: s.rules(), template: s.template, folder: settings().docsInbox ?? '', facts: s.facts().length, tags: s.allTags(), models: { small: settings().smallModel ?? '', embed: settings().embedModel ?? '' } }
 })
-ipcMain.handle('docs:setFolder', async () => {
-  const pick = process.env.STM_TEST_SECRETS && process.env.STM_TEST_DOCS_INBOX ? process.env.STM_TEST_DOCS_INBOX : win ? (await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], title: 'Folder to watch for documents' })).filePaths[0] : undefined
+ipcMain.handle('docs:setFolder', async (_e, chosen?: unknown) => {
+  const pick = process.env.STM_TEST_SECRETS && process.env.STM_TEST_DOCS_INBOX ? process.env.STM_TEST_DOCS_INBOX : win ? (await openPick(chosen === undefined ? undefined : [chosen], undefined, () => dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory'], title: 'Folder to watch for documents' }))).filePaths[0] : undefined
   if (!pick) return settings().docsInbox ?? ''
   saveSettings({ ...settings(), docsInbox: pick })
   watchInbox(pick)
@@ -6323,9 +6389,9 @@ ipcMain.handle('diagram:edit', async (_e, path: string, text: string, ids: strin
   diagramStore().write(path, next, `${ids?.length ? `${ids.length} shape${ids.length === 1 ? '' : 's'}: ` : ''}${String(text).slice(0, 80)}`)
   return path
 })
-ipcMain.handle('diagram:fromImage', async (_e, cwd: string, name: string, hint: string) => {
+ipcMain.handle('diagram:fromImage', async (_e, cwd: string, name: string, hint: string, chosen?: unknown) => {
   const root = diagramCwd(cwd)
-  const pick = process.env.STM_TEST_SECRETS && process.env.STM_TEST_DIAGRAM_IMAGE ? process.env.STM_TEST_DIAGRAM_IMAGE : win ? (await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] })).filePaths[0] : undefined
+  const pick = process.env.STM_TEST_SECRETS && process.env.STM_TEST_DIAGRAM_IMAGE ? process.env.STM_TEST_DIAGRAM_IMAGE : win ? (await openPick(chosen, ['png', 'jpg', 'jpeg', 'webp', 'gif'], () => dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] }))).filePaths[0] : undefined
   if (!pick) return null
   const ext = extname(pick).toLowerCase().replace('.', '').replace('jpg', 'jpeg')
   const data = readFileSync(pick)
@@ -6453,20 +6519,20 @@ ipcMain.handle('web:try', async (_e, url: string, question: string, mode: 'page'
   if (mode === 'crawl') return { crawl: await crawl(url, String(question ?? ''), 8) }
   return { page: await readPage(url, 20_000, { question: String(question ?? '') || undefined }) }
 })
-ipcMain.handle('team:export', async (_e, name: string) => {
+ipcMain.handle('team:export', async (_e, name: string, dir?: unknown) => {
   if (!win) return null
   const { team, dropped } = exportTeam(String(name ?? ''), teamNow())
   // a test profile can name the file instead of the dialog, which an automated run cannot click
-  const r = process.env.STM_TEST_SECRETS && process.env.STM_TEST_TEAM_FILE ? { canceled: false, filePath: process.env.STM_TEST_TEAM_FILE } : await dialog.showSaveDialog(win, { defaultPath: `${team.name.replace(/[^\w.-]+/g, '-')}.stmteam.json`, filters: [{ name: 'SuperTokenMan team', extensions: ['json'] }] })
+  const r = process.env.STM_TEST_SECRETS && process.env.STM_TEST_TEAM_FILE ? { canceled: false, filePath: process.env.STM_TEST_TEAM_FILE } : savePick(dir, `${team.name.replace(/[^\w.-]+/g, '-')}.stmteam.json`)
   if (r.canceled || !r.filePath) return null
   writeFileSync(r.filePath, JSON.stringify(team, null, 2))
   return { file: r.filePath, personas: team.personas.length, triggers: team.triggers.length, evals: Object.keys(team.evals).length, dropped }
 })
-ipcMain.handle('team:open', async (_e, path?: string) => {
+ipcMain.handle('team:open', async (_e, path?: string, chosen?: unknown) => {
   let file = process.env.STM_TEST_SECRETS ? (typeof path === 'string' ? path : process.env.STM_TEST_TEAM_IN ?? '') : ''
   if (!file) {
     if (!win) return null
-    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'SuperTokenMan team', extensions: ['json'] }] })
+    const r = await openPick(chosen, ['json'], () => dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'SuperTokenMan team', extensions: ['json'] }] }))
     if (r.canceled || !r.filePaths[0]) return null
     file = r.filePaths[0]
   }

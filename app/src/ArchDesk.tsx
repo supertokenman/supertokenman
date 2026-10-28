@@ -5,6 +5,7 @@ import { Stat } from './Chart'
 import { clean } from './errors'
 import { IconAdd, IconCheck, IconClose, IconExternal, IconSend } from './icons'
 import './bridge'
+import { NumberField, Select } from './ui'
 
 const STATUS: AdrStatus[] = ['proposed', 'accepted', 'rejected', 'deprecated', 'superseded']
 const VERB: Record<AdrStatus, string> = { proposed: 'Back to proposed', accepted: 'Accept', rejected: 'Reject', deprecated: 'Deprecate', superseded: 'Supersede' }
@@ -73,7 +74,7 @@ function Decisions(props: { cwd: string }) {
             <div className="fld-grid">
               <label className="fld wide"><span className="fld-label">Decision</span><input autoFocus value={fresh.title} placeholder="Use a queue for outgoing email" onChange={(e) => setFresh({ ...fresh, title: e.target.value })} /></label>
               <label className="fld wide"><span className="fld-label">Context</span><textarea rows={4} value={fresh.context} placeholder="What forces this decision now?" onChange={(e) => setFresh({ ...fresh, context: e.target.value })} /></label>
-              <label className="fld"><span className="fld-label">Replaces</span><select value={fresh.supersedes} onChange={(e) => setFresh({ ...fresh, supersedes: Number(e.target.value) })}><option value={0}>Nothing</option>{list?.filter((a) => a.status !== 'superseded').map((a) => <option key={a.n} value={a.n}>{a.n}. {a.title}</option>)}</select></label>
+              <label className="fld"><span className="fld-label">Replaces</span><Select value={fresh.supersedes} onChange={(e) => setFresh({ ...fresh, supersedes: Number(e.target.value) })}><option value={0}>Nothing</option>{list?.filter((a) => a.status !== 'superseded').map((a) => <option key={a.n} value={a.n}>{a.n}. {a.title}</option>)}</Select></label>
             </div>
             <div className="ob-row"><span className="spacer-flex" /><button className="ghost small" onClick={() => setFresh(null)}>Cancel</button><button className="primary small" disabled={!fresh.title.trim()} onClick={() => void window.stm.adr.create(props.cwd, fresh.title, fresh.context, fresh.supersedes || undefined).then((r) => (setList(r.adrs), setFresh(null), setPick(r.file)), (e) => setErr(clean(e)))}><IconCheck />Write docs/adr/…</button></div>
           </>
@@ -124,7 +125,7 @@ function Capacity() {
   const [c, setC] = useState<CapacityIn>({ dau: 100_000, requestsPerUser: 40, peak: 3, readRatio: 0.9, payloadKb: 20, writeKb: 2, years: 3, replicas: 3 })
   const r = capacity(c)
   const f = (k: keyof CapacityIn, label: string, help: string, step = 1) => (
-    <label className="fld"><span className="fld-label">{label}</span><input type="number" step={step} min={0} value={c[k]} onChange={(e) => setC({ ...c, [k]: Number(e.target.value) || 0 })} /><span className="fld-help">{help}</span></label>
+    <label className="fld"><span className="fld-label">{label}</span><NumberField step={step} min={0} value={c[k]} onChange={(e) => setC({ ...c, [k]: Number(e.target.value) || 0 })} /><span className="fld-help">{help}</span></label>
   )
   return (
     <div className="ar-pad">

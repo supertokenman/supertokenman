@@ -5,6 +5,7 @@ import type { Persona } from '../shared/personas'
 import type { Experiment } from './bridge'
 import { clean } from './errors'
 import './bridge'
+import { Checkbox, Select } from './ui'
 
 const close = (
   <IconClose />
@@ -58,7 +59,7 @@ function Waterfall(props: { spans: import('../shared/spans').Span[]; t0: number;
         const a = n.start - props.t0
         const w = (n.end ?? n.start) - n.start
         return (
-          <div key={n.id} className="ob-fall-row" title={`${n.name} ${n.summary ?? ''}: +${ms(a)}, ${ms(w)}${n.error ? `, ${n.error}` : ''}`}>
+          <div key={n.id} className="ob-fall-row" data-tip={`${n.name} ${n.summary ?? ''}: +${ms(a)}, ${ms(w)}${n.error ? `, ${n.error}` : ''}`}>
             <span className="ob-fall-name" style={{ paddingLeft: depth * 12 }}>{n.name}</span>
             <span className="ob-fall-track"><i className={`${n.kind} ${n.error ? 'bad' : ''}`} style={{ left: pct(a), width: n.kind === 'model' ? '3px' : `max(3px, ${pct(w)})` }} /></span>
             <span className="ob-fall-ms faint">{n.kind === 'tool' ? ms(w) : ''}</span>
@@ -75,7 +76,7 @@ function Node(props: { n: SpanNode; t0: number; depth: number }) {
     <>
       <div className={`ob-span ${n.error ? 'bad' : ''}`} style={{ paddingLeft: 8 + props.depth * 16 }}>
         <span className={`ob-kind ${n.kind}`}>{n.kind === 'model' ? 'Model' : 'Tool'}</span>
-        <span className="ob-name" title={n.name}>{n.name}</span>
+        <span className="ob-name" data-tip={n.name}>{n.name}</span>
         <span className="ob-sum faint">{n.kind === 'model' ? `${n.inputTokens ?? 0} in, ${n.outputTokens ?? 0} out` : n.error ?? n.summary}</span>
         <span className="ob-ms faint">+{ms(n.start - props.t0)}{n.kind === 'tool' ? `, ${n.end != null ? ms(n.end - n.start) : 'no result'}` : ''}</span>
       </div>
@@ -166,7 +167,7 @@ function Datasets(props: { datasets: Dataset[]; reload: () => void }) {
     <div className="cf-body">
       <div className="cf-col">
         <div className="ob-row">
-          <select value={ds?.id} onChange={(e) => setPick(e.target.value)}>{props.datasets.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
+          <Select value={ds?.id} onChange={(e) => setPick(e.target.value)}>{props.datasets.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</Select>
           {ds && <input className="ob-grow" value={ds.name} onChange={(e) => save({ ...ds, name: e.target.value })} aria-label="Dataset name" />}
           {ds && <button onClick={() => void window.stm.obs.deleteDataset(ds.id).then(props.reload)}>Delete</button>}
         </div>
@@ -181,7 +182,7 @@ function Datasets(props: { datasets: Dataset[]; reload: () => void }) {
       <div className="cf-col">
         <div className="faint">Runs each case once on your Claude plan, against the persona's production instructions and, when it has one, its staging version. The budget brake checks every call.</div>
         <div className="ob-row">
-          <select value={persona} onChange={(e) => setPersona(e.target.value)}>{personas.map((p) => <option key={p.id} value={p.id}>{p.name}{staging[p.id] ? ' (has staging)' : ''}</option>)}</select>
+          <Select value={persona} onChange={(e) => setPersona(e.target.value)}>{personas.map((p) => <option key={p.id} value={p.id}>{p.name}{staging[p.id] ? ' (has staging)' : ''}</option>)}</Select>
           <input className="ob-grow" placeholder="Checks, comma separated: @numbered, total, /regex/" value={must} onChange={(e) => setMust(e.target.value)} />
         </div>
         <div className="ob-row">
@@ -223,7 +224,7 @@ function StagingTab() {
     <div className="cf-body">
       <div className="cf-col">
         <div className="faint">A staging version of a persona's instructions sits beside production. Panels keep using production; experiments in Datasets run both. Promote copies staging into production and keeps the old text in the persona's history.</div>
-        <select value={pick} onChange={(e) => setPick(e.target.value)}>{personas.map((x) => <option key={x.id} value={x.id}>{x.name}{staging[x.id] ? ' (staging)' : ''}</option>)}</select>
+        <Select value={pick} onChange={(e) => setPick(e.target.value)}>{personas.map((x) => <option key={x.id} value={x.id}>{x.name}{staging[x.id] ? ' (staging)' : ''}</option>)}</Select>
         <div className="ob-label">Production</div>
         <pre className="ob-pre">{p?.instructions || '(empty)'}</pre>
       </div>
@@ -255,8 +256,8 @@ function ExportTab(props: { turns: Turn[] }) {
     <div className="cf-body">
       <div className="cf-col">
         <div className="faint">Sends each turn as an OpenTelemetry trace to a collector you run, such as your own Langfuse at <code>https://your-host/api/public/otel/v1/traces</code>. Off by default. Keys come from the vault: LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY.</div>
-        <label className="check"><input type="checkbox" checked={o.on} onChange={(e) => save({ ...o, on: e.target.checked })} /> Export after each turn</label>
-        <label className="check"><input type="checkbox" checked={o.withText} onChange={(e) => save({ ...o, withText: e.target.checked })} /> Include prompts and tool inputs (off: only names, timing, tokens and cost)</label>
+        <label className="check"><Checkbox checked={o.on} onChange={(e) => save({ ...o, on: e.target.checked })} /> Export after each turn</label>
+        <label className="check"><Checkbox checked={o.withText} onChange={(e) => save({ ...o, withText: e.target.checked })} /> Include prompts and tool inputs (off: only names, timing, tokens and cost)</label>
         <input placeholder="Endpoint URL" defaultValue={o.endpoint} onBlur={(e) => save({ ...o, endpoint: e.target.value })} />
         <div className="ob-row"><button disabled={!o.endpoint || !props.turns.length} onClick={test}>Send the last 5 turns now</button></div>
         {msg && <div className="notice">{msg}</div>}

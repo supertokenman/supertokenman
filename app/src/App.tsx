@@ -136,6 +136,7 @@ import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 import { FilePickerHost } from './FilePicker'
+import { alertDialog, confirmDialog, ContextMenuHost, DialogHost } from './ui'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
 
@@ -324,7 +325,7 @@ function Backdrop({ id, strength, theme }: { id: string; strength: number; theme
   if (!scene) return null
   // an image, not inline SVG: the browser rasterizes it once, so nothing above it repaints the landscape
   return (
-    <div key={scene.id} className="scene" aria-hidden="true" title={scene.place}>
+    <div key={scene.id} className="scene" aria-hidden="true" data-tip={scene.place} role="img" aria-label={scene.place}>
       <img src={`data:image/svg+xml;utf8,${encodeURIComponent(svg.replace('width="100%" height="100%"', 'width="1600" height="900"'))}`} alt="" />
     </div>
   )
@@ -596,12 +597,12 @@ export function App() {
       const u = await window.stm.updateCheck()
       setUpdate({ behind: u.behind, subjects: u.subjects ?? [], source: u.source })
       if (!u.source) {
-        alert('This copy runs from the source folder (npm run dev). Update it with git pull in the terminal.')
+        await alertDialog({ title: 'Update', message: 'This copy runs from the source folder (npm run dev). Update it with git pull in the terminal.' })
         return
       }
       if (u.source === 'release') {
-        if (!u.behind) return void alert('SuperTokenMan is up to date.')
-        if (confirm(`Install ${u.subjects?.[0] ?? 'the new version'}?\n\n${(u.subjects ?? []).slice(1).join('\n')}\n\nIt downloads, quits and opens the new version.`)) {
+        if (!u.behind) return void (await alertDialog({ title: 'Update', message: 'SuperTokenMan is up to date.' }))
+        if (await confirmDialog({ title: `Install ${u.subjects?.[0] ?? 'the new version'}?`, message: `${(u.subjects ?? []).slice(1).join('\n')}\n\nIt downloads, quits and opens the new version.`.trim(), confirm: 'Install' })) {
           setUpd({ state: 'busy', step: 'Starting' })
           await window.stm.updateRun()
         }
@@ -610,12 +611,12 @@ export function App() {
       const ask = u.behind
         ? `Update SuperTokenMan? ${u.behind} new change${u.behind > 1 ? 's' : ''}:\n\n${(u.subjects ?? []).join('\n')}\n\nIt pulls, rebuilds (a few minutes), quits and opens the new version.`
         : 'Already up to date. Rebuild and reinstall anyway?'
-      if (confirm(ask)) {
+      if (await confirmDialog({ title: 'Update', message: ask, confirm: u.behind ? 'Update' : 'Rebuild' })) {
         setUpd({ state: 'busy', step: 'Starting' })
         await window.stm.updateRun()
       }
     } catch (e) {
-      alert(`Could not check for updates: ${(e as Error).message}`)
+      await alertDialog({ title: 'Update', message: `Could not check for updates: ${(e as Error).message}` })
     } finally {
       setUpdating(false)
     }
@@ -1229,6 +1230,8 @@ export function App() {
       <Backdrop id={scene.id} strength={scene.strength} theme={theme} />
       <FolderPickerHost recents={recentDirs} />
       <FilePickerHost />
+      <DialogHost />
+      <ContextMenuHost />
       <header className={`top ${topFit === 'tightest' ? 'tight tighter tightest' : topFit === 'tighter' ? 'tight tighter' : topFit}`} ref={topRef}>
         <div className="brand">
           <BrandMark />
@@ -1236,21 +1239,21 @@ export function App() {
         </div>
         <div className="top-actions">
           <ModelMenu model={model} effort={effort} onModel={setModel} onEffort={setEffort} />
-          <button className="ghost" onClick={() => void open(p.focus ? p.byId[p.focus]?.cwd : undefined)} title="New panel in the same folder (Cmd+T)">
+          <button className="ghost" onClick={() => void open(p.focus ? p.byId[p.focus]?.cwd : undefined)} data-tip="New panel in the same folder (Cmd+T)" aria-label="New panel in the same folder (Cmd+T)">
             <IconPanel />
           </button>
           <SandboxButton cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onOpen={(cwd) => open(cwd, undefined, undefined, true)} />
-          <button className="ghost icon" onClick={() => void openWorktree()} title="New panel in its own git worktree, on its own branch">
+          <button className="ghost icon" onClick={() => void openWorktree()} data-tip="New panel in its own git worktree, on its own branch" aria-label="New panel in its own git worktree, on its own branch">
             <BranchMark size={16} />
           </button>
           {p.order.length > 1 && (
-            <button className="ghost layout-btn" onClick={() => setLayout(LAYOUTS[(LAYOUTS.findIndex((l) => l.id === layout) + 1) % LAYOUTS.length]!.id)} title={`Panels: ${LAYOUTS.find((l) => l.id === layout)!.name}. ${LAYOUTS.find((l) => l.id === layout)!.what}. Click for the next layout.`}>
+            <button className="ghost layout-btn" onClick={() => setLayout(LAYOUTS[(LAYOUTS.findIndex((l) => l.id === layout) + 1) % LAYOUTS.length]!.id)} data-tip={`Panels: ${LAYOUTS.find((l) => l.id === layout)!.name}. ${LAYOUTS.find((l) => l.id === layout)!.what}. Click for the next layout.`} aria-label={`Panels: ${LAYOUTS.find((l) => l.id === layout)!.name}. ${LAYOUTS.find((l) => l.id === layout)!.what}. Click for the next layout.`}>
               <LayoutGlyph layout={layout} />
             </button>
           )}
           <button
             className="ghost"
-            title="Open a folder in a new panel"
+            data-tip="Open a folder in a new panel" aria-label="Open a folder in a new panel"
             onClick={async () => {
               const dir = await pickProjectFolder('Open a folder in a new panel')
               if (dir) void open(dir)
@@ -1262,7 +1265,7 @@ export function App() {
         <span className="spacer" />
         <RouterBox onSend={sendToTeam} />
         <span className="spacer" />
-        <span className="total" title="All panels, at API prices">
+        <span className="total" data-tip="All panels, at API prices">
           <span className="total-n">{p.order.length}</span> {p.order.length === 1 ? 'panel' : 'panels'}
           <span className="sep" />
           {money(total)}
@@ -1291,7 +1294,7 @@ export function App() {
           </div>
         )}
         {!online && (
-          <button className="ghost offline-badge" onClick={() => setAskLocal(true)} title="No network: panels wait for it. Quick ask runs on the local model and works offline.">
+          <button className="ghost offline-badge" onClick={() => setAskLocal(true)} data-tip="No network: panels wait for it. Quick ask runs on the local model and works offline.">
             <StateMark state="down" label="Offline" />
             Offline
           </button>
@@ -1300,14 +1303,14 @@ export function App() {
         <InboxButton items={needList} onGo={goNeed} />
         <NextChip agenda={agenda} onOpen={() => setAgendaOpen(true)} />
         {(!agenda.next || agenda.next.inMin > 120) && (
-          <button className="ghost" onClick={() => setAgendaOpen(true)} title="Today's meetings">
+          <button className="ghost" onClick={() => setAgendaOpen(true)} data-tip="Today's meetings">
             <IconCalendar /> <span className="lbl">Agenda</span>
           </button>
         )}
         {focus ? (
           <FocusChip f={focus} now={now} onClick={() => setFocusSheet(true)} />
         ) : (
-          <button className="ghost" onClick={() => setFocusSheet(true)} title="Start a focus round, see where the time went">
+          <button className="ghost" onClick={() => setFocusSheet(true)} data-tip="Start a focus round, see where the time went">
             <IconFocus /> <span className="lbl">Focus</span>
           </button>
         )}
@@ -1315,16 +1318,16 @@ export function App() {
           <MusicChip np={spotify.np} onClick={() => setMusic(true)} />
         ) : (
           spotify.np && (
-            <button className="ghost" onClick={() => setMusic(true)} title="Spotify">
+            <button className="ghost" onClick={() => setMusic(true)} data-tip="Spotify">
               <IconMusic /> <span className="lbl">Music</span>
             </button>
           )
         )}
-        <button className="ghost" onClick={() => setNewsOpen(true)} title="News from your feeds">
+        <button className="ghost" onClick={() => setNewsOpen(true)} data-tip="News from your feeds">
           <IconNews /> <span className="lbl">News</span>
           {news.unread > 0 && <span className="count quiet">{news.unread > 99 ? '99+' : news.unread}</span>}
         </button>
-        <button className={`ghost wa-btn ${wa ? 'on' : ''}`} onClick={toggleWa} title="Your web apps: messages, mail, food, rides, social, video (Cmd+Shift+W)">
+        <button className={`ghost wa-btn ${wa ? 'on' : ''}`} onClick={toggleWa} data-tip="Your web apps: messages, mail, food, rides, social, video (Cmd+Shift+W)">
           <IconApps /> <span className="lbl">Apps</span>
           {unreadTotal > 0 && <span className="count">{unreadTotal > 99 ? '99+' : unreadTotal}</span>}
         </button>
@@ -1375,11 +1378,11 @@ export function App() {
           ]}
         />
         {!!update?.behind && (
-          <button className="update-pill" disabled={updating} onClick={() => void runUpdate()} title={update.subjects.join('\n')}>
+          <button className="update-pill" disabled={updating} onClick={() => void runUpdate()} data-tip={update.subjects.join('\n')}>
             <IconRefresh /> Update <b>{update.behind}</b>
           </button>
         )}
-        <button className={`private ${priv ? 'on' : ''}`} onClick={() => setPriv(!priv)} title="Hide this window from screen sharing and recordings (Cmd+Shift+P)">
+        <button className={`private ${priv ? 'on' : ''}`} onClick={() => setPriv(!priv)} data-tip="Hide this window from screen sharing and recordings (Cmd+Shift+P)">
           <IconPrivate on={priv} />
           <span className="lbl">{priv ? 'Hidden from sharing' : 'Private'}</span>
         </button>

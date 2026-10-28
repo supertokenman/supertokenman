@@ -9,6 +9,8 @@ import { ErDiagram, PlanView, SqlEditor } from './DbTools'
 import { clean as cleanErr } from './errors'
 import { vectorColumns, vectorSql } from '../shared/tidb'
 import { browseSql, countSql, firstView, type View } from '../shared/gridsql'
+import { NumberField, Select } from './ui'
+import { pickProjectFolder } from './FolderPicker'
 
 const fresh = (): DbConn => ({ id: `d${Date.now().toString(36)}`, name: '', kind: 'postgres', target: '', writes: false })
 const qi = (s: string, k?: DbKind) => (k === 'mysql' || k === 'tidb' ? `\`${s.replace(/`/g, '``')}\`` : `"${s.replace(/"/g, '""')}"`)
@@ -153,11 +155,11 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
             <div className="dbv-conns">
               {conns.map((c) => (
                 <div key={c.id} className="dbv-conn-row row-host">
-                <button className={`dbv-conn ${cur?.id === c.id ? 'on' : ''}`} onClick={() => void open(c)} title={c.target}>
+                <button className={`dbv-conn ${cur?.id === c.id ? 'on' : ''}`} onClick={() => void open(c)} data-tip={c.target}>
                   {cur?.id === c.id ? <StateMark state={state} label={state === 'up' ? 'Connected' : state === 'busy' ? 'Connecting' : state === 'down' ? 'Failed' : 'Not open'} /> : <StateMark state="off" label="Not open" />}
                   <span className={`dbv-kind ${c.kind}`}>{KINDS.find((x) => x.k === c.kind)?.short ?? 'PG'}</span>
                   <span className="dbv-name">{c.name}</span>
-                  {c.writes && <span className="dbv-w" title="Writes are on">W</span>}
+                  {c.writes && <span className="dbv-w" data-tip="Writes are on">W</span>}
                 </button>
                 <RowActs><RowAct label={`Edit ${c.name}`} icon={<IconEdit />} onClick={() => (setCur(c), setEditing(c))} /></RowActs>
                 </div>
@@ -169,7 +171,7 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
                 <input className="dbv-filter" value={filter} placeholder={`Filter ${list.length} tables`} onChange={(e) => setFilter(e.target.value)} />
                 <div className="dbv-tables">
                   {shown.map((t) => (
-                    <button key={`${t.schema}.${t.name}`} className="dbv-table" onClick={() => pick(t)} title={`${t.schema}.${t.name}`}>
+                    <button key={`${t.schema}.${t.name}`} className="dbv-table" onClick={() => pick(t)} data-tip={`${t.schema}.${t.name}`}>
                       <svg viewBox="0 0 10 10" className={`dbv-ico ${t.kind}`} aria-hidden>{t.kind === 'view' ? <circle cx="5" cy="5" r="3.6" /> : <rect x="1.2" y="1.2" width="7.6" height="7.6" />}</svg>
                       <span className="dbv-tname">{t.schema !== 'public' && t.schema !== 'main' ? <span className="faint">{t.schema}.</span> : null}{t.name}</span>
                       {t.rows !== undefined && <span className="dbv-count">{kRows(t.rows)}</span>}
@@ -199,14 +201,14 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
                   <div className="dbv-run">
                     <span className="faint">{cur.writes ? 'Writes are on' : 'Read-only'}{cur.ssh ? ` · via ${cur.ssh}` : ''}</span>
                     {history.length > 0 && (
-                      <select className="dbv-hist" aria-label="Query history" value="" onChange={(e) => e.target.value && setSql(e.target.value)}>
+                      <Select className="dbv-hist" aria-label="Query history" value="" onChange={(e) => e.target.value && setSql(e.target.value)}>
                         <option value="">History ({history.length})</option>
                         {history.map((h) => <option key={h.at} value={h.sql}>{h.ok ? '' : '✕ '}{h.sql.replace(/\s+/g, ' ').slice(0, 70)}</option>)}
-                      </select>
+                      </Select>
                     )}
                     <span className="spacer-flex" />
-                    <button className={`ghost small ${view === 'er' ? 'on' : ''}`} disabled={!schema} onClick={() => setView(view === 'er' ? 'rows' : 'er')} title="The tables and their foreign keys">Diagram</button>
-                    <button className="ghost small" disabled={!sql.trim() || !!busy || state !== 'up'} onClick={() => void doing('plan', async () => { setPlan(await window.stm.db.explain(cur.id, sql)); setView('plan') })} title="How the database will run it, without running it">{busy === 'plan' ? 'Explaining…' : 'Explain'}</button>
+                    <button className={`ghost small ${view === 'er' ? 'on' : ''}`} disabled={!schema} onClick={() => setView(view === 'er' ? 'rows' : 'er')} data-tip="The tables and their foreign keys">Diagram</button>
+                    <button className="ghost small" disabled={!sql.trim() || !!busy || state !== 'up'} onClick={() => void doing('plan', async () => { setPlan(await window.stm.db.explain(cur.id, sql)); setView('plan') })} data-tip="How the database will run it, without running it">{busy === 'plan' ? 'Explaining…' : 'Explain'}</button>
                     <button className="ghost small" onClick={() => setEditing(cur)}>Edit</button>
                     <button className="primary small" disabled={!sql.trim() || running || state !== 'up'} onClick={() => void run()}>{running ? 'Running' : 'Run'}</button>
                   </div>
@@ -227,7 +229,7 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
                 )}
                 {view === 'er' && schema && (
                   <div className="dbv-res up">
-                    <div className="dbv-res-head"><StateMark state="up" size="md" label="Diagram" /><span className="api-meta">{schema.tables.length} {schema.tables.length === 1 ? "table" : "tables"} · {schema.fks.length} {schema.fks.length === 1 ? "foreign key" : "foreign keys"}{schema.tables.length > 60 ? ' · first 60 shown' : ''}</span><span className="spacer-flex" />{props.cwd && props.onDiagram && <button className="ghost small" title="Writes diagrams/er-….drawio in the focused project" onClick={() => void window.stm.diagram.er(props.cwd!, cur?.name ?? 'database', schema).then(props.onDiagram!, (e) => setError(cleanErr(e)))}>Save as .drawio</button>}<button className="ghost small" onClick={() => setView('rows')}>Back to rows</button></div>
+                    <div className="dbv-res-head"><StateMark state="up" size="md" label="Diagram" /><span className="api-meta">{schema.tables.length} {schema.tables.length === 1 ? "table" : "tables"} · {schema.fks.length} {schema.fks.length === 1 ? "foreign key" : "foreign keys"}{schema.tables.length > 60 ? ' · first 60 shown' : ''}</span><span className="spacer-flex" />{props.cwd && props.onDiagram && <button className="ghost small" data-tip="Writes diagrams/er-….drawio in the focused project" onClick={() => void window.stm.diagram.er(props.cwd!, cur?.name ?? 'database', schema).then(props.onDiagram!, (e) => setError(cleanErr(e)))}>Save as .drawio</button>}<button className="ghost small" onClick={() => setView('rows')}>Back to rows</button></div>
                     <ErDiagram schema={schema} onPick={(t) => { const tb = list?.find((x) => x.name === t); if (tb) pick(tb) }} />
                   </div>
                 )}
@@ -238,8 +240,8 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
                     <span className="spacer-flex" />
                     {res && res.columns.length > 0 && (
                       <>
-                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('csv', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'csv'); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>CSV</button>
-                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('json', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'json'); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>JSON</button>
+                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('csv', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'csv', await pickProjectFolder('Save the CSV to')); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>CSV</button>
+                        <button className="ghost small" disabled={!!busy} onClick={() => void doing('json', async () => { const r = await window.stm.db.exportRows(cur.id, sql, 'json', await pickProjectFolder('Save the JSON to')); if (r) setNote(`Saved ${r.rows.toLocaleString()} rows to ${r.file}${r.cut ? ' (the first 200,000)' : ''}`) })}>JSON</button>
                       </>
                     )}
                     {res && <button className="small" onClick={toClaude}>Send to Claude</button>}
@@ -257,7 +259,7 @@ export function DatabaseSheet(props: { onClose: () => void; onAttach: (note: { l
                             <tr key={i}>
                               {r.map((v, j) => {
                                 const s = show(v)
-                                return <td key={j} className={typeof v === 'number' ? 'num' : s === null ? 'null' : ''} title={s ?? 'NULL'}>{s === null ? 'NULL' : s.length > 120 ? `${s.slice(0, 120)}…` : s}</td>
+                                return <td key={j} className={typeof v === 'number' ? 'num' : s === null ? 'null' : ''} data-tip={s ?? 'NULL'}>{s === null ? 'NULL' : s.length > 120 ? `${s.slice(0, 120)}…` : s}</td>
                               })}
                             </tr>
                           ))}
@@ -292,10 +294,10 @@ function VectorAsk(props: { cols: ReturnType<typeof vectorColumns>; onSql: (s: s
   return (
     <div className="dbv-vec">
       <span className="dbv-vec-tag">VECTOR</span>
-      <select aria-label="Vector column" value={pick} onChange={(e) => setPick(Number(e.target.value))}>{props.cols.map((x, i) => <option key={`${x.table}.${x.column}`} value={i}>{x.table}.{x.column}</option>)}</select>
+      <Select aria-label="Vector column" value={pick} onChange={(e) => setPick(Number(e.target.value))}>{props.cols.map((x, i) => <option key={`${x.table}.${x.column}`} value={i}>{x.table}.{x.column}</option>)}</Select>
       <input className="mono" value={vec} placeholder="[0.12, -0.5, 0.33]  nearest rows to this vector" spellCheck={false} onChange={(e) => setVec(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && build()} aria-label="Vector" />
-      <select aria-label="Distance" value={metric} onChange={(e) => setMetric(e.target.value as 'cosine' | 'l2')}><option value="cosine">cosine</option><option value="l2">L2</option></select>
-      <input className="dbv-vec-k" type="number" min={1} max={200} value={k} onChange={(e) => setK(Number(e.target.value) || 10)} aria-label="How many" />
+      <Select aria-label="Distance" value={metric} onChange={(e) => setMetric(e.target.value as 'cosine' | 'l2')}><option value="cosine">cosine</option><option value="l2">L2</option></Select>
+      <NumberField className="dbv-vec-k" min={1} max={200} value={k} onChange={(e) => setK(Number(e.target.value) || 10)} aria-label="How many" />
       <button className="ghost small" disabled={!vec.trim()} onClick={build}>Write query</button>
     </div>
   )

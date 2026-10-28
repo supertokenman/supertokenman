@@ -432,3 +432,52 @@ Taken from how Halo pairs a free community edition with paid editions.
   was not. No paid placement presented as editorial. Chinese texts are machine-written and need a
   native reader before posting.
 - **GitHub settings** the owner changes by hand: `docs/STOREFRONT.md`.
+
+## Own controls, no macOS defaults (decided 2026-10-27)
+
+- **The rule.** "Tudo que é padrão do sistema operacional (macOS) devemos ter nossa identidade autoral":
+  every control the system would draw is drawn by the app, in the model menu's look (`app/src/ModelMenu.tsx`,
+  the `.mm` popover: 12 px corners, the strong border, the accent tick, 140 ms rise) and with the theme
+  tokens, so Ink, Paper and every other theme follow without extra rules. Full keyboard, ARIA roles and
+  `prefers-reduced-motion` are part of each control, not an extra.
+- **The kit** (`app/src/ui`, no dependency):
+  - `Select`: a trigger and a listbox popover. It takes the same `<option>` and `<optgroup>` children as a
+    native select (an `<optgroup data-sub>` opens as a submenu, like Effort in the model menu), and its
+    `onChange` gets `{ target: { value } }`, so a migration renames the tag. Arrows, Home, End, type to
+    jump, Enter, Escape; the field is as wide as its widest option, as a native one is.
+  - `Checkbox`, `Switch` (role switch, on the app's `.switch` track), `Radio`, `RadioGroup`: a real input
+    underneath for labels, forms and handlers, our face over it (`appearance: none`).
+  - `NumberField`: the number input with our stepper; the system spin buttons are hidden.
+  - `Slider`: the range input with our track, accent fill and square thumb.
+  - `DateField`, `TimeField`, `DateTimeField`: **a text field with validation, not a picker.** A calendar
+    of our own would weigh more than all the rest of the kit for 13 fields; the formats are the ones the
+    native inputs handed over (YYYY-MM-DD, HH:MM, a space for the T), a wrong value shows the red edge and
+    is not passed on.
+  - `ColorField`: our own small picker, a swatch that opens the theme's colors and a hex field.
+  - `Combobox`: in place of `<input list>` and `<datalist>`.
+  - Tooltips: one delegated host (`app/src/ui/Tooltip.ts`) draws `data-tip` after a short delay, above or
+    below its element, and links it with `aria-describedby` while shown. Elements with no words of their own
+    carry an `aria-label`. The source never uses `title=`.
+  - `confirmDialog`, `alertDialog`, `promptDialog`: a promise each (`if (await confirmDialog({ ... }))`),
+    focus kept inside, Escape cancels, a `danger` variant for removals. They replace `confirm()`,
+    `alert()` and `prompt()`.
+  - `ContextMenu`: the window's right-click menu (spelling, cut, copy, paste, links, Inspect in development)
+    is drawn by the app; the main process sends the rows and runs the chosen one. Screens can open their
+    own with `openContextMenu`.
+  - Files: opening goes through the in-app file picker (`FilePicker.tsx`, `pickFile` for a file the window
+    reads), saving goes into a folder from the in-app folder picker, under the suggested name, never over
+    a file that is there.
+- **The guard.** `app/scripts/no-native-ui.mjs` runs in CI (the `test` job) on the syntax tree of
+  `app/src`: it fails on `<select>`, `<datalist>`, `<input list>`, raw checkbox, radio, range, number, date,
+  time, color and file inputs, `title=` on an HTML element and `confirm()`, `alert()`, `prompt()`. The kit's
+  own files are allowed; any other exception needs a `no-native-ui: <reason>` comment. `iframe title` is
+  allowed: it names the frame and draws no tooltip.
+- **What stays native, and why.**
+  - The menu bar (the application menu): it lives in the macOS menu bar, outside the window. Same for the
+    tray (menu bar extra) menu.
+  - macOS notifications (Notification Center) and permission prompts (camera, microphone, screen, files,
+    Keychain, Touch ID): drawn by the system on purpose, and the person must be able to trust they come from
+    macOS.
+  - The system file dialog only behind "Use Finder..." in the in-app pickers, when the person asks for it
+    (and `pickFolder` when no picker is mounted). The system save sheet is no longer used.
+  - Scrollbars were already ours.

@@ -3,6 +3,7 @@ import type { RadarCfg } from './bridge'
 import type { Hit } from '../shared/radar'
 import { IconClose } from './icons'
 import { clean } from './errors'
+import { Checkbox, Select, Slider } from './ui'
 
 /** Phase 109: how often your topics come up in the feeds you read; a draft for yourself, never a post. */
 export function TopicRadar(props: { onClose: () => void }) {
@@ -38,7 +39,7 @@ export function TopicRadar(props: { onClose: () => void }) {
               <>
                 <div className="chart-name">Source weight</div>
                 {res.sources.map((s) => (
-                  <label key={s} className="tr-w"><span>{s}</span><input type="range" min={0} max={5} step={0.5} value={cfg?.weights[s] ?? 1} onChange={(e) => weight(s, Number(e.target.value))} /><span className="num">{(cfg?.weights[s] ?? 1).toFixed(1)}</span></label>
+                  <label key={s} className="tr-w"><span>{s}</span><Slider min={0} max={5} step={0.5} value={cfg?.weights[s] ?? 1} onChange={(e) => weight(s, Number(e.target.value))} /><span className="num">{(cfg?.weights[s] ?? 1).toFixed(1)}</span></label>
                 ))}
               </>
             )}
@@ -47,11 +48,11 @@ export function TopicRadar(props: { onClose: () => void }) {
           </aside>
           <main className="tr-main">
             <div className="ob-row">
-              <label className="ca-toggle"><input type="checkbox" checked={onlyNew} onChange={(e) => (setOnlyNew(e.target.checked), run(e.target.checked))} />Only new since the last summary{res?.lastAt ? ` (${new Date(res.lastAt).toLocaleString()})` : ''}</label>
+              <label className="ca-toggle"><Checkbox checked={onlyNew} onChange={(e) => (setOnlyNew(e.target.checked), run(e.target.checked))} />Only new since the last summary{res?.lastAt ? ` (${new Date(res.lastAt).toLocaleString()})` : ''}</label>
               <span className="spacer-flex" />
-              <select value={hours} aria-label="Window" onChange={(e) => (setHours(Number(e.target.value)), run(onlyNew, Number(e.target.value)))}>
+              <Select value={hours} aria-label="Window" onChange={(e) => (setHours(Number(e.target.value)), run(onlyNew, Number(e.target.value)))}>
                 <option value={6}>6 hours</option><option value={24}>24 hours</option><option value={72}>3 days</option><option value={168}>7 days</option>
-              </select>
+              </Select>
             </div>
             {!res ? null : !res.hits.length ? <div className="faint">Nothing from your groups in this window.</div> : res.hits.map((h, i) => (
               <section key={h.group} className="tr-hit">

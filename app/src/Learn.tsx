@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { dueCards, newCard, parseCards, planReviewPrompt, PROJECTS, review, tutorPrompt, type Card, type Grade } from '../shared/learn'
 import { clean } from './errors'
 import { IconAdd, IconClose, IconExternal, IconSend } from './icons'
+import { Combobox } from './ui'
 import './bridge'
 
 /**
@@ -89,7 +90,7 @@ function Cards(props: { cards: Card[]; setCards: (c: Card[]) => void }) {
         </div>
       ) : <div className="notice">Nothing due. {props.cards.length} cards in {decks.length} {decks.length === 1 ? 'deck' : 'decks'}; the next comes back {props.cards.length ? new Date(Math.min(...props.cards.map((c) => c.due))).toLocaleDateString() : 'when you add one'}.</div>}
       <div className="fld-grid">
-        <label className="fld"><span className="fld-label">Deck</span><input value={deck} onChange={(e) => setDeck(e.target.value)} list="ln-decks" /><datalist id="ln-decks">{decks.map((d) => <option key={d} value={d} />)}</datalist></label>
+        <label className="fld"><span className="fld-label">Deck</span><Combobox value={deck} onChange={(e) => setDeck(e.target.value)} options={decks} /></label>
         <label className="fld wide"><span className="fld-label">New cards <span className="fld-kind">front :: back, one a line, or Q:/A:</span></span><textarea rows={4} value={text} placeholder={'Why a write-ahead log? :: To recover committed writes after a crash'} onChange={(e) => setText(e.target.value)} /><span className="fld-help">Tutor panels suggest cards in this shape; paste them here.</span></label>
       </div>
       <div className="ob-row">

@@ -171,6 +171,8 @@ Cmd+K, Install the stm command puts stm in ~/.local/bin. It talks to the running
 - stm goal <panel> "condition", stm trace <panel>, stm memory "query".
 - stm db list, stm db <connection> "select ...": always read-only from here.
 - stm triggers, stm triggers run <id>.
+- stm top: a live dashboard in the terminal (works in 80x24, fewer columns when narrower): each panel's project, model, state (running, waiting on its goal, needs-you when an approval waits, idle), context used and cost today, the day's total, the 5-hour window when a panel has reported it, approvals waiting and CI for the panel's branch. Keys: q quits, arrows or j/k select, ? help; focusing a panel from here is not available yet. It asks the app once a second over the same socket and makes no network calls; CI is what the app already polled, and shows "CI: not connected" while GitHub is off in Connections. Costs show in reais when the system language is Brazilian (LANG pt_BR, at the app's fixed rate, or STM_USD_BRL) and in dollars otherwise; --currency USD|BRL picks one. No colour with NO_COLOR or when the output is not a terminal.
+- stm top --once --json: one snapshot for scripts, {ok, data: {at, version, currency, today {usd, amount}, fiveHour {percentUsed, resetsAt} or null, approvalsWaiting, ciConnected, panels [{id, project, cwd, model, state, contextTokens, contextPercent, today {usd, amount}, approvals [{tool, summary}], ci {repo, branch, status, conclusion, workflow} or null}]}}. Exit 0 when it worked, 2 when the app is not running.
 
 ## Deploys: Coolify with checks and rollback, Supabase advisors
 

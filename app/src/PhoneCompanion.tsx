@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { clean } from './errors'
+import { Checkbox } from './ui'
 
 type Info = { on: boolean; url: string | null; phones: { name: string; at: number }[]; send: boolean; port: number }
 
@@ -50,7 +51,7 @@ export function PhoneCompanionSheet(props: { onClose: () => void }) {
               {info.phones.length > 0 && <div><button className="danger" onClick={() => act(window.stm.phone.forget())}>Unpair all</button></div>}
             </>
           )}
-          <label className="ca-toggle"><input type="checkbox" checked={Boolean(info?.send)} disabled={!info} onChange={(e) => act(window.stm.phone.setSend(e.target.checked))} />Let the phone send messages to panels</label>
+          <label className="ca-toggle"><Checkbox checked={Boolean(info?.send)} disabled={!info} onChange={(e) => act(window.stm.phone.setSend(e.target.checked))} />Let the phone send messages to panels</label>
           {err && <div className="notice error">{err}</div>}
           <div className="faint">Off until you turn it on, and off again when the app quits. The phone sees folder names, pending asks and the end of the last reply; never files, keys or settings. Pairings live only in memory. The page is plain http on your network: use it on networks you trust.</div>
         </div>

@@ -69,7 +69,7 @@ const LineView = memo(function LineView({ l, onStop, onSend }: { l: Line; onStop
         {(l.images?.length || l.files?.length) ? (
           <div className="msg-atts">
             {l.images?.map((src, i) => <img key={i} src={src} alt="" />)}
-            {l.files?.map((f) => <span key={f} className="att-chip" title={f}><FileGlyph />{f.split('/').pop()}</span>)}
+            {l.files?.map((f) => <span key={f} className="att-chip" data-tip={f}><FileGlyph />{f.split('/').pop()}</span>)}
           </div>
         ) : null}
         {l.text}
@@ -127,7 +127,7 @@ function StepMark({ name }: { name: string }) {
 /** One step: a quiet line with a dot; a click shows the whole argument when it was cut. */
 function StepLine({ t, live, open, onToggle }: { t: Tool; live: boolean; open: boolean; onToggle: () => void }) {
   return (
-    <button className={`step ${open ? 'open' : ''} ${live ? 'live' : ''}`} onClick={onToggle} title={open ? undefined : t.summary}>
+    <button className={`step ${open ? 'open' : ''} ${live ? 'live' : ''}`} onClick={onToggle} data-tip={open ? undefined : t.summary}>
       <StepMark name={t.name} />
       <span className="step-tool">{verb(t.name)}</span>
       <span className="step-arg">{t.summary}</span>
@@ -192,7 +192,7 @@ function CacheChip(props: { at: number; ttl: number; tokens: number; model: stri
   return (
     <span
       className={`cache-chip ${state}`}
-      title={left === 0
+      data-tip={left === 0
         ? `The prompt cache has lapsed: the next message writes the whole context again, ${cost} more than a warm one.`
         : `The prompt cache stays warm for ${mins(left)}. A message before then re-reads the conversation at a tenth of the price; after, it costs ${cost} more.`}
     >
@@ -555,18 +555,18 @@ export function Panel(props: {
       {dropping && <div className="drop-veil"><span>Drop to attach</span></div>}
       <header className="panel-bar">
         <StateMark state={s.busy ? 'busy' : s.asleep ? 'off' : s.model ? 'up' : 'warn'} label={s.busy ? 'Working' : s.asleep ? 'Asleep: the next message resumes it' : s.model ? 'Ready' : 'Starting'} />
-        <span className="path" title={s.cwd}>
+        <span className="path" data-tip={s.cwd}>
           <span className="path-parent">{folder.slice(-2, -1)[0] ?? ''}/</span>
           {folder.at(-1) ?? '...'}
         </span>
         {s.goal && (
-          <span className="goal-chip" title={`Goal: ${s.goal}. /goal clear ends it.`}>
+          <span className="goal-chip" data-tip={`Goal: ${s.goal}. /goal clear ends it.`}>
             <svg viewBox="0 0 12 12" aria-hidden><circle cx="6" cy="6" r="4.6" /><circle cx="6" cy="6" r="1.6" /></svg>
             <span>{s.goal}</span>
           </span>
         )}
         {s.persona && (
-          <span className="persona-chip" style={{ '--pc': s.persona.color } as React.CSSProperties} title={`Persona: ${s.persona.name}${s.persona.access && s.persona.access !== 'ask' ? `. ${ACCESS[s.persona.access].what}` : ''}`}>
+          <span className="persona-chip" style={{ '--pc': s.persona.color } as React.CSSProperties} data-tip={`Persona: ${s.persona.name}${s.persona.access && s.persona.access !== 'ask' ? `. ${ACCESS[s.persona.access].what}` : ''}`}>
             {s.persona.access && s.persona.access !== 'ask' && <AccessMark access={s.persona.access} />}
             {s.persona.name}
           </span>
@@ -584,32 +584,32 @@ export function Panel(props: {
             onDone={(note, close) => window.dispatchEvent(new CustomEvent('stm:close-panels', { detail: { sids: close, note, repo: s.worktree?.repo } }))}
           />
         )}
-        <span className="pid" title="Panel id, for messages between panels">{sid}</span>
+        <span className="pid" data-tip="Panel id, for messages between panels">{sid}</span>
         {s.model && <span className="badge">{s.model.replace(/^claude-/, '').replace(/-(\d+)-(\d+)$/, ' $1.$2')}</span>}
         {s.cacheTtl && s.lastTurnAt && !s.busy && <CacheChip at={s.lastTurnAt} ttl={s.cacheTtl} tokens={s.context?.tokens ?? 0} model={s.model} money={props.money} />}
         {saved && <span className="saved-note">{saved}</span>}
         {lastReply && !s.busy && (
           <span className="wb-rate" role="group" aria-label="Rate the last reply">
-            {rated ? <span className="saved-note">{rated}{rated === 'Rated good' && <button className="ghost small" title="The app drafts a Claude Code skill from what this panel did; it does nothing until you approve it" onClick={() => window.dispatchEvent(new CustomEvent('stm:skill-draft', { detail: { sid } }))}>Draft a skill</button>}</span> : (
+            {rated ? <span className="saved-note">{rated}{rated === 'Rated good' && <button className="ghost small" data-tip="The app drafts a Claude Code skill from what this panel did; it does nothing until you approve it" onClick={() => window.dispatchEvent(new CustomEvent('stm:skill-draft', { detail: { sid } }))}>Draft a skill</button>}</span> : (
               <>
                 <ReadAloud text={lastReply.kind === 'assistant' ? lastReply.text : ''} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
-                <button className="ghost small" title="A good reply: scored in Observability and kept as an example" onClick={() => void window.stm.wb.rate(sid, 1, lastReply.kind === 'assistant' ? lastReply.text : '').then(() => (setRated('Rated good'), setTimeout(() => setRated(''), 15000)), (e: Error) => setRated(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))}>Good</button>
-                <button className="ghost small" title="A bad reply: scored in Observability and kept as a case to improve" onClick={() => void window.stm.wb.rate(sid, 0, '').then(() => (setRated('Rated bad'), setTimeout(() => setRated(''), 3000)), (e: Error) => setRated(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))}>Bad</button>
+                <button className="ghost small" data-tip="A good reply: scored in Observability and kept as an example" onClick={() => void window.stm.wb.rate(sid, 1, lastReply.kind === 'assistant' ? lastReply.text : '').then(() => (setRated('Rated good'), setTimeout(() => setRated(''), 15000)), (e: Error) => setRated(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))}>Good</button>
+                <button className="ghost small" data-tip="A bad reply: scored in Observability and kept as a case to improve" onClick={() => void window.stm.wb.rate(sid, 0, '').then(() => (setRated('Rated bad'), setTimeout(() => setRated(''), 3000)), (e: Error) => setRated(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))}>Bad</button>
               </>
             )}
           </span>
         )}
         {lastReply && (
-          <button className="ghost small remember" title="Save the last reply to this project's note in the vault" onClick={() => void rememberLast()}>
+          <button className="ghost small remember" data-tip="Save the last reply to this project's note in the vault" onClick={() => void rememberLast()}>
             <IconRemember /> Remember
           </button>
         )}
-        {s.meter?.label && <span className="meter-chip" title={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
+        {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
         <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
         <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
         {!s.sandbox && <IsolateChip sid={sid} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />}
         {lastReply && (
-          <button className="ghost small" title="Export this conversation as Markdown or HTML, credentials masked" onClick={() => setExporting(true)}>Export</button>
+          <button className="ghost small" data-tip="Export this conversation as Markdown or HTML, credentials masked" onClick={() => setExporting(true)}>Export</button>
         )}
         <div className="segmented" role="tablist">
           <button role="tab" aria-selected={tab === 'chat'} onClick={() => setTab('chat')}>Chat</button>
@@ -617,22 +617,22 @@ export function Panel(props: {
             Changes{files ? <span className="count">{files}</span> : null}
           </button>
           <button role="tab" aria-selected={tab === 'git'} onClick={() => setTab('git')}>Git</button>
-          <button role="tab" aria-selected={tab === 'terminal'} onClick={() => setTab('terminal')} title="A shell in this folder">Terminal</button>
-          <button role="tab" aria-selected={tab === 'preview'} onClick={() => setTab('preview')} title={s.servers.length ? s.servers.map((v) => v.url).join('\n') : 'Your app on localhost, or any site, with developer tools'}>
+          <button role="tab" aria-selected={tab === 'terminal'} onClick={() => setTab('terminal')} data-tip="A shell in this folder">Terminal</button>
+          <button role="tab" aria-selected={tab === 'preview'} onClick={() => setTab('preview')} data-tip={s.servers.length ? s.servers.map((v) => v.url).join('\n') : 'Your app on localhost, or any site, with developer tools'}>
             Browse{s.servers.length ? <StateMark state="up" label="A dev server is running" /> : null}
           </button>
           {s.ci && (
-            <button role="tab" aria-selected={tab === 'ci'} onClick={() => setTab('ci')} title={ciTitle}>
+            <button role="tab" aria-selected={tab === 'ci'} onClick={() => setTab('ci')} data-tip={ciTitle}>
               CI <StateMark state={ciState === 'success' ? 'up' : ciState === 'failure' ? 'down' : ciState === 'running' ? 'busy' : 'off'} label={ciTitle} />
             </button>
           )}
         </div>
-        <button className="icon" title="Close panel (Cmd+W)" aria-label="Close panel" onClick={props.onClose}>
+        <button className="icon" data-tip="Close panel (Cmd+W)" aria-label="Close panel" onClick={props.onClose}>
           <IconClose />
         </button>
       </header>
 
-      <div className="hud" title={WHY[mood]} dangerouslySetInnerHTML={{ __html: themed(hudMini(hudView(s, money, Date.now()))) }} />
+      <div className="hud" data-tip={WHY[mood]} role="img" aria-label={WHY[mood]} dangerouslySetInnerHTML={{ __html: themed(hudMini(hudView(s, money, Date.now()))) }} />
 
       {/* stays mounted once opened, so switching tabs keeps the page and its state */}
       {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><Suspense fallback={null}><PreviewView servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></Suspense></section>}
@@ -840,7 +840,7 @@ export function Panel(props: {
         {tips.length > 0 && (
           <div className="tips">
             {tips.map((t) => (
-              <div key={t.id} className={`tip ${t.tone}`} title={t.body}>
+              <div key={t.id} className={`tip ${t.tone}`} data-tip={t.body}>
                 {t.meter != null && (
                   <svg className="tip-ring" width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
                     <circle cx="17" cy="17" r="14" className="track" />
@@ -865,11 +865,11 @@ export function Panel(props: {
         {(atts.length > 0 || ctx.length > 0) && (
           <div className="atts">
             {ctx.map((c, i) => (
-              <span key={`c${i}`} className="att ctx" title={c.text.slice(0, 600)}>
+              <span key={`c${i}`} className="att ctx" data-tip={c.text.slice(0, 600)}>
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 2h6M2 2v6M14 14H8M14 14V8" /></svg>
                 <span className="att-name">{c.label}</span>
                 {!c.shrunk && c.text.length > 1500 && (
-                  <button className={`att-shrink ${c.busy ? 'busy' : ''}`} title={`Shorten it on this Mac before sending (${Math.round(c.text.length / 4).toLocaleString()} tokens now); free`} aria-label="Shorten on this Mac" onClick={() => void shrink(i)}>
+                  <button className={`att-shrink ${c.busy ? 'busy' : ''}`} data-tip={`Shorten it on this Mac before sending (${Math.round(c.text.length / 4).toLocaleString()} tokens now); free`} aria-label="Shorten on this Mac" onClick={() => void shrink(i)}>
                     <svg viewBox="0 0 12 12" aria-hidden><path d="M2 2l3 3M5 2v3H2M10 10 7 7M7 10V7h3" /></svg>
                   </button>
                 )}
@@ -877,7 +877,7 @@ export function Panel(props: {
               </span>
             ))}
             {atts.map((a, i) => (
-              <span key={i} className={`att ${a.kind}`} title={a.kind === 'file' ? a.path : a.name}>
+              <span key={i} className={`att ${a.kind}`} data-tip={a.kind === 'file' ? a.path : a.name}>
                 {a.kind === 'image' ? <img src={`data:${a.mediaType};base64,${a.data}`} alt="" /> : <FileGlyph dir={a.dir} />}
                 <span className="att-name">{a.name}</span>
                 <button className="att-x" aria-label={`Remove ${a.name}`} onClick={() => setAtts((x) => x.filter((_, k) => k !== i))}>×</button>
@@ -899,7 +899,7 @@ export function Panel(props: {
           <div className="cite-bar" role="group" aria-label="Sources of the last answer">
             <span className="chart-name">Sources</span>
             {sources.map((x) => (
-              <button key={x.n} className={`cite-chip ${cited.includes(x.n) ? 'used' : ''}`} title={`${x.text.slice(0, 300)}${x.text.length > 300 ? '...' : ''}\n\nClick to open the document`} onClick={() => void window.stm.docs.show(x.doc)}>
+              <button key={x.n} className={`cite-chip ${cited.includes(x.n) ? 'used' : ''}`} data-tip={`${x.text.slice(0, 300)}${x.text.length > 300 ? '...' : ''}\n\nClick to open the document`} onClick={() => void window.stm.docs.show(x.doc)}>
                 <b>S{x.n}</b> {x.title}
               </button>
             ))}
@@ -930,7 +930,7 @@ export function Panel(props: {
         )}
         {s.snapshot && !snapHidden && <SnapshotCard sid={sid} text={s.snapshot.text} inject={s.snapshot.inject} onDone={() => setSnapHidden(true)} />}
         <div className="composer">
-          <button className="attach" title="Attach files, folders or images (or paste and drop them)" aria-label="Attach" onClick={async () => {
+          <button className="attach" data-tip="Attach files, folders or images (or paste and drop them)" aria-label="Attach" onClick={async () => {
             const picked = await pickAttachments(s.cwd)
             if (picked.length) setAtts((a) => [...a, ...picked].slice(0, MAX_ATTACHMENTS))
           }}>
@@ -958,7 +958,7 @@ export function Panel(props: {
             }}
           />
           {looksLikeCommand(draft) && (
-            <button className="run-hint" onClick={() => runShell(draft)} title="Run in the shell (Cmd+Enter)">
+            <button className="run-hint" onClick={() => runShell(draft)} data-tip="Run in the shell (Cmd+Enter)">
               <IconRun /> Run
             </button>
           )}
@@ -972,11 +972,11 @@ export function Panel(props: {
             }}
           />
           {s.busy ? (
-            <button className="send stop" title="Stop" aria-label="Stop" onClick={() => void window.stm.interrupt(sid)}>
+            <button className="send stop" data-tip="Stop" aria-label="Stop" onClick={() => void window.stm.interrupt(sid)}>
               <IconStop />
             </button>
           ) : (
-            <button className="send" title="Send (Enter)" aria-label="Send" disabled={!draft.trim() && !atts.length} onClick={() => submit(draft)}>
+            <button className="send" data-tip="Send (Enter)" aria-label="Send" disabled={!draft.trim() && !atts.length} onClick={() => submit(draft)}>
               <IconSend />
             </button>
           )}

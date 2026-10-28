@@ -3,6 +3,7 @@ import { displayCurrency, symbolOf } from './currency'
 import { useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import { paramsOf, READ_MIN_PARAMS } from '../shared/params'
+import { Select } from './ui'
 
 /**
  * The local model at a glance: each link of the chain from "Ollama is installed" to "panels use it",
@@ -43,7 +44,7 @@ function Copy({ text }: { text: string }) {
   return (
     <button
       className="ghost small lm-cmd"
-      title="Copy the command"
+      data-tip="Copy the command"
       onClick={() => {
         void navigator.clipboard?.writeText(text)
         setDone(true)
@@ -208,7 +209,7 @@ export function LocalModelSheet(props: { onClose: () => void; usdToBrl: number }
               <ol className={`lm-chain${allUp ? ' live' : ''}`}>
                 {chain.map((c) => (
                   <li key={c.title} className={`lm-link ${c.state}`}>
-                    <span className={`lm-sign ${c.state}`} role="img" aria-label={c.state === 'up' ? 'up' : c.state === 'warn' ? 'needs a look' : c.state === 'down' ? 'down' : 'waiting'} title={c.state === 'up' ? 'Up' : c.state === 'warn' ? 'Needs a look' : c.state === 'down' ? 'Down' : 'Waiting on the step above'}>
+                    <span className={`lm-sign ${c.state}`} role="img" aria-label={c.state === 'up' ? 'up' : c.state === 'warn' ? 'needs a look' : c.state === 'down' ? 'down' : 'waiting'} data-tip={c.state === 'up' ? 'Up' : c.state === 'warn' ? 'Needs a look' : c.state === 'down' ? 'Down' : 'Waiting on the step above'}>
                       <Mark shape={c.shape} />
                     </span>
                     <div className="lm-link-text">
@@ -223,12 +224,12 @@ export function LocalModelSheet(props: { onClose: () => void; usdToBrl: number }
               {running && models.length > 0 && (
                 <div className="lm-row">
                   <label className="lm-label" htmlFor="lm-model">Model</label>
-                  <select id="lm-model" value={st.model ?? ''} onChange={(e) => void pick(e.target.value || null)}>
+                  <Select id="lm-model" value={st.model ?? ''} onChange={(e) => void pick(e.target.value || null)}>
                     <option value="">Claude Haiku (your plan)</option>
                     {models.map((m) => (
                       <option key={m.name} value={m.name}>{m.name}{m.params ? ` · ${m.params}` : ''} · {gb(m.size)}</option>
                     ))}
-                  </select>
+                  </Select>
                   <button disabled={!st.model || testing} onClick={() => void runTest()}>{testing ? 'Testing...' : 'Test now'}</button>
                 </div>
               )}
@@ -260,14 +261,14 @@ export function LocalModelSheet(props: { onClose: () => void; usdToBrl: number }
                             <span>{m.job}</span>
                           </div>
                           {here && !here.error ? (
-                            <div className="lm-get-progress" title={here.status}>
+                            <div className="lm-get-progress" data-tip={here.status}>
                               <i style={{ width: `${Math.round(here.done * 100)}%` }} />
                               <span>{here.done ? `${Math.round(here.done * 100)}%` : here.status}</span>
                             </div>
                           ) : have ? (
                             st.model === m.name ? <span className="lm-get-in-use">In use</span> : <button className="ghost small" onClick={() => void pick(m.name)}>Use</button>
                           ) : (
-                            <button className="small" disabled={!!pull && !pull.error} onClick={() => void download(m.name)} title={here?.error}>{here?.error ? 'Retry' : `Get · ${m.size}`}</button>
+                            <button className="small" disabled={!!pull && !pull.error} onClick={() => void download(m.name)} data-tip={here?.error}>{here?.error ? 'Retry' : `Get · ${m.size}`}</button>
                           )}
                         </div>
                       )
@@ -297,7 +298,7 @@ export function LocalModelSheet(props: { onClose: () => void; usdToBrl: number }
                       {st.jobs.slice(0, 8).map((j) => (
                         <li key={j.at} className={j.ok ? '' : 'failed'}>
                           <span className="lm-job-kind">{j.kind === 'read' ? 'Read' : 'Draft'}</span>
-                          <span className="lm-job-what" title={j.what}>{j.what}</span>
+                          <span className="lm-job-what" data-tip={j.what}>{j.what}</span>
                           <span className="faint">{j.ok ? (j.kind === 'read' ? `${kTok(j.read - j.kept)} kept out` : 'done') : 'failed, Claude did it'}</span>
                           <span className="faint num">{(j.ms / 1000).toFixed(1)}s · {ago(j.at)}</span>
                         </li>

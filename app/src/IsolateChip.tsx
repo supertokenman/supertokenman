@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { clean } from './errors'
+import { Checkbox } from './ui'
 
 type St = { on: boolean; image: string; network: boolean }
 
@@ -19,7 +20,7 @@ export function IsolateChip(props: { sid: string; onNote: (t: string) => void })
   if (!st) return null
   return (
     <span className="iso-wrap">
-      <button className={`ghost small iso-chip ${st.on ? 'on' : ''} ${st.on && st.network ? 'net' : ''}`} title={st.on ? `Commands run in ${st.image}` : 'Run this panel\'s commands in a container'} onClick={(e) => {
+      <button className={`ghost small iso-chip ${st.on ? 'on' : ''} ${st.on && st.network ? 'net' : ''}`} data-tip={st.on ? `Commands run in ${st.image}` : 'Run this panel\'s commands in a container'} onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect()
         setAt({ top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 336) })
         setOpen(!open)
@@ -37,7 +38,7 @@ export function IsolateChip(props: { sid: string; onNote: (t: string) => void })
             </>
           ) : (
             <>
-              <label className="ca-toggle"><input type="checkbox" checked={st.network} onChange={(e) => act(window.stm.iso.network(props.sid, e.target.checked))} />Let the container reach the network</label>
+              <label className="ca-toggle"><Checkbox checked={st.network} onChange={(e) => act(window.stm.iso.network(props.sid, e.target.checked))} />Let the container reach the network</label>
               <div className="ob-row"><span className="spacer-flex" /><button className="danger" onClick={() => act(window.stm.iso.stop(props.sid))}>Stop isolating</button></div>
             </>
           )}

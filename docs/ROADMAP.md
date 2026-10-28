@@ -113,7 +113,7 @@ done. Ideas only, no code. Each one ships with a test, an empty state and its `d
    Claude plan." (Puter)
 2. Launch channels in `docs/launch/KIT.md`: awesome-claude-code and similar lists, GitHubDaily,
    HelloGitHub, Product Hunt, TLDR, Console.dev, Changelog, each with its link and text. (GitHubDaily)
-3. `stm top`: a live terminal dashboard of panels, costs, approvals waiting and CI, next to `stm` and
+3. Done: `stm top`, a live terminal dashboard of panels, costs, approvals waiting and CI, next to `stm` and
    `stm news`. (World Monitor)
 4. Triggers on events, not only on a clock: a monitor down, CI red, a feed item matching a filter, a
    file in a folder. Each run opens a panel and still asks before edits and commands. Plus a daily

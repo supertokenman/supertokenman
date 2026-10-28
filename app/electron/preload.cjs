@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('stm', {
     list: () => ipcRenderer.invoke('personas:list'),
     save: (p) => ipcRenderer.invoke('personas:save', p),
     remove: (id) => ipcRenderer.invoke('personas:delete', id),
-    exportFile: (id) => ipcRenderer.invoke('personas:export', id),
+    exportFile: (id, dir) => ipcRenderer.invoke('personas:export', id, dir),
     importFiles: (paths) => ipcRenderer.invoke('personas:import', paths),
     history: (id) => ipcRenderer.invoke('personas:history', id),
     restore: (id, at) => ipcRenderer.invoke('personas:restore', id, at),
@@ -111,7 +111,7 @@ contextBridge.exposeInMainWorld('stm', {
     schema: (id) => ipcRenderer.invoke('db:schema', id),
     explain: (id, sql) => ipcRenderer.invoke('db:explain', id, sql),
     history: (id) => ipcRenderer.invoke('db:history', id),
-    exportRows: (id, sql, format) => ipcRenderer.invoke('db:export', id, sql, format),
+    exportRows: (id, sql, format, dir) => ipcRenderer.invoke('db:export', id, sql, format, dir),
     ask: (id, request) => ipcRenderer.invoke('db:ask', id, request),
     apply: (id, statements) => ipcRenderer.invoke('db:apply', id, statements),
   },
@@ -363,7 +363,7 @@ contextBridge.exposeInMainWorld('stm', {
     save: (m) => ipcRenderer.invoke('monitor:save', m),
     remove: (id) => ipcRenderer.invoke('monitor:remove', id),
     check: (id) => ipcRenderer.invoke('monitor:check', id),
-    page: (title) => ipcRenderer.invoke('monitor:page', title),
+    page: (title, dir) => ipcRenderer.invoke('monitor:page', title, dir),
     pageTitle: () => ipcRenderer.invoke('monitor:pageTitle'),
     netdataUrl: () => ipcRenderer.invoke('monitor:netdataUrl'),
     setNetdata: (url) => ipcRenderer.invoke('monitor:setNetdata', url),
@@ -430,7 +430,7 @@ contextBridge.exposeInMainWorld('stm', {
     open: (path) => ipcRenderer.invoke('diagram:open', path),
     create: (cwd, name, text) => ipcRenderer.invoke('diagram:create', cwd, name, text),
     edit: (path, text, ids) => ipcRenderer.invoke('diagram:edit', path, text, ids),
-    fromImage: (cwd, name, hint) => ipcRenderer.invoke('diagram:fromImage', cwd, name, hint),
+    fromImage: (cwd, name, hint, chosen) => ipcRenderer.invoke('diagram:fromImage', cwd, name, hint, chosen),
     er: (cwd, name, schema) => ipcRenderer.invoke('diagram:er', cwd, name, schema),
     template: (cwd, name, id) => ipcRenderer.invoke('diagram:template', cwd, name, id),
     restore: (path, at) => ipcRenderer.invoke('diagram:restore', path, at),
@@ -442,7 +442,7 @@ contextBridge.exposeInMainWorld('stm', {
   },
   photos: {
     get: () => ipcRenderer.invoke('photos:get'),
-    pick: () => ipcRenderer.invoke('photos:pick'),
+    pick: (chosen) => ipcRenderer.invoke('photos:pick', chosen),
     scan: () => ipcRenderer.invoke('photos:scan'),
     thumb: (source, id) => ipcRenderer.invoke('photos:thumb', source, id),
     open: (id) => ipcRenderer.invoke('photos:open', id),
@@ -598,7 +598,7 @@ contextBridge.exposeInMainWorld('stm', {
   anomalySeries: (sid) => ipcRenderer.invoke('anomaly:series', sid),
   pdfTools: {
     config: (url) => ipcRenderer.invoke('pdf:config', url),
-    pick: () => ipcRenderer.invoke('pdf:pick'),
+    pick: (chosen) => ipcRenderer.invoke('pdf:pick', chosen),
     scan: (file) => ipcRenderer.invoke('pdf:scan', file),
     run: (op, files, p) => ipcRenderer.invoke('pdf:run', op, files, p),
     reveal: (file) => ipcRenderer.invoke('pdf:reveal', file),
@@ -606,14 +606,14 @@ contextBridge.exposeInMainWorld('stm', {
   vaultBoard: {
     notes: () => ipcRenderer.invoke('fmv:notes'),
     set: (file, key, value, mtime) => ipcRenderer.invoke('fmv:set', file, key, value, mtime),
-    importEnex: () => ipcRenderer.invoke('enex:import'),
+    importEnex: (chosen) => ipcRenderer.invoke('enex:import', chosen),
   },
   handoff: {
     write: (cwd, text, replace) => ipcRenderer.invoke('design:write', cwd, text, replace),
-    pickHtml: () => ipcRenderer.invoke('html:pick'),
+    pickHtml: (chosen) => ipcRenderer.invoke('html:pick', chosen),
   },
   mdImages: {
-    pick: () => ipcRenderer.invoke('mdimg:pick'),
+    pick: (chosen) => ipcRenderer.invoke('mdimg:pick', chosen),
     scan: (file) => ipcRenderer.invoke('mdimg:scan', file),
     publish: (file, refs, template) => ipcRenderer.invoke('mdimg:publish', file, refs, template),
   },
@@ -757,7 +757,7 @@ contextBridge.exposeInMainWorld('stm', {
   },
   docs: {
     state: () => ipcRenderer.invoke('docs:state'),
-    setFolder: () => ipcRenderer.invoke('docs:setFolder'),
+    setFolder: (chosen) => ipcRenderer.invoke('docs:setFolder', chosen),
     addFiles: (paths) => ipcRenderer.invoke('docs:addFiles', paths),
     retry: (id) => ipcRenderer.invoke('docs:retry', id),
     doc: (id) => ipcRenderer.invoke('docs:doc', id),
@@ -818,8 +818,8 @@ contextBridge.exposeInMainWorld('stm', {
     tryRead: (url, question, mode) => ipcRenderer.invoke('web:try', url, question, mode),
   },
   team: {
-    exportFile: (name) => ipcRenderer.invoke('team:export', name),
-    open: (path) => ipcRenderer.invoke('team:open', path),
+    exportFile: (name, dir) => ipcRenderer.invoke('team:export', name, dir),
+    open: (path, chosen) => ipcRenderer.invoke('team:open', path, chosen),
     apply: (team, picked) => ipcRenderer.invoke('team:apply', team, picked),
   },
   design: {
@@ -904,11 +904,19 @@ contextBridge.exposeInMainWorld('stm', {
   },
   setIntegration: (id, on) => ipcRenderer.invoke('integrations:set', id, on),
   openUrl: (url) => ipcRenderer.invoke('open:url', url),
-  exportText: (name, text) => ipcRenderer.invoke('export:text', name, text),
+  exportText: (name, text, dir) => ipcRenderer.invoke('export:text', name, text, dir),
   setPanelModel: (sid, model) => ipcRenderer.invoke('chat:model', sid, model),
   routeTally: () => ipcRenderer.invoke('route:tally'),
   faithJudge: (pairs) => ipcRenderer.invoke('faith:judge', pairs),
   onClosing: (fn) => ipcRenderer.on('app:closing', () => fn()),
+  ctx: {
+    onOpen: (fn) => {
+      const h = (_e, m) => fn(m)
+      ipcRenderer.on('ctx:open', h)
+      return () => ipcRenderer.removeListener('ctx:open', h)
+    },
+    pick: (i) => ipcRenderer.send('ctx:pick', i),
+  },
   closeReady: () => ipcRenderer.send('app:close-ready'),
   existing: (paths) => ipcRenderer.invoke('fs:existing', paths),
   remote: {
@@ -1021,8 +1029,8 @@ contextBridge.exposeInMainWorld('stm', {
     rules: (r) => ipcRenderer.invoke('news:rules', r),
     senders: (l) => ipcRenderer.invoke('news:senders', l),
     newsletter: (id) => ipcRenderer.invoke('news:newsletter', id),
-    opmlImport: () => ipcRenderer.invoke('news:opmlImport'),
-    opmlExport: () => ipcRenderer.invoke('news:opmlExport'),
+    opmlImport: (chosen) => ipcRenderer.invoke('news:opmlImport', chosen),
+    opmlExport: (dir) => ipcRenderer.invoke('news:opmlExport', dir),
     digest: (items, save) => ipcRenderer.invoke('news:digest', items, save),
     briefing: (name) => ipcRenderer.invoke('news:briefing', name),
     schedule: (s) => ipcRenderer.invoke('news:schedule', s),
@@ -1069,6 +1077,7 @@ contextBridge.exposeInMainWorld('stm', {
   send: (sid, text, attachments, why) => ipcRenderer.invoke('chat:send', sid, text, attachments, why),
   pickFiles: () => ipcRenderer.invoke('files:pick'),
   attachPaths: (paths) => ipcRenderer.invoke('files:attach', paths),
+  readPicked: (path) => ipcRenderer.invoke('files:read', path),
   filePick: {
     list: (dir, hidden) => ipcRenderer.invoke('filepick:list', dir, hidden),
     project: (dir, hidden) => ipcRenderer.invoke('filepick:project', dir, hidden),

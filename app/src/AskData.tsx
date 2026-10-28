@@ -7,6 +7,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconBoard, IconClose, IconRefresh, IconSpark, IconTrash } from './icons'
 import './bridge'
+import { Select } from './ui'
 
 const show = (v: unknown) => (v === null || v === undefined ? 'NULL' : String(v))
 
@@ -109,7 +110,7 @@ export function AskDataSheet(props: { onClose: () => void; onDatabase?: () => vo
             ) : (
               <>
                 <div className="fld-grid">
-                  <label className="fld"><span className="fld-label">Database</span><select value={conn} onChange={(e) => (setConn(e.target.value), setRes(null), setSql(''))}>{conns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                  <label className="fld"><span className="fld-label">Database</span><Select value={conn} onChange={(e) => (setConn(e.target.value), setRes(null), setSql(''))}>{conns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></label>
                   <label className="fld wide"><span className="fld-label">Question</span><input value={q} placeholder="Orders per status this month" onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && q.trim() && void write()} /></label>
                 </div>
                 <div className="ob-row">

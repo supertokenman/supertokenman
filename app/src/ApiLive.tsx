@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { StateMark } from './StateMark'
 import type { Entry, Kind, Saved } from '../electron/realtime'
+import { Checkbox } from './ui'
 
 const PH: Record<Kind, string> = { ws: 'wss://echo.example.com/socket?token={{API_KEY}}', sse: 'https://api.example.com/v1/stream', sio: 'https://chat.example.com' }
 const kb = (n: number) => (n >= 1e3 ? `${(n / 1e3).toFixed(1)} KB` : `${n} B`)
@@ -68,7 +69,7 @@ export function ApiLive(props: { kind: Kind; secrets: string[]; onAttach: (note:
         {mine.length === 0 && <div className="faint api-empty">Save a session to keep it here as an example.</div>}
         {mine.map((s) => (
           <div key={s.id} className="api-item">
-            <button className="api-pick" onClick={() => open(s)} title={s.url}>
+            <button className="api-pick" onClick={() => open(s)} data-tip={s.url}>
               <span className="api-m">{s.kind.toUpperCase()}</span>
               <span className="api-name">{s.name}</span>
             </button>
@@ -85,7 +86,7 @@ export function ApiLive(props: { kind: Kind; secrets: string[]; onAttach: (note:
         <div className="api-headers">
           {headers.map((h, i) => (
             <div key={i} className="api-header">
-              <input type="checkbox" checked={h.on} onChange={(e) => setHeader(i, { on: e.target.checked })} aria-label="Use this header" />
+              <Checkbox checked={h.on} onChange={(e) => setHeader(i, { on: e.target.checked })} aria-label="Use this header" />
               <input value={h.key} placeholder="Header" onChange={(e) => setHeader(i, { key: e.target.value })} />
               <input value={h.value} placeholder="Value or {{SECRET}}" onChange={(e) => setHeader(i, { value: e.target.value })} />
               <button className="att-x" aria-label="Remove header" onClick={() => setHeaders((hs) => hs.filter((_, k) => k !== i))}>×</button>

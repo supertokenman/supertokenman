@@ -5,6 +5,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import { IconCalendar, IconCheck, IconClose, IconDeploy, IconExternal, IconRefresh } from './icons'
 import './bridge'
+import { Checkbox, NumberField, TimeField } from './ui'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const fresh = (): Omit<Booking, 'url' | 'publishedAt'> => ({ account: '', name: 'book-me', title: 'Talk with me', who: '', rules: { days: 14, from: '09:00', to: '17:00', minutes: 30, buffer: 10, weekdays: [1, 2, 3, 4, 5], notBeforeHours: 12 } })
@@ -52,13 +53,13 @@ export function BookingSheet(props: { onClose: () => void }) {
           <div className="fld-grid">
             <label className="fld"><span className="fld-label">Page title</span><input value={b.title} onChange={(e) => setB({ ...b, title: e.target.value })} /></label>
             <label className="fld"><span className="fld-label">Your name on it</span><input value={b.who} onChange={(e) => setB({ ...b, who: e.target.value })} /></label>
-            <label className="fld"><span className="fld-label">Length (min)</span><input type="number" min={10} step={5} value={b.rules.minutes} onChange={(e) => R({ minutes: Number(e.target.value) || 30 })} /></label>
-            <label className="fld"><span className="fld-label">Buffer (min)</span><input type="number" min={0} step={5} value={b.rules.buffer} onChange={(e) => R({ buffer: Number(e.target.value) || 0 })} /></label>
-            <label className="fld"><span className="fld-label">From</span><input type="time" value={b.rules.from} onChange={(e) => R({ from: e.target.value })} /></label>
-            <label className="fld"><span className="fld-label">To</span><input type="time" value={b.rules.to} onChange={(e) => R({ to: e.target.value })} /></label>
-            <label className="fld"><span className="fld-label">Days ahead</span><input type="number" min={1} max={60} value={b.rules.days} onChange={(e) => R({ days: Number(e.target.value) || 14 })} /></label>
-            <label className="fld"><span className="fld-label">Notice (hours)</span><input type="number" min={0} value={b.rules.notBeforeHours} onChange={(e) => R({ notBeforeHours: Number(e.target.value) || 0 })} /></label>
-            <div className="fld wide"><span className="fld-label">Weekdays</span><div className="ds-row">{DAYS.map((d, i) => <label key={d} className="check"><input type="checkbox" checked={b.rules.weekdays.includes(i)} onChange={(e) => R({ weekdays: e.target.checked ? [...b.rules.weekdays, i].sort() : b.rules.weekdays.filter((x) => x !== i) })} /> {d}</label>)}</div></div>
+            <label className="fld"><span className="fld-label">Length (min)</span><NumberField min={10} step={5} value={b.rules.minutes} onChange={(e) => R({ minutes: Number(e.target.value) || 30 })} /></label>
+            <label className="fld"><span className="fld-label">Buffer (min)</span><NumberField min={0} step={5} value={b.rules.buffer} onChange={(e) => R({ buffer: Number(e.target.value) || 0 })} /></label>
+            <label className="fld"><span className="fld-label">From</span><TimeField value={b.rules.from} onChange={(e) => R({ from: e.target.value })} /></label>
+            <label className="fld"><span className="fld-label">To</span><TimeField value={b.rules.to} onChange={(e) => R({ to: e.target.value })} /></label>
+            <label className="fld"><span className="fld-label">Days ahead</span><NumberField min={1} max={60} value={b.rules.days} onChange={(e) => R({ days: Number(e.target.value) || 14 })} /></label>
+            <label className="fld"><span className="fld-label">Notice (hours)</span><NumberField min={0} value={b.rules.notBeforeHours} onChange={(e) => R({ notBeforeHours: Number(e.target.value) || 0 })} /></label>
+            <div className="fld wide"><span className="fld-label">Weekdays</span><div className="ds-row">{DAYS.map((d, i) => <label key={d} className="check"><Checkbox checked={b.rules.weekdays.includes(i)} onChange={(e) => R({ weekdays: e.target.checked ? [...b.rules.weekdays, i].sort() : b.rules.weekdays.filter((x) => x !== i) })} /> {d}</label>)}</div></div>
             <label className="fld"><span className="fld-label">Cloudflare account id</span><input value={b.account} placeholder="32 hex characters" onChange={(e) => setB({ ...b, account: e.target.value.trim() })} /></label>
             <label className="fld"><span className="fld-label">Worker name</span><input value={b.name} onChange={(e) => setB({ ...b, name: e.target.value.trim().toLowerCase() })} /><span className="fld-help">Needs CLOUDFLARE_API_TOKEN in the vault.</span></label>
           </div>

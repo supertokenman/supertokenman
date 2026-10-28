@@ -4,6 +4,7 @@ import { RoleHero } from './RoleHero'
 import { createPortal } from 'react-dom'
 import type { Persona } from '../shared/personas'
 import { learn, route, stripMention, type Learned } from '../shared/router'
+import { Checkbox } from './ui'
 
 const ASK_KEY = 'stm.routerAsk'
 const LEARNED_KEY = 'stm.routerLearned'
@@ -126,7 +127,7 @@ export function RouterBox(props: { onSend: (persona: Persona | null, text: strin
 
   return (
     <>
-      <button className="router-pill" onClick={() => setOpen(true)} title="Ask the team (Cmd+E)">
+      <button className="router-pill" onClick={() => setOpen(true)} data-tip="Ask the team (Cmd+E)">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
           <circle cx="3" cy="8" r="1.75" />
           <path d="M4.75 8h3.5M8.25 8 12 4M8.25 8 12 12" />
@@ -175,7 +176,7 @@ export function RouterBox(props: { onSend: (persona: Persona | null, text: strin
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l2 2M10 10l2 2M12 4l-2 2M6 10l-2 2" /></svg>
                   </span>
                   <span className="tm-name">Auto</span>
-                  <span className="tm-role" title={!pick && suggested ? 'Suggested by the local model' : undefined}>{!pick && chosen ? `${r.sure || suggested ? '→' : '→ maybe'} ${chosen.name}` : 'From your words'}</span>
+                  <span className="tm-role" data-tip={!pick && suggested ? 'Suggested by the local model' : undefined}>{!pick && chosen ? `${r.sure || suggested ? '→' : '→ maybe'} ${chosen.name}` : 'From your words'}</span>
                 </button>
                 {personas.map((p) => (
                   <button key={p.id} role="radio" aria-checked={pick === p.id} className={`tm-person ${pick === p.id ? 'on' : ''} ${!pick && chosen?.id === p.id ? 'guess' : ''}`} style={{ '--pc': p.color } as React.CSSProperties} onClick={() => setPick(pick === p.id ? null : p.id)}>
@@ -206,10 +207,9 @@ export function RouterBox(props: { onSend: (persona: Persona | null, text: strin
                               : 'Nobody stands out yet: pick someone.'
                             : 'Your words, an @mention or a click decide.')}
                 </span>
-                <label className="tm-ask" title="When the words do not decide, one short call to the smallest model picks the persona">
+                <label className="tm-ask" data-tip="When the words do not decide, one short call to the smallest model picks the persona">
                   <span className="switch">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={ask}
                       onChange={(e) => {
                         setAsk(e.target.checked)
