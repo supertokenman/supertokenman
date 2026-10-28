@@ -481,3 +481,63 @@ Taken from how Halo pairs a free community edition with paid editions.
   - The system file dialog only behind "Use Finder..." in the in-app pickers, when the person asks for it
     (and `pickFolder` when no picker is mounted). The system save sheet is no longer used.
   - Scrollbars were already ours.
+
+## stm from inside a panel (decided 2026-10-28)
+
+- **What.** A panel's Claude Code can drive the app through `stm`: `whoami`, `panels`, `spawn`, `send`,
+  `note`, `link`, `links`. First step of the v1.2 "Agents working together" item; the canvas comes later.
+- **Where the idea came from.** A competitor's public behaviour: its CLI is made available in each agent
+  terminal, with environment variables for the CLI's path, the socket and the terminal's id. We took only
+  that architecture idea. No code, names, wording or UI were copied; our variables are `STM_CLI`,
+  `STM_SOCKET`, `STM_PANEL_ID` and `STM_PANEL_KEY`, and our commands keep stm's own vocabulary.
+- **Safety decisions.**
+  - A panel can only act as itself: besides its id, each panel gets a random key only its own Claude Code
+    process sees; the app refuses an unknown id or a key that does not match.
+  - `stm send` never submits by default. The labelled message ("From panel <name>: ...") waits in the
+    receiving composer and the person presses send. Auto-send is per link, off by default, stored in the
+    app settings and switched only from the window (the "linked:" chip in the panel header), never from
+    stm. Auto-sent text goes through the same budget brake and tool approvals as typed text.
+  - Caps per panel: 10 sends a minute and 5 spawns an hour by default (`stmLimits` in the settings file);
+    every action and refusal goes to the app's log.
+  - Notes stay on the machine, in the project's `.supertokenman/notes/` (added to the repository's local
+    git exclude), 64 KB each, names limited to letters, digits, dot, dash and underscore.
+  - Panels in a sandbox or on another machine do not get the variables: the path would mean nothing there.
+  - Known gap: the older `stm send` from your own terminal (no panel identity) still sends at once, as
+    before; an agent that removes its panel variables and reads `~/.supertokenman/cli.json` could use it.
+    Closing it would change the existing command; left for a follow-up decision.
+- **Packaged builds.** The launcher is written to the app's data folder (`stm-bin/stm`) and runs the app's
+  own binary with `--stm-cli` and the script from `app.asar.unpacked/cli/`, so no system Node is needed and
+  the RunAsNode fuse stays off.
+
+## Video transcripts (decided 2026-10-28)
+
+Transcripts of videos as text, for Claude and for the social pack (Research > Last 30 days). The idea
+comes from Agent-Reach (MIT); no code was taken. Routes looked at, with what their terms say (read on
+2026-10-28):
+
+- **YouTube Data API v3 `captions.download`**: needs OAuth (`youtube.force-ssl` or `youtubepartner`
+  scope) and "requires the user to have permission to edit the video"
+  (https://developers.google.com/youtube/v3/docs/captions/download). It only covers videos the person can
+  edit, so it does not serve the brief (other people's videos). Not shipped; it would need our own OAuth
+  client, which we do not have.
+- **The video page's caption tracks / `timedtext` endpoint**: undocumented. YouTube's Terms of Service
+  forbid accessing the Service "using any automated means (such as robots, botnets or scrapers)" except
+  public search engines or with prior written permission, and downloading content except "as expressly
+  authorized by the Service" or with written permission (https://www.youtube.com/t/terms). Not shipped.
+- **yt-dlp**: on YouTube it is the same automated access and download as above, so the app refuses
+  YouTube links whatever is installed. For other sites, the app detects a `yt-dlp` the person installed
+  (on PATH, found by looking at the disk, no process started to look) and runs it locally on the link
+  they chose: captions only (`--skip-download`), never cookies from a browser, no evasion flags. We do not
+  bundle it; that site's terms are the person's call. We do not claim it works on any given site.
+- **Local speech-to-text**: a file the person supplies goes to `whisper.cpp` (`whisper-cli`) if they
+  installed it and put a `ggml-*.bin` model in the app's `whisper` folder; `ffmpeg` (theirs) converts
+  non-wav files first. Nothing leaves the machine.
+- **Paste**: the person pastes a transcript (YouTube shows one under the video) or a .vtt/.srt.
+
+Decision: ship the file, paste, local whisper.cpp and user-installed yt-dlp (non-YouTube) routes; do not
+fetch YouTube captions at all. Plainly: **the app cannot get a YouTube video's transcript by itself**; for
+YouTube the person pastes it or gives a file they have the rights to. The feature is off until Settings >
+Appearance > Video transcripts; when off it reads nothing, looks for no tool and starts no process (tested;
+netwatch fails if yt-dlp, whisper or ffmpeg ever start with nobody asking). Transcripts are cached per
+video (YouTube id, or a hash of the link or file) under the app's data folder, each cut at 200,000
+characters, the folder kept under 20 MB (oldest out first). Every result shows the route used.

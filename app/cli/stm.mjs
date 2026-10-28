@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 import { connect } from 'node:net'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { PANEL_HELP, panelRequest, panelText } from './panelcmd.mjs'
 
 const HELP = `stm, SuperTokenMan from the command line (the app must be running)
 
@@ -27,6 +28,7 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
   stm ask test                       from a panel's Bash: run the tests, once approved in the panel
   stm ask scan deps|secrets          a dependency or secret scan of the panel's folder, once approved
   stm ask preview <local url>        show a local page in the panel's Preview tab, once approved
+  stm transcript <url|file>          a video's transcript as text (--timestamps, --fresh); on in the app first
   stm mcp                            run as an MCP server (stdio) for other agents: status, panels, spend, memory, read-only SQL
 
   --json  machine-readable output     --help  this text`
@@ -47,7 +49,7 @@ const die = (msg, code = 1) => {
   process.exit(code)
 }
 if (flags.help || flags.h || !pos.length || pos[0] === 'help') {
-  process.stdout.write(`${HELP}\n`)
+  process.stdout.write(`${HELP}\n\n${PANEL_HELP}\n`)
   process.exit(0)
 }
 
@@ -60,7 +62,7 @@ try {
 
 function call(cmd, args) {
   return new Promise((ok, fail) => {
-    const s = connect(info.socket)
+    const s = connect(process.env.STM_SOCKET || info.socket)
     let buf = ''
     s.setEncoding('utf8')
     s.on('connect', () => s.write(`${JSON.stringify({ token: info.token, cmd, args })}\n`))
@@ -149,8 +151,16 @@ function mcpServe() {
   })
 }
 
+let panelReq = null
 try {
-  if (cmd === 'top') {
+  panelReq = panelRequest(cmd, rest, flags, process.env)
+} catch (e) {
+  die(e.message)
+}
+
+try {
+  if (panelReq) print(await call(panelReq.cmd, panelReq.args), (d) => panelText(panelReq.cmd, d))
+  else if (cmd === 'top') {
     const { runTop } = await import('./top.mjs')
     let code
     try {
@@ -211,7 +221,8 @@ try {
   } else if (cmd === 'triggers') {
     if (rest[0] === 'run') print(await call('triggerRun', { id: rest[1] }), () => `Started ${rest[1]}.`)
     else print(await call('triggers', {}), (d) => (d.length ? d.map((t) => `${pad(t.id, 12)} ${pad(t.enabled ? 'on' : 'off', 4)} ${t.name}`).join('\n') : 'No triggers.'))
-  } else die(`Unknown command "${cmd}". Try: stm help`)
+  } else if (cmd === 'transcript') await (await import('./transcript.mjs')).runTranscript(call, { json })
+  else die(`Unknown command "${cmd}". Try: stm help`)
 } catch (e) {
   die(e.message)
 }

@@ -101,6 +101,12 @@ References to read before choosing (what they did, not claims about us):
      you turn on auto for that link). Every link shows its tokens and cost and has a spending cap, which
      none of the apps above show. Each panel stays a real Claude Code session on the user's own login:
      no API key and no new network calls.
+     Step done (2026-10-28): stm from inside a panel. Each panel's Claude Code gets STM_CLI,
+     STM_SOCKET, STM_PANEL_ID and a per-panel key, and can run stm whoami, panels, spawn, send
+     (queued in the other composer unless the person turns on auto for that link), note and
+     link/links; rate-limited and logged. See "Using stm from inside a panel" in docs/STM_GUIDE.md.
+     Still to come: the canvas itself (drawing the links), reading another panel's summary, and the
+     per-link token, cost and spending cap.
 
 ## After v1.1: from the repo review of 2026-10-27
 

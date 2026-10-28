@@ -140,6 +140,7 @@ const known = {
     }
   },
   send: async (sid: string, text: string) => void reply(sid, text),
+  panelBus: { onInbox: () => () => undefined, links: async () => ({}), onLinks: () => () => undefined, setAuto: async () => ({}) },
   stmCli: {
     onOpen: (fn: typeof cliOpen) => {
       cliOpen = fn

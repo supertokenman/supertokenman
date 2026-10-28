@@ -792,6 +792,11 @@ contextBridge.exposeInMainWorld('stm', {
     save: (input, id) => ipcRenderer.invoke('sites:save', input, id),
     remove: (id) => ipcRenderer.invoke('sites:remove', id),
   },
+  transcript: {
+    get: (r) => ipcRenderer.invoke('transcript:get', r),
+    enabled: (on) => ipcRenderer.invoke('transcript:enabled', on),
+    tools: () => ipcRenderer.invoke('transcript:tools'),
+  },
   brief: {
     sources: () => ipcRenderer.invoke('brief:sources'),
     connectReddit: (id, secret) => unlocked('save a secret').then(() => ipcRenderer.invoke('brief:connectReddit', id, secret)),
@@ -845,6 +850,20 @@ contextBridge.exposeInMainWorld('stm', {
       ipcRenderer.on('deploy:event', l)
       return () => ipcRenderer.removeListener('deploy:event', l)
     },
+  },
+  panelBus: {
+    onInbox: (fn) => {
+      const l = (_e, sid, text, sent) => fn(sid, text, sent)
+      ipcRenderer.on('panel:inbox', l)
+      return () => ipcRenderer.removeListener('panel:inbox', l)
+    },
+    links: () => ipcRenderer.invoke('panel:links'),
+    onLinks: (fn) => {
+      const l = (_e, v) => fn(v)
+      ipcRenderer.on('panel:links', l)
+      return () => ipcRenderer.removeListener('panel:links', l)
+    },
+    setAuto: (a, b, on) => ipcRenderer.invoke('panel:linkAuto', a, b, on),
   },
   stmCli: {
     onOpen: (fn) => {
