@@ -247,6 +247,7 @@ contextBridge.exposeInMainWorld('stm', {
   countTokens: (text, model) => ipcRenderer.invoke('tokens:count', text, model),
   memoryNode: (id) => ipcRenderer.invoke('memory:node', id),
   guardInject: (text) => ipcRenderer.invoke('guard:inject', text),
+  guardSecrets: (text) => ipcRenderer.invoke('guard:secrets', text),
   trace: (sid) => ipcRenderer.invoke('trace:get', sid),
   a2m: {
     list: (q, cat, keyless) => ipcRenderer.invoke('a2m:list', q, cat, keyless),

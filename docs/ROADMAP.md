@@ -172,7 +172,8 @@ panel" (in progress):
    effort levels and shows cost, time and pass or fail, to find the cheapest setting that holds.
    (ADK, VoltAgent)
 4. Secret guard on what leaves: before a prompt is sent, warn when a vault secret or a pasted key is
-   in it; the user decides. (VoltAgent)
+   in it; the user decides. (VoltAgent) Done: the composer also checks saved vault values; messages
+   that skip the composer (auto-send links, stm send --now) are refused when they carry one.
 5. Permissions per trigger: each scheduled run lists the folders it may read or write and the
    commands it may run. (AgentUse)
 6. Reviewer loop with a cap: a review panel sends work back to a build panel until tests pass, with a

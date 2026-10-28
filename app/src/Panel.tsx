@@ -389,9 +389,14 @@ export function Panel(props: {
     // what came from outside (a page, an API answer, a query result) goes in marked as data, not orders
     const t = [typed, ...list.map((c) => wrapOutside(c.label, c.text))].filter(Boolean).join('\n\n')
     // a credential in a prompt would sit in the transcript and the model's context: stop and ask
-    const found = checked ? [] : findSecrets(t)
-    if (found.length) {
-      setGuard({ text: typed, found })
+    if (!checked) {
+      const local = findSecrets(t)
+      // saved vault values too: the main process holds them and only answers with the ones in this text
+      void window.stm.guardSecrets(t).catch(() => []).then((saved) => {
+        const found = [...saved, ...local.filter((l) => !saved.some((v) => v.value === l.value))]
+        if (found.length) setGuard({ text: typed, found })
+        else submit(typed, true, outsideChecked, list)
+      })
       return
     }
     setGuard(null)

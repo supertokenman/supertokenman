@@ -103,7 +103,7 @@ import { cleanPrefs, Gate, passwordPrompt, type LockPrefs } from './lock.js'
 import { CATALOG, OPEN_SHIM, routeLogins, serversFor } from './integrations.js'
 import { decisions, DECISION_RULE, digest, graphCached, projectMemory, projectName, readDoc, readNote, writeDoc, remember, rememberDecisions, search, sessionNotes, vaultDir } from './memory.js'
 import { github, mcpServers, PICKS, plugins, rank, runClaude, skills, withPicks, type Item } from './catalog.js'
-import { redact } from '../shared/secrets.js'
+import { redact, findSecrets } from '../shared/secrets.js'
 import { isLocalUrl } from '../shared/local.js'
 import * as P from './procs.js'
 import * as D from './docker.js'
@@ -2410,6 +2410,13 @@ ipcMain.handle('memory:node', (_e, id: string) => {
 })
 // outside text about to go into a panel (a page, an API answer, a query result): the rules, then the
 // local model's opinion when one is set and the rules found nothing
+// saved vault values found in a prompt: only the values that are already in the text go back to the window
+ipcMain.handle('guard:secrets', (_e, text: string) => findSecrets(String(text ?? '').slice(0, 200_000), vault?.all() ?? []).filter((f) => f.kind === 'Saved credential'))
+/** A message sent without the composer (auto link, stm send --now) must not carry a credential: refuse, never mask silently. */
+const refuseSecrets = (text: string) => {
+  const f = findSecrets(text, vault?.all() ?? [])
+  if (f.length) throw new Error(`Not sent: it carries ${f.map((x) => `${x.kind} (${x.name})`).join(', ')}. Send it from the panel's composer, where you decide, or take the credential out.`)
+}
 ipcMain.handle('guard:inject', async (_e, text: string) => {
   const t = String(text ?? '').slice(0, 200_000)
   const found = scanInjection(t)
@@ -5665,6 +5672,7 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
       send(sid, { kind: 'note', text: 'A message from the command line is in the composer. Read it and press send, or clear it.' })
       return { panel: sid, queued: true }
     }
+    if (a.checked !== true) refuseSecrets(text)
     const s = sessions.get(sid)!
     // the same brake as a message typed in the window
     const v = budgetVerdict(sid)
@@ -5892,6 +5900,7 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     const how = PB.deliveryOf(PB.linkOf(links(), from, to))
     if (how === 'auto') {
       // the person turned auto on for this link: sent as if typed, with the same brake and approvals
+      refuseSecrets(text)
       const v = budgetVerdict(to)
       if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
       tracePrompt(to, body, `Panel ${panelName(from)}`)
