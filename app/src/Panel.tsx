@@ -102,6 +102,13 @@ const LineView = memo(function LineView({ l, onStop, onSend }: { l: Line; onStop
     )
   if (l.kind === 'shell') return <ShellBlock r={l} onStop={() => onStop(l.id)} onSend={() => onSend(l)} />
   if (l.kind === 'tool') return null
+  if (l.kind === 'evidence')
+    return (
+      <div className={`evidence ${l.level}`} role="note" data-tip={`Claim: ${l.claim}`}>
+        <StateMark state={l.level === 'observed' ? 'up' : 'warn'} label={l.level} />
+        {l.text}
+      </div>
+    )
   return <div className={`notice ${l.tone ?? ''}`}>{l.text}</div>
 })
 
@@ -918,7 +925,7 @@ export function Panel(props: {
             ))}
           </div>
         )}
-        {exporting && <ExportSessionSheet lines={s.lines} cwd={s.cwd ?? ''} home={/^(\/(?:Users|home)\/[^/]+)/.exec(s.cwd ?? '')?.[1] ?? ''} onClose={() => setExporting(false)} />}
+        {exporting && <ExportSessionSheet lines={s.lines.filter((l): l is Exclude<Line, { kind: 'evidence' }> => l.kind !== 'evidence')} cwd={s.cwd ?? ''} home={/^(\/(?:Users|home)\/[^/]+)/.exec(s.cwd ?? '')?.[1] ?? ''} onClose={() => setExporting(false)} />}
         {route && routeOff !== `${route.tier}|${s.model}` && !s.busy && (
           <div className={`route-chip ${route.costsMore ? 'more' : 'less'}`} role="status">
             <span className="chart-name">Suggested</span>

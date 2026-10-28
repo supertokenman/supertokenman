@@ -4,6 +4,7 @@ import type { FileEdit } from '../electron/diff'
 import type { ShellEvent } from '../electron/shell'
 import type { Exposure } from './bridge'
 import { findDevUrls } from './preview'
+import { evidenceOf, evidenceText } from '../shared/evidence'
 import type { HudView } from '../../token-kit/mod/supertokenman/hooks/hud'
 
 export type Line =
@@ -12,6 +13,7 @@ export type Line =
   | { kind: 'tool'; name: string; summary: string }
   | { kind: 'note'; text: string; tone?: 'error' }
   | { kind: 'peer'; from: string; text: string }
+  | { kind: 'evidence'; level: import('../shared/evidence').Level; claim: string; text: string }
   | { kind: 'shell'; id: string; command: string; out: string; code: number | null; ms: number; running: boolean }
 
 export type Ask = { id: string; tool: string; summary: string; command?: string; edit?: FileEdit; risk?: import('../shared/cmdrisk').Risk; why?: string; cls?: 'read' | 'write' }
@@ -149,7 +151,7 @@ export function reduce(s: State, a: Action, now = Date.now()): State {
         lastTurnAt: now,
         cacheTtl: a.cacheTtlMs ?? s.cacheTtl,
         turnTimes: [...s.turnTimes, now].slice(-5000),
-        lines: a.isError ? [...s.lines, { kind: 'note', text: a.text, tone: 'error' }] : s.lines,
+        lines: a.isError ? [...s.lines, { kind: 'note', text: a.text, tone: 'error' }] : withEvidence(s.lines),
       }
     case 'context':
       return { ...s, context: { tokens: a.tokens, window: a.window, percent: a.percent } }
@@ -272,4 +274,14 @@ export function reducePanels(p: Panels, a: PanelAction, now = Date.now()): Panel
       return cur ? { ...p, byId: { ...p.byId, [a.sid]: reduce(cur, a.action, now) } } : p
     }
   }
+}
+
+/** After a turn: whether its last reply's claim ("fixed", "tests pass") had a check run in that turn. */
+export function withEvidence(lines: Line[]): Line[] {
+  const from = lines.map((l) => l.kind).lastIndexOf('user') + 1
+  const turn = lines.slice(from)
+  const reply = [...turn].reverse().find((l) => l.kind === 'assistant')
+  if (!reply || reply.kind !== 'assistant') return lines
+  const e = evidenceOf(reply.text, turn.flatMap((l) => (l.kind === 'tool' ? [{ name: l.name, summary: l.summary }] : [])))
+  return e ? [...lines, { kind: 'evidence', level: e.level, claim: e.claim, text: evidenceText(e) }] : lines
 }

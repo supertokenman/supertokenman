@@ -167,7 +167,9 @@ panel" (in progress):
    Local only: no new network calls.
 2. Evidence on claims: when Claude says "fixed" or "faster", the panel shows whether a test or a
    measurement ran in that turn, marked observed, derived or inferred. The same marks on Savings and
-   on the performance report. (Flameox)
+   on the performance report. (Flameox) Started: after a turn whose reply claims a fix, a pass or a speed-up, the
+   panel marks it observed (a test, build or measurement ran after the last edit), stale (files
+   changed after it) or inferred (none ran). Savings and the performance report: not yet.
 3. Model and effort evaluation: `stm eval` runs saved tasks from the project on several models and
    effort levels and shows cost, time and pass or fail, to find the cheapest setting that holds.
    (ADK, VoltAgent) Done: stm eval, plan first, runs with --yes under a spend cap.

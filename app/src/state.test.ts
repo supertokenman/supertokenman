@@ -59,3 +59,16 @@ describe('state', () => {
     expect(hudView(s, money, 10000).ko).toBeNull()
   })
 })
+
+describe('evidence after a turn', () => {
+  it('adds a mark when the last reply claims a fix', async () => {
+    const { withEvidence } = await import('./state')
+    const lines = withEvidence([
+      { kind: 'user', text: 'fix it' },
+      { kind: 'tool', name: 'Edit', summary: 'a.ts' },
+      { kind: 'assistant', text: 'The bug is fixed.' },
+    ])
+    expect(lines.at(-1)).toMatchObject({ kind: 'evidence', level: 'inferred', claim: 'The bug is fixed' })
+    expect(withEvidence([{ kind: 'user', text: 'hi' }, { kind: 'assistant', text: 'Hello.' }])).toHaveLength(2)
+  })
+})
