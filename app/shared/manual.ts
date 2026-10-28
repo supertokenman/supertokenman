@@ -226,6 +226,7 @@ export const MANUAL: Section[] = [
 - stm whoami: this panel's id, project and model.
 - stm panels: the open panels (--json for scripts).
 - stm spawn [--cwd DIR] [--model ID] [--prompt "text"]: opens a new panel, linked to this one, and prints its id. --cwd is relative to this panel's folder; the model must be one the app lists. The prompt is queued in the new panel like any message from a panel.
+- stm read <panel>: a linked panel's goal, whether it is working, and the end of its last reply (up to 8,000 characters, credentials masked). Only panels linked to this one can be read; reading changes nothing and is logged.
 - stm send <panel> "text": puts "From panel <name>: text" in the front of that panel's composer and a note in the panel. It is never sent by itself: the person there reads it and presses send. Only when the person turns on auto-send for that link (click the "linked:" chip in the panel header) is it sent at once, through the same budget brake and the same tool approvals as typed text. An agent cannot turn auto-send on.
 - stm note get|set|append <name> [text]: notes shared by the panels of one project folder, kept on this machine in .supertokenman/notes/<name>.md (added to the repository's local git exclude), up to 64 KB each.
 - stm link <panel>, stm links: record and list links between panels. Data only for now: the header shows them, and a later canvas will draw them.
