@@ -234,7 +234,7 @@ describe('Session', () => {
     const events: UiEvent[] = []
     let interrupted = 0
     const q = fakeQuery(async function* () {
-      for (let i = 0; i < 3; i++) yield { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: `t${i}`, name: 'Bash', input: { command: 'npm test' } }] } } as unknown as SDKMessage
+      for (let i = 0; i < 4; i++) yield { type: 'assistant', parent_tool_use_id: null, message: { id: `m${i}`, model: 'claude-sonnet-5-5', usage: { input_tokens: 1000, output_tokens: 100 }, content: [{ type: 'tool_use', id: `t${i}`, name: 'Bash', input: { command: 'npm test' } }] } } as unknown as SDKMessage
     })
     const s = new Session((e) => events.push(e), {
       cwd: '/p',
@@ -247,7 +247,10 @@ describe('Session', () => {
     s.start()
     s.send('fix the tests')
     await settle()
-    expect(events.filter((e) => e.kind === 'loop')).toEqual([{ kind: 'loop', reason: 'Bash ran 3 times with the same input (npm test).' }])
+    const loops = events.filter((e) => e.kind === 'loop')
+    expect(loops).toHaveLength(1)
+    expect(loops[0]).toMatchObject({ reason: 'Paused: the same Bash call repeated 4 times.', why: 'repeat', count: 4, tokens: 3300 })
+    expect((loops[0] as { usd: number }).usd).toBeGreaterThan(0)
     expect(interrupted).toBe(1)
     s.close()
   })
@@ -261,8 +264,25 @@ describe('Session', () => {
     s.start()
     s.send('go')
     await settle()
-    expect(events.find((e) => e.kind === 'loop')).toMatchObject({ reason: expect.stringMatching(/same error came back 3 times/) })
+    expect(events.find((e) => e.kind === 'loop')).toMatchObject({ reason: expect.stringMatching(/same tool error came back 3 times/) })
     s.close()
+  })
+
+  it('does not pause a panel told not to, nor when the setting is off', async () => {
+    for (const setup of [(s: Session) => (s.loopQuiet = true), () => undefined]) {
+      const events: UiEvent[] = []
+      const q = fakeQuery(async function* () {
+        for (let i = 0; i < 6; i++) yield { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: `t${i}`, name: 'Bash', input: { command: 'npm test' } }] } } as unknown as SDKMessage
+      })
+      const quiet = setup.length === 1
+      const s = new Session((e) => events.push(e), { cwd: '/p', query: q.fn, ...(quiet ? {} : { loop: () => ({ on: false, repeats: 4, window: 6, errors: 3 }) }) })
+      setup(s)
+      s.start()
+      s.send('go')
+      await settle()
+      expect(events.some((e) => e.kind === 'loop')).toBe(false)
+      s.close()
+    }
   })
 
   it('does not sleep while working', () => {

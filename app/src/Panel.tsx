@@ -2,6 +2,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import { Windowed } from './windowed'
 import { pickAttachments } from './FilePicker'
 import { StateMark } from './StateMark'
+import { LoopNotice, LOOP_CONTINUE } from './LoopNotice'
 import { cacheLeft, coldExtraUsd } from '../shared/cache'
 import { Thinking } from './Thinking'
 import { IMAGE_TYPES, imageTypeOf, MAX_ATTACHMENTS, MAX_IMAGE_BYTES, type Attachment } from '../shared/attach'
@@ -724,21 +725,19 @@ export function Panel(props: {
             </div>
           )}
           {s.loop && !s.busy && (
-            <div className="ask held-card" role="alert">
-              <div className="ask-head">
-                <StateMark state="warn" label="Stopped" />
-                <span className="ask-label">Going in circles</span>
-              </div>
-              <p className="held-why">{s.loop} The turn was stopped before it spent more on the same thing.</p>
-              <div className="ask-actions">
-                <button className="ghost" onClick={() => dispatch({ kind: 'loop', reason: '' })}>Dismiss</button>
-                <button className="primary" onClick={() => {
-                  const t = 'You were repeating the same step. Stop, say in one line what is blocking it, and try a different approach.'
-                  dispatch({ kind: 'sent', text: t, at: Date.now() })
-                  void window.stm.send(sid, t)
-                }}>Try another way</button>
-              </div>
-            </div>
+            <LoopNotice
+              loop={s.loop}
+              money={money}
+              onContinue={() => {
+                dispatch({ kind: 'sent', text: LOOP_CONTINUE, at: Date.now() })
+                void window.stm.send(sid, LOOP_CONTINUE)
+              }}
+              onQuiet={() => {
+                void window.stm.loopQuiet(sid)
+                dispatch({ kind: 'sent', text: LOOP_CONTINUE, at: Date.now() })
+                void window.stm.send(sid, LOOP_CONTINUE)
+              }}
+            />
           )}
           {rule && (
             <div className="ask rule-card" role="status">

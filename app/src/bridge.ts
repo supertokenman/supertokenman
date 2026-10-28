@@ -987,6 +987,8 @@ export type Bridge = {
   isDir: (path: string) => Promise<boolean>
   pathOf: (file: File) => string
   interrupt: (sid: string) => Promise<void>
+  loopSettings: (next?: Partial<import('../shared/loopguard').LoopConfig>) => Promise<import('../shared/loopguard').LoopConfig>
+  loopQuiet: (sid: string) => Promise<boolean>
   answer: (sid: string, id: string, allow: boolean) => Promise<void>
   onEvent: (fn: (sid: string, e: UiEvent | ShellEvent | Exposure) => void) => () => void
 }
