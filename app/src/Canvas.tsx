@@ -3,7 +3,7 @@ import type { PanelLinkView } from './bridge'
 import { clampZoom, fit, linkEnds, place, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
 
 /** Optional on purpose: older bridges send links without a spend. */
-type LinkInfo = PanelLinkView & { spent?: { usd: number }; capUsd?: number }
+type LinkInfo = PanelLinkView
 
 const POS_KEY = 'stm.canvas.pos'
 const VIEW_KEY = 'stm.canvas.view'
