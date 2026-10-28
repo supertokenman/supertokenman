@@ -5658,6 +5658,13 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
         setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
       })
     } else sid = panelId(a.panel)
+    if (a.queue) {
+      // from the terminal without --now: it waits in the composer until the person presses send
+      if (!win || win.isDestroyed()) throw new Error('The app window is closed; the message could not be queued.')
+      win.webContents.send('panel:inbox', sid, `[From the command line]\n${text}`, false)
+      send(sid, { kind: 'note', text: 'A message from the command line is in the composer. Read it and press send, or clear it.' })
+      return { panel: sid, queued: true }
+    }
     const s = sessions.get(sid)!
     // the same brake as a message typed in the window
     const v = budgetVerdict(sid)

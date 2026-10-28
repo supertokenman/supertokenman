@@ -12,7 +12,8 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
 
   stm status                         the app, its panels and today's spend
   stm panels                         open panels: id, folder, persona, busy
-  stm send <panel|new> "text"        send a message; waits for the reply (--no-wait to return at once)
+  stm send <panel|new> "text"        put a message in the panel's composer; the person sends it
+                                     --now sends it at once and waits for the reply (--no-wait to return at once)
        [--cwd DIR] [--persona ID]    for "new": the folder and persona of the panel to open
   stm goal <panel> "condition"       set a panel's goal (stm goal <panel> clear ends it)
   stm key <NAME>                     print a provider key from the vault (Claude Code's apiKeyHelper)
@@ -38,7 +39,7 @@ const flags = {}
 const pos = []
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i]
-  if (a === '--json' || a === '--no-wait' || a === '--once' || a === '--help' || a === '-h') flags[a.replace(/^-+/, '')] = true
+  if (a === '--json' || a === '--no-wait' || a === '--once' || a === '--now' || a === '--help' || a === '-h') flags[a.replace(/^-+/, '')] = true
   else if (a.startsWith('--')) flags[a.slice(2)] = argv[++i]
   else pos.push(a)
 }
@@ -190,7 +191,7 @@ try {
     const [panel, ...words] = rest
     const text = words.join(' ')
     if (!panel || !text) die('Usage: stm send <panel|new> "text"')
-    print(await call('send', { panel, text, cwd: flags.cwd, persona: flags.persona, wait: !flags['no-wait'] }), (d) => (d.reply !== undefined ? d.reply : `Sent to ${d.panel}.`))
+    print(await call('send', { panel, text, cwd: flags.cwd, persona: flags.persona, wait: !flags['no-wait'], queue: !flags.now }), (d) => (d.queued ? `Queued in ${d.panel}'s composer; press send there, or use --now.` : d.reply !== undefined ? d.reply : `Sent to ${d.panel}.`))
   } else if (cmd === 'goal') {
     const [panel, ...words] = rest
     if (!panel || !words.length) die('Usage: stm goal <panel> "condition"   or   stm goal <panel> clear')
