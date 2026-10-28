@@ -967,6 +967,8 @@ export type Bridge = {
     saveConstitution: (cwd: string, text: string) => Promise<boolean>
   }
   guardInject: (text: string) => Promise<import('../shared/injection').InjectionFinding[]>
+  /** saved vault values that appear in `text` */
+  guardSecrets: (text: string) => Promise<import('../shared/secrets').Finding[]>
   memoryNode: (id: string) => Promise<{ project: string; node: import('../electron/memtree').MemNode } | null>
   drop: (sid: string) => Promise<void>
   budget: {
