@@ -4,7 +4,9 @@ import { checkArgs, CONTRACT } from './ipccontract'
 
 const main = readFileSync(new URL('../electron/main.ts', import.meta.url), 'utf8')
 const preload = readFileSync(new URL('../electron/preload.cjs', import.meta.url), 'utf8')
-const handled = new Set([...main.matchAll(/ipcMain\.handle\('([^']+)'/g)].map((m) => m[1]!))
+// handlers registered from their own module, beside main.ts
+const modules = ['transcripts.ts'].map((f) => readFileSync(new URL(`../electron/${f}`, import.meta.url), 'utf8')).join('\n')
+const handled = new Set([...(main + modules).matchAll(/ipcMain\.handle\('([^']+)'/g)].map((m) => m[1]!))
 const native = readFileSync(new URL('../electron/native.ts', import.meta.url), 'utf8')
 const listened = new Set([...(main + native).matchAll(/ipcMain\.on\('([^']+)'/g)].map((m) => m[1]!))
 

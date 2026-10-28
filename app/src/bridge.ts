@@ -901,6 +901,11 @@ export type Bridge = {
     save: (input: import('../shared/webapps').SiteInput, id?: string) => Promise<import('../shared/webapps').Site[]>
     remove: (id: string) => Promise<import('../shared/webapps').Site[]>
   }
+  transcript: {
+    get: (r: import('../electron/transcripts').Request) => Promise<import('../electron/transcripts').Result>
+    enabled: (on?: boolean) => Promise<boolean>
+    tools: () => Promise<{ ytdlp: boolean; whisper: boolean; ffmpeg: boolean; model: boolean } | null>
+  }
   brief: {
     sources: () => Promise<{ reddit: boolean; youtube: boolean }>
     connectReddit: (id: string, secret: string) => Promise<void>
