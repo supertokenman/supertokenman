@@ -60,6 +60,8 @@ import { RouterBox } from './Router'
 
 import type { Persona } from '../shared/personas'
 // sheets that open only on a click load then, not at start
+// the canvas loads when it is first picked, so the first screen stays inside its size budget
+const Canvas = lazy(() => import('./Canvas').then((x) => ({ default: x.Canvas })))
 const OfficeFiles = lazy(() => import('./OfficeFiles').then((x) => ({ default: x.OfficeFiles })))
 const MdImages = lazy(() => import('./MdImages').then((x) => ({ default: x.MdImages })))
 const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ default: x.DesignHandoff })))
@@ -134,7 +136,6 @@ import { dateKey, lastDay, record, snapshot, type DayLog } from './day'
 import { WEB_APPS } from '../shared/webapps'
 
 import { arrange, LAYOUTS, type Layout } from '../shared/layout'
-import { Canvas } from './Canvas'
 
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 import { FilePickerHost } from './FilePicker'
@@ -1770,7 +1771,9 @@ export function App() {
 
       <div className="body">
       {layout === 'canvas' ? (
-        <Canvas order={p.order} panel={panelEl} />
+        <Suspense fallback={null}>
+          <Canvas order={p.order} panel={panelEl} />
+        </Suspense>
       ) : (
       <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
         {p.order.map(panelEl)}
