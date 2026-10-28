@@ -81,14 +81,33 @@ export function noteSet(project: string, name: string, text: string, append = fa
 export const isModel = (id: string) => MODEL_LIST.some((m) => m.id === id.replace(/\[1m\]$/i, ''))
 export const modelIds = () => MODEL_LIST.map((m) => m.id)
 
-export type Link = { a: string; b: string; auto?: boolean; at: number }
+/** spent: what the turns started by this link's messages cost today; capUsd: a daily cap, none when unset */
+export type Spent = { day: string; usd: number; tokens: number; turns: number }
+export type Link = { a: string; b: string; auto?: boolean; at: number; spent?: Spent; capUsd?: number }
 export const linkKey = (x: string, y: string) => [x, y].sort().join('|')
 export const linkOf = (links: Link[], x: string, y: string) => links.find((l) => linkKey(l.a, l.b) === linkKey(x, y))
 export function addLink(links: Link[], a: string, b: string, now = Date.now()): Link[] {
   if (a === b) throw new Error('A panel cannot link to itself.')
   return linkOf(links, a, b) ? links : [...links, { a, b, at: now }].slice(-200)
 }
-export const linksFor = (links: Link[], sid: string) => links.filter((l) => l.a === sid || l.b === sid).map((l) => ({ panel: l.a === sid ? l.b : l.a, auto: Boolean(l.auto) }))
+export const spentToday = (l: Link | undefined, day: string): Spent => (l?.spent?.day === day ? l.spent : { day, usd: 0, tokens: 0, turns: 0 })
+export const linksFor = (links: Link[], sid: string, day = '') =>
+  links.filter((l) => l.a === sid || l.b === sid).map((l) => ({ panel: l.a === sid ? l.b : l.a, auto: Boolean(l.auto), spent: spentToday(l, day), capUsd: l.capUsd ?? null }))
+
+/** A turn the link started: its cost and tokens added to today's total for that link. */
+export function charge(links: Link[], x: string, y: string, usd: number, tokens: number, day: string): Link[] {
+  return links.map((l) => {
+    if (linkKey(l.a, l.b) !== linkKey(x, y)) return l
+    const s = spentToday(l, day)
+    return { ...l, spent: { day, usd: s.usd + Math.max(0, usd), tokens: s.tokens + Math.max(0, tokens), turns: s.turns + 1 } }
+  })
+}
+/** Why the link may not carry another message today, or null. */
+export function overCap(l: Link | undefined, day: string): string | null {
+  if (!l?.capUsd) return null
+  const s = spentToday(l, day)
+  return s.usd >= l.capUsd ? `This link reached its daily cap: $${s.usd.toFixed(2)} of $${l.capUsd.toFixed(2)}. The person can raise it from the linked: chip.` : null
+}
 
 /** What a message from another panel looks like in the receiving composer: always labelled. */
 export const labelled = (fromName: string, text: string) => `From panel ${fromName}: ${text}`

@@ -105,12 +105,29 @@ describe('send delivery and links', () => {
     let l = addLink([], 's1', 's2', 1)
     l = addLink(l, 's2', 's1', 2)
     expect(l).toHaveLength(1)
-    expect(linksFor(l, 's2')).toEqual([{ panel: 's1', auto: false }])
+    expect(linksFor(l, 's2')).toMatchObject([{ panel: 's1', auto: false, capUsd: null }])
     expect(() => addLink(l, 's1', 's1')).toThrow(/itself/)
   })
   it('validates model ids against the model list', () => {
     expect(isModel('claude-opus-5-5')).toBe(true)
     expect(isModel('claude-opus-5-5[1m]')).toBe(true)
     expect(isModel('gpt-5')).toBe(false)
+  })
+})
+
+describe('link spending', async () => {
+  const { charge, overCap, linksFor } = await import('./panelbus')
+  const base = [{ a: 's1', b: 's2', at: 1 }]
+  it('adds the cost of turns a link started, per day', () => {
+    let l = charge(base, 's2', 's1', 0.5, 1000, '2026-10-28')
+    l = charge(l, 's1', 's2', 0.25, 500, '2026-10-28')
+    expect(linksFor(l, 's1', '2026-10-28')[0]!.spent).toEqual({ day: '2026-10-28', usd: 0.75, tokens: 1500, turns: 2 })
+    expect(linksFor(l, 's1', '2026-10-29')[0]!.spent.usd).toBe(0)
+  })
+  it('refuses once the daily cap is reached, and never without a cap', () => {
+    const l = charge([{ ...base[0]!, capUsd: 1 }], 's1', 's2', 1.2, 0, '2026-10-28')
+    expect(overCap(l[0], '2026-10-28')).toMatch(/\$1\.20 of \$1\.00/)
+    expect(overCap(l[0], '2026-10-29')).toBeNull()
+    expect(overCap(charge(base, 's1', 's2', 99, 0, '2026-10-28')[0], '2026-10-28')).toBeNull()
   })
 })

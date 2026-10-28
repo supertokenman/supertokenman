@@ -23,7 +23,7 @@ import type { UiEvent } from '../electron/session'
 import type { ShellEvent } from '../electron/shell'
 
 export type { UiEvent }
-export type PanelLinkView = { panel: string; auto: boolean; name: string }
+export type PanelLinkView = { panel: string; auto: boolean; name: string; spent: { usd: number; tokens: number; turns: number }; capUsd: number | null }
 
 type Up = { ratio: number | null; avgMs: number | null; count: number }
 export type MonitorRow = { monitor: import('../shared/monitors').Monitor; state: import('../shared/monitors').State; beats: import('../shared/monitors').Beat[]; day: Up; month: Up; last: import('../shared/monitors').Beat | null }
@@ -955,7 +955,7 @@ export type Bridge = {
     history: (uuid: string) => Promise<import('../electron/deploys').Deployment[]>
     onEvent: (fn: (e: DeployEvent) => void) => () => void
   }
-  panelBus: { onInbox: (fn: (sid: string, text: string, sent: boolean) => void) => () => void; links: () => Promise<Record<string, PanelLinkView[]>>; onLinks: (fn: (v: Record<string, PanelLinkView[]>) => void) => () => void; setAuto: (a: string, b: string, on: boolean) => Promise<Record<string, PanelLinkView[]>> }
+  panelBus: { onInbox: (fn: (sid: string, text: string, sent: boolean) => void) => () => void; links: () => Promise<Record<string, PanelLinkView[]>>; onLinks: (fn: (v: Record<string, PanelLinkView[]>) => void) => () => void; setAuto: (a: string, b: string, on: boolean) => Promise<Record<string, PanelLinkView[]>>; setCap: (a: string, b: string, usd: number) => Promise<Record<string, PanelLinkView[]>> }
   stmCli: { onOpen: (fn: (r: { req: string; cwd?: string; persona?: string; model?: string }) => void) => () => void; opened: (req: string, sid: string) => void; install: () => Promise<{ file: string; onPath: boolean; hint: string }> }
   vec: { status: (cwd: string) => Promise<{ model: string | null; models: string[]; size: number; total: number; project: string }>; model: (m: string | null) => Promise<string | null>; build: (cwd: string) => Promise<{ total: number; done: number }> }
   memtest: (cwd: string, question: string, where: 'local' | 'claude') => Promise<{ without: string; withMem: string; backedWithout: number; backedWith: number; agree: number }>
