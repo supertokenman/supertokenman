@@ -666,6 +666,23 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 /* whatsapp drawer */
 .body { display: flex; min-height: 0; overflow-x: clip; }
 .body > .grid { flex: 1; min-width: 0; }
+/* Canvas layout: cards on a surface you pan and zoom; links drawn under them */
+.body > .canvas { flex: 1; min-width: 0; }
+.canvas { position: relative; overflow: hidden; background: var(--sunken); cursor: grab; --card-cut: 12px; touch-action: none;
+  background-image: radial-gradient(rgba(var(--accent-rgb), 0.10) 1px, transparent 1px); background-size: 24px 24px; }
+.has-scene .canvas { background-color: transparent; }
+.canvas.moving, .canvas.panning, .canvas.panning * { cursor: grabbing; }
+.canvas.moving { user-select: none; }
+.cv-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.cv-links { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; }
+.cv-links path { fill: none; stroke: var(--border); stroke-width: 2; stroke-dasharray: 6 5; }
+.cv-links .auto path { stroke: rgba(var(--accent-rgb), 0.7); stroke-dasharray: none; }
+.cv-links text { fill: var(--muted); font-size: 12px; paint-order: stroke; stroke: var(--sunken); stroke-width: 4px; }
+.cv-card { position: absolute; display: grid; cursor: auto; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); }
+.cv-card > .panel { min-height: 0; clip-path: polygon(0 0, calc(100% - var(--card-cut)) 0, 100% var(--card-cut), 100% 100%, 0 100%); }
+.cv-card .panel-bar { cursor: move; }
+.cv-tools { position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); color: var(--text); z-index: 5; cursor: auto; }
+.cv-zoom { min-width: 44px; text-align: center; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .wa { position: relative; flex: none; width: 0; z-index: 30; }
 /* the drawer itself: a fixed-width sheet that slides on transform over the panels; the aside only takes its width once at rest (WebApps.tsx) */
 .wa-sheet { position: absolute; top: 0; right: 0; bottom: 0; display: grid; grid-template-rows: 44px 1fr; grid-template-columns: minmax(0, 1fr); overflow: hidden; border-left: 1px solid var(--border); background: var(--surface); transform: translate3d(100%, 0, 0); transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1); box-shadow: -12px 0 32px rgba(0, 0, 0, 0.18); }

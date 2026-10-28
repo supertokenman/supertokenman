@@ -865,6 +865,7 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('panel:links', l)
     },
     setAuto: (a, b, on) => ipcRenderer.invoke('panel:linkAuto', a, b, on),
+    setCap: (a, b, usd) => ipcRenderer.invoke('panel:linkCap', a, b, usd),
   },
   stmCli: {
     onOpen: (fn) => {

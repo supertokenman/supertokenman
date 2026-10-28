@@ -220,6 +220,7 @@ import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, 
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
 import * as ME from '../shared/modeleval.js'
 import * as RL from '../shared/reviewloop.js'
+import * as RN from '../shared/reviewnotes.js'
 import * as PF from '../shared/projectfiles.js'
 import { outside as outsideScope, type Scope } from '../shared/triggerscope.js'
 // what each trigger's panel may touch, set when its run begins
@@ -295,7 +296,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -677,6 +678,10 @@ const goals = new Map<string, Goal>()
 // review loops by build and review panel (one loop per panel), and each panel's last reply for the next step
 const reviewLoops = new Map<string, RL.Loop>()
 const loopReply = new Map<string, string>()
+// the panel whose message is waiting in (or was sent from) each panel's composer, so its turn is charged to the link
+const linkTurn = new Map<string, string>()
+// each panel's last reply, for a linked panel's stm read
+const lastReply = new Map<string, { text: string; at: number }>()
 let turnSeq = 0
 // each panel's answer styles and project, for the cost band of each task
 const bandOf = new Map<string, { project: string; styles: StyleId[] }>()
@@ -714,6 +719,12 @@ function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: {
     }
   }
   loopStep(sid, e.costUsd ?? 0, Boolean(e.isError))
+  // a turn started by a message from a linked panel: its cost counts against that link
+  const via = linkTurn.get(sid)
+  if (via && p.prompt.startsWith('From panel ')) {
+    linkTurn.delete(sid)
+    saveLinks(PB.charge(links(), via, sid, e.costUsd ?? 0, (e.inputTokens ?? 0) + (e.outputTokens ?? 0) + (e.cacheRead ?? 0), dayOf(new Date())))
+  }
   const s = sessions.get(sid)
   traceTurns.set(sid, addTurn(traceTurns.get(sid) ?? [], { id: p.id, goal: goals.get(sid)?.text, at: p.at, persona: personaOf.get(sid), model: s?.model, why: p.why, prompt: p.prompt.slice(0, 600), tools: p.tools, costUsd: e.costUsd ?? 0, inputTokens: e.inputTokens ?? 0, outputTokens: e.outputTokens ?? 0, cacheRead: e.cacheRead ?? 0, isError: Boolean(e.isError), ms: e.durationMs, spans }))
   obs.afterTurn(traceTurns.get(sid)![0]!)
@@ -1816,6 +1827,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     // decisions Claude marked in a reply go to the project's note
     onReply: (text) => {
       if (reviewLoops.has(sid)) loopReply.set(sid, text)
+      // what a linked panel can read with stm read: the last reply, credentials masked
+      lastReply.set(sid, { text: redact(text, vault?.all() ?? []).text.slice(-PB.READ_MAX), at: Date.now() })
       try {
         const n = rememberDecisions(vaultDir(), projectName(home), decisions(redact(text, vault.all()).text))
         if (n) send(sid, { kind: 'note', text: n === 1 ? 'Saved a decision to memory.' : `Saved ${n} decisions to memory.` })
@@ -2688,7 +2701,14 @@ ipcMain.handle('loop:quiet', (_e, sid: string) => {
   loopPaused.delete(String(sid))
   return Boolean(s)
 })
-ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean, extra?: { command?: unknown; note?: unknown }) => (phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow, { command: typeof extra?.command === 'string' ? extra.command : undefined, note: typeof extra?.note === 'string' ? extra.note : undefined })))
+// a note sent back with a denial is kept for the project, so stm learn can propose it as a rule
+function keepNote(sid: string, allow: boolean, extra?: { note?: unknown; tool?: unknown }) {
+  const text = typeof extra?.note === 'string' ? extra.note : ''
+  const project = panelDir(sid)
+  if (allow || !text.trim() || !project) return
+  saveSettings({ ...settings(), reviewNotes: RN.addLesson(settings().reviewNotes ?? [], { project, text: redact(text, vault?.all() ?? []).text, tool: typeof extra?.tool === 'string' ? extra.tool.slice(0, 60) : '', at: Date.now() }) })
+}
+ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean, extra?: { command?: unknown; note?: unknown; tool?: unknown }) => (keepNote(sid, allow, extra), phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow, { command: typeof extra?.command === 'string' ? extra.command : undefined, note: typeof extra?.note === 'string' ? extra.note : undefined })))
 // Phone companion: what the phone sees of each panel (pending asks, the last reply), and the server
 const phoneAsks = new Map<string, Map<string, { id: string; tool: string; summary: string; risk?: string }>>()
 const phoneReply = new Map<string, string>()
@@ -5905,6 +5925,22 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     for (const p of [l.build, l.review]) send(p, { kind: 'note', text: `Review loop stopped from the terminal. Spent $${l.spentUsd.toFixed(2)}.` })
     return { text: `Stopped after ${l.round} round${l.round === 1 ? '' : 's'}, $${l.spentUsd.toFixed(2)}.` }
   },
+  // `stm learn`: this project's review notes as proposed lines for CLAUDE.local.md; pick writes them
+  learn: (a) => {
+    const cwd = String(a.cwd ?? '')
+    if (!cwd || !existsSync(cwd)) throw new Error('Run it from a project folder, or pass --cwd DIR.')
+    const ps = RN.proposals(settings().reviewNotes ?? [], cwd, Math.max(1, Number(a.min ?? 1) || 1))
+    if (!ps.length) return { text: 'No review notes for this project yet. They come from Deny with a note on a permission card.' }
+    const list = ps.map((p, i) => `  ${String(i + 1).padStart(2)}. ${p.line}  (${p.count}x${p.tools.filter(Boolean).length ? `, ${p.tools.filter(Boolean).join(', ')}` : ''})`).join('\n')
+    const pick = String(a.pick ?? '').split(',').map((x) => Number(x.trim())).filter((n) => n >= 1 && n <= ps.length)
+    if (!pick.length) return { text: `Proposed for ${join(cwd, 'CLAUDE.local.md')}:\n${list}\n\nNothing written. Pick lines with --pick 1,3.` }
+    const file = join(cwd, 'CLAUDE.local.md')
+    const old = existsSync(file) ? readFileSync(file, 'utf8') : ''
+    const add = RN.block(old, pick.map((n) => ps[n - 1]!.line), dayOf(new Date()))
+    if (add) writeFileSync(file, old + add)
+    logs().info('stm:learn', `${cwd}: ${pick.length} picked`)
+    return { text: add ? `Added ${add.split('\n').filter((l) => l.startsWith('- ')).length} line(s) to ${file}. Claude Code reads it at the next panel start.` : 'Those lines are already in CLAUDE.local.md.' }
+  },
   // `stm top`: one read-only snapshot of what the app already holds in memory; nothing is fetched for it
   top: () => {
     const day = dayOf(new Date())
@@ -5992,7 +6028,7 @@ const spawnLimit = new PB.RateLimit('stm spawn', () => stmLimits().spawnPerHour,
 const panelName = (sid: string) => hub.list('').find((p) => p.panel === sid)?.name ?? sid
 const panelDir = (sid: string) => shells.get(sid)?.cwd ?? sessions.get(sid)?.cwd ?? ''
 const links = () => settings().panelLinks ?? []
-const panelLinksView = () => Object.fromEntries([...sessions.keys()].map((sid) => [sid, PB.linksFor(links(), sid).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))]))
+const panelLinksView = () => Object.fromEntries([...sessions.keys()].map((sid) => [sid, PB.linksFor(links(), sid, dayOf(new Date())).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))]))
 const saveLinks = (l: PB.Link[]) => {
   saveSettings({ ...settings(), panelLinks: l })
   if (win && !win.isDestroyed()) win.webContents.send('panel:links', panelLinksView())
@@ -6044,7 +6080,11 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     if (!text.trim()) throw new Error('Nothing to send.')
     if (a.counted !== false) sendLimit.take(from)
     const body = PB.labelled(panelName(from), text)
-    const how = PB.deliveryOf(PB.linkOf(links(), from, to))
+    const link = PB.linkOf(links(), from, to)
+    const capped = PB.overCap(link, dayOf(new Date()))
+    if (capped) throw new Error(capped)
+    if (link) linkTurn.set(to, from)
+    const how = PB.deliveryOf(link)
     if (how === 'auto') {
       // the person turned auto on for this link: sent as if typed, with the same brake and approvals
       refuseSecrets(text)
@@ -6083,14 +6123,31 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     saveLinks(PB.addLink(links(), sid, other))
     return { linked: [sid, other] }
   },
+  // a linked panel's last reply and goal, read only; unlinked panels cannot read each other
+  pread: (a) => {
+    const sid = asPanel(a, 'read', String(a.panel ?? ''))
+    const other = panelId(a.panel)
+    if (!PB.linkOf(links(), sid, other)) throw new Error(`Not linked to ${other}. The person links panels, or run: stm link ${other}`)
+    const r = lastReply.get(other)
+    logs().info('stm:panel', `${sid} read ${other} (${r?.text.length ?? 0} chars)`)
+    return { panel: other, name: panelName(other), goal: goals.get(other)?.text ?? null, busy: Boolean(sessions.get(other)?.busy), reply: r?.text ?? null, at: r?.at ?? null }
+  },
   plinks: (a) => {
     const sid = asPanel(a, 'links')
-    return PB.linksFor(links(), sid).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))
+    return PB.linksFor(links(), sid, dayOf(new Date())).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))
   },
 }
 Object.assign(cliHandlers, panelHandlers)
 // the per-link "auto" switch, only from the window: an agent cannot turn it on for itself
 ipcMain.handle('panel:links', () => panelLinksView())
+// a link's daily spending cap, only from the window; 0 or empty removes it
+ipcMain.handle('panel:linkCap', (_e, a: string, b: string, usd: number) => {
+  const l = PB.linkOf(links(), String(a), String(b))
+  if (!l) throw new Error('Those panels are not linked.')
+  const cap = Number(usd) > 0 ? Math.min(1000, Number(usd)) : undefined
+  saveLinks(links().map((x) => (x === l ? { ...x, capUsd: cap } : x)))
+  return panelLinksView()
+})
 ipcMain.handle('panel:linkAuto', (_e, a: string, b: string, on: boolean) => {
   const l = PB.linkOf(links(), String(a), String(b))
   if (!l) throw new Error('Those panels are not linked.')
