@@ -6,6 +6,7 @@ import { StateMark } from './StateMark'
 import { clean } from './errors'
 import './bridge'
 import { Checkbox, Select } from './ui'
+import { TranscriptPanel } from './Transcript'
 
 const SOURCES: BriefSource[] = ['reddit', 'youtube', 'hn', 'github']
 const TAG: Record<BriefSource, string> = { reddit: 'Reddit', youtube: 'YouTube', hn: 'HN', github: 'GitHub' }
@@ -25,6 +26,7 @@ export function LastDays(props: { cwd?: string; onDraft: (title: string, brief: 
   const [busy, setBusy] = useState(false)
   const [res, setRes] = useState<BriefResult | null>(null)
   const [err, setErr] = useState('')
+  const [tx, setTx] = useState<BriefItem | null>(null)
   const load = () => void window.stm.brief.sources().then(setConn, () => undefined)
   useEffect(load, [])
   const run = async () => {
@@ -131,9 +133,11 @@ export function LastDays(props: { cwd?: string; onDraft: (title: string, brief: 
                 <span className={`rs-tag ${i.source}`}>{TAG[i.source]}</span>
                 <a href={i.url} target="_blank" rel="noreferrer">{i.title || i.url}</a>
                 <span className="faint">{i.measure} · {i.date.slice(0, 10)}{i.where ? ` · ${i.where}` : ''}</span>
+                {i.source === 'youtube' && <button className="btn-ghost" onClick={() => setTx(i)}>Transcript</button>}
               </li>
             ))}
           </ol>
+          {tx && <TranscriptPanel key={tx.url} url={tx.url} title={tx.title} onUse={(t) => props.onDraft(tx.title, t)} onClose={() => setTx(null)} />}
         </>
       )}
     </div>

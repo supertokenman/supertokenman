@@ -28,6 +28,7 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
   stm ask test                       from a panel's Bash: run the tests, once approved in the panel
   stm ask scan deps|secrets          a dependency or secret scan of the panel's folder, once approved
   stm ask preview <local url>        show a local page in the panel's Preview tab, once approved
+  stm transcript <url|file>          a video's transcript as text (--timestamps, --fresh); on in the app first
   stm mcp                            run as an MCP server (stdio) for other agents: status, panels, spend, memory, read-only SQL
 
   --json  machine-readable output     --help  this text`
@@ -220,7 +221,8 @@ try {
   } else if (cmd === 'triggers') {
     if (rest[0] === 'run') print(await call('triggerRun', { id: rest[1] }), () => `Started ${rest[1]}.`)
     else print(await call('triggers', {}), (d) => (d.length ? d.map((t) => `${pad(t.id, 12)} ${pad(t.enabled ? 'on' : 'off', 4)} ${t.name}`).join('\n') : 'No triggers.'))
-  } else die(`Unknown command "${cmd}". Try: stm help`)
+  } else if (cmd === 'transcript') await (await import('./transcript.mjs')).runTranscript(call, { json })
+  else die(`Unknown command "${cmd}". Try: stm help`)
 } catch (e) {
   die(e.message)
 }

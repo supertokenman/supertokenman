@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { TranscriptToggle } from './Transcript'
 import { IconClose } from './icons'
 import { LOADERS, LoaderMark, loaderStyle, setLoaderStyle } from './Thinking'
 import { TouchIdSettings } from './Lock'
@@ -182,6 +183,7 @@ export function Appearance(props: { current: string; onPick: (id: string) => voi
             <LoginToggle />
             <UpdateToggle />
             <ClaudeUsageToggle />
+            <TranscriptToggle />
             <TouchIdSettings />
           </div>
           <div className="touchid">

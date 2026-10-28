@@ -792,6 +792,11 @@ contextBridge.exposeInMainWorld('stm', {
     save: (input, id) => ipcRenderer.invoke('sites:save', input, id),
     remove: (id) => ipcRenderer.invoke('sites:remove', id),
   },
+  transcript: {
+    get: (r) => ipcRenderer.invoke('transcript:get', r),
+    enabled: (on) => ipcRenderer.invoke('transcript:enabled', on),
+    tools: () => ipcRenderer.invoke('transcript:tools'),
+  },
   brief: {
     sources: () => ipcRenderer.invoke('brief:sources'),
     connectReddit: (id, secret) => unlocked('save a secret').then(() => ipcRenderer.invoke('brief:connectReddit', id, secret)),

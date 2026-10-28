@@ -133,6 +133,7 @@ import { buildIndex, indexSize, searchIndex } from './vecindex.js'
 import { inspect as inspectHeadroom } from './hrquality.js'
 import { startCli } from './cliserver.js'
 import * as PB from './panelbus.js'
+import { registerTranscripts } from './transcripts.js'
 import * as Deploys from './deploys.js'
 import { applyTeam, diffTeam, exportTeam, readTeam, type Current as TeamCurrent, type Team } from '../shared/team.js'
 import { COLLECT, cssOf, tailwindOf, tokensOf, type Sample } from '../shared/styleExtract.js'
@@ -5887,6 +5888,7 @@ ipcMain.handle('panel:linkAuto', (_e, a: string, b: string, on: boolean) => {
   logs().info('stm:panel', `link ${a}-${b} auto ${on ? 'on' : 'off'} (by the person, in the window)`)
   return panelLinksView()
 })
+registerTranscripts(ipcMain, cliHandlers, app.getPath('userData'))
 let cli: ReturnType<typeof startCli> | null = null
 app.whenReady().then(() => {
   try {

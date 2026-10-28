@@ -508,3 +508,36 @@ Taken from how Halo pairs a free community edition with paid editions.
 - **Packaged builds.** The launcher is written to the app's data folder (`stm-bin/stm`) and runs the app's
   own binary with `--stm-cli` and the script from `app.asar.unpacked/cli/`, so no system Node is needed and
   the RunAsNode fuse stays off.
+
+## Video transcripts (decided 2026-10-28)
+
+Transcripts of videos as text, for Claude and for the social pack (Research > Last 30 days). The idea
+comes from Agent-Reach (MIT); no code was taken. Routes looked at, with what their terms say (read on
+2026-10-28):
+
+- **YouTube Data API v3 `captions.download`**: needs OAuth (`youtube.force-ssl` or `youtubepartner`
+  scope) and "requires the user to have permission to edit the video"
+  (https://developers.google.com/youtube/v3/docs/captions/download). It only covers videos the person can
+  edit, so it does not serve the brief (other people's videos). Not shipped; it would need our own OAuth
+  client, which we do not have.
+- **The video page's caption tracks / `timedtext` endpoint**: undocumented. YouTube's Terms of Service
+  forbid accessing the Service "using any automated means (such as robots, botnets or scrapers)" except
+  public search engines or with prior written permission, and downloading content except "as expressly
+  authorized by the Service" or with written permission (https://www.youtube.com/t/terms). Not shipped.
+- **yt-dlp**: on YouTube it is the same automated access and download as above, so the app refuses
+  YouTube links whatever is installed. For other sites, the app detects a `yt-dlp` the person installed
+  (on PATH, found by looking at the disk, no process started to look) and runs it locally on the link
+  they chose: captions only (`--skip-download`), never cookies from a browser, no evasion flags. We do not
+  bundle it; that site's terms are the person's call. We do not claim it works on any given site.
+- **Local speech-to-text**: a file the person supplies goes to `whisper.cpp` (`whisper-cli`) if they
+  installed it and put a `ggml-*.bin` model in the app's `whisper` folder; `ffmpeg` (theirs) converts
+  non-wav files first. Nothing leaves the machine.
+- **Paste**: the person pastes a transcript (YouTube shows one under the video) or a .vtt/.srt.
+
+Decision: ship the file, paste, local whisper.cpp and user-installed yt-dlp (non-YouTube) routes; do not
+fetch YouTube captions at all. Plainly: **the app cannot get a YouTube video's transcript by itself**; for
+YouTube the person pastes it or gives a file they have the rights to. The feature is off until Settings >
+Appearance > Video transcripts; when off it reads nothing, looks for no tool and starts no process (tested;
+netwatch fails if yt-dlp, whisper or ffmpeg ever start with nobody asking). Transcripts are cached per
+video (YouTube id, or a hash of the link or file) under the app's data folder, each cut at 200,000
+characters, the folder kept under 20 MB (oldest out first). Every result shows the route used.

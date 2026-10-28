@@ -1,0 +1,1 @@
+{"systeminfo":"x","model":{"type":"base"},"transcription":[{"timestamps":{"from":"00:00:00,000","to":"00:00:04,000"},"offsets":{"from":0,"to":4000},"text":" Hello from whisper."},{"timestamps":{"from":"00:01:04,000","to":"00:01:09,000"},"offsets":{"from":64000,"to":69000},"text":" Second segment."}]}
