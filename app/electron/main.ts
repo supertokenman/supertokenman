@@ -209,6 +209,7 @@ import { fixMessage, type Kind as ScanKind } from '../shared/trivy.js'
 import * as WB from '../shared/workbench.js'
 import { parseEpModel, PRESETS, SHAPES, type VllmArgs } from '../shared/modelserver.js'
 import { addTurn, contextParts, type ContextPart, type TraceTurn } from '../shared/trace.js'
+import { modelLabel } from '../shared/models.js'
 import { pushVersion, type Version } from '../shared/versions.js'
 import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
@@ -5691,6 +5692,42 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
       return { shown: url }
     }
     throw new Error('Ask for: test, scan-deps, scan-secrets or preview.')
+  },
+  // `stm top`: one read-only snapshot of what the app already holds in memory; nothing is fetched for it
+  top: () => {
+    const day = dayOf(new Date())
+    const st = settings()
+    const spend = st.budgetSpend?.day === day ? st.budgetSpend : emptySpend(day)
+    const panels = [...sessions.entries()].map(([id, s]) => {
+      const turns = (traceTurns.get(id) ?? []).filter((t) => dayOf(new Date(t.at)) === day)
+      const last = (traceTurns.get(id) ?? []).at(-1)
+      const model = s.model ?? modelOf.get(id) ?? last?.model ?? null
+      const asks = [...(phoneAsks.get(id)?.values() ?? [])].map((a) => ({ tool: a.tool, summary: a.summary.slice(0, 200) }))
+      const c = ci.get(id)
+      const run = c?.runs[0]
+      return {
+        id,
+        project: basename(shells.get(id)?.cwd ?? s.cwd ?? ''),
+        cwd: shells.get(id)?.cwd ?? s.cwd ?? '',
+        model,
+        modelLabel: model ? modelLabel(model.replace(/\[1m\]$/i, '')) : null,
+        state: asks.length ? 'needs-you' : s.busy ? 'running' : goals.has(id) ? 'waiting' : 'idle',
+        goal: goals.get(id)?.text ?? null,
+        contextTokens: last ? last.inputTokens + last.cacheRead : null,
+        contextWindow: model && /\[1m\]$/i.test(model) ? 1_000_000 : 200_000,
+        todayUsd: turns.reduce((a, t) => a + (t.costUsd || 0), 0),
+        approvals: asks,
+        ci: c ? { repo: c.repo, branch: c.branch, status: run ? run.status : null, conclusion: run?.conclusion ?? null, workflow: run?.workflow ?? null, at: c.at } : null,
+      }
+    })
+    return {
+      at: Date.now(),
+      version: app.getVersion(),
+      todayUsd: Object.values(spend.project).reduce((a, b) => a + b, 0),
+      limits: (liveLimits ?? []).map((w) => ({ kind: w.kind, percentUsed: w.percentUsed, resetsAt: w.resetsAt ?? null })),
+      githubOn: settings().integrations.includes('github'),
+      panels,
+    }
   },
   triggers: () => triggers().map((t) => ({ id: t.id, name: t.name, enabled: t.enabled, persona: t.persona, when: t.when })),
   triggerRun: (a) => {
