@@ -187,7 +187,8 @@ panel" (in progress):
 8. Learning from reviews: rejections and comments become a proposed change to CLAUDE.md, a persona or
    a trigger, applied only when the user accepts. (AgentUse)
 9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the
-   project, versioned with git. (AgentUse, ADK, PraisonAI)
+   project, versioned with git. (AgentUse, ADK, PraisonAI) Done for personas and triggers: stm files
+   export / import (plan first, --yes applies, imported triggers arrive off). Saved teams: not yet.
 10. Recommended MCP servers: a short opt-in list, local only, starting with a profiler that reports
     evidence. Off by default; each host in docs/NETWORK.md. (Flameox)
 

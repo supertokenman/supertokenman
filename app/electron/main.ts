@@ -219,6 +219,7 @@ import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
 import * as ME from '../shared/modeleval.js'
+import * as PF from '../shared/projectfiles.js'
 import { outside as outsideScope, type Scope } from '../shared/triggerscope.js'
 // what each trigger's panel may touch, set when its run begins
 const scopeOf = new Map<string, Scope>()
@@ -5809,6 +5810,43 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
       }
     logs().info('stm:eval', `${runs.length} runs, $${spent.toFixed(4)}`)
     return { text: ME.table(ME.rows(runs, all), cases.length, stopped), runs }
+  },
+  // `stm files`: personas and triggers as files in the project. Export writes the ones this project uses
+  // (its triggers and the personas they name, or all with --all); import shows the plan, applies with yes.
+  filesExport: (a) => {
+    const cwd = String(a.cwd ?? '')
+    if (!cwd || !existsSync(cwd)) throw new Error('Run it from a project folder, or pass --cwd DIR.')
+    const trigs = triggers().filter((t) => t.cwd === cwd)
+    const used = new Set(trigs.map((t) => t.persona).filter(Boolean))
+    const ps = personas().filter((p) => a.all === true || used.has(p.id))
+    mkdirSync(join(cwd, PF.PERSONA_DIR), { recursive: true })
+    mkdirSync(join(cwd, PF.TRIGGER_DIR), { recursive: true })
+    for (const p of ps) writeFileSync(join(cwd, PF.PERSONA_DIR, `${p.id}.md`), PF.personaToMd(p))
+    for (const t of trigs) writeFileSync(join(cwd, PF.TRIGGER_DIR, `${t.id}.md`), PF.triggerToMd(t))
+    return { text: `Wrote ${ps.length} persona${ps.length === 1 ? '' : 's'} to ${PF.PERSONA_DIR} and ${trigs.length} trigger${trigs.length === 1 ? '' : 's'} to ${PF.TRIGGER_DIR}. Review them and commit them with git.${!ps.length && !trigs.length ? ' This project has no triggers; --all writes every persona.' : ''}` }
+  },
+  filesImport: (a) => {
+    const cwd = String(a.cwd ?? '')
+    if (!cwd || !existsSync(cwd)) throw new Error('Run it from a project folder, or pass --cwd DIR.')
+    const read = (dir: string) => {
+      const d = join(cwd, dir)
+      return existsSync(d) ? readdirSync(d).filter((f) => f.endsWith('.md')).slice(0, 100).map((f) => ({ id: PF.fileId(f), text: readFileSync(join(d, f), 'utf8').slice(0, 20_000) })) : []
+    }
+    const r = PF.plan({ personas: read(PF.PERSONA_DIR), triggers: read(PF.TRIGGER_DIR) }, { personas: personas(), triggers: triggers() }, cwd)
+    const todo = r.changes.filter((c) => c.what !== 'same')
+    const head = `From ${cwd}:\n${PF.planText(r.changes)}`
+    if (a.yes !== true) return { text: `${head}\n\n${todo.length ? 'Nothing changed yet. Read the files, then add --yes to apply. Triggers arrive turned off.' : 'Nothing to apply.'}` }
+    for (const p of r.personas) if (todo.some((c) => c.kind === 'persona' && c.id === p.id)) savePersona(p, `Imported from ${cwd}`)
+    const list = triggers()
+    for (const t of r.triggers) {
+      if (!todo.some((c) => c.kind === 'trigger' && c.id === t.id)) continue
+      const i = list.findIndex((x) => x.id === t.id)
+      if (i >= 0) list[i] = { ...t, enabled: false, armedAt: Date.now() }
+      else list.push({ ...t, enabled: false, armedAt: Date.now() })
+    }
+    saveTriggers(list)
+    logs().info('stm:files', `imported ${todo.length} from ${cwd}`)
+    return { text: `${head}\n\nApplied ${todo.length}. Imported triggers are off: turn them on in Triggers after a look.` }
   },
   // `stm top`: one read-only snapshot of what the app already holds in memory; nothing is fetched for it
   top: () => {
