@@ -151,6 +151,39 @@ done. Ideas only, no code. Each one ships with a test, an empty state and its `d
 Also queued and already in v1.2 above: import docs (Crawlee); the social pack (last 30 days brief, RSSHub
 and feed discovery, any site as an app) is being built now.
 
+## From the agent framework review of 2026-10-28
+
+Ideas from Google ADK, VoltAgent, PraisonAI, AgentUse (Apache-2.0 / MIT) and Flameox (MIT), and the
+architecture idea of a competitor's in-terminal CLI (Maestri; idea only, nothing copied). Features
+as each project's own page describes them, not tested by us. In this order, after "stm inside each
+panel" (in progress):
+
+1. Loop detection: when a panel repeats the same tool call or error several times, pause it and say
+   what it has spent on the repeat. (PraisonAI)
+2. Evidence on claims: when Claude says "fixed" or "faster", the panel shows whether a test or a
+   measurement ran in that turn, marked observed, derived or inferred. The same marks on Savings and
+   on the performance report. (Flameox)
+3. Model and effort evaluation: `stm eval` runs saved tasks from the project on several models and
+   effort levels and shows cost, time and pass or fail, to find the cheapest setting that holds.
+   (ADK, VoltAgent)
+4. Secret guard on what leaves: before a prompt is sent, warn when a vault secret or a pasted key is
+   in it; the user decides. (VoltAgent)
+5. Permissions per trigger: each scheduled run lists the folders it may read or write and the
+   commands it may run. (AgentUse)
+6. Reviewer loop with a cap: a review panel sends work back to a build panel until tests pass, with a
+   limit on rounds and on spend. Part of the canvas. (PraisonAI, ADK)
+7. Approve with a comment or an edit: an approval can change the command or add an instruction that
+   goes back to the agent. (AgentUse, ADK)
+8. Learning from reviews: rejections and comments become a proposed change to CLAUDE.md, a persona or
+   a trigger, applied only when the user accepts. (AgentUse)
+9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the
+   project, versioned with git. (AgentUse, ADK, PraisonAI)
+10. Recommended MCP servers: a short opt-in list, local only, starting with a profiler that reports
+    evidence. Off by default; each host in docs/NETWORK.md. (Flameox)
+
+Left out: hosted deployment, hosted observability consoles, inbound webhooks, chat-app connectors
+and drag-and-drop builders. They need a server of ours or fall outside a local Mac app.
+
 ## Later
 
 - New project from a template: persona, skills and CLAUDE.md set up in one step.
