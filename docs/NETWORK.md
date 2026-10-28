@@ -31,7 +31,6 @@ The source for the Security & Privacy page. Last reviewed: 2026-10-27.
 | Claude Code's own usage data and error reports | Anthropic | off: the app sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` for its panels; on with Appearance > Let Claude Code send usage data to Anthropic, or with your own value of that variable |
 | stm from inside a panel (`stm whoami`, `spawn`, `send`, `note`, `link`) | none: the app's local socket only (`cli.sock` in the app's data folder, or a named pipe on Windows); no new hosts | when a panel's Claude Code runs it |
 | Local checks | none (git, `docker ps`, `docker stats`, `openshell --version`, `officecli --version` on this Mac) | at launch and on timers |
-| Update check (released builds) | GitHub Releases of `supertokenman/supertokenman` (`latest-mac.yml`): github.com, release-assets.githubusercontent.com, objects.githubusercontent.com | at launch and every 6 hours; off with Appearance > Check for updates automatically; downloads only when you say Install |
 | Source update check | your git remote (`git fetch`) | every 6 hours, only in an app installed from a source checkout |
 
 No telemetry, analytics or crash reports are sent to us; there is no server of ours.
@@ -40,6 +39,7 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 
 | What | Where | Turned on by |
 |---|---|---|
+| Update check (released builds) | GitHub Releases of `supertokenman/supertokenman` (`releases.atom`, `latest-mac.yml`): github.com, release-assets.githubusercontent.com, objects.githubusercontent.com | off by default since 0.1.13: the Update button checks when you press it; with Appearance > Check for updates automatically on, a minute after launch (never during it) and every 6 hours; downloads only when you say Install |
 | Exchange rate | api.frankfurter.dev | Spend > Update rates |
 | Market quotes and predictions | query1.finance.yahoo.com, brapi.dev, api.coingecko.com, gamma-api.polymarket.com | opening Markets (every minute while it is open) |
 | Symbol lookup | query1.finance.yahoo.com (`/v1/finance/search`, what you typed) | typing in Markets > Add, after a pause, only when the built-in list has fewer than five matches |
@@ -55,5 +55,7 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | Video transcripts | none from the app: it reads a subtitle or audio file you give, or text you paste. A link other than YouTube runs **your own** `yt-dlp` (not shipped by us) on this machine; that tool contacts the video's site under your responsibility, captions only, never with browser cookies. Audio goes to **your own** `whisper.cpp` (and `ffmpeg`) locally. YouTube links are not fetched at all | Settings > Appearance > Video transcripts (off by default), then Transcript or `stm transcript` |
 | Sites added as drawer apps | the site's own address and the extra hosts you list; its icon once, from the same site, when you add it | adding the site, then opening it |
 
-The release update check runs only in a packaged Mac build that carries `app-update.yml`; netwatch runs
-the unpackaged app, so it does not exercise it (not verified until the first signed release).
+The release update check runs only in a packaged Mac build that carries `app-update.yml`. Since 0.1.13
+netwatch forces the app's release path (`STM_UPDATE_RELEASE_MODE=1`, the automatic check's wait cut to
+2 s), so a fresh profile that reaches GitHub on its own fails CI on Linux too; electron-updater itself
+still runs only in the signed build, which only the Mac proof covers.

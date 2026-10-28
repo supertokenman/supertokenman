@@ -351,3 +351,30 @@ runner: it catches a launch that starts waiting on something new, not a few perc
 Only perf-mac can confirm: the macOS numbers with the new method (0.1.12's run), whether the cold
 launches are Gatekeeper's first check or the disk cache, and whether macOS on a virtual M1 has anything
 of its own in the 1.3 to 1.7 s warm launch.
+
+## 0.1.12 on the Mac: slower launch, and the update check (2026-10-28)
+
+perf-mac on the signed 0.1.12 (run 40679328422, new method): launch to composer median 6662 ms (5300 to
+12667) after two cold launches (16772 / 22355 and 8059 / 10999 ms window / composer); window shown 4622 ms.
+0.1.11's warm runs were 1.4 to 3.0 s window and 1.9 to 3.1 s composer. Idle CPU of the tree went from 1.8
+to 3.4 % with one panel. Typing and memory did not move.
+
+What is known:
+
+- Linux under xvfb does not show it: `perf-launch.mjs --runs 5` on this fix's tree gives a median window
+  of 866 ms and composer of 1191 ms (min 1085, max 1490), as before 0.1.12. The CI launch guard passed on 0.1.12.
+- The only launch-path work that runs only in a signed Mac build is the release update check. The window
+  asked for it at mount. That loaded electron-updater (and Squirrel's native updater) in the main process
+  and sent releases.atom, releases/latest, the tag page, latest-mac.yml and the asset redirect while the
+  window was still starting. 0.1.11 did the same, so this is **not shown** to be the cause of the 3x.
+- None of the other changes between 0.1.11 and 0.1.12 (PR 50, 52, 56, 57) runs on the launch path before
+  the window. The stm launcher from PR 56 is written when a panel starts, and transcripts only register three IPC handlers.
+
+**Change:** the automatic update check is off on a new install and, when turned on, waits 60 s after the
+window is up (`electron/updategate.ts`). None of the updater runs during launch any more. See
+docs/security/2026-10-28-mac-0.1.12/REPORT.md for the network side.
+
+Only a new perf-mac run on a signed build can say whether this brings the warm launch back to about 2 s.
+If it does not, the next suspects are the runner (image 1000000368 for 0.1.11, then 1000000420) and
+Gatekeeper's checks of the larger `app.asar.unpacked` (the stm CLI files added in PR 56), which Linux
+cannot show.
