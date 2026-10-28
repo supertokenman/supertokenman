@@ -51,11 +51,17 @@ export function flatten(o, pre = '') {
   return out
 }
 
+/** Sections of the results whose `method` differs between two runs (a missing one counts as 1). */
+export const changedMethod = (prev, cur) =>
+  Object.keys(cur?.results ?? {}).filter((k) => prev?.results?.[k] && (prev.results[k].method ?? 1) !== (cur.results[k]?.method ?? 1))
+
 /** Every number in both runs' results, with the change, marked when it moved more than `limit`. */
 export function compare(prev, cur, limit = 0.1) {
+  // a section measured another way (its `method` differs) is not compared: see changedMethod
+  const skip = new Set(changedMethod(prev, cur))
   const a = flatten(prev?.results)
   const b = flatten(cur?.results)
-  return Object.keys(b).filter((k) => k in a).map((k) => {
+  return Object.keys(b).filter((k) => k in a && !skip.has(k.split('.')[0])).map((k) => {
     const change = a[k] === 0 ? (b[k] === 0 ? 0 : Infinity) : (b[k] - a[k]) / Math.abs(a[k])
     return { key: k, before: a[k], after: b[k], change, marked: Math.abs(change) > limit && Math.abs(b[k] - a[k]) > 1e-9 }
   })
@@ -65,11 +71,19 @@ const f = (x, d = 1) => (x === null || x === undefined ? '-' : Number(x).toFixed
 const pct = (c) => (c === Infinity ? 'new' : `${c >= 0 ? '+' : ''}${(c * 100).toFixed(0)}%`)
 
 /** PERF.md from perf.json, with the comparison when there is one. */
-export function render(p, cmp, prevVersion) {
+export function render(p, cmp, prevVersion, prev) {
   const r = p.results
   const rows = [
-    ['Launch to window shown (median of ' + r.launch.runs + ')', `${f(r.launch.windowMs, 0)} ms`],
-    ['Launch to composer usable (median)', `${f(r.launch.composerMs, 0)} ms`],
+    ...(r.launch.method >= 2
+      ? [
+          [`Launch to window shown (median of ${r.launch.runs} after ${r.launch.coldRuns} cold)`, `${f(r.launch.windowMs, 0)} ms (${f(r.launch.windowMin, 0)} to ${f(r.launch.windowMax, 0)})`],
+          ['Launch to composer usable (median)', `${f(r.launch.composerMs, 0)} ms (${f(r.launch.composerMin, 0)} to ${f(r.launch.composerMax, 0)})`],
+          ['Cold launch (slowest of the first ' + r.launch.coldRuns + '): window / composer', `${f(r.launch.coldWindowMs, 0)} / ${f(r.launch.coldComposerMs, 0)} ms`],
+        ]
+      : [
+          ['Launch to window shown (median of ' + r.launch.runs + ')', `${f(r.launch.windowMs, 0)} ms`],
+          ['Launch to composer usable (median)', `${f(r.launch.composerMs, 0)} ms`],
+        ]),
     ['Idle, 1 panel: layouts / style recalcs per s', `${f(r.idle.one.layoutsPerS, 2)} / ${f(r.idle.one.recalcsPerS, 2)}`],
     ['Idle, 1 panel: CPU of the process tree', `${f(r.idle.one.cpu)} %`],
     ['Idle, 1 panel: memory of the process tree', `${f(r.idle.one.rssMb, 0)} MB`],
@@ -77,7 +91,9 @@ export function render(p, cmp, prevVersion) {
     ['Idle, 4 panels: CPU of the process tree', `${f(r.idle.four.cpu)} %`],
     ['Idle, 4 panels: memory of the process tree', `${f(r.idle.four.rssMb, 0)} MB`],
     ['Memory per added panel', `${f(r.idle.perPanelMb, 0)} MB`],
-    ['Typing 200 characters: longest frame', `${f(r.typing.longestFrameMs, 0)} ms`],
+    r.typing.rounds
+      ? [`Typing 200 characters: longest frame (median of ${r.typing.rounds} rounds; worst)`, `${f(r.typing.longestFrameMs, 0)} ms; ${f(r.typing.worstFrameMs, 0)} ms`]
+      : ['Typing 200 characters: longest frame', `${f(r.typing.longestFrameMs, 0)} ms`],
     ['Typing: frames over 16 ms', `${r.typing.framesOver16 ?? '-'}`],
     ['Typing: frames over 33 ms (a frame or more dropped)', `${r.typing.framesOver33 ?? '-'}`],
     ['Typing: longest input to paint', `${f(r.typing.longestInputMs, 0)} ms`],
@@ -99,7 +115,7 @@ ${rows.map(([a, b]) => `| ${a} | ${b} |`).join('\n')}
     md += `
 ## Against ${prevVersion}
 
-Changes over 10% are marked.
+Changes over 10% are marked.${changedMethod(prev, p).length ? ` Measured differently since ${prevVersion}, so not compared: ${changedMethod(prev, p).join(', ')}.` : ''}
 
 | What | ${prevVersion} | ${p.version} | Change |
 |---|---|---|---|
@@ -110,10 +126,13 @@ ${cmp.map((c) => `| ${c.marked ? '**' + c.key + '**' : c.key} | ${f(c.before, 2)
 ## How
 
 - Launch: wall clock from process spawn to the window's document being visible, and to the composer
-  textarea being enabled and taking focus, polled every 50 ms over Chromium's debugging port.
+  textarea being enabled and taking focus, polled every 50 ms over Chromium's debugging port. The first
+  launches of a newly installed app are slow (system checks of the signed bundle, cold disk cache): they
+  are shown as the cold launch, and the median, minimum and maximum are of the launches after them.
 - Idle: 30 s after a 10 s settle. Layouts and style recalcs are deltas of CDP \`Performance.getMetrics\`;
   CPU and memory are \`ps\` samples of the app and every process under it, once a second, averaged.
-- Typing: 200 characters typed into the composer, 30 ms apart. Frames are gaps between
+- Typing: 200 characters typed into the composer, 30 ms apart, three rounds (median round shown, and the
+  worst round's longest frame). Frames are gaps between
   \`requestAnimationFrame\` callbacks; input to paint is the Event Timing API's longest event duration.
   On a 60 Hz screen a frame of 16.8 ms is jitter, not a dropped frame: read "over 33 ms" for those.
 - Sizes: \`app.asar\` listing (dist only), gzip of the files index.html loads at start, \`du\` of the .app.

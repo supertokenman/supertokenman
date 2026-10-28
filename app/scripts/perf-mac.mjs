@@ -95,21 +95,34 @@ async function idle(l, seconds = 30) {
   return { ...L.perSecond(before, after, seconds), cpu: avg('cpu'), rssMb: avg('rssMb'), processes: Math.max(...samples.map((s) => s.processes)) }
 }
 
-const results = { launch: { runs: 5 }, idle: {}, typing: {}, size: {} }
+// method: bumped when a section is measured differently, so the comparison with the previous release
+// leaves that section out instead of reading a change of method as a change of speed (perf-lib compare)
+const COLD = 2
+const RUNS = 7
+const results = { launch: { method: 2, runs: RUNS, coldRuns: COLD }, idle: {}, typing: { method: 2 }, size: {} }
 
-// ---- launch, 5 times
-const w = [], c = []
-for (let i = 1; i <= 5; i++) {
+// ---- launch: the first launches of a just-installed signed app on a fresh runner are much slower
+// (0.1.8 to 0.1.11: runs 1 and 2 at 4.6 to 6.6 s, later runs at 1.2 to 2.3 s), so a median of five that
+// includes them lands on whichever run the warm-up ended at. The cold ones are recorded on their own,
+// never dropped; the median and its spread are of the RUNS after them.
+const w = [], c = [], cw = [], cc = []
+for (let i = 1; i <= COLD + RUNS; i++) {
   const l = await launch(i)
-  w.push(l.windowMs); c.push(l.composerMs)
-  say(`launch ${i}: window ${Math.round(l.windowMs)} ms, composer ${Math.round(l.composerMs)} ms`)
+  if (i <= COLD) (cw.push(l.windowMs), cc.push(l.composerMs))
+  else (w.push(l.windowMs), c.push(l.composerMs))
+  say(`launch ${i}${i <= COLD ? ' (cold)' : ''}: window ${Math.round(l.windowMs)} ms, composer ${Math.round(l.composerMs)} ms`)
   await quit(l)
 }
-Object.assign(results.launch, { windowMs: L.median(w), composerMs: L.median(c), windowAll: w, composerAll: c })
+Object.assign(results.launch, {
+  windowMs: L.median(w), windowMin: Math.min(...w), windowMax: Math.max(...w),
+  composerMs: L.median(c), composerMin: Math.min(...c), composerMax: Math.max(...c),
+  coldWindowMs: Math.max(...cw), coldComposerMs: Math.max(...cc),
+  windowAll: w, composerAll: c, coldWindowAll: cw, coldComposerAll: cc,
+})
 
 // ---- idle with 1 then 4 panels, then typing, in one launch
 {
-  const l = await launch(6)
+  const l = await launch(COLD + RUNS + 1)
   await closeTour(l.win)
   await sleep(10_000)
   results.idle.one = await idle(l)
@@ -121,19 +134,30 @@ Object.assign(results.launch, { windowMs: L.median(w), composerMs: L.median(c), 
   say(`idle ${results.idle.panels} panels: ${JSON.stringify(results.idle.four)}`)
   results.idle.perPanelMb = results.idle.panels > 1 ? (results.idle.four.rssMb - results.idle.one.rssMb) / (results.idle.panels - 1) : null
 
-  // typing: rAF gaps for frames, Event Timing for input to paint
-  await l.win.evaluate(() => {
-    const s = (window.__perf = { frames: [], events: [] })
-    let last = performance.now()
-    const tick = (t) => { s.frames.push(t - last); last = t; if (!s.stop) requestAnimationFrame(tick) }
-    requestAnimationFrame(tick)
-    new PerformanceObserver((list) => { for (const e of list.getEntries()) s.events.push(e.duration) }).observe({ type: 'event', durationThreshold: 16, buffered: false })
-  })
+  // typing: rAF gaps for frames, Event Timing for input to paint. Three rounds of 200 characters: one
+  // round's longest frame is a single sample of a shared virtual machine (0.1.10 to 0.1.11 moved 63 to
+  // 109 ms with the same work per key on Linux), so the median round is the number and the worst is kept.
   await l.win.click('.composer textarea')
-  await l.win.keyboard.type('the quick brown fox jumps over the lazy dog, '.repeat(5).slice(0, 200), { delay: 30 })
-  await sleep(500)
-  const t = await l.win.evaluate(() => { const s = window.__perf; s.stop = true; return { frames: s.frames.slice(1), events: s.events } })
-  results.typing = { chars: 200, longestFrameMs: Math.max(0, ...t.frames), framesOver16: t.frames.filter((x) => x > 16.7).length, framesOver33: t.frames.filter((x) => x > 33.4).length, frames: t.frames.length, longestInputMs: Math.max(0, ...t.events) }
+  const rounds = []
+  for (let k = 0; k < 3; k++) {
+    await l.win.evaluate(() => {
+      const s = (window.__perf = { frames: [], events: [] })
+      let last = performance.now()
+      const tick = (t) => { s.frames.push(t - last); last = t; if (!s.stop) requestAnimationFrame(tick) }
+      requestAnimationFrame(tick)
+      s.obs = new PerformanceObserver((list) => { for (const e of list.getEntries()) s.events.push(e.duration) })
+      s.obs.observe({ type: 'event', durationThreshold: 16, buffered: false })
+    })
+    await l.win.keyboard.type('the quick brown fox jumps over the lazy dog, '.repeat(5).slice(0, 200), { delay: 30 })
+    await sleep(500)
+    const t = await l.win.evaluate(() => { const s = window.__perf; s.stop = true; s.obs.disconnect(); return { frames: s.frames.slice(1), events: s.events } })
+    rounds.push({ longestFrameMs: Math.max(0, ...t.frames), framesOver16: t.frames.filter((x) => x > 16.7).length, framesOver33: t.frames.filter((x) => x > 33.4).length, frames: t.frames.length, longestInputMs: Math.max(0, ...t.events) })
+    await l.win.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a')
+    await l.win.keyboard.press('Backspace')
+    await sleep(500)
+  }
+  const mid = (k) => L.median(rounds.map((r) => r[k]))
+  results.typing = { method: 2, rounds: rounds.length, chars: 200, longestFrameMs: mid('longestFrameMs'), worstFrameMs: Math.max(...rounds.map((r) => r.longestFrameMs)), framesOver16: mid('framesOver16'), framesOver33: mid('framesOver33'), frames: mid('frames'), longestInputMs: mid('longestInputMs'), all: rounds }
   say(`typing: ${JSON.stringify(results.typing)}`)
   await quit(l)
 }
@@ -166,6 +190,6 @@ const perf = {
 writeFileSync(join(out, 'perf.json'), JSON.stringify(perf, null, 2) + '\n')
 const prevFile = join(out, 'prev-perf.json')
 const prev = existsSync(prevFile) ? JSON.parse(readFileSync(prevFile, 'utf8')) : null
-writeFileSync(join(out, 'PERF.md'), L.render(perf, prev ? L.compare(prev, perf) : [], prev?.version))
+writeFileSync(join(out, 'PERF.md'), L.render(perf, prev ? L.compare(prev, perf) : [], prev?.version, prev))
 say(`wrote ${join(out, 'PERF.md')}`)
 process.exit(0)
