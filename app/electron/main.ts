@@ -876,11 +876,21 @@ function serveUi() {
     if (!f) return new Response('Not found', { status: 404 })
     try {
       return new Response(await readFileAsync(f.path), { headers: { 'content-type': f.type, 'x-content-type-options': 'nosniff' } })
-    } catch {
+    } catch (e) {
+      // the app's own files missing: right after an update the app can start before they are all in
+      // place. Say so in the log, try again shortly, and never leave a black window without a word.
+      logs().error('ui:file', `${req.url}: ${(e as Error).message}`)
+      if (/\/index\.html$/.test(new URL(req.url).pathname)) return new Response(uiRetryPage(++uiMisses), { headers: { 'content-type': 'text/html; charset=utf-8' } })
       return new Response('Not found', { status: 404 })
     }
   })
 }
+let uiMisses = 0
+/** What the window shows when index.html cannot be read: it reloads itself a few times, then asks for a restart. */
+const uiRetryPage = (n: number) =>
+  n <= 5
+    ? `<!doctype html><meta charset="utf-8"><body style="background:#0f0f0e;color:#ccc;font:14px -apple-system,sans-serif;display:grid;place-items:center;height:100vh;margin:0"><meta http-equiv="refresh" content="${n}"><p>Starting SuperTokenMan...</p>`
+    : '<!doctype html><meta charset="utf-8"><body style="background:#0f0f0e;color:#ccc;font:14px -apple-system,sans-serif;display:grid;place-items:center;height:100vh;margin:0;text-align:center"><p>SuperTokenMan could not read its own files.<br>This can happen right after an update. Quit it (Cmd+Q) and open it again.</p>'
 async function createWindow() {
   // STM_WINDOW=1440x900 pins the size and puts the window at the corner, for the tour recordings
   const fixed = /^(\d+)x(\d+)$/.exec(process.env.STM_WINDOW ?? '')
