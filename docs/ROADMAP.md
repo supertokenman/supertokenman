@@ -105,8 +105,9 @@ References to read before choosing (what they did, not claims about us):
      STM_SOCKET, STM_PANEL_ID and a per-panel key, and can run stm whoami, panels, spawn, send
      (queued in the other composer unless the person turns on auto for that link), note and
      link/links; rate-limited and logged. See "Using stm from inside a panel" in docs/STM_GUIDE.md.
-     Still to come: the canvas itself (drawing the links), reading another panel's summary, and the
-     per-link token, cost and spending cap.
+     Step done (2026-10-28): stm read <panel> gives a linked panel's goal and the end of its last
+     reply, credentials masked; unlinked panels cannot read each other.
+     Still to come: the canvas itself (drawing the links) and the per-link token, cost and spending cap.
 
 ## After v1.1: from the repo review of 2026-10-27
 

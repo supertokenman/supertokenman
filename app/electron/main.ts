@@ -673,6 +673,8 @@ const pendingSpans = new Map<string, SpanEvent[]>()
 const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; why?: string; tools: string[]; edits?: number }>()
 // a panel's goal, given with /goal: carried in front of each message until a reply says GOAL MET
 const goals = new Map<string, Goal>()
+// each panel's last reply, for a linked panel's stm read
+const lastReply = new Map<string, { text: string; at: number }>()
 let turnSeq = 0
 // each panel's answer styles and project, for the cost band of each task
 const bandOf = new Map<string, { project: string; styles: StyleId[] }>()
@@ -1780,6 +1782,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     onSessionStart: (source) => snapshotFor(sid, projectName(home), source),
     // decisions Claude marked in a reply go to the project's note
     onReply: (text) => {
+      // what a linked panel can read with stm read: the last reply, credentials masked
+      lastReply.set(sid, { text: redact(text, vault?.all() ?? []).text.slice(-PB.READ_MAX), at: Date.now() })
       try {
         const n = rememberDecisions(vaultDir(), projectName(home), decisions(redact(text, vault.all()).text))
         if (n) send(sid, { kind: 'note', text: n === 1 ? 'Saved a decision to memory.' : `Saved ${n} decisions to memory.` })
@@ -6025,6 +6029,15 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     const other = panelId(a.panel)
     saveLinks(PB.addLink(links(), sid, other))
     return { linked: [sid, other] }
+  },
+  // a linked panel's last reply and goal, read only; unlinked panels cannot read each other
+  pread: (a) => {
+    const sid = asPanel(a, 'read', String(a.panel ?? ''))
+    const other = panelId(a.panel)
+    if (!PB.linkOf(links(), sid, other)) throw new Error(`Not linked to ${other}. The person links panels, or run: stm link ${other}`)
+    const r = lastReply.get(other)
+    logs().info('stm:panel', `${sid} read ${other} (${r?.text.length ?? 0} chars)`)
+    return { panel: other, name: panelName(other), goal: goals.get(other)?.text ?? null, busy: Boolean(sessions.get(other)?.busy), reply: r?.text ?? null, at: r?.at ?? null }
   },
   plinks: (a) => {
     const sid = asPanel(a, 'links')
