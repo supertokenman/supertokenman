@@ -6,6 +6,8 @@ Our own controls everywhere, and a live dashboard in the terminal.
   The menu bar, notifications and macOS permission prompts stay the system's own.
 - `stm top`: a live view in the terminal of every open panel, its state, today's cost, approvals
   waiting and CI. `stm top --once --json` prints one snapshot for scripts. Local only, no network.
+- Claude inside a panel can now use `stm`: open a linked panel, send a message to another panel, and
+  share notes in the project. A message from another panel waits in the composer until you press send.
 - Video transcripts (off until you turn them on): paste a transcript, give a subtitle file, or run an
   audio or video file through your own whisper.cpp. The app does not fetch YouTube captions.
 - The Mac performance report now shows the first launches after install apart from warm launches,
