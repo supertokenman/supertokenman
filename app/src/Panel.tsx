@@ -13,6 +13,7 @@ import { AccessMark } from './Personas'
 import { SandboxChip } from './Sandbox'
 import { RemoteChip } from './RemoteChip'
 import { WorktreeChip } from './Worktree'
+import { LinksChip } from './PanelLinks'
 import { heldText } from '../shared/budget'
 import { ACCESS } from '../shared/personas'
 import { askOnce, SHRINK } from './localStream'
@@ -301,10 +302,10 @@ export function Panel(props: {
   // text handed over from the Memory sheet goes in front of the draft
   useEffect(() => {
     const onPrefill = (e: Event) => {
-      const d = (e as CustomEvent<{ sid: string; text: string }>).detail
+      const d = (e as CustomEvent<{ sid: string; text: string; quiet?: boolean }>).detail
       if (d.sid !== sid) return
       setDraft((cur) => d.text + cur)
-      box.current?.focus()
+      if (!d.quiet) box.current?.focus()
     }
     window.addEventListener('stm:prefill', onPrefill)
     return () => window.removeEventListener('stm:prefill', onPrefill)
@@ -508,7 +509,7 @@ export function Panel(props: {
   // other surfaces (Docker) ask the focused panel through a window event
   useEffect(() => {
     const on = (e: Event) => {
-      const d = (e as CustomEvent<{ sid: string; text: string }>).detail
+      const d = (e as CustomEvent<{ sid: string; text: string; quiet?: boolean }>).detail
       if (d.sid === sid) submitRef.current(d.text)
     }
     window.addEventListener('stm:ask', on)
@@ -571,6 +572,7 @@ export function Panel(props: {
             {s.persona.name}
           </span>
         )}
+        <LinksChip sid={sid} />
         {s.sandbox && <SandboxChip cwd={s.cwd} />}
         {s.remote && (
           <RemoteChip sid={sid} remote={s.remote} onPreview={(url) => (dispatch({ kind: 'preview-url', url }), setTab('preview'))} onDone={(note, close) => (dispatch({ kind: 'note', text: note }), close && props.onClose())} />

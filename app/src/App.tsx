@@ -824,10 +824,20 @@ export function App() {
   useEffect(
     () =>
       window.stm.stmCli.onOpen(async (r) => {
-        const sid = await open(r.cwd, undefined, r.persona)
+        const sid = await open(r.cwd, undefined, r.persona, undefined, r.model ? { model: r.model } : undefined)
         window.stm.stmCli.opened(r.req, sid)
       }),
     [open],
+  )
+  // a message from another panel (stm send): put in the composer for the person to send, never sent
+  // from here; only a link the person set to auto-send arrives already sent, shown like a typed one
+  useEffect(
+    () =>
+      window.stm.panelBus.onInbox((sid, text, sent) => {
+        if (sent) dispatch({ kind: 'event', sid, action: { kind: 'sent', text, at: Date.now() } })
+        else window.dispatchEvent(new CustomEvent('stm:prefill', { detail: { sid, text: `${text}\n\n`, quiet: true } }))
+      }),
+    [],
   )
   // a run a restart left unfinished, picked up from its step
   useEffect(() => {

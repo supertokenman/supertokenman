@@ -132,6 +132,7 @@ import { pct, rougeL } from '../shared/rouge.js'
 import { buildIndex, indexSize, searchIndex } from './vecindex.js'
 import { inspect as inspectHeadroom } from './hrquality.js'
 import { startCli } from './cliserver.js'
+import * as PB from './panelbus.js'
 import * as Deploys from './deploys.js'
 import { applyTeam, diffTeam, exportTeam, readTeam, type Current as TeamCurrent, type Team } from '../shared/team.js'
 import { COLLECT, cssOf, tailwindOf, tokensOf, type Sample } from '../shared/styleExtract.js'
@@ -285,7 +286,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -1683,7 +1684,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     mcpServers: inProcess({ ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
     // Claude's Bash sees only the credentials marked for commands
     // through Headroom's compressing proxy when it is on and answering; straight to Anthropic otherwise
-    env: { ...claudeTraffic(process.env), ...vault.commandEnv(), STM_PANEL: sid, ...(settings().headroom && headroomLive ? { ANTHROPIC_BASE_URL: HEADROOM_URL } : {}) },
+    env: { ...claudeTraffic(process.env), ...vault.commandEnv(), STM_PANEL: sid, ...(boxed || remote ? {} : panelEnv(sid)), ...(settings().headroom && headroomLive ? { ANTHROPIC_BASE_URL: HEADROOM_URL } : {}) },
     // listing panels only reads; messaging one always asks
     // the local tools only read project files and answer text
     // tools a panel here does not need stay out of every turn, unless the person wants them all
@@ -1979,6 +1980,7 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   closeTerminal(String(sid))
   get(sid)?.close()
   sessions.delete(sid)
+  panelKeys.drop(sid)
   sourceOf.delete(sid)
   gateway.revoke(sid)
   snapEvents.delete(sid)
@@ -5737,10 +5739,158 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     return { started: t.id }
   },
 }
+
+// stm from inside a panel (roadmap v1.2, first step): each panel's Claude Code gets the CLI's path, the
+// socket and its own id and key in its environment; the app checks the key, so a panel acts only as itself
+const cliSocket = () => (process.platform === 'win32' ? `\\\\.\\pipe\\supertokenman-${process.env.USERNAME ?? 'user'}` : join(app.getPath('userData'), 'cli.sock'))
+const panelKeys = new PB.PanelKeys()
+let stmLaunch: string | null = null
+/** A small launcher in the app's data folder that runs the app's own stm script with the app's own binary
+ * (--stm-cli: no system Node needed, and no RunAsNode, which is fused off in packaged builds). */
+function stmLauncher(): string {
+  if (stmLaunch && existsSync(stmLaunch)) return stmLaunch
+  const script = join(app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked'), 'cli', 'stm.mjs')
+  const dir = join(app.getPath('userData'), 'stm-bin')
+  mkdirSync(dir, { recursive: true })
+  const args = [...(app.isPackaged ? [] : [app.getAppPath()]), ...(app.commandLine.hasSwitch('no-sandbox') ? ['--no-sandbox'] : [])]
+  const quoted = args.map((a) => `"${a}" `).join('')
+  if (process.platform === 'win32') {
+    stmLaunch = join(dir, 'stm.cmd')
+    writeFileSync(stmLaunch, `@"${process.execPath}" ${quoted}--stm-cli "${script}" %*\r\n`)
+  } else {
+    stmLaunch = join(dir, 'stm')
+    writeFileSync(stmLaunch, `#!/bin/sh\n# SuperTokenMan command line for panels; written by the app\nexec "${process.execPath}" ${quoted}--stm-cli "${script}" "$@"\n`, { mode: 0o755 })
+  }
+  return stmLaunch
+}
+function panelEnv(sid: string): Record<string, string> {
+  try {
+    const cliPath = stmLauncher()
+    const sep = process.platform === 'win32' ? ';' : ':'
+    const env = { STM_CLI: cliPath, STM_SOCKET: cliSocket(), STM_PANEL_ID: sid, STM_PANEL_KEY: panelKeys.issue(sid), PATH: `${dirname(cliPath)}${sep}${process.env.PATH ?? ''}` }
+    // end-to-end tests only: the panel's environment, so a test can run stm as that panel
+    if (process.env.STM_TEST_PANEL_ENV) writeFileSync(join(process.env.STM_TEST_PANEL_ENV, `${sid}.json`), JSON.stringify(env), { mode: 0o600 })
+    return env
+  } catch (e) {
+    logs().warn('stm:panel', `stm not set up for panel ${sid}: ${e instanceof Error ? e.message : e}`)
+    return {}
+  }
+}
+const stmLimits = () => ({ ...PB.DEFAULT_LIMITS, ...(settings().stmLimits ?? {}) })
+const sendLimit = new PB.RateLimit('stm send', () => stmLimits().sendPerMin, 60_000)
+const spawnLimit = new PB.RateLimit('stm spawn', () => stmLimits().spawnPerHour, 3_600_000)
+const panelName = (sid: string) => hub.list('').find((p) => p.panel === sid)?.name ?? sid
+const panelDir = (sid: string) => shells.get(sid)?.cwd ?? sessions.get(sid)?.cwd ?? ''
+const links = () => settings().panelLinks ?? []
+const panelLinksView = () => Object.fromEntries([...sessions.keys()].map((sid) => [sid, PB.linksFor(links(), sid).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))]))
+const saveLinks = (l: PB.Link[]) => {
+  saveSettings({ ...settings(), panelLinks: l })
+  if (win && !win.isDestroyed()) win.webContents.send('panel:links', panelLinksView())
+}
+/** Every panel-scoped command: the caller's identity checked, then the action logged. */
+const asPanel = (a: Record<string, unknown>, what: string, detail = '') => {
+  let sid: string
+  try {
+    sid = panelKeys.verify(a.me, a.key)
+  } catch (e) {
+    logs().warn('stm:panel', `${what} refused: ${e instanceof Error ? e.message : e}`)
+    throw e
+  }
+  logs().info('stm:panel', `${sid} ${what}${detail ? ` ${detail}` : ''}`)
+  return sid
+}
+const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
+  whoami: (a) => {
+    const sid = asPanel(a, 'whoami')
+    const s = sessions.get(sid)
+    return { id: sid, name: panelName(sid), project: basename(panelDir(sid)), cwd: panelDir(sid), model: s?.model ?? modelOf.get(sid) ?? null }
+  },
+  pspawn: async (a) => {
+    const from = asPanel(a, 'spawn', a.model ? `model ${a.model}` : '')
+    const model = a.model ? String(a.model) : undefined
+    if (model && !PB.isModel(model)) throw new Error(`Unknown model "${model}". Known: ${PB.modelIds().join(', ')}`)
+    const cwd = a.cwd ? resolve(panelDir(from), String(a.cwd)) : panelDir(from)
+    if (!existsSync(cwd)) throw new Error(`No folder ${cwd}.`)
+    spawnLimit.take(from)
+    if (!win || win.isDestroyed()) throw new Error('The app window is closed; open it to start a panel.')
+    const req = `p${Date.now().toString(36)}`
+    const sid = await new Promise<string>((ok, fail) => {
+      cliOpens.set(req, ok)
+      win!.webContents.send('cli:open', { req, cwd, model })
+      setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
+    })
+    saveLinks(PB.addLink(links(), from, sid))
+    logs().info('stm:panel', `${from} spawned ${sid} in ${cwd}`)
+    const prompt = String(a.prompt ?? '').slice(0, 100_000)
+    // the first message is queued like any other from a panel: the person sends it
+    if (prompt.trim()) await panelHandlers.psend!({ me: a.me, key: a.key, panel: sid, text: prompt, counted: false })
+    return { id: sid, name: panelName(sid), cwd, linkedTo: from }
+  },
+  psend: async (a) => {
+    const from = asPanel(a, 'send', `to ${a.panel}`)
+    const to = panelId(a.panel)
+    if (to === from) throw new Error('A panel cannot send to itself.')
+    const text = String(a.text ?? '').slice(0, 100_000)
+    if (!text.trim()) throw new Error('Nothing to send.')
+    if (a.counted !== false) sendLimit.take(from)
+    const body = PB.labelled(panelName(from), text)
+    const how = PB.deliveryOf(PB.linkOf(links(), from, to))
+    if (how === 'auto') {
+      // the person turned auto on for this link: sent as if typed, with the same brake and approvals
+      const v = budgetVerdict(to)
+      if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
+      tracePrompt(to, body, `Panel ${panelName(from)}`)
+      if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, body, true)
+      sessions.get(to)!.step(withGoal(body, goals.get(to) ?? null), `Panel ${panelName(from)}`).catch(() => undefined)
+    } else {
+      // never sent on its own: it waits in the composer until the person presses send
+      if (!win || win.isDestroyed()) throw new Error('The app window is closed; the message could not be queued.')
+      win.webContents.send('panel:inbox', to, body, false)
+      send(to, { kind: 'note', text: `A message from panel ${panelName(from)} is in the composer. Read it and press send, or clear it.` })
+    }
+    logs().info('stm:panel', `${from} -> ${to} ${how} (${text.length} chars)`)
+    return { panel: to, delivery: how }
+  },
+  pnote: (a) => {
+    const op = String(a.op ?? '')
+    const sid = asPanel(a, `note ${op}`, String(a.name ?? ''))
+    const dir = panelDir(sid)
+    if (!dir) throw new Error('This panel has no project folder.')
+    const name = String(a.name ?? '')
+    if (op === 'get') return { name, text: PB.noteGet(dir, name) }
+    if (op !== 'set' && op !== 'append') throw new Error('Use: stm note get|set|append <name> [text]')
+    try {
+      excludeCache(dir, '.supertokenman/', 'local notes shared by SuperTokenMan panels')
+    } catch {
+      // not a repository
+    }
+    return { name, ...PB.noteSet(dir, name, String(a.text ?? ''), op === 'append') }
+  },
+  plink: (a) => {
+    const sid = asPanel(a, 'link', String(a.panel ?? ''))
+    const other = panelId(a.panel)
+    saveLinks(PB.addLink(links(), sid, other))
+    return { linked: [sid, other] }
+  },
+  plinks: (a) => {
+    const sid = asPanel(a, 'links')
+    return PB.linksFor(links(), sid).filter((l) => sessions.has(l.panel)).map((l) => ({ ...l, name: panelName(l.panel) }))
+  },
+}
+Object.assign(cliHandlers, panelHandlers)
+// the per-link "auto" switch, only from the window: an agent cannot turn it on for itself
+ipcMain.handle('panel:links', () => panelLinksView())
+ipcMain.handle('panel:linkAuto', (_e, a: string, b: string, on: boolean) => {
+  const l = PB.linkOf(links(), String(a), String(b))
+  if (!l) throw new Error('Those panels are not linked.')
+  saveLinks(links().map((x) => (x === l ? { ...x, auto: Boolean(on) } : x)))
+  logs().info('stm:panel', `link ${a}-${b} auto ${on ? 'on' : 'off'} (by the person, in the window)`)
+  return panelLinksView()
+})
 let cli: ReturnType<typeof startCli> | null = null
 app.whenReady().then(() => {
   try {
-    cli = startCli(process.platform === 'win32' ? `\\\\.\\pipe\\supertokenman-${process.env.USERNAME ?? 'user'}` : join(app.getPath('userData'), 'cli.sock'), cliHandlers)
+    cli = startCli(cliSocket(), cliHandlers)
   } catch (e) {
     console.warn('command line not started:', e instanceof Error ? e.message : e)
   }
