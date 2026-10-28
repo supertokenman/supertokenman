@@ -1,14 +1,16 @@
-More say over what agents do, and what they claim.
+Panels that work together, with a price on every link.
 
-- Permission cards: Edit and run changes a command before it runs (checked and isolated like the
-  original), and Deny with a note tells the agent what to do instead.
-- Limits per trigger: a scheduled run can be held to the folders it may read or write and the
-  commands it may run. Anything outside is refused, not asked; each command in a chain is checked.
-- Evidence on claims: when a reply says fixed, passing or faster, the panel marks whether a test,
-  build or measurement ran in that turn after the last edit. It does not read whether it passed.
-- `stm files export` and `stm files import`: personas and triggers as files in the project, for git.
-  Import shows what would change and applies only with `--yes`; imported triggers arrive off.
-- CI now also runs the first-run update question and loop detection checks on every change.
+- Canvas: a new layout where panels are cards you move, pan and zoom, with the links between them
+  drawn and labelled (auto or waits, and what the link cost today). Pick it with the layout button.
+- `stm read <panel>`: a panel reads a linked panel's goal and the end of its last reply, read only,
+  credentials masked. Unlinked panels cannot read each other.
+- What a link costs: turns started by messages over a link count against it today, in dollars,
+  tokens and turns. The linked: chip shows it and sets a daily cap; over the cap, the link refuses.
+- `stm loop <build> <review>`: a review loop. Each build reply goes to the review panel and the
+  review comes back, until APPROVED, a round limit (up to 10) or a spend cap (up to $50). Start it
+  from your own terminal; every step still asks before edits and commands.
+- `stm learn`: notes you send back with Deny with a note become proposed lines for the project's
+  CLAUDE.local.md, most repeated first. Nothing is written until you pick them.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:

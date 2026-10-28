@@ -2,7 +2,7 @@
   "name": "supertokenman-app",
   "private": true,
   "license": "FSL-1.1-ALv2",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "A desktop app around Claude Code: streaming chat, tool approvals and the SuperTokenMan HUD",
   "type": "module",
   "main": "dist-electron/electron/app.mjs",
