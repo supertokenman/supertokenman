@@ -175,7 +175,8 @@ panel" (in progress):
    in it; the user decides. (VoltAgent) Done: the composer also checks saved vault values; messages
    that skip the composer (auto-send links, stm send --now) are refused when they carry one.
 5. Permissions per trigger: each scheduled run lists the folders it may read or write and the
-   commands it may run. (AgentUse)
+   commands it may run. (AgentUse) Done: limits on the trigger (may read, may write, may run); anything outside is
+   refused before the usual approvals, each command in a chain checked.
 6. Reviewer loop with a cap: a review panel sends work back to a build panel until tests pass, with a
    limit on rounds and on spend. Part of the canvas. (PraisonAI, ADK)
 7. Approve with a comment or an edit: an approval can change the command or add an instruction that

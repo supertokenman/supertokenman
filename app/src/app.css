@@ -212,7 +212,7 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 .ask-cmd { margin: 0; font: 12px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ask-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .ask-reply { display: flex; flex-direction: column; gap: 6px; }
-.ask-reply-text { width: 100%; box-sizing: border-box; font: 12px/1.45 var(--mono, ui-monospace, monospace); background: var(--bg-2, transparent); color: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; resize: vertical; }
+.ask-reply-text { width: 100%; box-sizing: border-box; font: 12px/1.45 var(--mono, ui-monospace, monospace); background: var(--raised); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; resize: vertical; }
 
 /* dock: coach tips, composer, hints */
 .dock { padding: 0 16px 12px; display: grid; gap: 8px; max-width: 792px; width: 100%; margin: 0 auto; }
@@ -2683,6 +2683,12 @@ button.diff-comment.saved { border-radius: 0; clip-path: polygon(0 0, calc(100% 
 .trig-run { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
 .trig-gate { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 8px; font-size: 12.5px; }
 .trig-gate .faint { grid-column: 2; font-size: 11.5px; }
+.trig-scope { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.trig-scope .faint { font-size: 11.5px; }
+.trig-scope-title { font-weight: 600; }
+.trig-scope-row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 8px; }
+.trig-scope-input { height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--raised); color: var(--text); font: 12px/1 var(--mono, ui-monospace, monospace); min-width: 0; }
+.trig-scope-input:focus, .ask-reply-text:focus { outline: none; border-color: rgba(var(--accent-rgb), 0.5); }
 .tr-receipts { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--mono); color: var(--muted); }
 .tr-receipts.bad { color: var(--red); }
 

@@ -148,6 +148,28 @@ function Editor(props: { t: Trigger; personas: Persona[]; onSave: (t: Trigger) =
         Only in business hours
         <span className="faint">Waits until the hours set in the Inbox open; Run now still runs at once.</span>
       </label>
+      <div className="trig-scope">
+        <span className="trig-scope-title">Limits for this run</span>
+        <span className="faint">One per line or comma. Folders are relative to the project. Empty means no limit of that kind; anything outside a limit is refused, not asked.</span>
+        {([
+          ['read', 'May read', 'docs, src'],
+          ['write', 'May write', 'src'],
+          ['commands', 'May run', 'npm test, git status'],
+        ] as const).map(([k, label, ph]) => (
+          <label key={k} className="trig-scope-row">
+            <span>{label}</span>
+            <input
+              className="trig-scope-input"
+              placeholder={ph}
+              value={(t.scope?.[k] ?? []).join(', ')}
+              onChange={(e) => {
+                const v = e.target.value.split(/[,\n]/).map((x) => x.trim())
+                set({ scope: { read: t.scope?.read ?? [], write: t.scope?.write ?? [], commands: t.scope?.commands ?? [], [k]: e.target.value.trim() ? v : [] } })
+              }}
+            />
+          </label>
+        ))}
+      </div>
       <textarea className="pe-text trig-text" placeholder="What to do each time, e.g. Check Cloud and the CI of this repo and list what needs me today. Do not change anything." value={t.prompt} onChange={(e) => set({ prompt: e.target.value })} />
       <div className="trig-when-edit">
         <div className="segmented">
