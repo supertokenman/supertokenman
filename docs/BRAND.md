@@ -508,6 +508,10 @@ Taken from how Halo pairs a free community edition with paid editions.
     panel variables could still submit without a person. `--now` is still reachable that way; it is a
     deliberate, documented flag, not the default. The phone and opt-in MCP routes keep sending at once:
     the phone is the person, and MCP sending is off unless the person turns it on.
+  - Review loops (`stm loop`, 2026-10-28) also send without the composer, between two panels, so only
+    the person starts one: the command refuses from inside a panel, a loop stops at APPROVED, a round
+    limit (at most 10) or a spend cap (at most $50), and each step still passes the budget brake, the
+    secret guard and the approvals for edits and commands.
 - **Packaged builds.** The launcher is written to the app's data folder (`stm-bin/stm`) and runs the app's
   own binary with `--stm-cli` and the script from `app.asar.unpacked/cli/`, so no system Node is needed and
   the RunAsNode fuse stays off.

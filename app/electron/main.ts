@@ -219,6 +219,7 @@ import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
 import * as ME from '../shared/modeleval.js'
+import * as RL from '../shared/reviewloop.js'
 import * as PF from '../shared/projectfiles.js'
 import { outside as outsideScope, type Scope } from '../shared/triggerscope.js'
 // what each trigger's panel may touch, set when its run begins
@@ -673,6 +674,9 @@ const pendingSpans = new Map<string, SpanEvent[]>()
 const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; why?: string; tools: string[]; edits?: number }>()
 // a panel's goal, given with /goal: carried in front of each message until a reply says GOAL MET
 const goals = new Map<string, Goal>()
+// review loops by build and review panel (one loop per panel), and each panel's last reply for the next step
+const reviewLoops = new Map<string, RL.Loop>()
+const loopReply = new Map<string, string>()
 let turnSeq = 0
 // each panel's answer styles and project, for the cost band of each task
 const bandOf = new Map<string, { project: string; styles: StyleId[] }>()
@@ -709,9 +713,40 @@ function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: {
       // the ledger is best effort
     }
   }
+  loopStep(sid, e.costUsd ?? 0, Boolean(e.isError))
   const s = sessions.get(sid)
   traceTurns.set(sid, addTurn(traceTurns.get(sid) ?? [], { id: p.id, goal: goals.get(sid)?.text, at: p.at, persona: personaOf.get(sid), model: s?.model, why: p.why, prompt: p.prompt.slice(0, 600), tools: p.tools, costUsd: e.costUsd ?? 0, inputTokens: e.inputTokens ?? 0, outputTokens: e.outputTokens ?? 0, cacheRead: e.cacheRead ?? 0, isError: Boolean(e.isError), ms: e.durationMs, spans }))
   obs.afterTurn(traceTurns.get(sid)![0]!)
+}
+/** After a turn in a review loop: pass the reply on, or end the loop and say why in both panels. */
+function loopStep(sid: string, costUsd: number, isError: boolean) {
+  const l = reviewLoops.get(sid)
+  if (!l) return
+  const reply = loopReply.get(sid) ?? ''
+  loopReply.delete(sid)
+  const end = (why: string) => {
+    reviewLoops.delete(l.build)
+    reviewLoops.delete(l.review)
+    for (const p of [l.build, l.review]) send(p, { kind: 'note', text: `Review loop ended: ${why} Spent $${l.spentUsd.toFixed(2)}.` })
+    logs().info('stm:loop', `${l.build}/${l.review} ended: ${why}`)
+  }
+  if (isError) return end('the last turn ended with an error.')
+  const r = RL.next(l, sid, reply, costUsd, { build: panelName(l.build), review: panelName(l.review) })
+  reviewLoops.set(l.build, r.loop)
+  reviewLoops.set(l.review, r.loop)
+  if ('stop' in r.step) return end(r.step.stop)
+  const { to, text } = r.step.send
+  try {
+    if (!sessions.has(to)) throw new Error(`panel ${to} is closed.`)
+    refuseSecrets(text)
+    const v = budgetVerdict(to)
+    if (!v.ok) throw new Error(`held by the budget: ${v.reason}`)
+    tracePrompt(to, text, 'Review loop')
+    if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, text, true)
+    sessions.get(to)!.step(withGoal(text, goals.get(to) ?? null), 'Review loop').catch(() => undefined)
+  } catch (e) {
+    end(`${(e as Error).message}`)
+  }
 }
 const tracePrompt = (sid: string, prompt: string, why?: string) => pendingTurn.set(sid, { id: `${sid}-t${++turnSeq}`, at: Date.now(), prompt, why, tools: [] })
 const turnOf = (sid: string) => pendingTurn.get(sid)?.id
@@ -1780,6 +1815,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     onSessionStart: (source) => snapshotFor(sid, projectName(home), source),
     // decisions Claude marked in a reply go to the project's note
     onReply: (text) => {
+      if (reviewLoops.has(sid)) loopReply.set(sid, text)
       try {
         const n = rememberDecisions(vaultDir(), projectName(home), decisions(redact(text, vault.all()).text))
         if (n) send(sid, { kind: 'note', text: n === 1 ? 'Saved a decision to memory.' : `Saved ${n} decisions to memory.` })
@@ -5847,6 +5883,27 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     saveTriggers(list)
     logs().info('stm:files', `imported ${todo.length} from ${cwd}`)
     return { text: `${head}\n\nApplied ${todo.length}. Imported triggers are off: turn them on in Triggers after a look.` }
+  },
+  // `stm loop`: a review loop between two open panels, started from the person's terminal
+  loopStart: (a) => {
+    const build = panelId(a.build)
+    const review = panelId(a.review)
+    if (reviewLoops.has(build) || reviewLoops.has(review)) throw new Error('One of these panels is already in a review loop. Stop it with: stm loop stop <panel>')
+    const l = RL.newLoop(build, review, Number(a.rounds ?? 3), Number(a.maxUsd ?? 2))
+    reviewLoops.set(build, l)
+    reviewLoops.set(review, l)
+    const text = `Review loop on: when ${panelName(build)} finishes a turn, its reply goes to ${panelName(review)}; the review comes back until APPROVED, ${l.maxRounds} rounds or $${l.maxUsd.toFixed(2)}. Each step still asks before edits and commands.`
+    for (const p of [build, review]) send(p, { kind: 'note', text })
+    logs().info('stm:loop', `${build}/${review} started (${l.maxRounds} rounds, $${l.maxUsd})`)
+    return { text: `${text}\nNow send the task to ${panelName(build)}.` }
+  },
+  loopStop: (a) => {
+    const l = reviewLoops.get(panelId(a.panel))
+    if (!l) return { text: 'That panel is not in a review loop.' }
+    reviewLoops.delete(l.build)
+    reviewLoops.delete(l.review)
+    for (const p of [l.build, l.review]) send(p, { kind: 'note', text: `Review loop stopped from the terminal. Spent $${l.spentUsd.toFixed(2)}.` })
+    return { text: `Stopped after ${l.round} round${l.round === 1 ? '' : 's'}, $${l.spentUsd.toFixed(2)}.` }
   },
   // `stm top`: one read-only snapshot of what the app already holds in memory; nothing is fetched for it
   top: () => {

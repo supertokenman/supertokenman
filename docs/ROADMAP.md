@@ -180,7 +180,8 @@ panel" (in progress):
    commands it may run. (AgentUse) Done: limits on the trigger (may read, may write, may run); anything outside is
    refused before the usual approvals, each command in a chain checked.
 6. Reviewer loop with a cap: a review panel sends work back to a build panel until tests pass, with a
-   limit on rounds and on spend. Part of the canvas. (PraisonAI, ADK)
+   limit on rounds and on spend. Part of the canvas. (PraisonAI, ADK) Done: stm loop <build> <review>, until APPROVED,
+   a round limit or a spend cap; drawing it on the canvas is still to come.
 7. Approve with a comment or an edit: an approval can change the command or add an instruction that
    goes back to the agent. (AgentUse, ADK) Done: Edit and run on Bash cards (the edited command is
    checked and isolated like the original), and Deny with a note.

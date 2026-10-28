@@ -16,6 +16,9 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
                                      run .supertokenman/evals.txt on models and efforts; shows the plan, runs with --yes
   stm files export [--all]           write this project's triggers and their personas to .supertokenman/ (for git)
   stm files import [--yes]           show what the files there would change; --yes applies (triggers arrive off)
+  stm loop <build> <review> [--rounds 3] [--max-usd 2]
+                                     review loop: each build reply goes to review and back until APPROVED or a limit
+  stm loop stop <panel>              end the review loop that panel is in
   stm send <panel|new> "text"        put a message in the panel's composer; the person sends it
                                      --now sends it at once and waits for the reply (--no-wait to return at once)
        [--cwd DIR] [--persona ID]    for "new": the folder and persona of the panel to open
@@ -197,7 +200,17 @@ try {
     if (!panel || !text) die('Usage: stm send <panel|new> "text"')
     print(await call('send', { panel, text, cwd: flags.cwd, persona: flags.persona, wait: !flags['no-wait'], queue: !flags.now }), (d) => (d.queued ? `Queued in ${d.panel}'s composer; press send there, or use --now.` : d.reply !== undefined ? d.reply : `Sent to ${d.panel}.`))
   } else if (cmd === 'eval') print(await call('evalRun', { cwd: flags.cwd || process.cwd(), models: flags.models, effort: flags.effort, maxUsd: flags['max-usd'], yes: Boolean(flags.yes) }), (d) => d.text)
-  else if (cmd === 'files') {
+  else if (cmd === 'loop') {
+    // a loop sends between panels without the composer: the person starts it, not an agent in a panel
+    if (process.env.STM_PANEL_ID && rest[0] !== 'stop') die('Start a review loop from your own terminal, not from inside a panel.')
+    if (rest[0] === 'stop') {
+      if (!rest[1]) die('Usage: stm loop stop <panel>')
+      print(await call('loopStop', { panel: rest[1] }), (d) => d.text)
+    } else {
+      if (!rest[0] || !rest[1]) die('Usage: stm loop <build> <review> [--rounds 3] [--max-usd 2]')
+      print(await call('loopStart', { build: rest[0], review: rest[1], rounds: flags.rounds, maxUsd: flags['max-usd'] }), (d) => d.text)
+    }
+  } else if (cmd === 'files') {
     const op = rest[0]
     if (op !== 'export' && op !== 'import') die('Usage: stm files export [--all]   or   stm files import [--yes]')
     print(await call(op === 'export' ? 'filesExport' : 'filesImport', { cwd: flags.cwd || process.cwd(), all: Boolean(flags.all), yes: Boolean(flags.yes) }), (d) => d.text)
