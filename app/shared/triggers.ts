@@ -2,6 +2,8 @@
 // when a pull request starts waiting on your review. The app has to be running (it lives in the menu
 // bar when its window is closed); a trigger whose time passed while the Mac slept runs once on wake.
 
+import { cleanScope } from './triggerscope.js'
+
 export type When =
   | { kind: 'schedule'; days: number[]; time: string }
   | { kind: 'every'; minutes: number }
@@ -23,6 +25,8 @@ export type Trigger = {
   gate?: boolean
   /** waits for business hours (the one inbox's hours) before it runs */
   hoursOnly?: boolean
+  /** folders it may read or write and commands it may run; the app refuses the rest */
+  scope?: import('./triggerscope.js').Scope
 }
 
 export const EVERY = [15, 30, 60, 120, 240, 480]
@@ -85,6 +89,7 @@ export function cleanTrigger(t: Partial<Trigger>): Trigger {
     armedAt: typeof t.armedAt === 'number' ? t.armedAt : undefined,
     gate: t.gate === true,
     hoursOnly: t.hoursOnly === true,
+    scope: cleanScope(t.scope),
   }
 }
 

@@ -219,6 +219,9 @@ import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
 import * as ME from '../shared/modeleval.js'
+import { outside as outsideScope, type Scope } from '../shared/triggerscope.js'
+// what each trigger's panel may touch, set when its run begins
+const scopeOf = new Map<string, Scope>()
 import { allows, appOfPartition, isAppPage, siteApp, validateSite, WEB_APPS, type Site, type SiteInput } from '../shared/webapps.js'
 import { fetchIcon } from './sites.js'
 
@@ -1767,6 +1770,10 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
       if (sp && installedNames.has(sp.server) && heldMcp(mcpHealth(), sp.server).includes(sp.tool)) return { action: 'deny' as const, risk: null, reason: `The app holds ${tool}: the ${sp.server} server changed or added this tool since it was approved. Tell the person to look at it in MCP health before it runs.` }
       const v = sp && installedNames.has(sp.server) ? verdict(mcpPolicy(), tool, persona?.id) : null
       if (v) return { action: v.action, risk: null, cls: v.cls, why: v.why, ...(v.action === 'deny' ? { reason: `The app's MCP approvals do not allow ${tool}: ${v.why}. Say so to the person instead of retrying.` } : {}) }
+      // a trigger's run stays inside what the trigger lists, before any other rule
+      const sc = scopeOf.get(sid)
+      const out = sc ? outsideScope(sc, cwd, tool, input) : null
+      if (out) return { action: 'deny' as const, risk: null, reason: `This scheduled run may not do that: it ${out}. Change the trigger's limits in Triggers if it should. Say so to the person instead of retrying.` }
       return decide(persona?.autonomy ?? 'supervised', tool, input)
     },
     onSessionStart: (source) => snapshotFor(sid, projectName(home), source),
@@ -1992,6 +1999,7 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   closeTerminal(String(sid))
   get(sid)?.close()
   sessions.delete(sid)
+  scopeOf.delete(sid)
   panelKeys.drop(sid)
   sourceOf.delete(sid)
   gateway.revoke(sid)
@@ -4884,6 +4892,8 @@ ipcMain.handle('runs:gate', (_e, run: string, ok: boolean) => {
 ipcMain.handle('runs:begin', async (_e, sid: string, trig: { id: string; name: string; prompt: string; gate?: boolean }, resume?: string) => {
   const s = sessions.get(sid)
   if (!s) return
+  const scope = triggers().find((x) => x.id === trig.id)?.scope
+  if (scope) scopeOf.set(sid, scope)
   const steps = stepsOf(String(trig.prompt), Boolean(trig.gate))
   const old = resume ? runsNow().find((r) => r.id === resume) : undefined
   let run: TriggerRun = old ? { ...old, state: 'running' } : { id: `r${Date.now().toString(36)}`, trigger: trig.id, name: trig.name, step: 0, of: steps.length, at: Date.now(), state: 'running' }
