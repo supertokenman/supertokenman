@@ -121,3 +121,7 @@ jobs:
           # launch to a usable composer, median of 5 fresh profiles: loose for a shared runner, it catches a
           # launch that starts waiting on something new (docs/PERFORMANCE.md, launch regression 2026-10-28)
           xvfb-run -a node scripts/perf-launch.mjs --runs 5 --max-composer-ms 4000
+          # the first-run update question shows once, after the splash and the Tour, and saves nothing by showing
+          xvfb-run -a node scripts/update-ask-check.mjs
+          # a panel repeating the same call pauses on the 4th with its notice, and no 5th call goes out
+          xvfb-run -a node scripts/loop-check.mjs
