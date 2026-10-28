@@ -412,6 +412,27 @@ Taken from how Halo pairs a free community edition with paid editions.
   fixed spans with no React render per frame.
 - **Reduced motion** (or motion turned off): the still mark and name, nothing counts.
 
+## Repository storefront and launch channels (decided 2026-10-27)
+
+- **README top.** Badges for `ci` and `proof-mac`, the site and the live demo
+  (https://supertokenman.com/docs/demo/, the real path; `/demo/` returns 404), one picture, and the line
+  "No server of ours: you use your own Claude plan or API key." The roadmap wording said only "plan";
+  `docs/NETWORK.md` shows the app also works with an API key, so both are named. "Not affiliated with
+  Anthropic" sits right under it, as well as at the bottom. Mirrored in Portuguese and Spanish.
+- **The picture** is `site/assets/screens/control.png`, an existing screenshot of the real app (a panel
+  with the Budgets sheet). No new binary was added. The video stills in `site/assets/*.jpg` were not
+  used, because they carry caption overlays that are not the app.
+- **Code of conduct.** Contributor Covenant 2.1, unchanged except the contact: GitHub private reporting,
+  because the repo has no published email and none was invented.
+- **Issue templates** are forms; blank issues are off; questions go to Discussions, security to private
+  reporting.
+- **"Open source".** The license is FSL-1.1-ALv2. In launch texts for lists that require an
+  OSI-approved license, say "source-available", and do not add the `open-source` topic.
+- **Launch channels** are in `docs/launch/KIT.md`, each with what was checked on its own page and what
+  was not. No paid placement presented as editorial. Chinese texts are machine-written and need a
+  native reader before posting.
+- **GitHub settings** the owner changes by hand: `docs/STOREFRONT.md`.
+
 ## Own controls, no macOS defaults (decided 2026-10-27)
 
 - **The rule.** "Tudo que é padrão do sistema operacional (macOS) devemos ter nossa identidade autoral":

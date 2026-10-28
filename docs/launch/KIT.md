@@ -150,3 +150,113 @@ self-promotion, answer every comment, and do not cross-post the same day.
   server of ours."
 - Any number of users, stars or downloads that we have not counted.
 - Anything about the Agent SDK license being cleared: it has not been read by a lawyer yet.
+
+## Channels (added 2026-10-27)
+
+How each one takes a submission, and a ready text. "Checked" means the rule was read on the channel's own
+page on 2026-10-27; "not confirmed" means it was not, and must be read before posting. Every text ends
+with or keeps "Not affiliated with Anthropic" where the form allows it.
+
+### Facts the texts may cite, and where each one is proven
+
+| Fact | Source in the repo |
+|---|---|
+| Signed with a Developer ID, notarized, SHA-256 checksums; the 0.1.3 dmg passed `shasum`, `codesign`, `spctl` on a Mac | `docs/security/2026-10-26-mac/REPORT.md` |
+| On that Mac run the decoy secret was not found in the recorded traffic; the only remote connection was GitHub (update check) | same report (result: **partial**, no Claude Code turn was recorded) |
+| Two audit rounds: gitleaks no leaks, Semgrep 0 real findings, OSV 0 shipped vulnerable packages, no GPL/AGPL/SSPL in 157 shipped packages, 153-component SBOM | `docs/security/2026-10-26-round2/REPORT.md` (raw files next to it) |
+| At launch with a clean profile: 16 network attempts, all on the allowed list (Linux run) | same report; `docs/NETWORK.md` |
+| No telemetry, no server of ours; Claude Code traffic goes to Anthropic on the user's own login or key | `docs/NETWORK.md` |
+| Idle style recalcs ~120/s to 0, layouts ~60/s to 0, start-up renderer bundle 1.74 MB to 1.27 MB (Linux, Xvfb, software rendering) | `docs/PERFORMANCE.md` |
+| Live demo in the browser with sample data and no network (`connect-src 'none'`) | `site/README.md`; https://supertokenman.com/docs/demo/ |
+| License FSL-1.1-ALv2, each version Apache 2.0 after two years | `LICENSE.md` |
+
+### Not verified: never cite as fact
+
+- A Mac network run that includes a Claude Code turn (the Mac proof was partial).
+- Where child processes (`claude`, `git`, `docker`) connect: recorded when they start, not where they go.
+- Performance numbers on a Mac with a GPU: all numbers above are Linux/Xvfb.
+- Any outside security review: there has been none.
+- Any count of users, stars or downloads.
+- The Agent SDK license reading by a lawyer.
+
+### Short texts
+
+One line (lists, forms with a short field, no emoji, no address to the reader):
+
+> SuperTokenMan: a Mac app that runs Claude Code in parallel panels, each in its own git worktree, with tool approvals in the window and the cost of every turn. FSL-1.1-ALv2. Not affiliated with Anthropic.
+
+Paragraph (newsletters, Product Hunt description):
+
+> SuperTokenMan is a free, source-available Mac app for Claude Code. Several panels run side by side, each
+> in its own git worktree; tool calls wait for Allow or Deny; a meter shows what each turn costs and
+> what was kept out of the context. It runs Claude Code through the Agent SDK with your own login or API
+> key, and has no server of its own and no telemetry. Builds are signed and notarized, and the audit
+> reports (gitleaks, Semgrep, OSV, SBOM) are in the repo with what is still open. A live demo with sample
+> data runs in the browser: https://supertokenman.com/docs/demo/. Not affiliated with Anthropic.
+
+Note on "open source": the license is FSL-1.1-ALv2, which the OSI does not list as open source until each
+version turns Apache 2.0. Lists that require an OSI license may refuse it; say "source-available" there.
+
+### awesome-claude-code (hesreallyhim) — checked
+
+- Link: https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml
+- Rules (from its CONTRIBUTING.md): web issue form only, filled by a human, not a PR and not `gh`; one
+  resource at a time; the repo must be at least 14 days old (first commit) with activity after the first
+  day, or have 100 stars; one-line description, no emoji, no sales pitch, no "you".
+- Earliest date: our first commit is 2026-10-25, so **2026-11-08** unless 100 stars come first.
+- Text: the one-line text above. Category: the closest of its tooling categories at the time.
+
+### Other curated lists — not confirmed
+
+- awesome-mac (jaywcjlove/awesome-mac): pull request; it keeps an English and a Chinese README, so the
+  entry likely goes in both. Read its contributing rules first.
+- awesome-electron (sindresorhus/awesome-electron): pull request; it tends to want apps with traction.
+  Read its contributing rules first.
+- Text: the one-line text.
+
+### HelloGitHub — checked (link), language not confirmed
+
+- Link: https://hellogithub.com/periodical (self-nomination is allowed, per its README).
+- Language: its rules were not found in English; the site and monthly issue are in Chinese, so send the
+  Chinese text and the English one together.
+- Chinese text:
+
+> SuperTokenMan：一个运行 Claude Code 的 Mac 应用。多个面板并排运行，每个面板在自己的 git worktree 中；工具调用在窗口里等待你允许或拒绝；每一轮对话的花费都会显示出来。使用你自己的 Claude 登录或 API key，没有我们的服务器，没有遥测。安装包经过签名和苹果公证，安全审计报告（gitleaks、Semgrep、OSV、SBOM）都在仓库里。可在浏览器中试用演示（示例数据，无网络）：https://supertokenman.com/docs/demo/ 。与 Anthropic 无关联。
+
+  The Chinese was written by an AI, not by a native speaker: have it read by one before posting.
+
+### GitHubDaily — checked (link), language not confirmed
+
+- Link: https://github.com/GitHubDaily/GitHubDaily/issues/new (its README invites recommending or
+  self-nominating projects in the issues).
+- Language: no rule found; the README is in Chinese. Post the Chinese text above, then the English
+  paragraph, with the repo link as the title: `[自荐] SuperTokenMan - a Mac app for Claude Code`.
+
+### Product Hunt — checked
+
+- Link: https://www.producthunt.com/launch (guide); submit from Submit > New Product while logged in.
+- Rules: a personal account (company accounts are not allowed); do not ask anyone to upvote, ask them to
+  visit and comment; makers may hunt their own product; 12:01 am Pacific is the usual start.
+- Tagline (60 characters max, not confirmed): `Claude Code in parallel panels on your Mac`
+- Description: the paragraph text. First comment: the Show HN text above.
+- Media: `site/assets/screens/*.png`, `site/assets/og.png`, and the 30-second recording once it exists.
+
+### TLDR — not confirmed
+
+- No submission page found (2026-10-27); only https://advertise.tldr.tech/ (paid). Do not pay for a
+  placement presented as editorial. If a "submit" or contact link appears, send the paragraph text.
+
+### Console.dev — not confirmed
+
+- No free submission form found; https://console.dev/advertise is the paid route and its reviews are
+  chosen by the editors. If a suggestion address is found on their site, send the paragraph text; do not
+  invent one.
+
+### Changelog News — checked
+
+- Link: https://changelog.com/news/submit (sign-in required). Fields: URL, title, "What's interesting
+  about it?". It does not want commercial products or how-tos.
+- URL: https://github.com/supertokenman/supertokenman
+- Title: `SuperTokenMan: a source-available Mac app for running Claude Code in parallel`
+- What's interesting: the paragraph text, plus "The network behaviour is written down in
+  docs/NETWORK.md and checked by a script and a Mac workflow on each release."

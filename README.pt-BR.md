@@ -1,12 +1,19 @@
 # SuperTokenMan
 
+[![ci](https://github.com/supertokenman/supertokenman/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/supertokenman/supertokenman/actions/workflows/ci.yml) [![proof-mac](https://github.com/supertokenman/supertokenman/actions/workflows/proof-mac.yml/badge.svg)](https://github.com/supertokenman/supertokenman/actions/workflows/proof-mac.yml)
+
 [English](README.md) · Português (Brasil) · [Español](README.es.md)
 
 Um app para Mac em volta do Claude Code: vários painéis lado a lado, aprovação de ferramentas na própria
 janela e um medidor que mostra quanto uma sessão custa e o que o app deixou fora do contexto. Ele roda o
 Claude Code pelo Agent SDK com o seu próprio login, configurações, plugins e hooks.
 
-Site: https://supertokenman.com
+Site: https://supertokenman.com · Demo ao vivo no navegador (dados de exemplo, sem rede): https://supertokenman.com/docs/demo/
+
+Nenhum servidor nosso: você usa o seu próprio plano do Claude ou chave de API. Não é afiliado à Anthropic.
+
+![SuperTokenMan: um painel do Claude Code com a folha de Orçamentos aberta](site/assets/screens/control.png)
+
 
 ## Download
 
