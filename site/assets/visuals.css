@@ -69,3 +69,17 @@
   .flip[aria-pressed="true"] .back { display: flex; }
   .flip[aria-pressed="true"] .front { display: none; }
 }
+
+/* conversion pass (2026-10-29): risk-reduction line under the CTA, and the download section */
+.trigger { color: var(--muted); font-size: 14px; max-width: 36em; margin: 16px 0 0; }
+.hero.v2 .cta { gap: 14px; }
+.get { padding: 104px 0; border-top: 1px solid var(--line); }
+.get .wrap { display: grid; grid-template-columns: 5fr 6fr; gap: 56px; align-items: start; }
+.get h2 { font-size: clamp(30px, 4vw, 48px); margin: 14px 0 18px; }
+.get .cta-row { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; }
+.first { list-style: none; counter-reset: n; margin: 32px 0 0; padding: 0; }
+.first li { counter-increment: n; position: relative; padding: 14px 0 14px 42px; border-top: 1px solid var(--line); color: var(--muted); }
+.first li::before { content: counter(n); position: absolute; left: 0; top: 14px; font: 500 13px/1.8 var(--mono); color: var(--accent); }
+.first b { color: var(--ink); display: block; font-weight: 600; }
+@media (max-width: 860px) { .get { padding: 64px 0; } .get .wrap { grid-template-columns: 1fr; gap: 28px; } }
+@media (max-width: 520px) { .hero.v2 .cta .btn, .get .cta-row .btn { width: 100%; justify-content: center; } }

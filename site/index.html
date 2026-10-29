@@ -39,24 +39,23 @@
       <div class="hero-grid">
         <div class="hero-text">
           <div class="dots motif" aria-hidden="true" data-dots="#####.#####.#####/#...#.#...#.*****/#...#.#...#.*****/#####.#####.*****"></div>
-          <div class="nlabel">nº 1 · a Mac app for Claude Code · cost per turn shown</div>
-          <h1 class="display split">your Claude Code team, in one window.</h1>
+          <div class="nlabel">nº 1 · free and open source · a Mac app for Claude Code</div>
+          <h1 class="display split">run Claude Code in parallel. approve every step.</h1>
         </div>
         <div class="hero-side">
-          <p class="lead">Run Claude Code in parallel panels that link to each other. One builds while another reviews, each asks before it acts, and what they learn about your project stays for the next session.</p>
+          <p class="lead">SuperTokenMan puts several Claude Code sessions side by side in one Mac window. One builds while another reviews, nothing runs until you allow it, and the cost of each turn is shown.</p>
           <div class="cta">
-            <a class="btn" href="/download/">Download for Mac</a>
-            <a class="btn ghost" href="/docs/demo/">Try the live demo</a>
-            <a class="link" href="/docs/">How it works</a>
+            <a class="btn" href="#download">Download for Mac</a>
+            <a class="btn ghost" href="/docs/demo/">Try it in your browser</a>
           </div>
-          <p class="demo-note"><a class="link" href="/docs/demo/">Live demo</a>: the real interface with sample data, running in your browser. Nothing is sent anywhere.</p>
+          <p class="trigger">Free. Apple silicon or Intel. Signed and notarized by Apple, and the <a class="link" href="https://github.com/supertokenman/supertokenman">source is public</a>. Needs your own Claude plan or API key. Not affiliated with Anthropic.</p>
         </div>
       </div>
       <figure class="live" id="live" data-src="/docs/demo/?autoplay=1">
         <div class="live-frame">
           <img class="live-poster" src="assets/hero-demo.webp" width="2200" height="1341" fetchpriority="high" alt="SuperTokenMan with two panels. In acme-shop, Claude found why the cart total test failed, edited src/cart.ts, ran npm test once it was allowed, and all 42 tests pass. The session cost, US$0.27, sits above the chat.">
         </div>
-        <figcaption class="nlabel">The live demo, playing by itself: the real interface with sample projects, replies and numbers. <a class="link" href="/docs/demo/">Try it yourself</a></figcaption>
+        <figcaption class="nlabel">The real interface, playing by itself with sample projects and numbers. Nothing is sent anywhere.</figcaption>
       </figure>
     </div>
   </section>
@@ -187,10 +186,26 @@
     </div>
   </section>
 
-  <section class="final">
+  <section class="get" id="download">
     <div class="wrap">
-      <h2 class="display split">Close the other tabs.</h2>
-      <a class="btn" href="/download/">Download for Mac</a>
+      <div class="get-head">
+        <div class="nlabel">nº 3 · get it</div>
+        <h2 class="display">download it, point it at a folder, give it a task.</h2>
+        <p class="lead">No account with us and no payment. The app is free and open source (FSL-1.1).</p>
+      </div>
+      <div class="get-main">
+        <div class="cta-row">
+          <a class="btn" href="https://github.com/supertokenman/supertokenman/releases/latest/download/SuperTokenMan-arm64.dmg">Download for Apple silicon</a>
+          <a class="btn ghost" href="https://github.com/supertokenman/supertokenman/releases/latest/download/SuperTokenMan-x64.dmg">Download for Intel</a>
+        </div>
+        <p class="trigger">Not sure which? Apple menu, About This Mac: a chip named Apple M is Apple silicon. Each release lists SHA-256 checksums; <a class="link" href="/download/">how to check the download</a>.</p>
+        <ol class="first">
+          <li><b>Drag it into Applications.</b> Signed with a Developer ID and notarized by Apple.</li>
+          <li><b>Pick the folder of a project.</b> A panel is one Claude Code session in that folder.</li>
+          <li><b>Type a task and press Enter.</b> Allow or deny each command as it asks.</li>
+        </ol>
+        <p class="trigger">Claude Code runs with your Claude plan or an Anthropic API key; Anthropic bills that usage, not us. <a class="link" href="https://github.com/supertokenman/supertokenman">Read the source, star or clone it on GitHub</a>.</p>
+      </div>
     </div>
   </section>
 </main>

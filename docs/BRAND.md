@@ -619,3 +619,12 @@ and ids; errors also without numbers (line numbers, pids). The switch and the th
 Settings > Appearance; "Continue and don't pause again" is per panel and lasts until the panel closes.
 No trigger or fan-out run has a "do not interrupt" flag today, so there is nothing else to respect;
 if one is added it should skip the guard. Network: none (docs/NETWORK.md unchanged).
+
+## Landing conversion pass (decided 2026-10-29)
+
+Review in `scratchpad/lp/review.md` (product-conversion-review). Decisions, replacing the hero line of "Landing message: the team first":
+- Hero headline is now "run Claude Code in parallel. approve every step." (outcome and control, not the category). The six cards, the demo and the cost trust signal stay.
+- Under the hero button, one line of risk reduction: free, Apple silicon or Intel, signed and notarized, source public, needs the visitor's own Claude plan or API key, not affiliated with Anthropic. Every claim in it already appears on /download/ or in the README.
+- Download goes straight to a section on the home ("get it", two direct dmg buttons, the three first-session steps from the get-started doc). The hero button scrolls there; the nav button still opens /download/.
+- Proof: none invented. No user counts, testimonials or performance numbers on the landing; trust comes from checkable things (public source, checksums, notarization, the security page).
+- Measurement stays outside the site: GitHub release downloads, stars and clones, fixed before/after windows. No analytics.
