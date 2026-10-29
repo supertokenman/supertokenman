@@ -24,11 +24,10 @@ export function AwayCard(props: { card: Card; onClose: () => void }) {
           <ul>{props.card.lines.map((l) => <li key={l}>{l}</li>)}</ul>
           {msg && <p>{msg}</p>}
           {props.card.canSpeak && <button className="ghost small" onClick={() => void window.stm.away.say().then(() => setMsg(''), (e: Error) => setMsg(e.message))}>Read aloud</button>}
-          <p>
-            <label className="faint">
-              <Switch checked={on} onChange={(e) => void window.stm.away.setCard(e.target.checked).then(setOn)} /> Show this after an hour away
-            </label>
-          </p>
+          <div className="tid-row">
+            <span className="faint">Show this after an hour away</span>
+            <Switch checked={on} onChange={(e) => void window.stm.away.setCard(e.target.checked).then(setOn)} />
+          </div>
         </div>
       </div>
     </div>
