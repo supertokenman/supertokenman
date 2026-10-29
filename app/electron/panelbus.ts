@@ -38,6 +38,10 @@ export class RateLimit {
     private max: () => number,
     private windowMs: number,
   ) {}
+  /** How many more actions this panel may take right now. */
+  left(sid: string, now = Date.now()) {
+    return Math.max(0, this.max() - (this.hits.get(sid) ?? []).filter((t) => now - t < this.windowMs).length)
+  }
   take(sid: string, now = Date.now()) {
     const recent = (this.hits.get(sid) ?? []).filter((t) => now - t < this.windowMs)
     const max = this.max()

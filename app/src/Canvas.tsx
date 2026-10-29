@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { PanelLinkView } from './bridge'
+import { planArrange, checkArrange } from '../shared/uitools'
 import { clampZoom, fit, linkEnds, place, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
 
 /** Optional on purpose: older bridges send links without a spend. */
@@ -24,7 +25,7 @@ function save(key: string, value: unknown) {
 }
 
 /** Panels as cards on a surface you pan and zoom, with their links drawn underneath. */
-export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNode }) {
+export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNode; cmd?: { n: number; mode: string } | null }) {
   const [pos, setPos] = useState<Record<string, Point>>(() => load(POS_KEY, {}))
   const [view, setView] = useState<View>(() => {
     const v = load<View | null>(VIEW_KEY, null)
@@ -110,6 +111,21 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
     const r0 = rects[sid]!, z = view.zoom
     drag(e, (dx, dy) => setPos((p) => ({ ...p, [sid]: { x: r0.x + dx / z, y: r0.y + dy / z } })))
   }
+  // the assistant asked to arrange (ui_arrange): row, column and grid move the cards, then every mode frames them
+  const lastCmd = useRef(0)
+  useEffect(() => {
+    const c = props.cmd
+    if (!c || c.n === lastCmd.current) return
+    lastCmd.current = c.n
+    const m = checkArrange(c.mode)
+    if (!m.ok) return
+    const plan = planArrange(m.value, props.order)
+    if (plan) setPos(plan)
+    requestAnimationFrame(() => {
+      const b = surf.current?.getBoundingClientRect()
+      if (b) setView(fit(Object.values(place(props.order, plan ?? pos)), b.width, b.height))
+    })
+  }, [props.cmd])
   const frame = () => {
     const b = surf.current?.getBoundingClientRect()
     if (b) setView(fit(Object.values(rects), b.width, b.height))

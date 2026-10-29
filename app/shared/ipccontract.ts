@@ -49,6 +49,8 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'phone:send': z.tuple([z.boolean()]),
   'mcpsrv:send': z.tuple([z.boolean()]),
   'panel:linkAuto': z.tuple([sid, sid, z.boolean()]),
+  // ui tools (stm MCP server): the window's answer to ui:cmd and ui:confirm, which go main -> window and take no arguments from it
+  'ui:reply': z.tuple([z.string().max(64), z.union([z.boolean(), z.object({ layout: z.string().max(20) })]).optional()]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
 }
 
