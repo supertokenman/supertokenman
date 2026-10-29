@@ -250,6 +250,8 @@ contextBridge.exposeInMainWorld('stm', {
     setTriageOn: (on) => ipcRenderer.invoke('social:setTriageOn', on),
     triage: (m) => ipcRenderer.invoke('social:triage', m),
     connected: () => ipcRenderer.invoke('social:connected'),
+    projects: () => ipcRenderer.invoke('social:projects'),
+    setProjects: (list) => ipcRenderer.invoke('social:setProjects', list),
   },
   routerAsk: (text, localOnly) => ipcRenderer.invoke('router:ask', text, localOnly),
   newSession: (opts) => ipcRenderer.invoke('session:new', opts || {}),

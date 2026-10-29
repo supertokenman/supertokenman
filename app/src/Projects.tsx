@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { clean } from './errors'
 import { Checkbox } from './ui'
 import { cleanBrandKit, MAX_CHARACTERS, type BrandCharacter, type BrandSeries } from '../shared/brandkit'
 import { validateProject, type Project } from '../shared/socaccounts'
 
-// Projects live in this window's localStorage for now: no IPC exists for them yet (see the report).
-const KEY = 'stm.social.projects'
+// Projects live in the settings of the app (social:projects). A list kept in this window's localStorage by an
+// earlier version is moved there once, then removed here.
+const OLD_KEY = 'stm.social.projects'
 
 export type Candidate = { id: string; label: string }
 
@@ -18,25 +20,26 @@ type Draft = {
   series: BrandSeries[]
 }
 
-// Entries that fail validateProject are skipped and counted, never shown.
-function load(): { list: Project[]; skipped: number } {
+function legacy(): unknown[] {
   try {
-    const raw: unknown = JSON.parse(window.localStorage.getItem(KEY) ?? '[]')
-    if (!Array.isArray(raw)) return { list: [], skipped: 0 }
-    const checks = raw.map((p) => validateProject(p))
-    return { list: checks.flatMap((c) => (c.ok ? [c.project] : [])), skipped: checks.filter((c) => !c.ok).length }
+    const raw: unknown = JSON.parse(window.localStorage.getItem(OLD_KEY) ?? '[]')
+    return Array.isArray(raw) ? raw : []
   } catch {
-    return { list: [], skipped: 0 }
+    return []
   }
 }
 
-function store(list: Project[]): string {
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(list))
-    return ''
-  } catch {
-    return 'Could not save projects in this window.'
+async function load(): Promise<{ list: Project[]; skipped: number }> {
+  const got = await window.stm.social.projects()
+  const old = legacy().flatMap((p) => { const c = validateProject(p); return c.ok && !got.list.some((x) => x.id === c.project.id) ? [c.project] : [] })
+  if (!old.length) {
+    // nothing left to move: an empty or unreadable old list is dropped
+    try { if (window.localStorage.getItem(OLD_KEY) !== null) window.localStorage.removeItem(OLD_KEY) } catch { /* private window */ }
+    return got
   }
+  const list = await window.stm.social.setProjects([...got.list, ...old])
+  try { window.localStorage.removeItem(OLD_KEY) } catch { /* private window */ }
+  return { list, skipped: got.skipped }
 }
 
 const toDraft = (p: Project): Draft => ({
@@ -61,8 +64,9 @@ const blank = (name: string): Draft => ({
 
 /** Projects: a name, the account ids it uses, and a brand kit. Keys and tokens are never here. */
 export function Projects(props: { candidates: Candidate[] }) {
-  const [loaded] = useState(load)
-  const [list, setList] = useState<Project[]>(loaded.list)
+  const [loaded, setLoaded] = useState({ list: [] as Project[], skipped: 0 })
+  const [list, setList] = useState<Project[]>([])
+  useEffect(() => void load().then((r) => (setLoaded(r), setList(r.list)), (e) => setMsg(clean(e))), [])
   const [newName, setNewName] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [msg, setMsg] = useState('')
@@ -94,10 +98,7 @@ export function Projects(props: { candidates: Candidate[] }) {
     const next = list.some((p) => p.id === draft.id)
       ? list.map((p) => (p.id === draft.id ? check.project : p))
       : [...list, check.project]
-    const err = store(next)
-    setList(next)
-    setMsg(err)
-    if (!err) setDraft(null)
+    window.stm.social.setProjects(next).then((saved) => (setList(saved), setMsg(''), setDraft(null)), (e) => setMsg(clean(e)))
   }
 
   const setChar = (i: number, patch: Partial<BrandCharacter>) =>

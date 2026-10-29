@@ -17,6 +17,7 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'social:skip': z.tuple([z.string().max(40)]),
   'social:setTriageOn': z.tuple([z.boolean()]),
   'social:triage': z.tuple([z.array(z.object({ id: z.string().max(200), author: z.string().max(200), text: z.string().max(10_000) })).max(200)]),
+  'social:setProjects': z.tuple([z.array(z.record(z.string(), z.unknown())).max(50)]),
   'vault:set': z.tuple([name, text(100_000).min(1), opt(z.boolean())]),
   'vault:delete': z.tuple([name]),
   'vault:forCommands': z.tuple([name, z.boolean()]),
