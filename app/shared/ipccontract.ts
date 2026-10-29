@@ -11,6 +11,18 @@ const opt = <T extends z.ZodType>(t: T) => t.optional()
 
 export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'vault:list': z.tuple([]),
+  'social:setNetSlots': z.tuple([z.enum(['instagram', 'facebook', 'threads', 'youtube', 'linkedin', 'x', 'tiktok', 'bluesky', 'mastodon']), z.array(z.object({ day: z.number().int().min(0).max(6), time: z.string().regex(/^\d{2}:\d{2}$/) })).max(50)]),
+  'social:nextSlot': z.tuple([z.string().max(30)]),
+  'social:postNow': z.tuple([z.string().max(40)]),
+  'social:skip': z.tuple([z.string().max(40)]),
+  'social:setTriageOn': z.tuple([z.boolean()]),
+  'social:triage': z.tuple([z.array(z.object({ id: z.string().max(200), author: z.string().max(200), text: z.string().max(10_000) })).max(200)]),
+  'social:setProjects': z.tuple([z.array(z.record(z.string(), z.unknown())).max(50)]),
+  'social:rewrite': z.tuple([text(10_000), z.array(z.string().max(20)).max(9)]),
+  'social:hooks': z.tuple([text(200), text(40), text(2000), opt(z.string().max(100))]),
+  'social:reword': z.tuple([text(10_000), z.string().max(20)]),
+  'social:classify': z.tuple([z.array(z.object({ id: z.string().max(200), text: z.string().max(10_000) })).max(100)]),
+  'social:readImport': z.tuple([z.string().min(1).max(4096)]),
   'vault:set': z.tuple([name, text(100_000).min(1), opt(z.boolean())]),
   'vault:delete': z.tuple([name]),
   'vault:forCommands': z.tuple([name, z.boolean()]),

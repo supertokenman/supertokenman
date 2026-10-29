@@ -3,17 +3,11 @@
 // window sees account names, numbers and posts, never a token.
 
 export type NetworkId = 'instagram' | 'facebook' | 'threads' | 'youtube' | 'linkedin' | 'x' | 'tiktok' | 'bluesky' | 'mastodon'
+/** Everything with a saved connection: the networks above, plus the ones Post everywhere only sends to. */
+export type AccountId = NetworkId | 'telegram' | 'discord' | 'devto'
 
-export type Cred = {
-  accessToken: string
-  refreshToken?: string
-  /** ms epoch */
-  expiresAt?: number
-  clientId?: string
-  clientSecret?: string
-  /** ids the network needs besides the token (page id, Instagram user id, person urn...) */
-  ids?: Record<string, string>
-}
+export type { Cred } from '../../shared/accounts.js'
+import type { Cred } from '../../shared/accounts.js'
 
 export type Profile = { id: string; name: string; handle?: string; avatar?: string; followers?: number; posts?: number; url?: string }
 export type Post = { id: string; text: string; at: string; url?: string; media?: string; likes?: number; comments?: number; views?: number; shares?: number }

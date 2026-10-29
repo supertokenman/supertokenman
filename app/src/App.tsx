@@ -69,6 +69,7 @@ const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ defaul
 const VaultBoard = lazy(() => import('./VaultBoard').then((x) => ({ default: x.VaultBoard })))
 const PdfTools = lazy(() => import('./PdfTools').then((x) => ({ default: x.PdfTools })))
 const AppContainers = lazy(() => import('./AppContainers').then((x) => ({ default: x.AppContainers })))
+const PostEverywhere = lazy(() => import('./PostEverywhere').then((x) => ({ default: x.PostEverywhere })))
 const TopicRadar = lazy(() => import('./TopicRadar').then((x) => ({ default: x.TopicRadar })))
 const TeamImport = lazy(() => import('./TeamImport').then((x) => ({ default: x.TeamImport })))
 const AwayCard = lazy(() => import('./AwayCard').then((x) => ({ default: x.AwayCard })))
@@ -189,6 +190,8 @@ const PubCalendarSheet = lazy(() => import('./PubCalendar').then((m) => ({ defau
 const ObserveSheet = lazy(() => import('./Observe').then((m) => ({ default: m.ObserveSheet })))
 const MonitorsSheet = lazy(() => import('./Monitors').then((m) => ({ default: m.MonitorsSheet })))
 const ModelServersSheet = lazy(() => import('./ModelServers').then((m) => ({ default: m.ModelServersSheet })))
+const MentionsSheet = lazy(() => import('./Mentions').then((m) => ({ default: m.MentionsSheet })))
+const PostBriefSheet = lazy(() => import('./PostBrief').then((m) => ({ default: m.PostBriefSheet })))
 const ShotToCodeSheet = lazy(() => import('./ShotToCode').then((m) => ({ default: m.ShotToCodeSheet })))
 const WorkbenchSheet = lazy(() => import('./Workbench').then((m) => ({ default: m.WorkbenchSheet })))
 const SecuritySheet = lazy(() => import('./Security').then((m) => ({ default: m.SecuritySheet })))
@@ -445,6 +448,11 @@ export function App() {
   const [ctrOpen, setCtrOpen] = useState(false)
   const [bwOpen, setBwOpen] = useState(false)
   const [radarOpen, setRadarOpen] = useState(false)
+  const [briefOpen, setBriefOpen] = useState(false)
+  const [mentionsOpen, setMentionsOpen] = useState(false)
+  const [briefSid, setBriefSid] = useState<string | null>(null)
+  const [postOpen, setPostOpen] = useState<{ text?: string; title?: string } | null>(null)
+  useEffect(() => window.stm.post.onOpen((r) => setPostOpen({ text: r.text, title: r.title })), [])
   const [ciOpen, setCiOpen] = useState(false)
   const [teamIn, setTeamIn] = useState<{ team: import('../shared/teambundle').Team; lines: string[] } | null>(null)
   const [awayCard, setAwayCard] = useState<import('./bridge').AwayCard | null>(null)
@@ -1214,6 +1222,9 @@ export function App() {
       ['image-xray', 'Image X-ray: Docker layers and waste', 'docker image layers size waste dive dockerfile slim', () => setXrOpen(true)],
       ['while-away', 'While you were away', 'away overnight summary since idle what happened cost approvals trigger errors read aloud', () => void window.stm.away.get().then(setAwayCard)],
       ['run-ci', 'Run CI here with act, before the push', 'github actions workflow ci act local docker job run test', () => setCiOpen(true)],
+      ['post-brief', 'Brief a post: summary and the best prompt from a link or screenshot', 'brief post link url screenshot summary summarize x twitter linkedin threads reddit youtube article prompt deeper', () => setBriefOpen(true)],
+      ['mentions', 'Mentions: draft a brief for people who ask you in a mention', 'mentions bluesky mastodon x twitter reply summarize summary resumo resumen prompt brief approve queue', () => setMentionsOpen(true)],
+      ['post-everywhere', 'Post everywhere: one post to the networks you connect', 'post publish social bluesky mastodon linkedin x twitter telegram discord dev.to share announce', () => setPostOpen({})],
       ['topic-radar', 'Topic radar: your topics in your feeds', 'radar trends topics keywords feeds news count ranking summary ntfy', () => setRadarOpen(true)],
       ['bitwarden', 'Bitwarden or Vaultwarden: link secrets', 'bitwarden vaultwarden bw secrets password keys link', () => setBwOpen(true)],
       ['app-containers', 'App containers: what the app runs in Docker, live', 'docker containers isolate self-hosting stats events stop remove', () => setCtrOpen(true)],
@@ -1679,6 +1690,26 @@ export function App() {
       </Presence>
       <Presence show={awayCard !== null}>{awayCard && <AwayCard card={awayCard} onClose={() => setAwayCard(null)} />}</Presence>
       <Presence show={ciOpen}><RunCi cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} sid={p.focus ?? undefined} onClose={() => setCiOpen(false)} /></Presence>
+      <Presence show={briefOpen}>
+        <PostBriefSheet
+          run={briefSid && p.byId[briefSid] ? { busy: p.byId[briefSid].busy, reply: [...p.byId[briefSid].lines].reverse().find((l) => l.kind === 'assistant')?.text ?? '' } : null}
+          onClose={() => setBriefOpen(false)}
+          onBrief={async (text, images) => {
+            const sid = await open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+            setBriefSid(sid)
+            dispatch({ kind: 'event', sid, action: { kind: 'sent', text, at: Date.now(), images: images.map((i) => `data:${i.mediaType};base64,${i.data}`) } })
+            await window.stm.send(sid, text, images)
+          }}
+          onOpen={async (prompt) => {
+            const sid = await open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+            dispatch({ kind: 'event', sid, action: { kind: 'sent', text: prompt, at: Date.now() } })
+            void window.stm.send(sid, prompt)
+            setBriefOpen(false)
+          }}
+        />
+      </Presence>
+      <Presence show={mentionsOpen}><MentionsSheet onClose={() => setMentionsOpen(false)} /></Presence>
+      <Presence show={!!postOpen}><PostEverywhere text={postOpen?.text} title={postOpen?.title} onClose={() => setPostOpen(null)} /></Presence>
       <Presence show={radarOpen}><TopicRadar onClose={() => setRadarOpen(false)} /></Presence>
       <Presence show={bwOpen}><BitwardenSheet onClose={() => setBwOpen(false)} /></Presence>
       <Presence show={ctrOpen}><AppContainers onClose={() => setCtrOpen(false)} /></Presence>

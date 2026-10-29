@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { IconClose } from './icons'
 import type { NetworkId } from '../electron/social/core'
 import { problem, stateOf, textFor, type Item, type ItemState } from '../electron/social/queue'
@@ -8,6 +8,8 @@ import { clean } from './errors'
 import './bridge'
 import { Checkbox, DateTimeField, Select, TimeField } from './ui'
 
+const SlotsEditor = lazy(() => import('./SlotsEditor').then((x) => ({ default: x.SlotsEditor })))
+const BestTime = lazy(() => import('./BestTime').then((x) => ({ default: x.BestTime })))
 const NAMES: Record<NetworkId, string> = { instagram: 'Instagram', facebook: 'Facebook', threads: 'Threads', youtube: 'YouTube', linkedin: 'LinkedIn', x: 'X', tiktok: 'TikTok', bluesky: 'Bluesky', mastodon: 'Mastodon' }
 const SHORT: Record<NetworkId, string> = { instagram: 'IG', facebook: 'FB', threads: 'TH', youtube: 'YT', linkedin: 'IN', x: 'X', tiktok: 'TT', bluesky: 'BS', mastodon: 'MA' }
 const STATE: Record<ItemState, { label: string; mark: 'off' | 'warn' | 'busy' | 'up' | 'down' }> = {
@@ -38,13 +40,21 @@ export function PubCalendarSheet(props: { onClose: () => void }) {
   const [pick, setPick] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [slotsOpen, setSlotsOpen] = useState(false)
+  const [bestOpen, setBestOpen] = useState(false)
+  const [held, setHeld] = useState<Item[]>([])
   const [drag, setDrag] = useState<string | null>(null)
-  const load = () => void window.stm.social.queue().then(setQ, (e) => setErr(clean(e)))
+  const load = () => {
+    void window.stm.social.queue().then(setQ, (e) => setErr(clean(e)))
+    void window.stm.social.held().then(setHeld, (e) => setErr(clean(e)))
+  }
   useEffect(() => {
     load()
     void window.stm.social.slots().then(setSlots)
     void window.stm.social.connected().then(setNets)
   }, [])
+  // a held post is late: Post now, Move to the next slot of its network, or Skip; then read both lists again
+  const heldAct = (p: Promise<unknown>) => void p.then(() => (load(), setErr('')), (e) => setErr(clean(e)))
+  const moveHeld = (it: Item) => heldAct(toNextSlot(it))
   // while something is going out, read the queue again until each network has answered
   const going = q.some((i) => stateOf(i) === 'publishing')
   useEffect(() => {
@@ -86,6 +96,7 @@ export function PubCalendarSheet(props: { onClose: () => void }) {
           </div>
           <span className="spacer-flex" />
           <button className="ghost small" aria-expanded={slotsOpen} onClick={() => setSlotsOpen(!slotsOpen)}>Time slots…</button>
+          <button className="ghost small" aria-expanded={bestOpen} onClick={() => setBestOpen(!bestOpen)}>Best time…</button>
           <button className="primary small" onClick={newPost}>New post</button>
           <button className="icon" aria-label="Close" onClick={props.onClose}>
             <IconClose />
@@ -93,6 +104,32 @@ export function PubCalendarSheet(props: { onClose: () => void }) {
         </header>
         {err && <div className="notice error pc-notice">{err}</div>}
         {slotsOpen && <Slots slots={slots} onSave={(s) => void window.stm.social.setSlots(s).then((x) => (setSlots(x), setSlotsOpen(false)), (e) => setErr(clean(e)))} />}
+        {slotsOpen && (
+          <Suspense fallback={null}>
+            <SlotsEditor nets={nets} onError={setErr} />
+          </Suspense>
+        )}
+        {bestOpen && (
+          <Suspense fallback={null}>
+            <BestTime nets={nets} />
+          </Suspense>
+        )}
+        {held.length > 0 && (
+          <div className="pc-slots pc-held">
+            <span className="sp-label">Missed</span>
+            <span className="faint">These were due while the app was closed or the Mac was asleep. Nothing posts until you pick one.</span>
+            {held.map((i) => (
+              <div key={i.id} className="pc-held-row">
+                <span className="pc-text">{i.text || <span className="faint">Empty draft</span>}</span>
+                <span className="faint">{i.when != null ? hhmm(i.when) : ''} · {i.networks.map((n) => SHORT[n]).join(' ')}</span>
+                <span className="spacer-flex" />
+                <button className="primary small" onClick={() => heldAct(window.stm.social.postNow(i.id))}>Post now</button>
+                <button className="ghost small" onClick={() => moveHeld(i)}>Move to next slot</button>
+                <button className="ghost small" onClick={() => heldAct(window.stm.social.skip(i.id))}>Skip</button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className={`pc-body ${current ? 'with-editor' : ''}`}>
           <aside className="pc-drafts" onDragOver={(e) => e.preventDefault()} onDrop={() => drop({ at: null })}>
             <div className="sp-label">Drafts · no time yet</div>
@@ -126,6 +163,30 @@ export function PubCalendarSheet(props: { onClose: () => void }) {
   )
 }
 
+/**
+ * Places each network of the item on the next free time of that network. A queue item has one time, so a
+ * post for several networks becomes one item per network, each with its own text and slot. Every slot is
+ * found before anything is changed. Nothing is approved here.
+ */
+async function toNextSlot(it: Item): Promise<Item[]> {
+  if (!it.networks.length) throw new Error('Pick a network first.')
+  const at: number[] = []
+  for (const n of it.networks) {
+    const t = await window.stm.social.nextSlot(n)
+    if (t == null) throw new Error(`No free time on ${NAMES[n]} in the next four weeks. Set its times in Time slots first.`)
+    at.push(t)
+  }
+  const [first, ...rest] = it.networks
+  for (const [i, n] of rest.entries()) {
+    await window.stm.social.save({ text: it.variants?.[n]?.trim() ? it.variants[n] : it.text, mediaUrl: it.mediaUrl, mediaKind: it.mediaKind, link: it.link, title: it.title, networks: [n], when: at[i + 1]! })
+  }
+  if (rest.length) {
+    const own = it.variants?.[first!]
+    await window.stm.social.save({ ...it, text: own?.trim() ? own : it.text, variants: undefined, networks: [first!] })
+  }
+  return window.stm.social.move(it.id, at[0]!)
+}
+
 function Card(props: { i: Item; on: boolean; onPick: () => void; onDrag: () => void }) {
   const st = stateOf(props.i)
   const done = st === 'done' || st === 'partly'
@@ -136,7 +197,7 @@ function Card(props: { i: Item; on: boolean; onPick: () => void; onDrag: () => v
         <span className="pc-nets">{props.i.networks.map((n) => <span key={n} className="pc-net">{SHORT[n]}</span>)}</span>
       </span>
       <span className="pc-text">{props.i.text || <span className="faint">Empty draft</span>}</span>
-      <span className="pc-state"><StateMark state={STATE[st].mark} label={STATE[st].label} />{STATE[st].label}{props.i.comments?.length ? <span className="faint"> · {props.i.comments.length} note{props.i.comments.length === 1 ? '' : 's'}</span> : null}</span>
+      <span className="pc-state"><StateMark state={props.i.held ? 'warn' : STATE[st].mark} label={props.i.held ? 'Missed' : STATE[st].label} />{props.i.held ? 'Missed' : STATE[st].label}{props.i.comments?.length ? <span className="faint"> · {props.i.comments.length} note{props.i.comments.length === 1 ? '' : 's'}</span> : null}</span>
     </button>
   )
 }
@@ -206,6 +267,9 @@ function Editor(props: { it: Item; nets: NetworkId[]; slots: Slot[]; queue: Item
         <button className="danger small" onClick={() => (props.act(window.stm.social.remove(d.id)), props.onClose())}>{sent ? 'Remove from the calendar' : 'Delete'}</button>
         <span className="spacer-flex" />
         {dirty && !sent && <button className="ghost small" onClick={() => props.act(window.stm.social.save(d))}>Save</button>}
+        {!dirty && st === 'draft' && d.when == null && !sent && (
+          <button className="ghost small" data-tip={d.networks[0] ? (d.networks.length > 1 ? 'Each network takes its own next free time; the post becomes one item per network' : `Takes the next free time of ${NAMES[d.networks[0]]}`) : 'Pick a network first'} disabled={!d.networks[0]} onClick={() => props.act(toNextSlot(props.it))}>Add to queue</button>
+        )}
         {!dirty && st === 'draft' && <button className="primary small" onClick={() => props.act(window.stm.social.approve(d.id, true))}>{d.when == null || d.when <= Date.now() ? 'Approve and post now' : `Approve for ${hhmm(d.when)}`}</button>}
         {!dirty && st === 'scheduled' && <button className="ghost small" onClick={() => props.act(window.stm.social.approve(d.id, false))}>Take approval back</button>}
         {(st === 'failed' || st === 'partly') && <button className="ghost small" onClick={() => props.act(window.stm.social.retry(d.id))}>Retry the failed ones</button>}

@@ -55,7 +55,26 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | Monitors, Prometheus, PostHog, local model servers, storage | the addresses you enter | adding them |
 | Web reader, embedded videos, web apps | the page you open | opening it |
 | Video transcripts | none from the app: it reads a subtitle or audio file you give, or text you paste. A link other than YouTube runs **your own** `yt-dlp` (not shipped by us) on this machine; that tool contacts the video's site under your responsibility, captions only, never with browser cookies. Audio goes to **your own** `whisper.cpp` (and `ffmpeg`) locally. YouTube links are not fetched at all | Settings > Appearance > Video transcripts (off by default), then Transcript or `stm transcript` |
+| Bluesky: the server you sign in to (bsky.social by default) | Accounts: sign-in when you connect (only the session is kept, not the app password). Post everywhere: one post, with a rewritten version per network when you accepted one. Scheduled posts: an approved queue item goes out at its time. Best time, Hit share and Evergreen: your own recent posts, read when you open them or click. Mentions: your notifications, the post a mention replies to, a reply | connecting Bluesky in Accounts; a post only when you press Post and confirm, or when an approved scheduled post is due while the app is open; Mentions polls only while on (every 2 minutes by default, 1 at least, less often after errors, stops when the app quits) and replies only when you click Approve |
+| Mastodon: the instance you name | Post everywhere: one post (or the rewritten version for this network). Scheduled posts and your own recent posts for Best time, Hit share and Evergreen, as for Bluesky. Mentions: your mention notifications, the post a mention replies to, a reply | connecting Mastodon in Accounts; then as for Bluesky |
+| api.x.com | Post everywhere and scheduled posts: `/2/tweets`. Your own recent posts for Best time, Hit share and Evergreen, only when you click. Mentions: `/2/users/:id/mentions`, and `/2/tweets` for a reply. Your own keys | connecting X in Accounts; then as for Bluesky (reading mentions needs a paid tier on X) |
+| api.linkedin.com | Post everywhere and scheduled posts: `/v2/userinfo`, `/rest/posts` | connecting LinkedIn; only when you press Post and confirm, or when an approved scheduled post is due while the app is open |
+| www.linkedin.com | OAuth sign-in when you connect LinkedIn (`/oauth/v2/authorization`, `/oauth/v2/accessToken`); links to your profile are only opened when you click them | connecting LinkedIn in Accounts |
+| graph.facebook.com | Facebook Page and Instagram: post, scheduled posts, your own recent posts for Best time, Hit share and Evergreen. Your own app keys | connecting Facebook or Instagram in Accounts; then only when you press Post and confirm, or an approved scheduled post is due while the app is open |
+| graph.threads.net | Threads: post, scheduled posts, your own recent posts, as for graph.facebook.com | connecting Threads in Accounts; then as for graph.facebook.com |
+| open.tiktokapis.com | TikTok: OAuth token, upload of a post you approved, your own recent posts | connecting TikTok in Accounts; then as for graph.facebook.com |
+| oauth2.googleapis.com | YouTube: OAuth token when you connect and when it refreshes | connecting YouTube in Accounts |
+| api.telegram.org, discord.com (your webhook), dev.to | Post everywhere: one message, webhook post or article | connecting each in Accounts; only when you press Post and confirm; `stm post` only opens the sheet |
 | Sites added as drawer apps | the site's own address and the extra hosts you list; its icon once, from the same site, when you add it | adding the site, then opening it |
+
+Scheduled social posts go out **only while the app is open** and the Mac is awake: the queue is checked
+every minute inside the app, there is no background agent, and nothing posts while the app is closed.
+After sleep or a restart, a post that is a little late goes out and one that is very late is held until
+you choose Post now, Move or Skip. The small-model helpers (rewrite per network, hook fill, evergreen
+rewording, niche classify, Mentions triage) call no social host: each runs the small-model path only when
+you click its button (triage only while switched on), and nothing they write is posted without Approve. A
+picked CSV, JSON or text file for Niche import is read on this Mac (up to 2 MB); links in it are never
+opened. No host is added by these features.
 
 The release update check runs only in a packaged Mac build that carries `app-update.yml`. Since 0.1.13
 netwatch forces the app's release path (`STM_UPDATE_RELEASE_MODE=1`, the automatic check's wait cut to

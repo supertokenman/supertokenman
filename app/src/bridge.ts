@@ -162,7 +162,23 @@ export type Bridge = {
     comment: (id: string, text: string) => Promise<QueueItem[]>
     slots: () => Promise<import('../shared/pubcal').Slot[]>
     setSlots: (s: import('../shared/pubcal').Slot[]) => Promise<import('../shared/pubcal').Slot[]>
+    netSlots: () => Promise<import('../shared/postslots').NetSlots>
+    setNetSlots: (network: string, s: import('../shared/pubcal').Slot[]) => Promise<import('../shared/postslots').NetSlots>
+    nextSlot: (network: string) => Promise<number | null>
+    held: () => Promise<QueueItem[]>
+    postNow: (id: string) => Promise<QueueItem[]>
+    skip: (id: string) => Promise<QueueItem[]>
+    triageOn: () => Promise<boolean>
+    setTriageOn: (on: boolean) => Promise<boolean>
+    triage: (m: { id: string; author: string; text: string }[]) => Promise<{ on: boolean; labels: Record<string, import('../shared/socialprompts').TriageLabel>; skipped: Record<string, string> }>
     connected: () => Promise<NetworkId[]>
+    rewrite: (text: string, networks: string[]) => Promise<{ texts: Partial<Record<NetworkId, string>>; rejected: Partial<Record<NetworkId, string>> }>
+    hooks: (template: string, label: string, topic: string, projectId?: string) => Promise<{ hooks: string[]; rejected: string[] }>
+    reword: (text: string, network: NetworkId) => Promise<{ text: string }>
+    classify: (captions: { id: string; text: string }[]) => Promise<{ labels: Record<string, import('../shared/socialprompts').NicheLabel>; rejected: string[] }>
+    readImport: (path: string) => Promise<string>
+    projects: () => Promise<{ list: import('../shared/socaccounts').Project[]; skipped: number }>
+    setProjects: (list: import('../shared/socaccounts').Project[]) => Promise<import('../shared/socaccounts').Project[]>
   }
   routerAsk: (text: string, localOnly?: boolean) => Promise<{ id: string | null; where: 'local' | 'claude' | 'none' }>
   savings: { get: (days: number) => Promise<{ summary: Summary; sources: { id: Source; name: string; what: string; method: 'measured' | 'from the tool' | 'estimated' }[] }> }
@@ -338,6 +354,16 @@ export type Bridge = {
     stop: () => Promise<boolean>
     onLine: (fn: (line: string) => void) => () => void
   }
+  /** the social accounts Post everywhere and Mentions share; secrets go in and never come back */
+  accounts: {
+    status: () => Promise<PostNet[]>
+    connect: (net: import('../shared/social').Net, fields: Record<string, string>) => Promise<PostNet[]>
+    disconnect: (net: import('../shared/social').Net) => Promise<PostNet[]>
+  }
+  post: {
+    send: (nets: import('../shared/social').Net[], text: string, title: string, texts?: Partial<Record<import('../shared/social').Net, string>>) => Promise<import('../shared/posteverywhere').Result[]>
+    onOpen: (fn: (r: { text: string; title: string }) => void) => () => void
+  }
   radar: {
     get: () => Promise<RadarCfg>
     save: (groups: string, weights: Record<string, number>, ntfy: string) => Promise<RadarCfg>
@@ -345,6 +371,15 @@ export type Bridge = {
     mark: () => Promise<RadarCfg>
     draft: (hits: import('../shared/radar').Hit[]) => Promise<{ text: string; by: string }>
     notify: (text: string) => Promise<boolean>
+  }
+  mentions: {
+    get: () => Promise<{ cfg: import('../shared/mentions').Config; ready: Record<import('../shared/mentions').Net, boolean>; limits: Record<import('../shared/mentions').Net, number>; queue: import('../shared/mentions').Item[]; sentLastHour: number; last: { at: number; error?: string } }>
+    save: (cfg: import('../shared/mentions').Config) => Promise<boolean>
+    check: () => Promise<void>
+    approve: (key: string, draft: string[]) => Promise<boolean>
+    skip: (key: string) => Promise<void>
+    clear: () => Promise<void>
+    onChange: (fn: () => void) => () => void
   }
   bitwarden: {
     status: () => Promise<BwState>
@@ -1034,3 +1069,5 @@ export type QuotaState = { source: import('../shared/quotapolicy').Source; pause
 export type BwState = import('../electron/bitwarden').Status & { links: { name: string; label: string; field: string; shown: string | null }[] }
 
 export type RadarCfg = { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }
+
+export type PostNet = { net: import('../shared/social').Net; connected: boolean; host: string | null; handle?: string; mastodonLimit?: number }

@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto'
 // The Electron main process: one window, several Claude Code sessions (one per panel), IPC between them.
 import { readFile as readFileAsync } from 'node:fs/promises'
 import { guardIpc, lockPermissions, reportIpcErrors, UI_SCHEME, UI_URL, uiFile } from './hardening.js'
@@ -24,6 +24,10 @@ import * as G from './git.js'
 import { cancel as ciCancel, finished, github as githubApi, jobs as ciJobs, log as ciLog, repoOf, rerunFailed, runs as ciRuns, token as ciToken, type Run } from './ci.js'
 import { describe as describeLink, nowPlaying, osascript, script as spotifyScript, type Command, type Saved } from './spotify.js'
 import { Vault } from './vault.js'
+import { registerPostEverywhere } from './posteverywhere.js'
+import { ACCOUNTS, mastoLimit, pdsOf } from '../shared/accounts.js'
+import { bskyRecord, count, mastoStatus, xTweet, X_TWEETS, type Net as SocialNet, type Req as SocialReq } from '../shared/social.js'
+import { xAuth } from './social/networks.js'
 import { cleanPersona, fromMarkdown, personaPrompt, STARTERS, toMarkdown, type Persona } from '../shared/personas.js'
 import { choosePrompt } from '../shared/router.js'
 import { claim as claimAsk, HEAD as ASK_HEAD, type Waiting } from '../shared/askroute.js'
@@ -195,6 +199,8 @@ import * as AN from '../shared/anomaly.js'
 import * as CTR from '../shared/containers.js'
 import * as BWN from './bitwarden.js'
 import * as RD from '../shared/radar.js'
+import * as MN from '../shared/mentions.js'
+import { parseBrief } from '../shared/postbrief.js'
 import * as ACT from '../shared/act.js'
 import * as GT from './gitea.js'
 import * as KONG from '../shared/kong.js'
@@ -307,7 +313,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -1490,6 +1496,22 @@ ipcMain.handle('social:status', () => social.status())
 ipcMain.handle('social:connectToken', (_e, n: string, token: string) => social.connectToken(asNet(n), String(token)))
 ipcMain.handle('social:connectOAuth', (_e, n: string, id: string, secret?: string) => social.connectOAuth(asNet(n), String(id), secret ? String(secret) : undefined))
 ipcMain.handle('social:disconnect', (_e, n: string) => social.disconnect(asNet(n)))
+// the accounts Post everywhere and Mentions share: one per network, pasted once, read back by neither window
+const asAccount = (n: unknown) => {
+  if (!ACCOUNTS.includes(n as SocialNet)) throw new Error('Unknown network.')
+  return n as SocialNet
+}
+ipcMain.handle('accounts:status', () => social.accounts())
+ipcMain.handle('accounts:connect', async (_e, n: unknown, fields: Record<string, unknown>) => {
+  const r = await social.connectFields(asAccount(n), fields ?? {})
+  toWin('mentions:changed')
+  return r
+})
+ipcMain.handle('accounts:disconnect', (_e, n: unknown) => {
+  social.disconnect(asAccount(n))
+  toWin('mentions:changed')
+  return social.accounts()
+})
 ipcMain.handle('social:profile', (_e, n: string) => social.profile(asNet(n)))
 ipcMain.handle('social:timeline', (_e, n: string) => social.timeline(asNet(n)))
 ipcMain.handle('social:like', (_e, n: string, id: string) => social.like(asNet(n), String(id)))
@@ -1516,6 +1538,101 @@ ipcMain.handle('social:setSlots', async (_e, slots: import('../shared/pubcal.js'
   const clean = slots.map((x) => ({ day: Number(x.day), time: x.time })).sort((a, b) => a.day - b.day || a.time.localeCompare(b.time))
   saveSettings({ ...settings(), pubSlots: clean })
   return clean
+})
+ipcMain.handle('social:netSlots', () => settings().netSlots ?? {})
+ipcMain.handle('social:setNetSlots', async (_e, network: string, slots: import('../shared/pubcal.js').Slot[]) => {
+  const { checkSlots } = await import('../shared/pubcal.js')
+  const bad = checkSlots(slots)
+  if (bad) throw new Error(bad)
+  const clean = slots.map((x) => ({ day: Number(x.day), time: x.time })).sort((a, b) => a.day - b.day || a.time.localeCompare(b.time))
+  const netSlots = { ...(settings().netSlots ?? {}), [String(network)]: clean }
+  saveSettings({ ...settings(), netSlots })
+  return netSlots
+})
+ipcMain.handle('social:nextSlot', (_e, network: string) => social.nextSlot(settings().netSlots ?? {}, String(network)))
+ipcMain.handle('social:held', () => social.held())
+ipcMain.handle('social:postNow', (_e, id: string) => social.postNow(String(id)))
+ipcMain.handle('social:skip', (_e, id: string) => social.skip(String(id)))
+ipcMain.handle('social:triageOn', () => Boolean(settings().socialTriage))
+ipcMain.handle('social:setTriageOn', (_e, on: boolean) => (saveSettings({ ...settings(), socialTriage: Boolean(on) }), Boolean(on)))
+ipcMain.handle('social:triage', async (_e, mentions: { id: string; author: string; text: string }[]) => {
+  // off by default: no model call until the person turns it on; spam is dropped before any call
+  if (!settings().socialTriage) return { on: false, labels: {}, skipped: {} as Record<string, string> }
+  const { preFilter } = await import('../shared/triage.js')
+  const { triagePrompt, parseTriage } = await import('../shared/socialprompts.js')
+  const list = (Array.isArray(mentions) ? mentions : []).slice(0, 50).map((m) => ({ id: String(m.id), author: String(m.author ?? ''), text: String(m.text ?? '').slice(0, 1000) }))
+  const skipped: Record<string, string> = {}
+  const rest = list.filter((m) => { const w = preFilter(m); if (w) skipped[m.id] = w; return !w })
+  if (!rest.length) return { on: true, labels: {}, skipped }
+  const r = parseTriage((await small(triagePrompt(rest))).text, rest.map((m) => m.id))
+  return { on: true, labels: r.ok ? r.value.labels : {}, skipped }
+})
+// projects: account ids and a brand kit, no keys; every one passes validateProject before it is kept
+const goodProjects = async (raw: unknown) => {
+  const { validateProject } = await import('../shared/socaccounts.js')
+  const checks = (Array.isArray(raw) ? raw : []).map((p) => validateProject(p))
+  return { list: checks.flatMap((c) => (c.ok ? [c.project] : [])), bad: checks.flatMap((c) => (c.ok ? [] : [c.problem])) }
+}
+ipcMain.handle('social:projects', async () => {
+  const r = await goodProjects(settings().socialProjects)
+  return { list: r.list, skipped: r.bad.length }
+})
+ipcMain.handle('social:setProjects', async (_e, projects: unknown) => {
+  const r = await goodProjects(projects)
+  if (r.bad.length) throw new Error(`Not saved: ${r.bad[0]}.`)
+  if (r.list.length > 50) throw new Error('Not saved: up to 50 projects.')
+  if (new Set(r.list.map((p) => p.id)).size !== r.list.length) throw new Error('Not saved: two projects share an id.')
+  saveSettings({ ...settings(), socialProjects: r.list })
+  return r.list
+})
+// the small-model helpers: each runs only when the person clicks its button, one call per click, nothing posted
+ipcMain.handle('social:rewrite', async (_e, text: unknown, networks: unknown) => {
+  const { rewritePrompt, parseRewrite, NETWORK_IDS } = await import('../shared/socialprompts.js')
+  const t = String(text ?? '').trim().slice(0, 10_000)
+  const nets = (Array.isArray(networks) ? networks : []).filter((n): n is NetworkId => NETWORK_IDS.includes(n as NetworkId)).slice(0, 9)
+  if (!t || !nets.length) throw new Error('Write a post and pick a network that can be rewritten first.')
+  const r = parseRewrite((await small(rewritePrompt(t, nets))).text, { text: t }, nets)
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+ipcMain.handle('social:hooks', async (_e, template: unknown, label: unknown, topic: unknown, projectId?: unknown) => {
+  const { hookPrompt, parseHooks } = await import('../shared/socialprompts.js')
+  const { SLOT } = await import('../shared/hookfmt.js')
+  const { EMPTY_BRAND_KIT } = await import('../shared/brandkit.js')
+  const tpl = String(template ?? '')
+  const subject = String(topic ?? '').trim().slice(0, 2000)
+  if (tpl.length > 200 || tpl.split(SLOT).length !== 2) throw new Error(`The format needs exactly one ${SLOT}.`)
+  if (!subject) throw new Error('Write the topic first.')
+  const kit = (await goodProjects(settings().socialProjects)).list.find((p) => p.id === projectId)?.brandKit ?? EMPTY_BRAND_KIT
+  const format = { id: 'choice' as const, label: String(label ?? '').slice(0, 40), template: tpl }
+  const r = parseHooks((await small(hookPrompt(format, subject, kit))).text, format, kit)
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+ipcMain.handle('social:reword', async (_e, text: unknown, network: unknown) => {
+  const { evergreenPrompt, parseEvergreen, NETWORK_IDS } = await import('../shared/socialprompts.js')
+  const t = String(text ?? '').trim().slice(0, 10_000)
+  if (!t || !NETWORK_IDS.includes(network as NetworkId)) throw new Error('Pick a post on a network that can be reworded.')
+  const r = parseEvergreen((await small(evergreenPrompt(t, network as NetworkId))).text, { text: t }, network as NetworkId)
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+ipcMain.handle('social:classify', async (_e, captions: unknown) => {
+  const { nichePrompt, parseNiche } = await import('../shared/socialprompts.js')
+  const list = (Array.isArray(captions) ? captions : []).slice(0, 100).map((c: { id?: unknown; text?: unknown }) => ({ id: String(c?.id ?? ''), text: String(c?.text ?? '').slice(0, 1000) })).filter((c) => c.id && c.text)
+  if (!list.length) throw new Error('No captions to sort.')
+  const r = parseNiche((await small(nichePrompt(list))).text, list.map((c) => c.id))
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+// a CSV, JSON or text export the person picked in the app's file picker: up to 2 MB, returned as text, never opened as a link
+ipcMain.handle('social:readImport', (_e, path: unknown) => {
+  const p = pickPaths([path])[0]
+  if (!p || !['csv', 'json', 'txt'].includes(extname(p).slice(1).toLowerCase())) throw new Error('Pick a .csv, .json or .txt file.')
+  const st = statSync(p)
+  if (!st.isFile()) throw new Error('Not a file.')
+  if (st.size > 2 * 1024 * 1024) throw new Error('Files up to 2 MB.')
+  return readFileSync(p, 'utf8')
 })
 ipcMain.handle('social:connected', () => social.status().filter((x) => x.connected).map((x) => x.id))
 ipcMain.handle('social:remove', (_e, id: string) => social.removeItem(String(id)))
@@ -4198,6 +4315,146 @@ ipcMain.handle('radar:notify', async (_e, text: string) => {
   if (!r.ok) throw new Error(`ntfy answered ${r.status}`)
   return true
 })
+
+// Mentions: someone asks for a brief in a mention; a draft reply waits for the person's click. Polls only while
+// on and the app is open; credentials in the vault, never logged and never sent back to the window.
+const mnCfg = (): MN.Config => {
+  const { on, everyMin, keywords, maxPerHour } = { ...MN.DEFAULTS, ...settings().mentions?.cfg }
+  return { on, everyMin, keywords, maxPerHour }
+}
+const mnState = () => settings().mentions ?? { cfg: MN.DEFAULTS, seen: [], sent: [], queue: [] }
+const mnSave = (p: Partial<NonNullable<Settings['mentions']>>) => (saveSettings({ ...settings(), mentions: { ...mnState(), ...p } }), toWin('mentions:changed'))
+// the shared accounts (Accounts, one per network); X also needs the numeric user id to read mentions
+const mnAcct = (n: MN.Net) => social.account(n).catch(() => null)
+const mnReady = async () => {
+  const [b, m, x] = await Promise.all([mnAcct('bluesky'), mnAcct('mastodon'), mnAcct('x')])
+  return { bluesky: !!b, mastodon: !!m, x: !!x?.ids?.userId }
+}
+const mnFetch = async <T>(r: SocialReq): Promise<T> => {
+  const res = await fetch(r.url, { method: r.method, headers: r.headers, body: r.body, signal: AbortSignal.timeout(20_000) })
+  // the status only: a body could echo a credential
+  if (!res.ok) throw new Error(`${new URL(r.url).host} answered ${res.status}`)
+  return (await res.json()) as T
+}
+const mnNeed = async (n: MN.Net) => {
+  const c = await mnAcct(n)
+  if (!c) throw new Error(`Connect ${MN.NET_NAME[n]} in Accounts first.`)
+  return c
+}
+async function mnFind(): Promise<MN.Mention[]> {
+  const c = mnCfg()
+  const out: MN.Mention[] = []
+  const [bs, ma, xa] = await Promise.all([mnAcct('bluesky'), mnAcct('mastodon'), mnAcct('x')])
+  if (bs) {
+    for (const m of MN.bskyMentions(await mnFetch(MN.bsky.notifications(pdsOf(bs), bs.accessToken)))) {
+      if (m.parentUri && MN.isRequest(m.text, MN.keywordsOf(c.keywords)) && !mnState().seen.includes(m.key)) {
+        const p = MN.bskyPost(await mnFetch<Parameters<typeof MN.bskyPost>[0]>(MN.bsky.thread(pdsOf(bs), bs.accessToken, m.parentUri)).catch(() => ({})))
+        if (p) m.post = p
+      }
+      out.push(m)
+    }
+  }
+  if (ma) {
+    const t = ma.accessToken
+    const inst = ma.ids?.server ?? ''
+    for (const m of MN.mastoMentions(await mnFetch(MN.masto.notifications(inst, t)))) {
+      if (m.parentId && MN.isRequest(m.text, MN.keywordsOf(c.keywords)) && !mnState().seen.includes(m.key)) {
+        const p = await mnFetch<Parameters<typeof MN.mastoPost>[0]>(MN.masto.status(inst, t, m.parentId)).catch(() => null)
+        if (p) m.post = MN.mastoPost(p)
+      }
+      out.push(m)
+    }
+  }
+  if (xa?.ids?.userId) {
+    const url = MN.xMentionsUrl(xa.ids.userId)
+    out.push(...MN.xMentions(await mnFetch({ method: 'GET', url, headers: { Authorization: xAuth(xa, 'GET', url) } })))
+  }
+  return out
+}
+async function mnBrief(m: MN.Mention) {
+  const { text } = await small(MN.mentionBriefPrompt(m))
+  const b = parseBrief(text)
+  if (!b.ok) throw new Error('The brief was not in the expected format.')
+  return MN.composeReply(m.net, b, m.net === 'mastodon' ? `${m.author} ` : '', MN.limitOf(m.net, m.net === 'mastodon' ? mastoLimit(await mnAcct('mastodon')) : undefined))
+}
+let mnTimer: ReturnType<typeof setTimeout> | null = null
+let mnFails = 0
+let mnLast: { at: number; error?: string } = { at: 0 }
+async function mnPoll() {
+  mnTimer = null
+  if (!mnCfg().on) return
+  try {
+    const st = mnState()
+    const seen = new Set(st.seen)
+    const kw = MN.keywordsOf(mnCfg().keywords)
+    const found = MN.fresh(await mnFind(), seen).filter((m) => MN.isRequest(m.text, kw))
+    const queue = [...found.map((m): MN.Item => ({ ...m, state: 'briefing', draft: [] })), ...st.queue].slice(0, 100)
+    mnSave({ seen: MN.keepSeen(seen), queue })
+    for (const m of found) {
+      const draft = await mnBrief(m).then((d) => ({ draft: d, state: 'ready' as const }), (e: Error) => ({ draft: [], state: 'failed' as const, error: e.message }))
+      mnSave({ queue: mnState().queue.map((q) => (q.key === m.key ? { ...q, ...draft } : q)) })
+    }
+    mnFails = 0
+    mnLast = { at: Date.now() }
+  } catch (e) {
+    mnFails++
+    mnLast = { at: Date.now(), error: (e as Error).message }
+  }
+  mnSchedule()
+}
+function mnSchedule() {
+  if (mnTimer) clearTimeout(mnTimer)
+  mnTimer = null
+  if (!mnCfg().on) return
+  // backoff on errors: double each time, up to an hour
+  const every = Math.max(1, mnCfg().everyMin) * 60_000
+  mnTimer = setTimeout(() => void mnPoll(), Math.min(3600_000, every * 2 ** Math.min(mnFails, 5)))
+}
+app.whenReady().then(() => mnCfg().on && mnSchedule())
+app.on('will-quit', () => mnTimer && clearTimeout(mnTimer))
+ipcMain.handle('mentions:get', async () => {
+  const s = mnState()
+  return { cfg: mnCfg(), ready: await mnReady(), limits: { bluesky: MN.limitOf('bluesky'), mastodon: MN.limitOf('mastodon', mastoLimit(await mnAcct('mastodon'))), x: MN.limitOf('x') }, queue: s.queue, sentLastHour: s.sent.filter((t) => Date.now() - t < 3600_000).length, last: mnLast }
+})
+ipcMain.handle('mentions:save', (_e, cfg: MN.Config) => {
+  const c: MN.Config = {
+    on: !!cfg?.on,
+    everyMin: Math.max(1, Math.min(60, Math.round(Number(cfg?.everyMin) || 2))),
+    keywords: String(cfg?.keywords ?? '').slice(0, 2000),
+    maxPerHour: Math.max(1, Math.min(60, Math.round(Number(cfg?.maxPerHour) || 10))),
+  }
+  mnSave({ cfg: c })
+  mnFails = 0
+  mnSchedule()
+  return true
+})
+ipcMain.handle('mentions:check', () => (mnFails = 0, mnPoll()))
+ipcMain.handle('mentions:skip', (_e, key: string) => mnSave({ queue: mnState().queue.map((q) => (q.key === key ? { ...q, state: 'skipped' as const } : q)) }))
+ipcMain.handle('mentions:clear', () => mnSave({ queue: mnState().queue.filter((q) => q.state === 'ready' || q.state === 'briefing') }))
+// posting happens only here, on the person's click on Approve
+ipcMain.handle('mentions:approve', async (_e, key: string, draft: string[]) => {
+  const st = mnState()
+  const q = st.queue.find((x) => x.key === key)
+  if (!q || q.state !== 'ready') throw new Error('This mention is no longer waiting.')
+  const c = mnCfg()
+  if (!MN.canReply(st.sent, Date.now(), c.maxPerHour)) throw new Error(`The limit of ${c.maxPerHour} replies an hour is reached. Try later.`)
+  const parts = (Array.isArray(draft) ? draft : []).map((p) => String(p).trim()).filter(Boolean).slice(0, 3)
+  if (!parts.length) throw new Error('The reply is empty.')
+  const acct = await mnNeed(q.net)
+  const max = MN.limitOf(q.net, mastoLimit(acct))
+  if (parts.some((p) => count(q.net, p) > max)) throw new Error(`Each post must fit ${max} characters.`)
+  if (q.net !== 'bluesky' && parts.length > 1) throw new Error('One post only here.')
+  if (q.net === 'bluesky') {
+    let parent = q.reply.parent!
+    for (const p of parts) {
+      const r = await mnFetch<MN.Ref>(bskyRecord(pdsOf(acct), acct.accessToken, acct.ids?.did ?? '', p, new Date().toISOString(), { root: q.reply.root!, parent }))
+      parent = { uri: r.uri, cid: r.cid }
+    }
+  } else if (q.net === 'mastodon') await mnFetch(mastoStatus(acct.ids?.server ?? '', acct.accessToken, parts[0], q.key, { inReplyTo: q.id, visibility: q.reply.visibility ?? 'public' }))
+  else await mnFetch(xTweet(parts[0], xAuth(acct, 'POST', X_TWEETS), q.id))
+  mnSave({ sent: [...st.sent.filter((t) => Date.now() - t < 3600_000), Date.now()], queue: mnState().queue.map((x) => (x.key === key ? { ...x, state: 'sent' as const, draft: parts } : x)) })
+  return true
+})
 ipcMain.handle('news:setup', () => ({ rsshub: settings().rsshub ?? '', rules: settings().feedRules ?? [], senders: settings().newsletterSenders ?? [], briefing: { ...FD.DEFAULT_SCHEDULE, ...settings().briefing }, model: settings().smallModel ?? '', briefings: listBriefings() }))
 ipcMain.handle('news:rules', (_e, rules: FD.FeedRule[]) => {
   for (const r of rules) {
@@ -4664,7 +4921,9 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => setTimeout(() => void tickTriggers(), 15_000))
   // the social queue: approved items go out at their time
   setInterval(() => void social.tick(), 60_000)
-  setTimeout(() => void social.tick(), 20_000)
+  // keys move to SOCIAL_<NET>_<HANDLE> only once several accounts per network are turned on
+  setTimeout(() => { if (settings().socialAccounts) social.migrate(); social.catchUp() }, 20_000)
+  powerMonitor.on('resume', () => setTimeout(() => social.catchUp(), 20_000))
   powerMonitor.on('suspend', lockNow)
   if (process.platform === 'darwin') app.dock?.setIcon(join(here, '..', '..', 'build', 'icon.png'))
   vault = new Vault(join(app.getPath('userData'), 'vault.json'), {
@@ -5967,6 +6226,13 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     }
     return { panel: sid, reply: await done }
   },
+  // opens Post everywhere with the text; the window still shows the networks and asks before posting
+  post: (a) => {
+    if (!win || win.isDestroyed()) throw new Error('The app window is closed; open it to post.')
+    win.webContents.send('post:open', { text: String(a.text ?? '').slice(0, 100_000), title: String(a.title ?? '').slice(0, 300) })
+    win.show()
+    return { opened: true }
+  },
   goal: (a) => {
     const sid = panelId(a.panel)
     const t = String(a.text ?? '').trim()
@@ -6564,6 +6830,8 @@ Object.assign(cliHandlers, {
   },
 })
 registerTranscripts(ipcMain, cliHandlers, app.getPath('userData'))
+// Post everywhere: off until a network is connected; posts only after the window's confirm
+registerPostEverywhere(ipcMain, (n) => social.account(n))
 let cli: ReturnType<typeof startCli> | null = null
 app.whenReady().then(() => {
   try {

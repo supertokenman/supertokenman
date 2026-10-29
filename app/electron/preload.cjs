@@ -240,7 +240,23 @@ contextBridge.exposeInMainWorld('stm', {
     comment: (id, text) => ipcRenderer.invoke('social:comment', id, text),
     slots: () => ipcRenderer.invoke('social:slots'),
     setSlots: (s) => ipcRenderer.invoke('social:setSlots', s),
+    netSlots: () => ipcRenderer.invoke('social:netSlots'),
+    setNetSlots: (n, s) => ipcRenderer.invoke('social:setNetSlots', n, s),
+    nextSlot: (n) => ipcRenderer.invoke('social:nextSlot', n),
+    held: () => ipcRenderer.invoke('social:held'),
+    postNow: (id) => ipcRenderer.invoke('social:postNow', id),
+    skip: (id) => ipcRenderer.invoke('social:skip', id),
+    triageOn: () => ipcRenderer.invoke('social:triageOn'),
+    setTriageOn: (on) => ipcRenderer.invoke('social:setTriageOn', on),
+    triage: (m) => ipcRenderer.invoke('social:triage', m),
     connected: () => ipcRenderer.invoke('social:connected'),
+    rewrite: (text, networks) => ipcRenderer.invoke('social:rewrite', text, networks),
+    hooks: (template, label, topic, projectId) => ipcRenderer.invoke('social:hooks', template, label, topic, projectId),
+    reword: (text, network) => ipcRenderer.invoke('social:reword', text, network),
+    classify: (captions) => ipcRenderer.invoke('social:classify', captions),
+    readImport: (path) => ipcRenderer.invoke('social:readImport', path),
+    projects: () => ipcRenderer.invoke('social:projects'),
+    setProjects: (list) => ipcRenderer.invoke('social:setProjects', list),
   },
   routerAsk: (text, localOnly) => ipcRenderer.invoke('router:ask', text, localOnly),
   newSession: (opts) => ipcRenderer.invoke('session:new', opts || {}),
@@ -523,6 +539,19 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('act:line', h)
     },
   },
+  accounts: {
+    status: () => ipcRenderer.invoke('accounts:status'),
+    connect: (net, fields) => unlocked('connect an account').then(() => ipcRenderer.invoke('accounts:connect', net, fields)),
+    disconnect: (net) => unlocked('disconnect an account').then(() => ipcRenderer.invoke('accounts:disconnect', net)),
+  },
+  post: {
+    send: (nets, text, title, texts) => ipcRenderer.invoke('post:send', nets, text, title, texts),
+    onOpen: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('post:open', l)
+      return () => ipcRenderer.removeListener('post:open', l)
+    },
+  },
   radar: {
     get: () => ipcRenderer.invoke('radar:get'),
     save: (groups, weights, ntfy) => ipcRenderer.invoke('radar:save', groups, weights, ntfy),
@@ -530,6 +559,19 @@ contextBridge.exposeInMainWorld('stm', {
     mark: () => ipcRenderer.invoke('radar:mark'),
     draft: (hits) => ipcRenderer.invoke('radar:draft', hits),
     notify: (text) => ipcRenderer.invoke('radar:notify', text),
+  },
+  mentions: {
+    get: () => ipcRenderer.invoke('mentions:get'),
+    save: (cfg) => ipcRenderer.invoke('mentions:save', cfg),
+    check: () => ipcRenderer.invoke('mentions:check'),
+    approve: (key, draft) => ipcRenderer.invoke('mentions:approve', key, draft),
+    skip: (key) => ipcRenderer.invoke('mentions:skip', key),
+    clear: () => ipcRenderer.invoke('mentions:clear'),
+    onChange: (fn) => {
+      const h = () => fn()
+      ipcRenderer.on('mentions:changed', h)
+      return () => ipcRenderer.removeListener('mentions:changed', h)
+    },
   },
   bitwarden: {
     status: () => ipcRenderer.invoke('bw:status'),

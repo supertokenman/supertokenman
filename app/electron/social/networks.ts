@@ -2,6 +2,10 @@
 // so tests run them against recorded answers and nothing here touches the disk or the vault.
 import type { Comment, Cred, Draft, Fetcher, Network, NetworkId, Post, Profile } from './core.js'
 import { qs } from './core.js'
+import { createHmac, randomBytes } from 'node:crypto'
+import { authHeader } from '../../shared/oauth1.js'
+import { LINKEDIN_VERSION } from '../../shared/posteverywhere.js'
+import { X_TWEETS, xTweet } from '../../shared/social.js'
 import type { OAuthSpec } from './oauth.js'
 import { bluesky, mastodon } from './open.js'
 
@@ -159,7 +163,6 @@ const youtube: Network = {
 
 /* ---------- LinkedIn (your own profile; Company Pages need LinkedIn's approval) ---------- */
 
-const LI_VERSION = '202410'
 const linkedin: Network = {
   id: 'linkedin',
   name: 'LinkedIn',
@@ -182,31 +185,44 @@ const linkedin: Network = {
       isReshareDisabledByAuthor: false,
       ...(d.link ? { content: { article: { source: d.link, title: d.title ?? d.link } } } : {}),
     }
-    await f('https://api.linkedin.com/rest/posts', { method: 'POST', headers: { ...bearer(c), 'Content-Type': 'application/json', 'LinkedIn-Version': LI_VERSION, 'X-Restli-Protocol-Version': '2.0.0' }, body: JSON.stringify(body) })
+    await f('https://api.linkedin.com/rest/posts', { method: 'POST', headers: { ...bearer(c), 'Content-Type': 'application/json', 'LinkedIn-Version': LINKEDIN_VERSION, 'X-Restli-Protocol-Version': '2.0.0' }, body: JSON.stringify(body) })
     return { id: 'posted', url: 'https://www.linkedin.com/in/me/recent-activity/all/' }
   },
 }
 
 /* ---------- X ---------- */
 
+/** X: OAuth 1.0a with the person's four keys when they pasted them, else the OAuth 2 token from signing in. */
+export function xAuth(c: Cred, method: string, url: string): string {
+  const k = c.keys
+  if (!k?.consumerKey) return `Bearer ${c.accessToken}`
+  const hmac = (key: string, t: string) => createHmac('sha1', key).update(t).digest('base64')
+  return authHeader(method, url, { consumerKey: k.consumerKey, consumerSecret: k.consumerSecret, token: k.token, tokenSecret: k.tokenSecret }, hmac, { nonce: randomBytes(16).toString('hex'), timestamp: Math.floor(Date.now() / 1000) })
+}
+const xGet = (c: Cred, f: Fetcher, url: string) => f(url, { headers: { Authorization: xAuth(c, 'GET', url) } })
+const xSend = async (c: Cred, f: Fetcher, text: string, inReplyTo?: string) => {
+  const r = xTweet(text, xAuth(c, 'POST', X_TWEETS), inReplyTo)
+  return (await f(r.url, r)) as { data: { id: string } }
+}
+
 const x: Network = {
   id: 'x',
   name: 'X',
   can: { read: true, comments: false, reply: true, publish: true, note: 'The free API tier allows posting and your profile; reading timelines and mentions needs a paid tier.' },
   async profile(c, f) {
-    const j = (await f('https://api.x.com/2/users/me?user.fields=public_metrics,profile_image_url', { headers: bearer(c) })) as { data: { id: string; name: string; username: string; profile_image_url?: string; public_metrics?: { followers_count: number; tweet_count: number } } }
+    const j = (await xGet(c, f, 'https://api.x.com/2/users/me?user.fields=public_metrics,profile_image_url')) as { data: { id: string; name: string; username: string; profile_image_url?: string; public_metrics?: { followers_count: number; tweet_count: number } } }
     return { id: j.data.id, name: j.data.name, handle: `@${j.data.username}`, avatar: j.data.profile_image_url, followers: j.data.public_metrics?.followers_count, posts: j.data.public_metrics?.tweet_count, url: `https://x.com/${j.data.username}` }
   },
   async posts(c, f) {
-    const me = (await f('https://api.x.com/2/users/me', { headers: bearer(c) })) as { data: { id: string; username: string } }
-    const j = (await f(`https://api.x.com/2/users/${me.data.id}/tweets?${qs({ max_results: 20, 'tweet.fields': 'created_at,public_metrics' })}`, { headers: bearer(c) })) as { data?: { id: string; text: string; created_at: string; public_metrics?: { like_count: number; reply_count: number; retweet_count: number; impression_count?: number } }[] }
+    const me = (await xGet(c, f, 'https://api.x.com/2/users/me')) as { data: { id: string; username: string } }
+    const j = (await xGet(c, f, `https://api.x.com/2/users/${me.data.id}/tweets?${qs({ max_results: 20, 'tweet.fields': 'created_at,public_metrics' })}`)) as { data?: { id: string; text: string; created_at: string; public_metrics?: { like_count: number; reply_count: number; retweet_count: number; impression_count?: number } }[] }
     return (j.data ?? []).map((t) => ({ id: t.id, text: t.text, at: t.created_at, url: `https://x.com/${me.data.username}/status/${t.id}`, likes: t.public_metrics?.like_count, comments: t.public_metrics?.reply_count, shares: t.public_metrics?.retweet_count, views: t.public_metrics?.impression_count }))
   },
   async reply(c, f, commentId, text) {
-    await f('https://api.x.com/2/tweets', { method: 'POST', headers: { ...bearer(c), 'Content-Type': 'application/json' }, body: JSON.stringify({ text, reply: { in_reply_to_tweet_id: commentId } }) })
+    await xSend(c, f, text, commentId)
   },
   async publish(c, f, d) {
-    const j = (await f('https://api.x.com/2/tweets', { method: 'POST', headers: { ...bearer(c), 'Content-Type': 'application/json' }, body: JSON.stringify({ text: d.link ? `${d.text} ${d.link}` : d.text }) })) as { data: { id: string } }
+    const j = await xSend(c, f, d.link ? `${d.text} ${d.link}` : d.text)
     return { id: j.data.id, url: `https://x.com/i/web/status/${j.data.id}` }
   },
 }
