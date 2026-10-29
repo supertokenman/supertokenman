@@ -1158,7 +1158,7 @@ function syncWebhook() {
         end(202)
       })
     })
-    hookServer.on('error', () => (hookServer = null))
+    hookServer.on('error', (e) => (logs().error('webhook', `127.0.0.1:${WH.PORT}: ${(e as Error).message}`), (hookServer = null)))
     hookServer.listen(WH.PORT, '127.0.0.1')
   } else if (!on && hookServer) {
     hookServer.close()

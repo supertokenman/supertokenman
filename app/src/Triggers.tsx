@@ -6,6 +6,7 @@ import { DAYS, describe, EVERY, nextRun, type Trigger, type When } from '../shar
 import { clean } from './errors'
 import type { Run } from '../shared/runs'
 import { Checkbox, Select, TimeField } from './ui'
+import { PORT } from '../shared/webhook'
 
 const ago = (t?: number) => {
   if (!t) return 'Never ran'
@@ -216,7 +217,8 @@ function Hook(props: { id: string }) {
   const [h, setH] = useState<{ curl: string; listening: boolean } | null | undefined>(undefined)
   useEffect(() => void window.stm.triggers.webhook(props.id).then(setH, () => setH(null)), [props.id])
   if (h === undefined) return null
-  if (!h || !h.listening) return <span className="faint">Save to get the curl line.</span>
+  if (!h) return <span className="faint">Save to get the curl line.</span>
+  if (!h.listening) return <span className="faint">Port {PORT} on this Mac is taken by another app, so the webhook is off. Free it and save again.</span>
   return (
     <div className="trig-hook">
       <code>{h.curl}</code>
