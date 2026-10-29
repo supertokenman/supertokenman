@@ -40,3 +40,21 @@ describe('post slots', () => {
     expect(new Date(out[0].when!).getDay()).toBe(1)
   })
 })
+
+describe('post slots by account', () => {
+  const slots: NetSlots = { x: [{ day: 1, time: '09:00' }], 'x:ana': [{ day: 2, time: '10:00' }] }
+  it('uses the account slots first, then the network', () => {
+    expect(nextSlotFor(slots, 'x', [], now, 'x:ana')).toBe(t(27, 10))
+    expect(nextSlotFor(slots, 'x', [], now, 'x:bob')).toBe(t(26, 9))
+    expect(nextSlotFor(slots, 'x', [], now)).toBe(t(26, 9))
+  })
+  it('two accounts of one network do not block each other', () => {
+    const q: SlotItem[] = [{ id: 'a', network: 'x', account: 'x:ana', when: t(27, 10) }]
+    expect(nextSlotFor(slots, 'x', q, now, 'x:ana')).toBe(t(3, 10, 0, 10))
+    expect(nextSlotFor({ ...slots, 'x:bob': slots['x:ana'] }, 'x', q, now, 'x:bob')).toBe(t(27, 10))
+  })
+  it('replan places an account on its own slots', () => {
+    const q: SlotItem[] = [{ id: 'a', network: 'x', account: 'x:ana', when: t(26, 9) }, { id: 'b', network: 'x', when: t(26, 12) }]
+    expect(replan(slots, q, now).map((i) => i.when)).toEqual([t(27, 10), t(26, 9)])
+  })
+})
