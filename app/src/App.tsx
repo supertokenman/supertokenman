@@ -62,6 +62,7 @@ import type { Persona } from '../shared/personas'
 // sheets that open only on a click load then, not at start
 // the canvas loads when it is first picked, so the first screen stays inside its size budget
 const Canvas = lazy(() => import('./Canvas').then((x) => ({ default: x.Canvas })))
+const NewFromTemplate = lazy(() => import('./NewFromTemplate').then((x) => ({ default: x.NewFromTemplate })))
 const OfficeFiles = lazy(() => import('./OfficeFiles').then((x) => ({ default: x.OfficeFiles })))
 const MdImages = lazy(() => import('./MdImages').then((x) => ({ default: x.MdImages })))
 const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ default: x.DesignHandoff })))
@@ -433,6 +434,7 @@ export function App() {
   const [remoteOpen, setRemoteOpen] = useState(false)
   const [dsOpen, setDsOpen] = useState(false)
   const [officeOpen, setOfficeOpen] = useState(false)
+  const [tplOpen, setTplOpen] = useState(false)
   const [mdImgOpen, setMdImgOpen] = useState(false)
   const [handoffOpen, setHandoffOpen] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
@@ -1037,6 +1039,7 @@ export function App() {
   menuRef.current = (id: string) => {
     if (id === 'menu:palette') return setPalette(true)
     if (id === 'menu:new-panel') return void open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+    if (id === 'menu:new-from-template') return setTplOpen(true)
     if (id === 'menu:open-folder') return void pickProjectFolder().then((dir) => dir && void open(dir))
     if (id === 'menu:export') return void (p.focus && window.dispatchEvent(new CustomEvent('stm:export', { detail: { sid: p.focus } })))
     const e = paletteEntries().find((x) => x.id === id)
@@ -1622,6 +1625,7 @@ export function App() {
       <Presence show={boardOpen}><VaultBoard onClose={() => setBoardOpen(false)} /></Presence>
       <Presence show={handoffOpen}><DesignHandoff cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setHandoffOpen(false)} /></Presence>
       <Presence show={mdImgOpen}><MdImages onClose={() => setMdImgOpen(false)} /></Presence>
+      <Presence show={tplOpen}><NewFromTemplate onClose={() => setTplOpen(false)} onOpen={(dir, persona) => (setTplOpen(false), void open(dir, undefined, persona))} /></Presence>
       <Presence show={officeOpen}><OfficeFiles onClose={() => setOfficeOpen(false)} /></Presence>
       <Presence show={remoteOpen}><RemotePanelSheet onClose={() => setRemoteOpen(false)} onOpen={async (r) => void (await open(undefined, undefined, undefined, false, { remote: r }))} /></Presence>
       <Presence show={issuesOpen}>

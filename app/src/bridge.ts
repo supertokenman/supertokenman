@@ -667,6 +667,7 @@ export type Bridge = {
   addMcp: (c: { id: string; name: string; remote?: string; npm?: string }) => Promise<void>
   closeSession: (sid: string) => Promise<void>
   pickFolder: () => Promise<string | null>
+  template: { plan: (id: string, dir: string) => Promise<{ path: string; exists: boolean }[]>; apply: (id: string, dir: string, replace: string[]) => Promise<{ text: string; persona: string }> }
   /** git repositories under the home folder, for the in-app folder picker */
   findRepos: () => Promise<{ home: string; repos: string[] }>
   setPrivate: (on: boolean) => Promise<boolean>

@@ -13,7 +13,7 @@ export function menuTemplate(go: (id: string) => void, opts: { mac: boolean; dev
     ...(opts.mac
       ? [{ label: opts.name, submenu: [{ role: 'about' }, { type: 'separator' }, item('Settings...', 'go-config', 'CmdOrCtrl+,'), item('Modules...', 'go-modules'), { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit' }] } as MenuItemConstructorOptions]
       : []),
-    { label: 'File', submenu: [item('New panel', 'menu:new-panel', 'CmdOrCtrl+T'), item('Open a folder...', 'menu:open-folder', 'CmdOrCtrl+O'), { type: 'separator' }, item('Export session...', 'menu:export'), { type: 'separator' }, opts.mac ? { role: 'close' } : { role: 'quit' }] },
+    { label: 'File', submenu: [item('New panel', 'menu:new-panel', 'CmdOrCtrl+T'), item('Open a folder...', 'menu:open-folder', 'CmdOrCtrl+O'), item('New project from template...', 'menu:new-from-template'), { type: 'separator' }, item('Export session...', 'menu:export'), { type: 'separator' }, opts.mac ? { role: 'close' } : { role: 'quit' }] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'pasteAndMatchStyle' }, { role: 'selectAll' }] },
     {
       label: 'View',

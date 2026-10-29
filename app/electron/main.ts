@@ -222,6 +222,7 @@ import * as ME from '../shared/modeleval.js'
 import * as RL from '../shared/reviewloop.js'
 import * as RN from '../shared/reviewnotes.js'
 import * as PF from '../shared/projectfiles.js'
+import * as PT from '../shared/projecttemplates.js'
 import { outside as outsideScope, type Scope } from '../shared/triggerscope.js'
 // what each trigger's panel may touch, set when its run begins
 const scopeOf = new Map<string, Scope>()
@@ -1068,6 +1069,28 @@ function savePersona(p: Partial<Persona>, note?: string) {
   return personas()
 }
 ipcMain.handle('personas:save', (_e, p: Partial<Persona>) => savePersona(p))
+// New project from a template: plan lists the files and which are already there; apply writes the new
+// ones and only the existing ones picked to replace, then adds the template's persona if the app lacks it.
+function templatePlan(id: unknown, dir: unknown) {
+  const t = PT.projectTemplateById(String(id))
+  if (!t || typeof dir !== 'string' || !dir) throw new Error('Pick a template and a folder.')
+  return PT.templateFiles(t).map((f) => ({ path: f.path, exists: existsSync(join(dir, f.path)) }))
+}
+function templateApply(id: unknown, dir: unknown, replace: unknown) {
+  const t = PT.projectTemplateById(String(id))
+  if (!t || typeof dir !== 'string' || !dir) throw new Error('Pick a template and a folder.')
+  mkdirSync(dir, { recursive: true })
+  const r = PT.planFiles(PT.templateFiles(t), (p) => existsSync(join(dir, p)), Array.isArray(replace) ? replace.map(String) : [])
+  for (const f of r.write) {
+    mkdirSync(dirname(join(dir, f.path)), { recursive: true })
+    writeFileSync(join(dir, f.path), f.text)
+  }
+  const p = PT.templatePersona(t)
+  if (!personas().some((x) => x.id === p.id)) savePersona(p, `from the ${t.name} template`)
+  return { text: PT.planSummary(r), persona: p.id }
+}
+ipcMain.handle('template:plan', (_e, id: unknown, dir: unknown) => templatePlan(id, dir))
+ipcMain.handle('template:apply', (_e, id: unknown, dir: unknown, replace: unknown) => templateApply(id, dir, replace))
 ipcMain.handle('personas:history', (_e, id: string) => settings().personaHistory?.[String(id)] ?? [])
 ipcMain.handle('personas:restore', (_e, id: string, at: number) => {
   const p = personas().find((x) => x.id === id)
@@ -5879,6 +5902,8 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
   },
   // `stm files`: personas and triggers as files in the project. Export writes the ones this project uses
   // (its triggers and the personas they name, or all with --all); import shows the plan, applies with yes.
+  // `stm new --template <id> [dir]`: existing files are kept unless --replace names them
+  templateNew: (a) => templateApply(a.template, String(a.dir ?? ''), String(a.replace ?? '').split(',').filter(Boolean)),
   filesExport: (a) => {
     const cwd = String(a.cwd ?? '')
     if (!cwd || !existsSync(cwd)) throw new Error('Run it from a project folder, or pass --cwd DIR.')
