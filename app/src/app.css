@@ -2428,8 +2428,10 @@ button { white-space: nowrap; }
 .offline-badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; font: 600 11.5px var(--mono); color: var(--red); border: 1px solid rgba(var(--red-rgb), 0.45); }
 
 /* the workspace from last time, offered back at launch */
-.resume-bar { display: flex; align-items: center; gap: 10px; margin: 8px max(16px, env(safe-area-inset-left, 0px)); padding: 8px 10px 8px 12px; background: var(--surface); border: 1px solid rgba(var(--accent-rgb), 0.5); font-size: 12.5px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); animation: cut-in 260ms var(--cut, ease) both; }
-.resume-bar > span:not(.sm-mark) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-pill { position: fixed; z-index: 45; bottom: 112px; left: 50%; translate: -50% 0; max-width: min(560px, calc(100vw - 32px)); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 4px 4px 4px 12px; background: var(--surface); border: 1px solid var(--border-strong); font-size: 12.5px; box-shadow: 0 6px 18px rgba(0,0,0,.12); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); animation: cut-in 220ms var(--cut, ease) both; }
+.resume-pill .rp-text { flex: 1 1 auto; min-width: 0; margin-right: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume-pill .rp-close svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.resume-pill .rp-list { flex: 1 0 100%; padding: 2px 8px 6px 0; color: var(--muted); font: 11.5px var(--mono); overflow-wrap: anywhere; }
 
 /* a persona's access: what it may do without asking */
 .pe-access { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -2512,7 +2514,6 @@ button { white-space: nowrap; }
 .sv-opt b { font-size: 12.5px; }
 .sv-warn { color: var(--warn, #d9a33f); }
 /* the last-time strip sits between the top bar and the panels, pushing them down instead of covering them */
-.shell:has(> .resume-bar) { grid-template-rows: 48px auto 1fr; }
 .bg-field input { height: 30px; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); padding: 0 10px; font: 12.5px var(--mono); outline: none; }
 .bg-field input:focus-visible { border-color: rgba(var(--accent-rgb), 0.7); }
 
@@ -4454,6 +4455,17 @@ table.tbl tbody tr:last-child > td { border-bottom: 0; }
 .usage-cap-title { flex-basis: 100%; font-size: 12px; color: var(--muted); }
 .usage-cap input { flex: 1; min-width: 0; }
 
+/* the panel header's More button and its tray: the less used controls, one column, full labels */
+.panel-bar > .more-btn { flex: none; overflow: visible; }
+.panel-bar > .more-btn svg { width: 14px; height: 14px; fill: currentColor; }
+.panel-bar > .more-btn[aria-expanded="true"] { color: var(--text); --btn-bg: var(--hover); }
+.panel-bar:not(:has(.remember)) > .more-btn { margin-left: auto; }
+.panel-bar:not(:has(.remember)) > .more-btn + .segmented { margin-left: 0; }
+.more-tray { position: fixed; z-index: 55; min-width: 200px; max-width: 320px; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: 0 12px 30px rgba(0,0,0,.2); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); }
+.more-tray[hidden] { display: none; }
+.more-tray > *, .more-tray > * > button, .more-tray button.small { width: 100%; justify-content: flex-start; text-align: left; white-space: nowrap; }
+.more-tray > :is(span, div) { display: flex; }
+.more-tray .meter-chip { padding: 4px 8px; }
 /* the empty window: a dot drawing of panels, a heading, the person's folders */
 .empty-start { padding: 24px 16px; overflow: auto; }
 .es-inner { display: grid; gap: 20px; justify-items: center; width: min(560px, 100%); }
