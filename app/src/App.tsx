@@ -71,6 +71,8 @@ const PdfTools = lazy(() => import('./PdfTools').then((x) => ({ default: x.PdfTo
 const AppContainers = lazy(() => import('./AppContainers').then((x) => ({ default: x.AppContainers })))
 const PostEverywhere = lazy(() => import('./PostEverywhere').then((x) => ({ default: x.PostEverywhere })))
 const TopicRadar = lazy(() => import('./TopicRadar').then((x) => ({ default: x.TopicRadar })))
+import type { UiItem } from './UiConfirm'
+const UiConfirm = lazy(() => import('./UiConfirm').then((x) => ({ default: x.UiConfirm })))
 const TeamImport = lazy(() => import('./TeamImport').then((x) => ({ default: x.TeamImport })))
 const AwayCard = lazy(() => import('./AwayCard').then((x) => ({ default: x.AwayCard })))
 const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
@@ -999,6 +1001,23 @@ export function App() {
       // storage off: the layout lasts this session
     }
   }
+  // a panel's Claude drives the window (ui_* tools): layout and arrange apply at once; opening panels waits for Allow
+  const [uiAsks, setUiAsks] = useState<{ req: string; from: string; items: UiItem[] }[]>([])
+  const [canvasCmd, setCanvasCmd] = useState<{ n: number; mode: string } | null>(null)
+  const layoutRef = useRef(layout)
+  layoutRef.current = layout
+  useEffect(() => {
+    const offCmd = window.stm.uiTools.onCmd((r) => {
+      if (r.op === 'layout' && r.arg) setLayout(r.arg as Layout)
+      if (r.op === 'arrange' && r.arg) {
+        setLayout('canvas')
+        setCanvasCmd((c) => ({ n: (c?.n ?? 0) + 1, mode: r.arg! }))
+      }
+      void window.stm.uiTools.reply(r.req, { layout: r.op === 'layout' && r.arg ? r.arg : r.op === 'arrange' ? 'canvas' : layoutRef.current })
+    })
+    const offAsk = window.stm.uiTools.onConfirm((r) => setUiAsks((q) => [...q, r]))
+    return () => (offCmd(), offAsk())
+  }, [])
   const screenSize = useScreen()
   const { cols, rows } = arrange(p.order.length, layout, portrait, screenSize)
 
@@ -1668,6 +1687,18 @@ export function App() {
       <Presence show={ckOpen}><DiagCheck sid={p.focus ?? undefined} onClose={() => setCkOpen(false)} /></Presence>
       <Presence show={stkOpen}><ComposeStacks onClose={() => setStkOpen(false)} /></Presence>
       <Presence show={xrOpen}><ImageXray sid={p.focus ?? undefined} onClose={() => setXrOpen(false)} /></Presence>
+      <Presence show={uiAsks.length > 0}>
+      {uiAsks[0] && (
+        <UiConfirm
+          from={uiAsks[0].from}
+          items={uiAsks[0].items}
+          onAnswer={(allow) => {
+            void window.stm.uiTools.reply(uiAsks[0]!.req, allow)
+            setUiAsks((q) => q.slice(1))
+          }}
+        />
+      )}
+      </Presence>
       <Presence show={teamIn !== null}>
         {teamIn && (
           <TeamImport
@@ -1868,7 +1899,7 @@ export function App() {
       <div className="body">
       {layout === 'canvas' ? (
         <Suspense fallback={null}>
-          <Canvas order={p.order} panel={panelEl} />
+          <Canvas order={p.order} panel={panelEl} cmd={canvasCmd} />
         </Suspense>
       ) : (
       <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>

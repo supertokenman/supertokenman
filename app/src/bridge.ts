@@ -1024,6 +1024,7 @@ export type Bridge = {
     say: () => Promise<void>
     touch: () => void
   }
+  uiTools: { onCmd: (fn: (r: { req: string; op: 'layout' | 'arrange' | 'state'; arg?: string }) => void) => () => void; onConfirm: (fn: (r: { req: string; from: string; items: { folder: string; title?: string; persona?: string; model?: string }[] }) => void) => () => void; reply: (req: string, value?: boolean | { layout: string }) => Promise<void> }
   stmCli: { onOpen: (fn: (r: { req: string; cwd?: string; persona?: string; model?: string }) => void) => () => void; opened: (req: string, sid: string) => void; install: () => Promise<{ file: string; onPath: boolean; hint: string }> }
   vec: { status: (cwd: string) => Promise<{ model: string | null; models: string[]; size: number; total: number; project: string }>; model: (m: string | null) => Promise<string | null>; build: (cwd: string) => Promise<{ total: number; done: number }> }
   memtest: (cwd: string, question: string, where: 'local' | 'claude') => Promise<{ without: string; withMem: string; backedWithout: number; backedWith: number; agree: number }>

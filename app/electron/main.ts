@@ -58,6 +58,7 @@ import { dayKey, ledger, priceOf, SOURCES, summarize } from './ledger.js'
 import { HEADROOM_PORT, HEADROOM_URL, headroomBin, headroomDir, headroomHealthy, headroomStats, setHeadroomDir, startHeadroom, stopHeadroom } from './headroom.js'
 import { setEndpointResolver, askLocal, chatLocal, emptyStats, OLLAMA, loadedModels, localModels, OLLAMA_PATHS, ollamaVersion, pullModel, smallTasks, SUGGESTED, type ChatMsg, type SmallStats } from './small.js'
 import { rereads } from './reread.js'
+import { UI_TOOLS, uiTools, type UiDeps } from './uitools.js'
 import { APP_GUIDE, MANUAL_TOOL, manualServer, MEMORY_TOOLS, memoryServer } from './guide.js'
 import { briefFor, decisionsOf, saveStopped, STOPPED_PROMPT, transcriptOf } from './brief.js'
 import { draftConstitution, parseTasks } from '../shared/spec.js'
@@ -2039,7 +2040,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     effort: (['low', 'medium', 'high', 'xhigh', 'max'] as const).find((e) => e === opts.effort),
     query: boxed ? (args) => query({ ...args, options: { ...args.options, spawnClaudeCodeProcess: spawnInSandbox(boxed, cwd) } }) : query,
     persona: persona ? personaPrompt(persona) : undefined,
-    mcpServers: inProcess({ ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
+    mcpServers: inProcess({ ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(uiDeps(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
     // Claude's Bash sees only the credentials marked for commands
     // through Headroom's compressing proxy when it is on and answering; straight to Anthropic otherwise
     env: { ...claudeTraffic(process.env), ...vault.commandEnv(), STM_PANEL: sid, ...(boxed || remote ? {} : panelEnv(sid)), ...(settings().headroom && headroomLive ? { ANTHROPIC_BASE_URL: HEADROOM_URL } : {}) },
@@ -2048,7 +2049,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     // tools a panel here does not need stay out of every turn, unless the person wants them all
     // a read-only persona has no editing tools at all; one that edits freely is not asked before an edit
     disallowedTools: [...(settings().fullTools ? [] : LEAN_OFF), ...(persona?.access === 'read' ? ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'] : []), ...blockedFor(persona)],
-    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, MANUAL_TOOL, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
+    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, MANUAL_TOOL, ...UI_TOOLS, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
     resume: opts.resume,
     ...(remote ? { spawn: remoteSpawn(remote.host, remote.dir) } : {}),
     resumeAt: opts.resume ? opts.resumeAt : undefined,
@@ -6582,6 +6583,66 @@ function answerAsks(sid: string, askId: string | undefined, reply: string, isErr
     if (sessions.has(a.from)) send(a.from, { kind: 'note', tone: 'error', text: `The answer from ${panelName(sid)} could not be delivered: ${(e as Error).message}` })
   }
 }
+
+// ui tools (stm MCP server): a panel's Claude drives the window. The window answers each request by id.
+const uiWaits = new Map<string, (v: unknown) => void>()
+let uiSeq = 0
+const uiTitles = new Map<string, string>()
+ipcMain.handle('ui:reply', (_e, req: string, value: unknown) => {
+  uiWaits.get(String(req))?.(value)
+  uiWaits.delete(String(req))
+})
+function uiAsk<T>(channel: 'ui:cmd' | 'ui:confirm', payload: Record<string, unknown>, ms: number, onTimeout?: T): Promise<T> {
+  return new Promise<T>((ok, fail) => {
+    if (!win || win.isDestroyed()) return fail(new Error('The app window is closed.'))
+    const req = `u${Date.now().toString(36)}${++uiSeq}`
+    const t = setTimeout(() => (uiWaits.delete(req), onTimeout !== undefined ? ok(onTimeout) : fail(new Error('The window did not answer.'))), ms)
+    uiWaits.set(req, (v) => (clearTimeout(t), ok(v as T)))
+    win.webContents.send(channel, { req, ...payload })
+  })
+}
+function uiDeps(me: string): UiDeps {
+  const folderOf = (raw: string) => {
+    const r = raw.startsWith('~') ? join(homedir(), raw.slice(1)) : raw
+    const dir = resolve(panelDir(me) || homedir(), r)
+    if (!existsSync(dir)) throw new Error(`No folder ${dir}.`)
+    if (!statSync(dir).isDirectory()) throw new Error(`${dir} is not a folder.`)
+    return dir
+  }
+  return {
+    me,
+    panels: () => [...sessions.keys()].map((id) => ({ id, folder: panelDir(id), name: uiTitles.get(id) ?? panelName(id), persona: personaOf.get(id) ?? null })),
+    links: () => links().filter((l) => sessions.has(l.a) && sessions.has(l.b)).map((l) => ({ a: l.a, b: l.b, auto: l.auto === true })),
+    link: (a, b, auto) => {
+      const added = PB.addLink(links(), a, b)
+      saveLinks(added.map((x) => (PB.linkKey(x.a, x.b) === PB.linkKey(a, b) ? { ...x, auto } : x)))
+    },
+    cmd: (op, arg) => uiAsk<{ layout: import('../shared/uitools.js').UiLayout }>('ui:cmd', { op, arg }, 10_000),
+    folder: folderOf,
+    known: (p) => {
+      if (p.model && !PB.isModel(p.model)) throw new Error(`Unknown model "${p.model}". Known: ${PB.modelIds().join(', ')}`)
+      if (p.persona && !personas().some((x) => x.id === p.persona || x.name.toLowerCase() === p.persona!.toLowerCase())) throw new Error(`Unknown persona "${p.persona}".`)
+    },
+    spawnLeft: () => spawnLimit.left(me),
+    confirm: (items) => uiAsk<boolean>('ui:confirm', { items, from: panelName(me) }, 120_000, false).then((v) => v === true),
+    open: async (p) => {
+      spawnLimit.take(me)
+      const persona = p.persona ? personas().find((x) => x.id === p.persona || x.name.toLowerCase() === p.persona!.toLowerCase())?.id : undefined
+      const req = `p${Date.now().toString(36)}${++uiSeq}`
+      const sid = await new Promise<string>((ok, fail) => {
+        cliOpens.set(req, ok)
+        if (!win || win.isDestroyed()) return fail(new Error('The app window is closed.'))
+        win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona })
+        setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
+      })
+      if (p.title) uiTitles.set(sid, p.title)
+      return sid
+    },
+    log: (m) => logs().info('stm:ui', `${me} ${m}`),
+  }
+}
+// end-to-end tests only: the ui tools of a panel, called as its Claude would
+if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmUiTools = (sid: string) => uiTools(uiDeps(sid))
 const room = { members: [] as RM.Member[], ask: '', spoken: [] as string[] }
 // the room, only from the window: the person names who answers, and asks for each further turn
 ipcMain.handle('room:post', (_e, sids: string[], text: string) => {

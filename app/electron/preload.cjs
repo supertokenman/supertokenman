@@ -950,6 +950,19 @@ contextBridge.exposeInMainWorld('stm', {
     say: () => ipcRenderer.invoke('away:say'),
     touch: () => ipcRenderer.send('away:touch'),
   },
+  uiTools: {
+    onCmd: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('ui:cmd', l)
+      return () => ipcRenderer.removeListener('ui:cmd', l)
+    },
+    onConfirm: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('ui:confirm', l)
+      return () => ipcRenderer.removeListener('ui:confirm', l)
+    },
+    reply: (req, value) => ipcRenderer.invoke('ui:reply', req, value),
+  },
   stmCli: {
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)
