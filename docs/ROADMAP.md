@@ -199,6 +199,8 @@ panel" (in progress):
 9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the
    project, versioned with git. (AgentUse, ADK, PraisonAI) Done for personas and triggers: stm files
    export / import (plan first, --yes applies, imported triggers arrive off). Saved teams: not yet.
+   Done (2026-10-28): new project from a template (File menu, stm new --template): persona, skills and
+   CLAUDE.md in one step; files already there are kept unless picked to replace. app/shared/projecttemplates.ts.
 10. Recommended MCP servers: a short opt-in list, local only, starting with a profiler that reports
     evidence. Off by default; each host in docs/NETWORK.md. (Flameox)
 
@@ -229,8 +231,6 @@ Left out: a server with Postgres (Rakazo), against local-first; API keys kept in
 (OpenMausBot), where our vault already does better.
 
 ## Later
-
-- New project from a template: persona, skills and CLAUDE.md set up in one step.
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
   after there are users.

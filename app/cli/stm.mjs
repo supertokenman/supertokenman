@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { connect } from 'node:net'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { PANEL_HELP, panelRequest, panelText } from './panelcmd.mjs'
 
 const HELP = `stm, SuperTokenMan from the command line (the app must be running)
@@ -16,6 +16,8 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
                                      run .supertokenman/evals.txt on models and efforts; shows the plan, runs with --yes
   stm files export [--all]           write this project's triggers and their personas to .supertokenman/ (for git)
   stm files import [--yes]           show what the files there would change; --yes applies (triggers arrive off)
+  stm new --template <id> [dir] [--replace CLAUDE.md,...]
+                                     start a project from a template (web-app, cli-tool, data-analysis, docs-site); keeps files already there
   stm loop <build> <review> [--rounds 3] [--max-usd 2]
                                      review loop: each build reply goes to review and back until APPROVED or a limit
   stm loop stop <panel>              end the review loop that panel is in
@@ -212,7 +214,10 @@ try {
       print(await call('loopStart', { build: rest[0], review: rest[1], rounds: flags.rounds, maxUsd: flags['max-usd'] }), (d) => d.text)
     }
   } else if (cmd === 'learn') print(await call('learn', { cwd: flags.cwd || process.cwd(), min: flags.min, pick: flags.pick }), (d) => d.text)
-  else if (cmd === 'files') {
+  else if (cmd === 'new') {
+    if (!flags.template) die('Usage: stm new --template <web-app|cli-tool|data-analysis|docs-site> [dir]')
+    print(await call('templateNew', { template: flags.template, dir: resolve(rest[0] ?? '.'), replace: flags.replace }), (d) => d.text)
+  } else if (cmd === 'files') {
     const op = rest[0]
     if (op !== 'export' && op !== 'import') die('Usage: stm files export [--all]   or   stm files import [--yes]')
     print(await call(op === 'export' ? 'filesExport' : 'filesImport', { cwd: flags.cwd || process.cwd(), all: Boolean(flags.all), yes: Boolean(flags.yes) }), (d) => d.text)
