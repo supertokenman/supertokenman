@@ -4443,3 +4443,8 @@ table.tbl tbody tr:last-child > td { border-bottom: 0; }
 .cv-room textarea { width: 100%; resize: vertical; }
 .cv-room-who, .cv-room-row span { font-size: 12px; opacity: 0.8; }
 .cv-room-row { display: flex; align-items: center; gap: 6px; }
+
+/* Usage chip: the cap editor floats under the chip instead of widening the panel header */
+.usage-cap { position: fixed; z-index: 60; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 288px; padding: 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: 0 18px 48px rgba(0, 0, 0, 0.3); }
+.usage-cap-title { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+.usage-cap input { flex: 1; min-width: 0; }

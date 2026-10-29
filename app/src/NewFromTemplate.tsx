@@ -15,6 +15,11 @@ export function NewFromTemplate(props: { onClose: () => void; onOpen: (dir: stri
     setReplace([])
     if (dir) void window.stm.template.plan(id, dir).then(setFiles, (e: Error) => setMsg(e.message))
   }, [id, dir])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && props.onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [props.onClose])
   const t = PROJECT_TEMPLATES.find((x) => x.id === id)!
   const create = async () => {
     if (!dir) return
@@ -28,7 +33,7 @@ export function NewFromTemplate(props: { onClose: () => void; onOpen: (dir: stri
   }
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <div className="sheet config" role="dialog" aria-label="New project from template">
+      <div className="sheet ports" role="dialog" aria-label="New project from template">
         <header className="sheet-head">
           <div className="sheet-title">New project from template</div>
           <span className="spacer-flex" />
