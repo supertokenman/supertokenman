@@ -16,6 +16,7 @@ import { RemoteChip } from './RemoteChip'
 import { WorktreeChip } from './Worktree'
 import { LinksChip } from './PanelLinks'
 import { heldText } from '../shared/budget'
+import { UsageChip } from './UsageChip'
 import { ACCESS } from '../shared/personas'
 import { askOnce, SHRINK } from './localStream'
 import { coach } from './coach'
@@ -623,6 +624,7 @@ export function Panel(props: {
           </button>
         )}
         {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
+        <UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} />
         <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
         <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
         {!s.sandbox && <IsolateChip sid={sid} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />}

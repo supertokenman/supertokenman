@@ -674,6 +674,8 @@ export type Bridge = {
   stopShell: (sid: string, id: string) => Promise<void>
   send: (sid: string, text: string, attachments?: import('../shared/attach').Attachment[], why?: string) => Promise<void | { held: true }>
   release: (sid: string) => Promise<void>
+  panelUsage: (sid: string) => Promise<{ usage: import('../shared/panelusage').Usage; cap: import('../shared/panelusage').Cap }>
+  panelCap: (sid: string, cap: import('../shared/panelusage').Cap) => Promise<import('../shared/panelusage').Cap>
   countTokens: (text: string, model?: string) => Promise<{ tokens: number; exact: boolean }>
   worktree: {
     stat: (sid: string) => Promise<{ files: number; added: number; removed: number; list: { path: string; added: number; removed: number }[] } | null>

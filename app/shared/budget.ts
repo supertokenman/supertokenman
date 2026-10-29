@@ -71,7 +71,9 @@ export function checkBudget(limits: Limits, spend: Spend, day: string, w: Where)
 }
 
 /** The words for a held message, in whatever currency the window shows. */
-export function heldText(h: { scope: 'panel' | 'project' | 'persona' | 'turn' | 'task'; spent: number; limit: number; estimate: number }, money: (usd: number) => string) {
+export function heldText(h: { scope: 'panel' | 'project' | 'persona' | 'turn' | 'task'; spent: number; limit: number; estimate: number; reason?: string }, money: (usd: number) => string) {
+  // a panel's own cap: its reason already says what the CLI reported
+  if (h.scope === 'panel' && !h.limit && h.reason) return h.reason
   if (h.scope === 'turn') return `The next turn is likely about ${money(h.estimate)}, more than the ${money(h.limit)} that asks first.`
   const what = h.scope === 'task' ? 'this task' : h.scope === 'panel' ? 'this panel' : h.scope === 'project' ? 'this project today' : 'this persona today'
   return `The budget for ${what} is ${money(h.limit)}; ${money(h.spent)} is spent and the next turn is likely about ${money(h.estimate)}.`
