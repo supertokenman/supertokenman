@@ -59,6 +59,11 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | Mastodon: the instance you name | Post everywhere: one post (or the rewritten version for this network). Scheduled posts and your own recent posts for Best time, Hit share and Evergreen, as for Bluesky. Mentions: your mention notifications, the post a mention replies to, a reply | connecting Mastodon in Accounts; then as for Bluesky |
 | api.x.com | Post everywhere and scheduled posts: `/2/tweets`. Your own recent posts for Best time, Hit share and Evergreen, only when you click. Mentions: `/2/users/:id/mentions`, and `/2/tweets` for a reply. Your own keys | connecting X in Accounts; then as for Bluesky (reading mentions needs a paid tier on X) |
 | api.linkedin.com | Post everywhere and scheduled posts: `/v2/userinfo`, `/rest/posts` | connecting LinkedIn; only when you press Post and confirm, or when an approved scheduled post is due while the app is open |
+| www.linkedin.com | OAuth sign-in when you connect LinkedIn (`/oauth/v2/authorization`, `/oauth/v2/accessToken`); links to your profile are only opened when you click them | connecting LinkedIn in Accounts |
+| graph.facebook.com | Facebook Page and Instagram: post, scheduled posts, your own recent posts for Best time, Hit share and Evergreen. Your own app keys | connecting Facebook or Instagram in Accounts; then only when you press Post and confirm, or an approved scheduled post is due while the app is open |
+| graph.threads.net | Threads: post, scheduled posts, your own recent posts, as for graph.facebook.com | connecting Threads in Accounts; then as for graph.facebook.com |
+| open.tiktokapis.com | TikTok: OAuth token, upload of a post you approved, your own recent posts | connecting TikTok in Accounts; then as for graph.facebook.com |
+| oauth2.googleapis.com | YouTube: OAuth token when you connect and when it refreshes | connecting YouTube in Accounts |
 | api.telegram.org, discord.com (your webhook), dev.to | Post everywhere: one message, webhook post or article | connecting each in Accounts; only when you press Post and confirm; `stm post` only opens the sheet |
 | Sites added as drawer apps | the site's own address and the extra hosts you list; its icon once, from the same site, when you add it | adding the site, then opening it |
 
