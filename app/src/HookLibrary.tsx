@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { Project } from '../shared/socaccounts'
+import { clean } from './errors'
 import { BUILTIN_FORMATS, MAX_SLOT, SLOT, detectFormat, fill, validateHook, type FormatId, type HookFormat } from '../shared/hookfmt'
 import { Select } from './ui'
 
 // Hook library: the four built-in caption formats, the user's own formats (localStorage only), a fill box
-// and a detector. Nothing here calls Claude or any IPC; all checks are the pure functions in shared/hookfmt.
+// and a detector. Claude is asked only when the person clicks "Write hooks"; all checks are the pure functions in shared/hookfmt.
 
 const KEY = 'stm.social.hooks'
 const MAX_LABEL = 40
@@ -57,6 +59,13 @@ export default function HookLibrary() {
   const [caption, setCaption] = useState('')
   const [draftLabel, setDraftLabel] = useState('')
   const [draftTemplate, setDraftTemplate] = useState('')
+  const [projects, setProjects] = useState<Project[]>([])
+  const [project, setProject] = useState('')
+  const [topic, setTopic] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [made, setMade] = useState<{ hooks: string[]; rejected: number } | null>(null)
+  const [err, setErr] = useState('')
+  useEffect(() => void window.stm.social.projects().then((r) => setProjects(r.list), () => undefined), [])
 
   const options: HookOption[] = useMemo(
     () => [
@@ -106,11 +115,20 @@ export default function HookLibrary() {
     if (picked === `u:${id}`) setPicked(`b:${BUILTIN_FORMATS[0]?.id ?? ''}`)
   }
 
+  const write = () => {
+    if (!current) return
+    setBusy(true)
+    setErr('')
+    window.stm.social.hooks(current.template, current.label, topic, project || undefined)
+      .then((r) => setMade({ hooks: r.hooks, rejected: r.rejected.length }), (e) => setErr(clean(e)))
+      .finally(() => setBusy(false))
+  }
+
   return (
     <section aria-label="Hook library" style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 640 }}>
       <div>
         <h2 style={{ margin: 0 }}>Hook library</h2>
-        <p className="faint" style={{ margin: '4px 0 0' }}>Caption formats with one slot. Nothing here calls Claude.</p>
+        <p className="faint" style={{ margin: '4px 0 0' }}>Caption formats with one slot. Claude is asked only when you click Write hooks.</p>
       </div>
 
       <div>
@@ -149,6 +167,25 @@ export default function HookLibrary() {
             <div aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {fillView.text !== '' && <div>{fillView.text}</div>}
               <div className={fillView.ok ? 'faint' : ''} style={{ fontSize: 12 }}>{fillView.message}</div>
+            </div>
+          )}
+          <input aria-label="Topic" value={topic} maxLength={2000} placeholder="Topic to write hooks about" onChange={(e) => setTopic(e.target.value)} />
+          {projects.length > 0 && (
+            <Select aria-label="Brand kit" value={project} onChange={(e) => setProject(e.target.value)}>
+              <option value="">No brand kit</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </Select>
+          )}
+          <div className="ob-row">
+            <button className="ghost small" disabled={busy || !topic.trim() || !current} onClick={write}>{busy ? 'Writing…' : 'Write hooks'}</button>
+            <span className="faint" style={{ fontSize: 12 }}>One request to the small model, only when you click. Nothing is posted.</span>
+          </div>
+          {err && <div className="error">{err}</div>}
+          {made && (
+            <div aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {made.hooks.length === 0 && <div className="faint">No usable hook came back. Try again or change the topic.</div>}
+              {made.hooks.map((h) => <div key={h}>{h}</div>)}
+              {made.rejected > 0 && <div className="faint" style={{ fontSize: 12 }}>{made.rejected} left out: wrong shape or a banned word.</div>}
             </div>
           )}
         </div>

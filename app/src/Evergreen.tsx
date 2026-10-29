@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { evergreenCandidates, MIN_AGE_DAYS, type EvergreenInput } from '../shared/evergreen'
 import type { NetworkId, Post } from '../electron/social/core'
+import { clean } from './errors'
 
 const NAMES: Partial<Record<NetworkId, string>> = { instagram: 'Instagram', facebook: 'Facebook', threads: 'Threads', youtube: 'YouTube', linkedin: 'LinkedIn', x: 'X', tiktok: 'TikTok', bluesky: 'Bluesky', mastodon: 'Mastodon' }
 
@@ -18,6 +19,18 @@ const engagementOf = (p: Post): number | undefined => {
  */
 export function Evergreen() {
   const [rows, setRows] = useState<Row[] | null>(null)
+  // one reworded text per post, asked for only when its button is clicked
+  const [words, setWords] = useState<Record<string, { text?: string; busy?: boolean; err?: string; saved?: boolean }>>({})
+  const setW = (k: string, w: { text?: string; busy?: boolean; err?: string; saved?: boolean }) => setWords((x) => ({ ...x, [k]: w }))
+  const reword = (r: Row) => {
+    const k = `${r.net}:${r.post.id}`
+    setW(k, { busy: true })
+    window.stm.social.reword(r.post.text, r.net).then((o) => setW(k, { text: o.text }), (e) => setW(k, { err: clean(e) }))
+  }
+  const draft = (r: Row, text: string) => {
+    const k = `${r.net}:${r.post.id}`
+    window.stm.social.save({ text, networks: [r.net] }).then(() => setW(k, { text, saved: true }), (e) => setW(k, { text, err: clean(e) }))
+  }
   useEffect(() => {
     let live = true
     void (async () => {
@@ -41,16 +54,29 @@ export function Evergreen() {
       <div className="chart-name">Evergreen</div>
       <div className="faint">
         Posts sent more than {MIN_AGE_DAYS} days ago that did well on their network and have no dates or version numbers in them.
-        Nothing is posted from here.
+        Rewording asks the small model only when you click it; a saved draft stays unapproved.
       </div>
       {rows === null && <div className="faint">Reading your posts...</div>}
       {rows?.length === 0 && <div className="faint">Not enough data yet</div>}
-      {rows?.map((r) => (
-        <div key={`${r.net}:${r.post.id}`} className="faint">
-          {NAMES[r.net] ?? r.net} · {new Date(r.at).toLocaleDateString()} · {r.post.text.slice(0, 160)}
-          {' '}{r.post.url && <a href={r.post.url} target="_blank" rel="noreferrer">open</a>}
-        </div>
-      ))}
+      {rows?.map((r) => {
+        const k = `${r.net}:${r.post.id}`
+        const w = words[k]
+        return (
+          <div key={k} style={{ display: 'grid', gap: 4, marginTop: 8 }}>
+            <div className="faint">
+              {NAMES[r.net] ?? r.net} · {new Date(r.at).toLocaleDateString()} · {r.post.text.slice(0, 160)}
+              {' '}{r.post.url && <a href={r.post.url} target="_blank" rel="noreferrer">open</a>}
+            </div>
+            <div className="ob-row">
+              <button className="ghost small" disabled={w?.busy} data-tip="One request to the small model, only when you click" onClick={() => reword(r)}>{w?.busy ? 'Rewording…' : 'Reword'}</button>
+              {w?.text && !w.saved && <button className="ghost small" onClick={() => draft(r, w.text!)}>Save as draft</button>}
+              {w?.saved && <span className="faint">Saved as an unapproved draft. Nothing is posted.</span>}
+            </div>
+            {w?.text && <div>{w.text}</div>}
+            {w?.err && <div className="error">{w.err}</div>}
+          </div>
+        )
+      })}
     </section>
   )
 }

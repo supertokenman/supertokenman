@@ -17,7 +17,6 @@ const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: 'json', label: 'JSON', hint: 'An array of captions, or of objects with caption, and optionally date and views.' },
 ]
 const SAMPLE_NOTICE = 'Pages in a study like this are the ones that succeeded; pages that failed are not in the sample.'
-const FILE_NOT_READY = 'Reading a picked file is not available yet. Paste the text instead.'
 
 function parse(text: string, mode: Mode): { rows: NicheRow[]; error?: string } {
   if (text.trim() === '') return { rows: [] }
@@ -35,6 +34,10 @@ export default function NicheImport() {
   const [mode, setMode] = useState<Mode>('lines')
   const [text, setText] = useState('')
   const [fileMsg, setFileMsg] = useState('')
+  // labels from the small model, asked for only when the button is clicked
+  const [labels, setLabels] = useState<{ counts: Record<string, number>; left: number } | null>(null)
+  const [sorting, setSorting] = useState(false)
+  const [sortErr, setSortErr] = useState('')
   const parsed = useMemo(() => parse(text, mode), [text, mode])
   const summary = useMemo(() => summarize(parsed.rows), [parsed.rows])
   const links = useMemo(() => {
@@ -42,12 +45,28 @@ export default function NicheImport() {
     for (const r of parsed.rows) for (const l of r.links) seen.set(l, (seen.get(l) ?? 0) + 1)
     return [...seen.entries()]
   }, [parsed.rows])
+  const classify = () => {
+    const caps = parsed.rows.slice(0, 100).map((r, i) => ({ id: `c${i}`, text: r.caption }))
+    setSorting(true)
+    setSortErr('')
+    window.stm.social.classify(caps).then((r) => {
+      const counts: Record<string, number> = {}
+      for (const l of Object.values(r.labels)) counts[l] = (counts[l] ?? 0) + 1
+      setLabels({ counts, left: r.rejected.length })
+    }, (e) => setSortErr(clean(e))).finally(() => setSorting(false))
+  }
   const hint = MODES.find((m) => m.id === mode)?.hint ?? ''
 
   const pickFile = () =>
-    void chooseFiles({ title: 'A CSV or JSON export', accept: ['csv', 'json'], action: 'Use' }).then(
+    void chooseFiles({ title: 'A CSV or JSON export', accept: ['csv', 'json', 'txt'], action: 'Use' }).then(
       (chosen) => {
-        if (chosen && chosen.length) setFileMsg(FILE_NOT_READY)
+        if (!chosen || !chosen.length) return
+        const path = chosen[0]!
+        const ext = path.split('.').pop()?.toLowerCase()
+        void window.stm.social.readImport(path).then(
+          (t) => { setText(t); setMode(ext === 'json' ? 'json' : ext === 'csv' ? 'csv' : 'lines'); setLabels(null); setFileMsg('') },
+          (e) => setFileMsg(clean(e)),
+        )
       },
       (e) => setFileMsg(clean(e)),
     )
@@ -72,7 +91,7 @@ export default function NicheImport() {
         aria-label="Captions to import"
         placeholder={mode === 'lines' ? 'Paste one caption per line' : mode === 'csv' ? 'caption,date,views' : '["caption", {"caption": "...", "views": 1200}]'}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => (setText(e.target.value), setLabels(null))}
       />
       <div className="ob-row">
         <button className="ghost small" onClick={pickFile}>Choose a CSV or JSON file...</button>
@@ -97,6 +116,20 @@ export default function NicheImport() {
               <span>{summary.counts.none}</span>
             </div>
           </div>
+
+          <div className="ob-row">
+            <button className="ghost small" disabled={sorting} data-tip="One request to the small model for up to 100 captions, only when you click" onClick={classify}>{sorting ? 'Sorting…' : 'Sort with the small model'}</button>
+            <span className="faint">The counts above come from a plain pattern check; this asks a model to sort the same captions.</span>
+          </div>
+          {sortErr && <div className="error">{sortErr}</div>}
+          {labels && (
+            <div style={{ display: 'grid', gap: 4 }}>
+              <div className="chart-name">Sorted by the small model</div>
+              {BUILTIN_FORMATS.map((f) => <div key={f.id} className="ob-row"><span style={{ minWidth: 200 }}>{f.label}</span><span>{labels.counts[f.id] ?? 0}</span></div>)}
+              <div className="ob-row"><span style={{ minWidth: 200 }} className="faint">No format match</span><span>{labels.counts.none ?? 0}</span></div>
+              {labels.left > 0 && <div className="faint">{labels.left} could not be sorted.</div>}
+            </div>
+          )}
 
           <div className="ob-row">
             <span className="chart-name">Median views</span>
