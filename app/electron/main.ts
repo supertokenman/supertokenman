@@ -1018,6 +1018,7 @@ async function createWindow() {
   // the closing animation plays in the window first; a window that does not answer is closed anyway
   let closeAnimated = false
   win.on('close', (e) => {
+    if (installing) return
     const hideOnly = process.platform === 'darwin' && !quitting
     if (!closeAnimated && win && !win.isDestroyed() && win.isVisible() && !process.env.STM_NO_CLOSE_ANIM) {
       e.preventDefault()
@@ -4405,6 +4406,9 @@ const updaterOf = async () => {
     const { autoUpdater } = (await import('electron-updater')).default
     autoUpdater.autoDownload = false
     autoUpdater.autoInstallOnAppQuit = false
+    // every step and error lands in main.log; a silent updater is how an update got stuck at Restarting
+    autoUpdater.logger = { info: (m: unknown) => logs().info('update', String(m)), warn: (m: unknown) => logs().error('update', String(m)), error: (m: unknown) => logs().error('update', String(m)), debug: () => undefined } as never
+    autoUpdater.on('error', (err) => logs().error('update', err))
     releaseUpdater = autoUpdater
   }
   return releaseUpdater
@@ -4465,7 +4469,17 @@ ipcMain.handle('update:run', async (e) => {
       tell({ state: 'busy', step: 'Downloading' })
       await u.downloadUpdate()
       tell({ state: 'busy', step: 'Restarting' })
+      // the window's closing animation prevents the close, and a prevented close cancels the quit
+      // that installs the update; skip it while installing
+      installing = true
       u.quitAndInstall()
+      // still here after a minute: the restart did not happen, so say so instead of waiting forever
+      setTimeout(() => {
+        if (e.sender.isDestroyed()) return
+        installing = false
+        logs().error('update', 'quitAndInstall did not restart the app within 60 s')
+        tell({ state: 'down', step: 'The update downloaded but the app could not restart into it. Quit with Cmd+Q and open it again, or download it from the releases page.', tail: 'https://github.com/supertokenman/supertokenman/releases/latest' })
+      }, 60_000)
     } catch (err) {
       tell({ state: 'down', step: 'The update stopped; this version stays.', tail: err instanceof Error ? err.message : String(err) })
     } finally {
@@ -4708,6 +4722,7 @@ ipcMain.handle('palette:used', () => {
 app.on('will-quit', () => globalShortcut.unregisterAll())
 // all day: on macOS the red button hides the window and everything keeps running; Cmd+Q quits
 let quitting = false
+let installing = false
 app.on('before-quit', () => {
   quitting = true
   // where each panel stopped, from its digest (no time to ask a model while quitting)
