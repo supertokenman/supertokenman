@@ -1,6 +1,6 @@
 # Team bundle format
 
-A team bundle is one Markdown file. It lists panels, the links between them and the triggers that start them. The app reads it with `stm team import <file>` (run from the person's terminal) and shows a review sheet. Nothing is created until the person presses Create.
+A team bundle is one Markdown file. It lists panels, the links between them and the triggers that start them. The app reads it from `mcp__stm__team_plan` and `mcp__stm__team_provision` (pass the Markdown as `bundle`) or from `stm team import <file>` (run from the person's terminal), and shows a review sheet. Nothing is created until the person presses Create.
 
 ## Layout
 
@@ -38,9 +38,7 @@ Metadata lines are the `- key: value` lines directly under a section heading. Th
 
 Three panels for a small web shop: an API, a storefront and a reviewer.
 The API and the storefront are built by their own panels. The reviewer checks what they report.
-After Create, start the review loop from your own terminal:
-  stm loop api reviewer --rounds 3 --max-usd 2
-The loop is not in this file. It is started by hand.
+The review loop is not in this file. Pass it as `loop` to the tools (build api, review reviewer, 3 rounds, US$2), or start it by hand with stm loop api reviewer --rounds 3 --max-usd 2 from the person's terminal.
 
 ## Panel: api
 - folder: api

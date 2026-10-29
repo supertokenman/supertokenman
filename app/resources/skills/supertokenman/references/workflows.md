@@ -8,10 +8,10 @@ Steps:
 
 1. Read the spec. Pick at most 8 panels, one role and one folder each (see `roles.md`).
 2. Write the team file as a draft. Check it against the validation rules in `team-bundle.md`.
-3. Show the person the plan: panels, links (which wait and which start on their own), loops and triggers.
-4. Adjust the file with their answers.
-5. The person runs `stm team import <file>` in their terminal, picks the parent folder and presses Create.
-6. The person opens the panels, sends the spec to the build panel, and starts any loop with `stm loop <build> <review>` from their terminal.
+3. Call `mcp__stm__team_plan` with the bundle (and `loop`, `capUsd` if wanted). Show the person the plan: panels, links (which wait and which start on their own), the loop and its cap, triggers.
+4. Adjust the bundle with their answers and plan again.
+5. Call `mcp__stm__team_provision` with the same arguments. The person picks the parent folder and presses Create in the review sheet. It makes the panels, links and triggers (off) and starts the loop with its cap. Terminal alternative: the person runs `stm team import <file>` and starts any loop by hand.
+6. Send the spec to the build panel with `stm send` or tell the person to; the first message waits in the composer.
 7. The person turns on triggers one at a time under Triggers, after reading each scope.
 
 Bundle sketch:
@@ -52,9 +52,9 @@ Spec: <one line>. Build panels first, then the review loop.
 
 Steps:
 
-1. Ask the person which folder has the bug. Use the existing build panel for it, or ask them to open one.
-2. Ask the person to open a reviewer panel for the same folder (or a second panel), and to send the bug report to the build panel's composer.
-3. The person starts the loop from their terminal: `stm loop <build> <reviewer> --rounds 3 --max-usd 2`. Rounds are 1 to 10. The spend cap is above $0 and at most $50.
+1. Ask the person which folder has the bug. Use the existing build panel for it, or open one with `mcp__stm__panels_open`.
+2. Open a reviewer panel for the same folder with `mcp__stm__panels_open`, and have the bug report sent to the build panel.
+3. Call `mcp__stm__loop_start` with `build`, `review`, `rounds` (1 to 10, default 3) and `maxUsd` (above $0, at most $50, default $2). The person approves the card in the panel.
 4. Each turn of the build panel goes to the reviewer. The reviewer replies APPROVED on its own line, or lists fixes. The loop stops on APPROVED, at the round limit or at the cap. Each panel gets a note with the reason.
 5. Stop early with `stm loop stop <panel>`.
 6. Read the last review in the reviewer panel. Decide what to commit yourself.
@@ -91,7 +91,7 @@ Steps:
 
 1. Confirm the test command with the person. Only commands in the trigger's `commands` line can run under its scope.
 2. Write the team file with one panel and one trigger. Keep read and write folders narrow.
-3. The person imports it with `stm team import <file>` and presses Create. The trigger arrives turned off.
+3. Plan it with `mcp__stm__team_plan`, then `mcp__stm__team_provision`; the person presses Create. The trigger arrives turned off. For a trigger on a panel that is already open, `mcp__stm__trigger_create` does the same after the person approves its card.
 4. The person reads the trigger's scope under Triggers, turns it on, and optionally runs it once with `stm triggers run <id>` to test it.
 5. Check the next day's report in the panel.
 
@@ -125,7 +125,7 @@ The `when` wording must match what the app shows under Triggers. If it does not,
 Steps:
 
 1. The person states the question and the folder for the build.
-2. Open a researcher panel and a builder panel. Link them with `auto: no` and a small cap.
+2. Open a researcher panel and a builder panel (`mcp__stm__team_provision`, or `mcp__stm__panels_open` twice) and link them with `mcp__stm__link`: `auto` false and a small `capUsd`.
 3. The researcher writes findings to a shared note: `stm note append <name> "text"`. Each point has a source.
 4. The builder reads the note with `stm note get <name>` before it changes code.
 5. If the builder needs a fact fast, it asks with `stm ask <researcher> "question"`. Answers come back as its next message.

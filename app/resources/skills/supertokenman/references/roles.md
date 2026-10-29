@@ -15,7 +15,7 @@ Run the project's tests before you report. Report what changed, the test result,
 Do not commit or push unless the person asks in this session.
 ```
 
-Suggested link: builder <-> reviewer, with a cap. For code, run it as a loop: `stm loop <builder> <reviewer>`, started from the person's terminal.
+Suggested link: builder <-> reviewer, with a cap. For code, run it as a loop: pass `loop` to `mcp__stm__team_provision`, or call `mcp__stm__loop_start` for panels already open.
 
 ## Reviewer
 

@@ -255,6 +255,26 @@ by typecheck and unit tests; not yet run in the real app.
 3. While you were away: a card with the events since the last time you were at the window (turns and cost,
    approvals waiting, trigger runs, errors), with Read aloud on macOS. Local only.
 
+## Planned for 0.1.21: an agent harness
+
+Built and checked by typecheck and unit tests; not yet run in the real app, and no savings measured (bench/ has
+the runner, nothing is recorded).
+
+1. A capability card replaces the long app guide and the "Asking the app" rule in the text added to every panel's
+   system prompt. The text is the same on every turn, so the prompt cache holds.
+2. The in-process stm server gains team_plan, team_provision, panels_open, link, loop_start and trigger_create.
+   Agents may provision a team and start a review loop after the person approves: team_provision opens the team
+   review sheet with the loop and a spend cap (US$5 by default, at most US$50) and creates nothing until Create;
+   the other four ask in the panel with a card that shows the cap. Triggers come in turned off. The stm command
+   still refuses loop and team inside a panel.
+3. The supertokenman skill reaches each panel as a local plugin copied into the app's data folder; the manual tool
+   with topic provision returns it as a fallback.
+4. Terse mode between agents (on by default, a switch in Savings): messages from one panel to another end with one
+   line asking for facts, file paths and the next step. Never added to what the person types.
+5. Long Bash output is condensed (head, tail, errors; the whole saved under .stm/outputs), on by default with a
+   switch. A port of token-kit's condenser.
+6. Bench variants A to D (old guide, card, terse, condensing), read from the environment in development runs only.
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
