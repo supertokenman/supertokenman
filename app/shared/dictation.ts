@@ -5,7 +5,7 @@ import { hotkeyLabel, validHotkey } from './hotkey.js'
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string }
 
-export const DEFAULT_DICTATION_SHORTCUT = 'Alt+Space'
+export const DEFAULT_DICTATION_SHORTCUT = 'Alt+Shift+D'
 
 // ---- shortcut ----
 

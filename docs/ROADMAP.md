@@ -285,7 +285,7 @@ by typecheck and unit tests; not yet run in the real app.
 
 ## Dictate anywhere (macOS)
 
-- [x] Hold-to-talk dictation into any app: a global shortcut (default Option+Space, toggle: press to start, press to stop, since a global shortcut reports only key down), a local whisper.cpp engine, paste with Cmd+V and the clipboard put back. Off by default; optional Clean up through the small-model path. Built and checked by typecheck and unit tests; permissions and pasting into other apps not yet run on a Mac.
+- [x] Dictation into any app: a global shortcut (default Option+Shift+D, toggle: press to start, press to stop, since a global shortcut reports only key down), a local whisper.cpp engine, paste with Cmd+V and the clipboard put back. Off by default; optional Clean up through the small-model path. Built and checked by typecheck and unit tests; permissions and pasting into other apps not yet run on a Mac.
 - [ ] macOS on-device speech recognition once it can be reached without compiling a native module.
 - [ ] True press-and-hold, which needs a key-up event (a native listener).
 
