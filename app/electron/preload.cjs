@@ -523,6 +523,17 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('act:line', h)
     },
   },
+  post: {
+    status: () => ipcRenderer.invoke('post:status'),
+    connect: (net, fields) => ipcRenderer.invoke('post:connect', net, fields),
+    disconnect: (net) => ipcRenderer.invoke('post:disconnect', net),
+    send: (nets, text, title) => ipcRenderer.invoke('post:send', nets, text, title),
+    onOpen: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('post:open', l)
+      return () => ipcRenderer.removeListener('post:open', l)
+    },
+  },
   radar: {
     get: () => ipcRenderer.invoke('radar:get'),
     save: (groups, weights, ntfy) => ipcRenderer.invoke('radar:save', groups, weights, ntfy),

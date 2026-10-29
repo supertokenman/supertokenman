@@ -68,6 +68,7 @@ const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ defaul
 const VaultBoard = lazy(() => import('./VaultBoard').then((x) => ({ default: x.VaultBoard })))
 const PdfTools = lazy(() => import('./PdfTools').then((x) => ({ default: x.PdfTools })))
 const AppContainers = lazy(() => import('./AppContainers').then((x) => ({ default: x.AppContainers })))
+const PostEverywhere = lazy(() => import('./PostEverywhere').then((x) => ({ default: x.PostEverywhere })))
 const TopicRadar = lazy(() => import('./TopicRadar').then((x) => ({ default: x.TopicRadar })))
 const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
 const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
@@ -440,6 +441,8 @@ export function App() {
   const [ctrOpen, setCtrOpen] = useState(false)
   const [bwOpen, setBwOpen] = useState(false)
   const [radarOpen, setRadarOpen] = useState(false)
+  const [postOpen, setPostOpen] = useState<{ text?: string; title?: string } | null>(null)
+  useEffect(() => window.stm.post.onOpen((r) => setPostOpen({ text: r.text, title: r.title })), [])
   const [ciOpen, setCiOpen] = useState(false)
   const [xrOpen, setXrOpen] = useState(false)
   const [stkOpen, setStkOpen] = useState(false)
@@ -1179,6 +1182,7 @@ export function App() {
       ['compose-stacks', 'Compose stacks: edit, start, stop, logs', 'docker compose stacks yaml dockge up down stop pull logs services', () => setStkOpen(true)],
       ['image-xray', 'Image X-ray: Docker layers and waste', 'docker image layers size waste dive dockerfile slim', () => setXrOpen(true)],
       ['run-ci', 'Run CI here with act, before the push', 'github actions workflow ci act local docker job run test', () => setCiOpen(true)],
+      ['post-everywhere', 'Post everywhere: one post to the networks you connect', 'post publish social bluesky mastodon linkedin x twitter telegram discord dev.to share announce', () => setPostOpen({})],
       ['topic-radar', 'Topic radar: your topics in your feeds', 'radar trends topics keywords feeds news count ranking summary ntfy', () => setRadarOpen(true)],
       ['bitwarden', 'Bitwarden or Vaultwarden: link secrets', 'bitwarden vaultwarden bw secrets password keys link', () => setBwOpen(true)],
       ['app-containers', 'App containers: what the app runs in Docker, live', 'docker containers isolate self-hosting stats events stop remove', () => setCtrOpen(true)],
@@ -1615,6 +1619,7 @@ export function App() {
       <Presence show={stkOpen}><ComposeStacks onClose={() => setStkOpen(false)} /></Presence>
       <Presence show={xrOpen}><ImageXray sid={p.focus ?? undefined} onClose={() => setXrOpen(false)} /></Presence>
       <Presence show={ciOpen}><RunCi cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} sid={p.focus ?? undefined} onClose={() => setCiOpen(false)} /></Presence>
+      <Presence show={!!postOpen}><PostEverywhere text={postOpen?.text} title={postOpen?.title} onClose={() => setPostOpen(null)} /></Presence>
       <Presence show={radarOpen}><TopicRadar onClose={() => setRadarOpen(false)} /></Presence>
       <Presence show={bwOpen}><BitwardenSheet onClose={() => setBwOpen(false)} /></Presence>
       <Presence show={ctrOpen}><AppContainers onClose={() => setCtrOpen(false)} /></Presence>

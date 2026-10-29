@@ -55,6 +55,7 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | Monitors, Prometheus, PostHog, local model servers, storage | the addresses you enter | adding them |
 | Web reader, embedded videos, web apps | the page you open | opening it |
 | Video transcripts | none from the app: it reads a subtitle or audio file you give, or text you paste. A link other than YouTube runs **your own** `yt-dlp` (not shipped by us) on this machine; that tool contacts the video's site under your responsibility, captions only, never with browser cookies. Audio goes to **your own** `whisper.cpp` (and `ffmpeg`) locally. YouTube links are not fetched at all | Settings > Appearance > Video transcripts (off by default), then Transcript or `stm transcript` |
+| Post everywhere | bsky.social (or the Bluesky server you name), the Mastodon instance you name, api.linkedin.com, api.x.com, api.telegram.org, discord.com (your webhook), dev.to. Each network's own API with your own credentials from the vault; no service in the middle | off by default: a network is called only after you connect it and only when you press Post and confirm the list of networks; `stm post` only opens the sheet |
 | Sites added as drawer apps | the site's own address and the extra hosts you list; its icon once, from the same site, when you add it | adding the site, then opening it |
 
 The release update check runs only in a packaged Mac build that carries `app-update.yml`. Since 0.1.13

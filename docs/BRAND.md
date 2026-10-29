@@ -182,6 +182,8 @@ under `prefers-reduced-motion`:
 Brand marks for other services are in `IntegrationMark.tsx`, drawn as our own pictograms, never their
 logos.
 
+Post everywhere names the networks as plain text only: no logos or marks of other brands.
+
 ## State marks
 
 `StateMark.tsx`: a state is a shape that moves the way the state feels, with the word kept for the
