@@ -873,6 +873,27 @@ contextBridge.exposeInMainWorld('stm', {
     roomPost: (sids, text) => ipcRenderer.invoke('room:post', sids, text),
     roomNext: () => ipcRenderer.invoke('room:next'),
   },
+  teamBundle: {
+    exportTo: () => ipcRenderer.invoke('team:export'),
+    importFrom: () => ipcRenderer.invoke('team:import'),
+    onReview: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('team:review', l)
+      return () => ipcRenderer.removeListener('team:review', l)
+    },
+    prepare: (team, base) => ipcRenderer.invoke('team:prepare', team, base),
+    apply: (team, opened) => ipcRenderer.invoke('team:apply', team, opened),
+  },
+  away: {
+    get: () => ipcRenderer.invoke('away:get'),
+    onShow: (fn) => {
+      const l = (_e, c) => fn(c)
+      ipcRenderer.on('away:show', l)
+      return () => ipcRenderer.removeListener('away:show', l)
+    },
+    setCard: (on) => ipcRenderer.invoke('away:setting', on),
+    say: () => ipcRenderer.invoke('away:say'),
+  },
   stmCli: {
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)

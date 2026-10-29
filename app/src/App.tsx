@@ -70,6 +70,8 @@ const VaultBoard = lazy(() => import('./VaultBoard').then((x) => ({ default: x.V
 const PdfTools = lazy(() => import('./PdfTools').then((x) => ({ default: x.PdfTools })))
 const AppContainers = lazy(() => import('./AppContainers').then((x) => ({ default: x.AppContainers })))
 const TopicRadar = lazy(() => import('./TopicRadar').then((x) => ({ default: x.TopicRadar })))
+const TeamImport = lazy(() => import('./TeamImport').then((x) => ({ default: x.TeamImport })))
+const AwayCard = lazy(() => import('./AwayCard').then((x) => ({ default: x.AwayCard })))
 const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
 const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
 const ComposeStacks = lazy(() => import('./ComposeStacks').then((x) => ({ default: x.ComposeStacks })))
@@ -443,6 +445,8 @@ export function App() {
   const [bwOpen, setBwOpen] = useState(false)
   const [radarOpen, setRadarOpen] = useState(false)
   const [ciOpen, setCiOpen] = useState(false)
+  const [teamIn, setTeamIn] = useState<{ team: import('../shared/teambundle').Team; lines: string[] } | null>(null)
+  const [awayCard, setAwayCard] = useState<import('./bridge').AwayCard | null>(null)
   const [xrOpen, setXrOpen] = useState(false)
   const [stkOpen, setStkOpen] = useState(false)
   const [ckOpen, setCkOpen] = useState(false)
@@ -839,6 +843,9 @@ export function App() {
       }),
     [open],
   )
+  // a team file to review (File menu or stm team import); panels are made only when the person confirms in the sheet
+  useEffect(() => window.stm.teamBundle.onReview(setTeamIn), [])
+  useEffect(() => window.stm.away.onShow(setAwayCard), [])
   // a message from another panel (stm send): put in the composer for the person to send, never sent
   // from here; only a link the person set to auto-send arrives already sent, shown like a typed one
   useEffect(
@@ -1041,6 +1048,8 @@ export function App() {
     if (id === 'menu:new-panel') return void open(p.focus ? p.byId[p.focus]?.cwd : undefined)
     if (id === 'menu:new-from-template') return setTplOpen(true)
     if (id === 'menu:open-folder') return void pickProjectFolder().then((dir) => dir && void open(dir))
+    if (id === 'menu:team-export') return void window.stm.teamBundle.exportTo().catch((e: Error) => alertDialog({ title: 'Team', message: e.message }))
+    if (id === 'menu:team-import') return void window.stm.teamBundle.importFrom().catch((e: Error) => alertDialog({ title: 'Team', message: e.message }))
     if (id === 'menu:export') return void (p.focus && window.dispatchEvent(new CustomEvent('stm:export', { detail: { sid: p.focus } })))
     const e = paletteEntries().find((x) => x.id === id)
     if (e) e.run()
@@ -1181,6 +1190,7 @@ export function App() {
       ['check-after-edits', 'Check after edits: new type or lint errors back to Claude', 'typecheck tsc lint ruff mypy errors diagnostics after edit check turn', () => setCkOpen(true)],
       ['compose-stacks', 'Compose stacks: edit, start, stop, logs', 'docker compose stacks yaml dockge up down stop pull logs services', () => setStkOpen(true)],
       ['image-xray', 'Image X-ray: Docker layers and waste', 'docker image layers size waste dive dockerfile slim', () => setXrOpen(true)],
+      ['while-away', 'While you were away', 'away overnight summary since idle what happened cost approvals trigger errors read aloud', () => void window.stm.away.get().then(setAwayCard)],
       ['run-ci', 'Run CI here with act, before the push', 'github actions workflow ci act local docker job run test', () => setCiOpen(true)],
       ['topic-radar', 'Topic radar: your topics in your feeds', 'radar trends topics keywords feeds news count ranking summary ntfy', () => setRadarOpen(true)],
       ['bitwarden', 'Bitwarden or Vaultwarden: link secrets', 'bitwarden vaultwarden bw secrets password keys link', () => setBwOpen(true)],
@@ -1617,6 +1627,27 @@ export function App() {
       <Presence show={ckOpen}><DiagCheck sid={p.focus ?? undefined} onClose={() => setCkOpen(false)} /></Presence>
       <Presence show={stkOpen}><ComposeStacks onClose={() => setStkOpen(false)} /></Presence>
       <Presence show={xrOpen}><ImageXray sid={p.focus ?? undefined} onClose={() => setXrOpen(false)} /></Presence>
+      <Presence show={teamIn !== null}>
+        {teamIn && (
+          <TeamImport
+            team={teamIn.team}
+            lines={teamIn.lines}
+            onClose={() => setTeamIn(null)}
+            onCreate={async (base) => {
+              const plan = await window.stm.teamBundle.prepare(teamIn.team, base)
+              const opened: Record<string, string> = {}
+              for (const x of plan) {
+                opened[x.name] = await open(x.cwd, undefined, x.persona)
+                if (x.instructions) window.dispatchEvent(new CustomEvent('stm:prefill', { detail: { sid: opened[x.name], text: `${x.instructions}\n\n`, quiet: true } }))
+              }
+              const r = await window.stm.teamBundle.apply(teamIn.team, opened)
+              setTeamIn(null)
+              return `Opened ${plan.length} panels, ${r.links} links, ${r.triggers} triggers (off).`
+            }}
+          />
+        )}
+      </Presence>
+      <Presence show={awayCard !== null}>{awayCard && <AwayCard card={awayCard} onClose={() => setAwayCard(null)} />}</Presence>
       <Presence show={ciOpen}><RunCi cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} sid={p.focus ?? undefined} onClose={() => setCiOpen(false)} /></Presence>
       <Presence show={radarOpen}><TopicRadar onClose={() => setRadarOpen(false)} /></Presence>
       <Presence show={bwOpen}><BitwardenSheet onClose={() => setBwOpen(false)} /></Presence>

@@ -40,6 +40,7 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
   stm ask scan deps|secrets          a dependency or secret scan of the panel's folder, once approved
   stm ask preview <local url>        show a local page in the panel's Preview tab, once approved
   stm transcript <url|file>          a video's transcript as text (--timestamps, --fresh); on in the app first
+  stm team export|import <file>      this window's panels, links and triggers as one Markdown file; import shows a plan in the window first
   stm mcp                            run as an MCP server (stdio) for other agents: status, panels, spend, memory, read-only SQL
 
   --json  machine-readable output     --help  this text`
@@ -248,6 +249,13 @@ try {
     const d = await call('ask', { panel, what: kind, url: what === 'preview' ? arg : undefined })
     print(d, (r) => (kind === 'test' ? [`${r.ok ? 'PASS' : 'FAIL'} ${r.cmd}: ${r.passed} passed, ${r.failed} failed (${(r.ms / 1000).toFixed(1)}s)`, r.ok ? '' : r.tail].filter(Boolean).join('\n') : kind === 'preview' ? `Shown in the Preview tab: ${r.shown}` : [`${r.findings} findings${r.critical !== undefined ? `, ${r.critical} critical` : ''}`, ...r.top].join('\n')))
     if (kind === 'test' && !d.ok) process.exitCode = 1
+  } else if (cmd === 'team') {
+    // a panel's agent does not start these: export writes a file, import opens the review sheet in the window
+    if (process.env.STM_PANEL_ID) die('Run stm team from your own terminal, not from inside a panel.')
+    const [op, file] = rest
+    if (!['export', 'import'].includes(op) || !file) die('Usage: stm team export <file>   or   stm team import <file>')
+    if (op === 'export') print(await call('teamExport', { file: resolve(file) }), (d) => `Wrote ${d.file}.`)
+    else print(await call('teamImport', { file: resolve(file) }), (d) => `${d.name}: ${d.panels} panels, ${d.links} links, ${d.triggers} triggers. Review it in the app window and press Create there.`)
   } else if (cmd === 'triggers') {
     if (rest[0] === 'run') print(await call('triggerRun', { id: rest[1] }), () => `Started ${rest[1]}.`)
     else print(await call('triggers', {}), (d) => (d.length ? d.map((t) => `${pad(t.id, 12)} ${pad(t.enabled ? 'on' : 'off', 4)} ${t.name}`).join('\n') : 'No triggers.'))

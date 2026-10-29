@@ -24,6 +24,7 @@ import type { ShellEvent } from '../electron/shell'
 
 export type { UiEvent }
 export type PanelLinkView = { panel: string; auto: boolean; name: string; spent: { usd: number; tokens: number; turns: number }; capUsd: number | null }
+export type AwayCard = { title: string; lines: string[]; empty: boolean; canSpeak: boolean; on: boolean }
 
 type Up = { ratio: number | null; avgMs: number | null; count: number }
 export type MonitorRow = { monitor: import('../shared/monitors').Monitor; state: import('../shared/monitors').State; beats: import('../shared/monitors').Beat[]; day: Up; month: Up; last: import('../shared/monitors').Beat | null }
@@ -961,6 +962,19 @@ export type Bridge = {
     onEvent: (fn: (e: DeployEvent) => void) => () => void
   }
   panelBus: { onInbox: (fn: (sid: string, text: string, sent: boolean) => void) => () => void; links: () => Promise<Record<string, PanelLinkView[]>>; onLinks: (fn: (v: Record<string, PanelLinkView[]>) => void) => () => void; setAuto: (a: string, b: string, on: boolean) => Promise<Record<string, PanelLinkView[]>>; setCap: (a: string, b: string, usd: number) => Promise<Record<string, PanelLinkView[]>>; roomPost?: (sids: string[], text: string) => Promise<{ panel: string; left: number }>; roomNext?: () => Promise<{ panel: string; delivery: string; left: number }> }
+  teamBundle: {
+    exportTo: () => Promise<string | null>
+    importFrom: () => Promise<boolean>
+    onReview: (fn: (r: { team: import('../shared/teambundle').Team; lines: string[] }) => void) => () => void
+    prepare: (team: import('../shared/teambundle').Team, base: string) => Promise<{ name: string; cwd: string; persona?: string; instructions: string }[]>
+    apply: (team: import('../shared/teambundle').Team, opened: Record<string, string>) => Promise<{ links: number; triggers: number }>
+  }
+  away: {
+    get: () => Promise<AwayCard>
+    onShow: (fn: (c: AwayCard) => void) => () => void
+    setCard: (on: boolean) => Promise<boolean>
+    say: () => Promise<void>
+  }
   stmCli: { onOpen: (fn: (r: { req: string; cwd?: string; persona?: string; model?: string }) => void) => () => void; opened: (req: string, sid: string) => void; install: () => Promise<{ file: string; onPath: boolean; hint: string }> }
   vec: { status: (cwd: string) => Promise<{ model: string | null; models: string[]; size: number; total: number; project: string }>; model: (m: string | null) => Promise<string | null>; build: (cwd: string) => Promise<{ total: number; done: number }> }
   memtest: (cwd: string, question: string, where: 'local' | 'claude') => Promise<{ without: string; withMem: string; backedWithout: number; backedWith: number; agree: number }>
