@@ -140,6 +140,7 @@ import { WEB_APPS } from '../shared/webapps'
 
 import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
+import { EmptyStart } from './EmptyStart'
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 import { FilePickerHost } from './FilePicker'
 import { alertDialog, confirmDialog, ContextMenuHost, DialogHost } from './ui'
@@ -1842,10 +1843,7 @@ export function App() {
       <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
         {p.order.map(panelEl)}
         {p.order.length === 0 && (
-          <div className="empty">
-            <div className="empty-title">No panels open</div>
-            <button className="primary" onClick={() => openOrSay()}>New panel</button>
-          </div>
+          <EmptyStart recents={recentDirs} lastCount={lastTime.length} onFolder={(d) => openOrSay(d)} onPick={() => void pickProjectFolder().then((d) => d && openOrSay(d))} onTemplate={() => setTplOpen(true)} onReopen={() => void reopen()} />
         )}
       </div>
       )}
