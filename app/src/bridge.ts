@@ -974,6 +974,7 @@ export type Bridge = {
     onShow: (fn: (c: AwayCard) => void) => () => void
     setCard: (on: boolean) => Promise<boolean>
     say: () => Promise<void>
+    touch: () => void
   }
   stmCli: { onOpen: (fn: (r: { req: string; cwd?: string; persona?: string; model?: string }) => void) => () => void; opened: (req: string, sid: string) => void; install: () => Promise<{ file: string; onPath: boolean; hint: string }> }
   vec: { status: (cwd: string) => Promise<{ model: string | null; models: string[]; size: number; total: number; project: string }>; model: (m: string | null) => Promise<string | null>; build: (cwd: string) => Promise<{ total: number; done: number }> }

@@ -26,6 +26,7 @@ import { describe as describeLink, nowPlaying, osascript, script as spotifyScrip
 import { Vault } from './vault.js'
 import { cleanPersona, fromMarkdown, personaPrompt, STARTERS, toMarkdown, type Persona } from '../shared/personas.js'
 import { choosePrompt } from '../shared/router.js'
+import { claim as claimAsk, HEAD as ASK_HEAD, type Waiting } from '../shared/askroute.js'
 import * as TB from '../shared/teambus.js'
 import * as TM from '../shared/teambundle.js'
 import * as OV from '../shared/overnight.js'
@@ -690,7 +691,7 @@ const placeOf = (sid: string) => basename(shells.get(sid)?.cwd ?? '') || 'A pane
 const traceParts = new Map<string, ContextPart[]>()
 const traceTurns = new Map<string, TraceTurn[]>()
 const pendingSpans = new Map<string, SpanEvent[]>()
-const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; why?: string; tools: string[]; edits?: number }>()
+const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; why?: string; tools: string[]; edits?: number; askId?: string }>()
 // a panel's goal, given with /goal: carried in front of each message until a reply says GOAL MET
 const goals = new Map<string, Goal>()
 // review loops by build and review panel (one loop per panel), and each panel's last reply for the next step
@@ -737,7 +738,7 @@ function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: {
     }
   }
   loopStep(sid, e.costUsd ?? 0, Boolean(e.isError))
-  answerAsks(sid, p.prompt, e.text ?? '', Boolean(e.isError))
+  answerAsks(sid, (p as { askId?: string }).askId, e.text ?? '', Boolean(e.isError))
   // a turn started by a message from a linked panel: its cost counts against that link
   const via = linkTurn.get(sid)
   if (via && p.prompt.startsWith('From panel ')) {
@@ -779,6 +780,9 @@ function awayLog(kind: OV.Event['kind'], panel: string, text?: string, costUsd?:
   awayTimer ??= setTimeout(awaySave, 5000)
 }
 app.on('will-quit', () => awayData && awaySave())
+// pointer and wheel input is seen by the page (keys also here); waking from sleep counts like coming back to the window
+ipcMain.on('away:touch', (e) => e.sender === win?.webContents && (lastActive = Date.now()))
+void app.whenReady().then(() => powerMonitor.on('resume', awayFocus))
 let awayLast: { title: string; lines: string[] } | null = null
 let lastActive = Date.now()
 function awayCard(from: number) {
@@ -836,7 +840,18 @@ function loopStep(sid: string, costUsd: number, isError: boolean) {
     end(`${(e as Error).message}`)
   }
 }
-const tracePrompt = (sid: string, prompt: string, why?: string) => pendingTurn.set(sid, { id: `${sid}-t${++turnSeq}`, at: Date.now(), prompt, why, tools: [] })
+// asks: delivered to an idle-or-auto panel (bound as its turn starts) or queued in the composer (claimed when the person sends it)
+const askBind = new Map<string, string>()
+const askWaiting = new Map<string, Waiting[]>()
+function tracePrompt(sid: string, prompt: string, why?: string) {
+  let askId = askBind.get(sid)
+  askBind.delete(sid)
+  if (!askId) {
+    const c = claimAsk(askWaiting.get(sid) ?? [], prompt)
+    if (c) (askId = c.id, askWaiting.set(sid, c.rest))
+  }
+  pendingTurn.set(sid, { id: `${sid}-t${++turnSeq}`, at: Date.now(), prompt, why, tools: [], ...(askId ? { askId } : {}) })
+}
 const turnOf = (sid: string) => pendingTurn.get(sid)?.id
 // outlet filters change how a reply is shown (not what Claude saw); events of a panel keep their order
 const outletChain = new Map<string, Promise<void>>()
@@ -2224,6 +2239,8 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   sessions.delete(sid)
   scopeOf.delete(sid)
   panelKeys.drop(sid)
+  askBind.delete(sid)
+  askWaiting.delete(sid)
   for (let i = openAsks.length - 1; i >= 0; i--) if (openAsks[i]!.from === sid || openAsks[i]!.to === sid) openAsks.splice(i, 1)
   sourceOf.delete(sid)
   gateway.revoke(sid)
@@ -6254,9 +6271,10 @@ function deliverLinked(from: string, to: string, text: string, body: string) {
 }
 /** Open asks between panels, in memory only; an ask ends when its target's turn ends, or when either panel closes. */
 const openAsks: TB.Ask[] = []
+let askSeq = 0
 /** The target's turn that began with an ask has ended: its reply goes back to the asker as that panel's next message. */
-function answerAsks(sid: string, prompt: string, reply: string, isError: boolean) {
-  const a = openAsks.find((x) => x.to === sid && prompt.includes(x.question.slice(0, 200)))
+function answerAsks(sid: string, askId: string | undefined, reply: string, isError: boolean) {
+  const a = askId ? openAsks.find((x) => x.id === askId && x.to === sid) : undefined
   if (!a) return
   openAsks.splice(openAsks.indexOf(a), 1)
   try {
@@ -6347,10 +6365,18 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     if (full) throw new Error(full)
     if (TB.wouldLoop(openAsks, from, to)) throw new Error(`${panelName(to)} is already waiting on an answer from ${panelName(from)} (or a panel it asked), so this would loop.`)
     const depth = Math.max(-1, ...openAsks.filter((x) => x.to === from).map((x) => x.depth)) + 1
-    const ask = TB.newAsk(from, to, String(a.question ?? '').slice(0, 100_000), depth)
+    const ask = TB.newAsk(from, to, String(a.question ?? '').slice(0, 100_000), depth, Date.now(), `a${Date.now().toString(36)}${++askSeq}`)
     sendLimit.take(from)
     const text = TB.askText(panelName(from), ask)
-    const how = deliverLinked(from, to, text, PB.labelled(panelName(from), text))
+    const body = PB.labelled(panelName(from), text)
+    askBind.set(to, ask.id)
+    let how: 'queued' | 'auto'
+    try {
+      how = deliverLinked(from, to, text, body)
+    } finally {
+      askBind.delete(to)
+    }
+    if (how === 'queued') askWaiting.set(to, [...(askWaiting.get(to) ?? []), { id: ask.id, head: body.slice(0, ASK_HEAD) }])
     openAsks.push(ask)
     logs().info('stm:panel', `${from} asked ${to} ${how} (depth ${depth})`)
     return { panel: to, delivery: how, ask: ask.id }
@@ -6435,14 +6461,20 @@ function buildTeam(): TM.Team {
   const panels = sids.map((sid, i) => {
     if (!panelOfDir.has(dirs[i]!)) panelOfDir.set(dirs[i]!, nameOf.get(sid)!)
     const persona = personaOf.get(sid)
-    return { name: nameOf.get(sid)!, folder: relative(base, dirs[i]!).split(pathSep).join('/') || '.', ...(persona ? { persona } : {}), instructions: '' }
+    // the app keeps instructions per persona, not per panel: a panel with a persona carries that persona's
+    const text = persona ? (personas().find((x) => x.id === persona)?.instructions ?? '') : ''
+    return { name: nameOf.get(sid)!, folder: relative(base, dirs[i]!).split(pathSep).join('/') || '.', ...(persona ? { persona } : {}), instructions: redact(text, vault?.all() ?? []).text.slice(0, TM.MAX_INSTRUCTIONS) }
   })
   const ls = links().filter((l) => nameOf.has(l.a) && nameOf.has(l.b)).map((l) => ({ a: nameOf.get(l.a)!, b: nameOf.get(l.b)!, auto: l.auto === true, ...(l.capUsd ? { capUsd: l.capUsd } : {}) }))
   const ts = triggers().flatMap((t) => {
     const panel = t.cwd ? panelOfDir.get(resolve(t.cwd)) : undefined
-    return panel ? [{ name: t.name, panel, when: describeWhen(t.when), prompt: t.prompt }] : []
+    if (!panel) return []
+    // scope folders are written relative to the panel's folder; one outside it cannot be written and is left out
+    const rel = (l: string[]) => l.flatMap((p) => { const r = p.startsWith('/') ? relative(t.cwd, p) : p; return r && !r.startsWith('..') && !/^([\\/]|[A-Za-z]:)/.test(r) ? [r.split(pathSep).join('/')] : [] })
+    const sc = t.scope ? { read: rel(t.scope.read), write: rel(t.scope.write), commands: t.scope.commands.filter((c) => !/[\r\n]/.test(c)) } : undefined
+    return [{ name: t.name, panel, when: describeWhen(t.when), prompt: t.prompt, ...(sc && (sc.read.length || sc.write.length || sc.commands.length) ? { scope: sc } : {}) }]
   })
-  return { name: `${basename(base) || 'Team'} team`, description: 'Exported from SuperTokenMan.', panels, links: ls, triggers: ts }
+  return { name: `${basename(base) || 'Team'} team`, description: 'Exported from SuperTokenMan. Panel instructions are the panel persona\'s instructions: the app keeps none per panel, so a panel without a persona has none. Trigger scope folders outside the trigger\'s panel folder, and triggers\' gate and webhook settings, are not included.', panels, links: ls, triggers: ts }
 }
 const teamCheck = (t: unknown) => TM.parseBundle(TM.toMarkdown(t as TM.Team))
 function teamReview(file: string) {
@@ -6476,7 +6508,9 @@ ipcMain.handle('team:prepare', (_e, team: unknown, base: string) => {
     const cwd = resolve(root, p.folder)
     if (cwd !== root && !cwd.startsWith(root + pathSep)) throw new Error(`Folder ${p.folder} is outside the one you picked.`)
     mkdirSync(cwd, { recursive: true })
-    return { name: p.name, cwd, ...(p.persona && personas().some((x) => x.id === p.persona) ? { persona: p.persona } : {}), instructions: p.instructions }
+    // a persona that exists brings its own instructions; the file's are put in the composer only when it does not
+    const known = Boolean(p.persona && personas().some((x) => x.id === p.persona))
+    return { name: p.name, cwd, ...(known ? { persona: p.persona } : {}), instructions: known ? '' : p.instructions }
   })
 })
 // the panels are open: links between them, and the triggers, turned off
@@ -6494,7 +6528,7 @@ ipcMain.handle('team:apply', (_e, team: unknown, opened: Record<string, string>)
   const stamp = Date.now()
   const made = t.triggers.flatMap((r, i) => {
     const id = sid(r.panel)
-    return id ? [cleanTrigger({ id: `tm${stamp.toString(36)}${i}`, name: r.name, cwd: panelDir(id), persona: personaOf.get(id) ?? '', prompt: r.prompt, when: parseWhen(r.when) ?? undefined, enabled: false })] : []
+    return id ? [cleanTrigger({ id: `tm${stamp.toString(36)}${i}`, name: r.name, cwd: panelDir(id), persona: personaOf.get(id) ?? '', prompt: r.prompt, when: parseWhen(r.when) ?? undefined, scope: r.scope, enabled: false })] : []
   })
   saveTriggers([...triggers(), ...made.map((x) => ({ ...x, armedAt: stamp }))])
   logs().info('stm:panel', `team ${t.name} imported: ${t.panels.length} panels, ${t.links.length} links, ${made.length} triggers (off), confirmed in the window`)

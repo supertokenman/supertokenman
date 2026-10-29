@@ -7,13 +7,15 @@ export type Team = {
   description: string
   panels: { name: string; folder: string; persona?: string; instructions: string }[]
   links: { a: string; b: string; auto: boolean; capUsd?: number }[]
-  triggers: { name: string; panel: string; when: string; prompt: string }[]
+  triggers: { name: string; panel: string; when: string; prompt: string; scope?: { read: string[]; write: string[]; commands: string[] } }[]
 }
 
 export const MAX_PANELS = 12
 export const MAX_INSTRUCTIONS = 8000
 
-const META = ['folder', 'persona', 'auto', 'cap', 'panel', 'when']
+const META = ['folder', 'persona', 'auto', 'cap', 'panel', 'when', 'read', 'write', 'commands']
+const MANY = ['read', 'write', 'commands']
+const bad = (p: string) => /^([\\/]|~|[A-Za-z]:)/.test(p) || p.split(/[\\/]/).includes('..')
 
 /** Markdown for a team; empty optional fields are written as empty values so the file reads as a form. */
 // a line of prose that looks like a heading gets a backslash, so it stays prose
@@ -29,7 +31,10 @@ export function toMarkdown(t: Team): string {
     out.push(`## Link: ${l.a} <-> ${l.b}`, `- auto: ${l.auto ? 'yes' : 'no'}`, `- cap: ${l.capUsd ?? ''}`, '')
   }
   for (const r of t.triggers) {
-    out.push(`## Trigger: ${r.name}`, `- panel: ${r.panel}`, `- when: ${r.when}`, '', esc(r.prompt.trim()), '')
+    const sc = r.scope
+    out.push(`## Trigger: ${r.name}`, `- panel: ${r.panel}`, `- when: ${r.when}`)
+    for (const k of MANY) for (const v of sc?.[k as 'read'] ?? []) out.push(`- ${k}: ${v}`)
+    out.push('', esc(r.prompt.trim()), '')
   }
   return out.join('\n')
 }
@@ -57,7 +62,7 @@ export function parseBundle(md: string): Team {
   const links: Team['links'] = []
   const triggers: Team['triggers'] = []
   for (const s of sections) {
-    const { meta, prose } = splitBody(s.body)
+    const { meta, prose, many } = splitBody(s.body)
     if (s.kind === 'Panel') {
       if (!s.name) throw new Error('Every panel needs a name after "## Panel:".')
       const folder = (meta.folder ?? '').trim() || '.'
@@ -78,7 +83,10 @@ export function parseBundle(md: string): Team {
       if (!s.name) throw new Error('Every trigger needs a name after "## Trigger:".')
       const panel = (meta.panel ?? '').trim()
       if (!panel) throw new Error(`Trigger ${s.name} has no panel.`)
-      triggers.push({ name: s.name, panel, when: (meta.when ?? '').trim(), prompt: unesc(prose) })
+      for (const k of ['read', 'write'])
+        for (const v of many[k] ?? []) if (bad(v)) throw new Error(`Trigger ${s.name}: ${k} folders must stay inside the project: ${v}`)
+      const scope = MANY.some((k) => many[k]?.length) ? { read: many.read ?? [], write: many.write ?? [], commands: many.commands ?? [] } : undefined
+      triggers.push({ name: s.name, panel, when: (meta.when ?? '').trim(), prompt: unesc(prose), ...(scope ? { scope } : {}) })
     }
   }
 
@@ -99,16 +107,20 @@ export function parseBundle(md: string): Team {
 }
 
 /** The leading "- key: value" lines (known keys only) are metadata; a blank line or anything else starts the prose. */
-function splitBody(body: string[]): { meta: Record<string, string>; prose: string } {
+function splitBody(body: string[]): { meta: Record<string, string>; many: Record<string, string[]>; prose: string } {
   const meta: Record<string, string> = {}
+  const many: Record<string, string[]> = {}
   let i = 0
   while (i < body.length && body[i].trim() === '') i++
   for (; i < body.length; i++) {
     const m = new RegExp(`^- (${META.join('|')}):(.*)$`).exec(body[i])
     if (!m) break
-    meta[m[1]] = m[2].trim()
+    if (MANY.includes(m[1]!)) {
+      const v = m[2]!.trim()
+      if (v) (many[m[1]!] ??= []).push(v)
+    } else meta[m[1]!] = m[2]!.trim()
   }
-  return { meta, prose: body.slice(i).join('\n').trim() }
+  return { meta, many, prose: body.slice(i).join('\n').trim() }
 }
 
 /** One line per thing an import will create, shown to the person before anything is made. */
@@ -116,6 +128,6 @@ export function reviewLines(t: Team): string[] {
   const out: string[] = []
   for (const p of t.panels) out.push(`Panel ${p.name} in ${p.folder}${p.persona ? `, persona ${p.persona}` : ''}`)
   for (const l of t.links) out.push(`Link ${l.a} <-> ${l.b}, ${l.auto ? 'starts on its own' : 'waits'}${l.capUsd !== undefined ? `, cap $${l.capUsd.toFixed(2)}` : ''}`)
-  for (const r of t.triggers) out.push(`Trigger ${r.name} for ${r.panel}${r.when ? ` (${r.when})` : ''} (comes in turned off)`)
+  for (const r of t.triggers) out.push(`Trigger ${r.name} for ${r.panel}${r.when ? ` (${r.when})` : ''} (comes in turned off${r.scope ? ', keeps its scope' : ''}; webhook and gate not imported)`)
   return out
 }

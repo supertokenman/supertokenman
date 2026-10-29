@@ -246,7 +246,7 @@ export const MANUAL: Section[] = [
     title: 'Team bundle: panels, links and triggers as one Markdown file',
     keys: 'team bundle export import markdown panels links triggers share file stm team folder',
     body: `File, Export team... writes this window's panels (name, folder relative to their common parent, persona), the links between them (auto and cap) and the triggers whose folder is one of those panels, as one Markdown file you can read and edit. File, Import team... reads one and opens a sheet listing everything it would make; nothing is made until you pick a folder and press Create. Folders are made under the one you pick and must stay inside it; links are set between the new panels; triggers come in turned off, so turn each on yourself under Triggers. A panel's instructions, if the file has any, are put in its composer, not sent. A link that says auto starts on its own: check the list before Create.
-- stm team export <file> writes the file; stm team import <file> opens the same review sheet in the window and creates nothing. Both run from your terminal, not from inside a panel.
+- stm team export <file> writes the file; stm team import <file> opens the same review sheet in the window and creates nothing. Both run from your terminal, not from inside a panel. Panel instructions in the file are the panel persona's: the app keeps none per panel. A trigger's read, write and commands scope is kept; its gate and webhook are not.
 - A trigger's schedule is written as the app shows it ("Mon to Fri at 09:00", "Every 30 min"); one the app cannot read comes in with the default schedule, still off.
 - A trigger's gate, scope and webhook settings are not in the file.`,
   },
@@ -254,7 +254,7 @@ export const MANUAL: Section[] = [
     id: 'while-away',
     title: 'While you were away',
     keys: 'while you were away overnight summary since idle away card read aloud say what happened approvals waiting cost errors triggers',
-    body: `Cmd+K, While you were away. The app keeps the last 2000 things that happened (a turn ending with its cost, an approval waiting, a trigger run, an error, a review loop ending) in a file in its data folder; nothing leaves this machine. When the window gets focus after an hour without a key press or a time away from it, a card lists what happened since: approvals waiting, trigger runs, turns and panels, errors, and what was spent. From the palette it shows what happened since the card was last shown (or the last 12 hours). Read aloud speaks it with the Mac's say command and exists on macOS only. The switch on the card turns off the automatic card; the palette entry stays.
+    body: `Cmd+K, While you were away. The app keeps the last 2000 things that happened (a turn ending with its cost, an approval waiting, a trigger run, an error, a review loop ending) in a file in its data folder; nothing leaves this machine. When the window gets focus after an hour without a key press, mouse movement, click or scroll (waking the Mac from sleep counts like coming back), a card lists what happened since: approvals waiting, trigger runs, turns and panels, errors, and what was spent. From the palette it shows what happened since the card was last shown (or the last 12 hours). Read aloud speaks it with the Mac's say command and exists on macOS only. The switch on the card turns off the automatic card; the palette entry stays.
 - Only what the app saw while it was running is counted. If it was closed, those hours are not in the card.`,
   },
   {

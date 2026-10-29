@@ -846,6 +846,19 @@ export function App() {
   // a team file to review (File menu or stm team import); panels are made only when the person confirms in the sheet
   useEffect(() => window.stm.teamBundle.onReview(setTeamIn), [])
   useEffect(() => window.stm.away.onShow(setAwayCard), [])
+  // pointer, wheel and key input tell the main process the person is here (at most every 10 s)
+  useEffect(() => {
+    let last = 0
+    const touch = () => {
+      const now = Date.now()
+      if (now - last < 10_000) return
+      last = now
+      window.stm.away.touch()
+    }
+    const evs = ['pointerdown', 'pointermove', 'wheel', 'keydown'] as const
+    for (const n of evs) window.addEventListener(n, touch, { passive: true, capture: true })
+    return () => { for (const n of evs) window.removeEventListener(n, touch, { capture: true }) }
+  }, [])
   // a message from another panel (stm send): put in the composer for the person to send, never sent
   // from here; only a link the person set to auto-send arrives already sent, shown like a typed one
   useEffect(

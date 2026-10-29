@@ -65,10 +65,27 @@ describe('team bundle', () => {
     const lines = reviewLines(team)
     expect(lines).toContain('Panel api in ./api, persona backend')
     expect(lines).toContain('Link api <-> web, waits, cap $2.00')
-    expect(lines).toContain('Trigger nightly for api (0 3 * * *) (comes in turned off)')
+    expect(lines).toContain('Trigger nightly for api (0 3 * * *) (comes in turned off; webhook and gate not imported)')
   })
   it('keeps a prose line that looks like a heading', () => {
     const t: Team = { name: 'x', description: 'd', panels: [{ name: 'api', folder: '.', instructions: '## Panel: not a panel\n# notes\nok' }], links: [], triggers: [] }
     expect(parseBundle(toMarkdown(t)).panels[0]!.instructions).toBe('## Panel: not a panel\n# notes\nok')
+  })
+
+  it('round trips a trigger scope and lists it in the review', () => {
+    const scope = { read: ['docs', 'src'], write: ['src'], commands: ['npm test', 'git status'] }
+    const t = { ...team, triggers: [{ ...team.triggers[0]!, scope }] }
+    expect(parseBundle(toMarkdown(t))).toEqual(t)
+    expect(reviewLines(t)).toContain('Trigger nightly for api (0 3 * * *) (comes in turned off, keeps its scope; webhook and gate not imported)')
+  })
+  it('keeps a prompt that looks like scope lines as prose', () => {
+    const t = { ...team, triggers: [{ ...team.triggers[0]!, prompt: '- read: /etc\nthen go' }] }
+    expect(parseBundle(toMarkdown(t))).toEqual(t)
+  })
+  it('refuses scope folders that leave the project', () => {
+    for (const k of ['read', 'write']) for (const v of ['/etc', '../x', '~/y', 'C:\\z', 'a/../../b']) {
+      const md = toMarkdown({ ...team, triggers: [{ ...team.triggers[0]!, scope: { read: [], write: [], commands: [], [k]: [v] } }] })
+      expect(bad(md)).toThrow(/inside the project/)
+    }
   })
 })

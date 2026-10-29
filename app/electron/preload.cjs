@@ -893,6 +893,7 @@ contextBridge.exposeInMainWorld('stm', {
     },
     setCard: (on) => ipcRenderer.invoke('away:setting', on),
     say: () => ipcRenderer.invoke('away:say'),
+    touch: () => ipcRenderer.send('away:touch'),
   },
   stmCli: {
     onOpen: (fn) => {
