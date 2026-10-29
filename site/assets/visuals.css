@@ -1,8 +1,7 @@
 /* Landing visuals (hero scene, dot matrix, flip cards). Pieces from .claude/skills/landing-visuals/.
    Our parts only: the accent, the 45 degree cut, mono labels, flat colour, no shadows. */
-:root { --paper: #f7f4ee; --dot: rgba(29, 29, 31, .13); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #141412; --dot: rgba(236, 235, 230, .1); } }
-:root[data-theme="dark"] { --paper: #141412; --dot: rgba(236, 235, 230, .1); }
+:root { --paper: #0c0d10; --dot: rgba(235, 238, 245, .09); }
+:root[data-theme="light"] { --paper: #f5f6f8; --dot: rgba(20, 22, 28, .12); }
 
 .dotgrid { background-color: var(--paper); background-image: radial-gradient(var(--dot) 1.2px, transparent 1.4px); background-size: 22px 22px; }
 .nlabel { font: 500 13px/1.4 var(--mono); color: var(--faint); letter-spacing: .02em; }

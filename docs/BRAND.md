@@ -244,6 +244,12 @@ between the cards. Panels do not resize by hand yet, so there is no handle in th
 
 ## Landing visuals (decided 2026-10-29)
 
+- Colour, "Noite" (chosen 2026-10-29 from three options): the site is dark by default, background
+  #0c0d10, ink #eef0f4, accent a vivid orange #ff6a2b (#e8551c on the light variant "Sinal", used only
+  when a page sets data-theme="light"). Why: cream with a terracotta near #d97757 is the most common
+  AI-made look and close to Anthropic's own; the app's screens are dark and sit in a dark page. The app
+  moves to the same orange in its own change.
+
 The home's top felt institutional; it now borrows a calm recipe (dot grid, heavy lowercase headline, small mono numbers, one highlighted block) in our own parts. Pieces and rules: `.claude/skills/landing-visuals/`.
 - Fonts: no serif. Headlines on the landing use the system sans at weight 800, lowercase, tight, ending with a period; SuperToken Display stays for the name and numbers. A serif would have to be self-hosted and none we hold fits; no font is loaded from another host.
 - Paper and dot grid: hero and feature sections sit on `--paper` (`#f7f4ee` light, `#141412` dark) with a faint 22px dot grid. Small labels read "nº 1 · ..." in mono, lowercase.
