@@ -259,6 +259,13 @@ The home's top felt institutional; it now borrows a calm recipe (dot grid, heavy
 - Motion rules: sparse; meters fill only while on screen; no tilt on touch; with reduced motion nothing moves and a card shows its back in place of the front when pressed.
 - Budget: the landing visuals add 1.6 KB gzip of JS and 1.8 KB of CSS, and no new image.
 
+## Landing message: the team first (decided 2026-10-29)
+
+The landing leads with a team of Claude Code agents working together, not with cost. Hero: "your Claude Code
+team, in one window." Six cards: canvas and group room, `stm loop`, approve with an edit or deny with a note,
+`stm learn`, triggers with a scope, cost per turn. Cost stays as a trust signal (the last card and the hero's
+mono label). Only features released up to 0.1.19.
+
 ## Changelog
 
 - Phase 16: top-bar selects follow the button shape (cut corner, drawn border, accent bar on focus, mono uppercase label); the Modules sheet shows modules that are off at reduced opacity and the ones on with an accent top rule.

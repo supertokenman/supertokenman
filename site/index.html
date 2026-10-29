@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SuperTokenMan</title>
-<meta name="description" content="A Mac app for running and controlling Claude Code: parallel panels, approvals, isolation, cost per turn, project memory and your own tools, in one window.">
+<meta name="description" content="A Mac app for a team of Claude Code agents: parallel panels that link, review each other, ask before acting and remember the project, with the cost of every turn shown.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="SuperTokenMan">
-<meta property="og:description" content="Your whole dev day in one window.">
+<meta property="og:description" content="Your Claude Code team, in one window.">
 <meta property="og:image" content="https://supertokenman.com/assets/og.png">
 <link rel="canonical" href="https://supertokenman.com/">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -39,9 +39,9 @@
       <div class="hero-grid">
         <div class="hero-text">
           <div class="dots motif" aria-hidden="true" data-dots="#####.#####.#####/#...#.#...#.*****/#...#.#...#.*****/#####.#####.*****"></div>
-          <div class="nlabel">nº 1 · every token, in plain sight</div>
-          <h1 class="display split">your whole dev day in one window.</h1>
-          <p class="lead">A Mac app for Claude Code. Run it in parallel panels, approve what it touches, see what every turn costs, and keep what it learns about your project.</p>
+          <div class="nlabel">nº 1 · a Mac app for Claude Code · cost per turn shown</div>
+          <h1 class="display split">your Claude Code team, in one window.</h1>
+          <p class="lead">Run Claude Code in parallel panels that link to each other. One builds while another reviews, each asks before it acts, and what they learn about your project stays for the next session.</p>
           <div class="cta">
             <a class="btn" href="/download/">Download for Mac</a>
             <a class="btn ghost" href="/docs/demo/">Try the live demo</a>
@@ -81,23 +81,31 @@
   <section class="features dotgrid" id="features">
     <div class="wrap">
       <div class="nlabel">nº 2 · what it does</div>
-      <h2>four things, one window.</h2>
+      <h2>six things your agents do together.</h2>
       <div class="flips">
         <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="hint">Panels</span><b>many panels.</b><span class="dots" aria-hidden="true" data-dots="####.####.####/#..#.#..#.#**#/#..#.#..#.#**#/#..#.#..#.#**#/####.####.####"></span></span>
-          <span class="face back"><span class="hint">Panels</span><p>Run Claude Code in parallel panels, each in its own git worktree, so two tasks never write over each other.</p></span>
+          <span class="face front"><span class="hint">Canvas</span><b>panels in a room.</b><span class="dots" aria-hidden="true" data-dots="#####.....#####/#...#.....#...#/#...#*****#...#/#####..*..#####/.......*......./.....#####...../.....#...#...../.....#####....."></span></span>
+          <span class="face back"><span class="hint">Canvas</span><p>Panels sit as cards on a canvas, with their links drawn. Send one message to the linked panels and the one you name with @name answers.</p></span>
         </span></button>
         <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="hint">Tasks</span><b>one budget.</b><span class="dots" aria-hidden="true" data-dots="####.......####/#..#.......#..#/#..#*******#..#/#..#.......#..#/####.......####"></span></span>
-          <span class="face back"><span class="hint">Tasks</span><p>Group panels under a task with one budget and one timeline.</p></span>
+          <span class="face front"><span class="hint">Review loop</span><b>build, review, repeat.</b><span class="dots" aria-hidden="true" data-dots="#####.....#####/#...#.***.#...#/#...#.....#...#/#####.....#####/.....*****....."></span></span>
+          <span class="face back"><span class="hint">Review loop</span><p><code>stm loop</code> sends each reply from a build panel to a review panel, and back, until the review says APPROVED, the rounds run out or the spend cap is reached.</p></span>
         </span></button>
         <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="hint">Approvals</span><b>ask first.</b><span class="dots" aria-hidden="true" data-dots="#############/#...........#/#.#######...#/#...........#/#.###..****.#/#############"></span></span>
-          <span class="face back"><span class="hint">Approvals</span><p>Tool calls wait for your approval, unless you let a persona run the safe ones alone.</p></span>
+          <span class="face front"><span class="hint">Approvals</span><b>approve your way.</b><span class="dots" aria-hidden="true" data-dots="###############/#.............#/#.#########...#/#.*******.....#/#.............#/#.####...####.#/###############"></span></span>
+          <span class="face back"><span class="hint">Approvals</span><p>Every tool call can wait for you. Edit the command before it runs, or deny it with a note that tells the agent what to do instead.</p></span>
+        </span></button>
+        <button class="flip" type="button" aria-pressed="false"><span class="inner">
+          <span class="face front"><span class="hint">Learns</span><b>learns from you.</b><span class="dots" aria-hidden="true" data-dots="###.###.###..../.............../###.###.###..../.............../*****.#####.***"></span></span>
+          <span class="face back"><span class="hint">Learns</span><p><code>stm learn</code> turns the notes you gave with denials into proposed lines for CLAUDE.local.md. Nothing is written until you pick them.</p></span>
+        </span></button>
+        <button class="flip" type="button" aria-pressed="false"><span class="inner">
+          <span class="face front"><span class="hint">Triggers</span><b>runs on its own.</b><span class="dots" aria-hidden="true" data-dots="..#####......../.#.....#......./#...#...#..***./#...#*..#..*.*/#.......#..***./.#.....#......./..#####........"></span></span>
+          <span class="face back"><span class="hint">Triggers</span><p>Triggers start a panel on a schedule or from a local webhook, held to the folders and commands you allow. Anything outside is refused.</p></span>
         </span></button>
         <button class="flip" type="button" aria-pressed="false"><span class="inner">
           <span class="face front"><span class="hint">Cost</span><b>every turn, priced.</b><span class="dots" aria-hidden="true" data-dots="#############/#+++++++++++#/#+++++++++++#/#############"></span></span>
-          <span class="face back"><span class="hint">Cost</span><p>The cost of each turn sits above the chat. Budgets per project, persona and task are checked before each turn starts.</p></span>
+          <span class="face back"><span class="hint">Cost</span><p>The cost of each turn sits above the chat. Budgets and per-panel caps are checked before a turn starts.</p></span>
         </span></button>
       </div>
       <p class="hint-line nlabel">Tap a card to turn it.</p>
@@ -109,7 +117,7 @@
       <div class="story-steps">
       <article class="step" id="agents" data-scene="0">
         <div class="label">Agents</div>
-        <h2 class="display">Many panels. One budget.</h2>
+        <h2 class="display">Many panels. One task.</h2>
         <p>Run Claude Code in parallel panels, each in its own git worktree, so two tasks never write over each other.</p>
         <p>Group panels under a task with one budget and one timeline. Close it with the decision: merged, dropped, or what was learned.</p>
         <ul>
