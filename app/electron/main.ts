@@ -307,7 +307,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -1427,6 +1427,34 @@ ipcMain.handle('social:setSlots', async (_e, slots: import('../shared/pubcal.js'
   const clean = slots.map((x) => ({ day: Number(x.day), time: x.time })).sort((a, b) => a.day - b.day || a.time.localeCompare(b.time))
   saveSettings({ ...settings(), pubSlots: clean })
   return clean
+})
+ipcMain.handle('social:netSlots', () => settings().netSlots ?? {})
+ipcMain.handle('social:setNetSlots', async (_e, network: string, slots: import('../shared/pubcal.js').Slot[]) => {
+  const { checkSlots } = await import('../shared/pubcal.js')
+  const bad = checkSlots(slots)
+  if (bad) throw new Error(bad)
+  const clean = slots.map((x) => ({ day: Number(x.day), time: x.time })).sort((a, b) => a.day - b.day || a.time.localeCompare(b.time))
+  const netSlots = { ...(settings().netSlots ?? {}), [String(network)]: clean }
+  saveSettings({ ...settings(), netSlots })
+  return netSlots
+})
+ipcMain.handle('social:nextSlot', (_e, network: string) => social.nextSlot(settings().netSlots ?? {}, String(network)))
+ipcMain.handle('social:held', () => social.held())
+ipcMain.handle('social:postNow', (_e, id: string) => social.postNow(String(id)))
+ipcMain.handle('social:skip', (_e, id: string) => social.skip(String(id)))
+ipcMain.handle('social:triageOn', () => Boolean(settings().socialTriage))
+ipcMain.handle('social:setTriageOn', (_e, on: boolean) => (saveSettings({ ...settings(), socialTriage: Boolean(on) }), Boolean(on)))
+ipcMain.handle('social:triage', async (_e, mentions: { id: string; author: string; text: string }[]) => {
+  // off by default: no model call until the person turns it on; spam is dropped before any call
+  if (!settings().socialTriage) return { on: false, labels: {}, skipped: {} as Record<string, string> }
+  const { preFilter } = await import('../shared/triage.js')
+  const { triagePrompt, parseTriage } = await import('../shared/socialprompts.js')
+  const list = (Array.isArray(mentions) ? mentions : []).slice(0, 50).map((m) => ({ id: String(m.id), author: String(m.author ?? ''), text: String(m.text ?? '').slice(0, 1000) }))
+  const skipped: Record<string, string> = {}
+  const rest = list.filter((m) => { const w = preFilter(m); if (w) skipped[m.id] = w; return !w })
+  if (!rest.length) return { on: true, labels: {}, skipped }
+  const r = parseTriage((await small(triagePrompt(rest))).text, rest.map((m) => m.id))
+  return { on: true, labels: r.ok ? r.value.labels : {}, skipped }
 })
 ipcMain.handle('social:connected', () => social.status().filter((x) => x.connected).map((x) => x.id))
 ipcMain.handle('social:remove', (_e, id: string) => social.removeItem(String(id)))
@@ -4699,7 +4727,8 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => setTimeout(() => void tickTriggers(), 15_000))
   // the social queue: approved items go out at their time
   setInterval(() => void social.tick(), 60_000)
-  setTimeout(() => void social.tick(), 20_000)
+  setTimeout(() => social.catchUp(), 20_000)
+  powerMonitor.on('resume', () => setTimeout(() => social.catchUp(), 20_000))
   powerMonitor.on('suspend', lockNow)
   if (process.platform === 'darwin') app.dock?.setIcon(join(here, '..', '..', 'build', 'icon.png'))
   vault = new Vault(join(app.getPath('userData'), 'vault.json'), {

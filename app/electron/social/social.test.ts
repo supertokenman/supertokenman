@@ -123,3 +123,12 @@ describe('store', () => {
     expect(xAuth({ accessToken: 'B' }, 'GET', 'https://api.x.com/2/users/me')).toBe('Bearer B')
   })
 })
+
+describe('held posts', () => {
+  it('a held item is never due until released', () => {
+    const i = cleanItem({ text: 'a', networks: ['x'], when: 1000, approved: true, held: true } as never)
+    expect(i.held).toBe(true)
+    expect(dueNetworks(i, 5000)).toEqual([])
+    expect(dueNetworks({ ...i, held: undefined }, 5000)).toEqual(['x'])
+  })
+})

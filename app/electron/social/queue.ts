@@ -15,6 +15,8 @@ export type Item = Draft & {
   variants?: Partial<Record<NetworkId, string>>
   /** notes on the draft before it is approved; never posted */
   comments?: { at: number; text: string }[]
+  /** late past the grace window after the app was closed; waits for Post now, Move or Skip */
+  held?: boolean
 }
 
 /** The text that goes to one network: its own version, or the main text. */
@@ -33,6 +35,7 @@ export function cleanItem(i: Partial<Item>, now = Date.now()): Item {
     when: typeof i.when === 'number' ? i.when : null,
     approved: Boolean(i.approved),
     createdAt: i.createdAt ?? now,
+    ...(i.held ? { held: true } : {}),
     results: i.results ?? {},
     ...(i.variants && Object.keys(i.variants).length ? { variants: Object.fromEntries(Object.entries(i.variants).filter(([n, t]) => nets.includes(n as NetworkId) && typeof t === 'string' && t.trim()).map(([n, t]) => [n, String(t).slice(0, 5000)])) } : {}),
     ...(i.comments?.length ? { comments: i.comments.filter((c) => c && String(c.text).trim()).map((c) => ({ at: Number(c.at) || now, text: String(c.text).slice(0, 2000) })).slice(-50) } : {}),
@@ -41,7 +44,7 @@ export function cleanItem(i: Partial<Item>, now = Date.now()): Item {
 
 /** The networks still to publish to, when the item is due; [] otherwise. */
 export function dueNetworks(i: Item, now: number): NetworkId[] {
-  if (!i.approved || (i.when != null && i.when > now)) return []
+  if (!i.approved || i.held || (i.when != null && i.when > now)) return []
   // a failure stays until the person retries it, so an error is never repeated on its own
   return i.networks.filter((n) => !i.results[n])
 }

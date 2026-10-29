@@ -8,6 +8,8 @@ import type { Net } from '../../shared/social.js'
 import { makeFetcher } from './core.js'
 import { metaIds, NETWORKS, OAUTH, ORDER, SETUP } from './networks.js'
 import { authorizeUrl, exchange, pkce, redirectFor, refreshed, waitForCode } from './oauth.js'
+import { catchUp } from '../../shared/missed.js'
+import { nextSlotFor, type NetSlots } from '../../shared/postslots.js'
 import { cleanItem, dueNetworks, problem, textFor, type Item } from './queue.js'
 import { credName, readCred, secretsOf, writeCred, type VaultLike } from './store.js'
 
@@ -149,9 +151,30 @@ export function socialService(d: SocialDeps) {
   }
   /** A new time from the calendar: an approved item that has not gone out yet waits for Approve again. */
   const move = (id: string, when: number | null) => {
-    writeQueue(readQueue().map((x) => (x.id === id && !Object.values(x.results).some((r) => r?.ok) ? { ...x, when, approved: x.when === when ? x.approved : false } : x)))
+    writeQueue(readQueue().map((x) => (x.id === id && !Object.values(x.results).some((r) => r?.ok) ? { ...x, when, held: false, approved: x.when === when ? x.approved : false } : x)))
     return readQueue()
   }
+  /** On launch and after sleep: a little late posts now, a lot late is held for the person. Returns how many were held. */
+  function catchUpNow(now = Date.now()) {
+    const { held } = catchUp(readQueue(), now)
+    if (held.length) writeQueue(readQueue().map((x) => (held.some((h) => h.id === x.id) ? { ...x, held: true } : x)))
+    void tick()
+    return held.length
+  }
+  const heldItems = () => readQueue().filter((x) => x.held)
+  const postNow = (id: string) => {
+    writeQueue(readQueue().map((x) => (x.id === id && x.held ? { ...x, held: false, when: Date.now() } : x)))
+    void tick()
+    return heldItems()
+  }
+  /** Skip: the item goes back to a draft; nothing is posted. */
+  const skip = (id: string) => {
+    writeQueue(readQueue().map((x) => (x.id === id && x.held ? { ...x, held: false, approved: false } : x)))
+    return heldItems()
+  }
+  /** The next free slot of one network, taken only by queued items that list that network. */
+  const nextSlot = (slots: NetSlots, network: string, now = new Date()) =>
+    nextSlotFor(slots, network, readQueue().flatMap((i) => (i.networks as string[]).includes(network) ? [{ id: i.id, network, when: i.when }] : []), now)
   const comment = (id: string, text: string) => {
     if (!text.trim()) return readQueue()
     writeQueue(readQueue().map((x) => (x.id === id ? cleanItem({ ...x, comments: [...(x.comments ?? []), { at: Date.now(), text }] }) : x)))
@@ -214,6 +237,11 @@ export function socialService(d: SocialDeps) {
     comment,
     retry,
     removeItem,
+    catchUp: catchUpNow,
+    held: heldItems,
+    postNow,
+    skip,
+    nextSlot,
     tick,
   }
 }

@@ -161,6 +161,15 @@ export type Bridge = {
     comment: (id: string, text: string) => Promise<QueueItem[]>
     slots: () => Promise<import('../shared/pubcal').Slot[]>
     setSlots: (s: import('../shared/pubcal').Slot[]) => Promise<import('../shared/pubcal').Slot[]>
+    netSlots: () => Promise<import('../shared/postslots').NetSlots>
+    setNetSlots: (network: string, s: import('../shared/pubcal').Slot[]) => Promise<import('../shared/postslots').NetSlots>
+    nextSlot: (network: string) => Promise<number | null>
+    held: () => Promise<QueueItem[]>
+    postNow: (id: string) => Promise<QueueItem[]>
+    skip: (id: string) => Promise<QueueItem[]>
+    triageOn: () => Promise<boolean>
+    setTriageOn: (on: boolean) => Promise<boolean>
+    triage: (m: { id: string; author: string; text: string }[]) => Promise<{ on: boolean; labels: Record<string, import('../shared/socialprompts').TriageLabel>; skipped: Record<string, string> }>
     connected: () => Promise<NetworkId[]>
   }
   routerAsk: (text: string, localOnly?: boolean) => Promise<{ id: string | null; where: 'local' | 'claude' | 'none' }>
