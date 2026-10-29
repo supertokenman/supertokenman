@@ -185,6 +185,7 @@ const PubCalendarSheet = lazy(() => import('./PubCalendar').then((m) => ({ defau
 const ObserveSheet = lazy(() => import('./Observe').then((m) => ({ default: m.ObserveSheet })))
 const MonitorsSheet = lazy(() => import('./Monitors').then((m) => ({ default: m.MonitorsSheet })))
 const ModelServersSheet = lazy(() => import('./ModelServers').then((m) => ({ default: m.ModelServersSheet })))
+const PostBriefSheet = lazy(() => import('./PostBrief').then((m) => ({ default: m.PostBriefSheet })))
 const ShotToCodeSheet = lazy(() => import('./ShotToCode').then((m) => ({ default: m.ShotToCodeSheet })))
 const WorkbenchSheet = lazy(() => import('./Workbench').then((m) => ({ default: m.WorkbenchSheet })))
 const SecuritySheet = lazy(() => import('./Security').then((m) => ({ default: m.SecuritySheet })))
@@ -440,6 +441,8 @@ export function App() {
   const [ctrOpen, setCtrOpen] = useState(false)
   const [bwOpen, setBwOpen] = useState(false)
   const [radarOpen, setRadarOpen] = useState(false)
+  const [briefOpen, setBriefOpen] = useState(false)
+  const [briefSid, setBriefSid] = useState<string | null>(null)
   const [ciOpen, setCiOpen] = useState(false)
   const [xrOpen, setXrOpen] = useState(false)
   const [stkOpen, setStkOpen] = useState(false)
@@ -1179,6 +1182,7 @@ export function App() {
       ['compose-stacks', 'Compose stacks: edit, start, stop, logs', 'docker compose stacks yaml dockge up down stop pull logs services', () => setStkOpen(true)],
       ['image-xray', 'Image X-ray: Docker layers and waste', 'docker image layers size waste dive dockerfile slim', () => setXrOpen(true)],
       ['run-ci', 'Run CI here with act, before the push', 'github actions workflow ci act local docker job run test', () => setCiOpen(true)],
+      ['post-brief', 'Brief a post: summary and the best prompt from a link or screenshot', 'brief post link url screenshot summary summarize x twitter linkedin threads reddit youtube article prompt deeper', () => setBriefOpen(true)],
       ['topic-radar', 'Topic radar: your topics in your feeds', 'radar trends topics keywords feeds news count ranking summary ntfy', () => setRadarOpen(true)],
       ['bitwarden', 'Bitwarden or Vaultwarden: link secrets', 'bitwarden vaultwarden bw secrets password keys link', () => setBwOpen(true)],
       ['app-containers', 'App containers: what the app runs in Docker, live', 'docker containers isolate self-hosting stats events stop remove', () => setCtrOpen(true)],
@@ -1615,6 +1619,24 @@ export function App() {
       <Presence show={stkOpen}><ComposeStacks onClose={() => setStkOpen(false)} /></Presence>
       <Presence show={xrOpen}><ImageXray sid={p.focus ?? undefined} onClose={() => setXrOpen(false)} /></Presence>
       <Presence show={ciOpen}><RunCi cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} sid={p.focus ?? undefined} onClose={() => setCiOpen(false)} /></Presence>
+      <Presence show={briefOpen}>
+        <PostBriefSheet
+          run={briefSid && p.byId[briefSid] ? { busy: p.byId[briefSid].busy, reply: [...p.byId[briefSid].lines].reverse().find((l) => l.kind === 'assistant')?.text ?? '' } : null}
+          onClose={() => setBriefOpen(false)}
+          onBrief={async (text, images) => {
+            const sid = await open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+            setBriefSid(sid)
+            dispatch({ kind: 'event', sid, action: { kind: 'sent', text, at: Date.now(), images: images.map((i) => `data:${i.mediaType};base64,${i.data}`) } })
+            await window.stm.send(sid, text, images)
+          }}
+          onOpen={async (prompt) => {
+            const sid = await open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+            dispatch({ kind: 'event', sid, action: { kind: 'sent', text: prompt, at: Date.now() } })
+            void window.stm.send(sid, prompt)
+            setBriefOpen(false)
+          }}
+        />
+      </Presence>
       <Presence show={radarOpen}><TopicRadar onClose={() => setRadarOpen(false)} /></Presence>
       <Presence show={bwOpen}><BitwardenSheet onClose={() => setBwOpen(false)} /></Presence>
       <Presence show={ctrOpen}><AppContainers onClose={() => setCtrOpen(false)} /></Presence>

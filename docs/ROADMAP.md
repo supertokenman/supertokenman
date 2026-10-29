@@ -228,6 +228,10 @@ Needs a decision first:
 Left out: a server with Postgres (Rakazo), against local-first; API keys kept in a plain config file
 (OpenMausBot), where our vault already does better.
 
+## Planned for 0.1.20
+
+- Brief a post: summary and the best prompt from any link or screenshot.
+
 ## Later
 
 - New project from a template: persona, skills and CLAUDE.md set up in one step.
