@@ -360,7 +360,7 @@ export type Bridge = {
     disconnect: (net: import('../shared/social').Net) => Promise<PostNet[]>
   }
   post: {
-    send: (nets: import('../shared/social').Net[], text: string, title: string) => Promise<import('../shared/posteverywhere').Result[]>
+    send: (nets: import('../shared/social').Net[], text: string, title: string, texts?: Partial<Record<import('../shared/social').Net, string>>) => Promise<import('../shared/posteverywhere').Result[]>
     onOpen: (fn: (r: { text: string; title: string }) => void) => () => void
   }
   radar: {

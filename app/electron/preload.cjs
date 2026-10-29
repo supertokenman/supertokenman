@@ -545,7 +545,7 @@ contextBridge.exposeInMainWorld('stm', {
     disconnect: (net) => unlocked('disconnect an account').then(() => ipcRenderer.invoke('accounts:disconnect', net)),
   },
   post: {
-    send: (nets, text, title) => ipcRenderer.invoke('post:send', nets, text, title),
+    send: (nets, text, title, texts) => ipcRenderer.invoke('post:send', nets, text, title, texts),
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)
       ipcRenderer.on('post:open', l)

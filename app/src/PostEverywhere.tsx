@@ -20,9 +20,10 @@ export function PostEverywhere(props: { onClose: () => void; text?: string; titl
   const [busy, setBusy] = useState(false)
   const [results, setResults] = useState<Result[] | null>(null)
   const [msg, setMsg] = useState('')
-  // rewrites come from the rewrite step (none wired yet); accepted ones wait for a per-network post IPC
+  // rewrites come only from the button below (one small-model call per click); accepted ones post as that network's own text
   const [rewrites, setRewrites] = useState<RewriteVersion[] | null>(null)
-  const [, setVariants] = useState<Partial<Record<NetId, string>>>({})
+  const [variants, setVariants] = useState<Partial<Record<NetId, string>>>({})
+  const [rewriting, setRewriting] = useState(false)
   // newly connected networks start ticked; disconnected ones drop out
   const got = (l: PostNet[]) => setNets((old) => {
     setPick((p) => new Set(l.filter((x) => x.connected && (p.has(x.net) || !old.find((o) => o.net === x.net)?.connected)).map((x) => x.net)))
@@ -33,15 +34,28 @@ export function PostEverywhere(props: { onClose: () => void; text?: string; titl
     if (props.title !== undefined) setTitle(props.title)
   }, [props.text, props.title])
   const connected = nets.filter((n) => n.connected)
-  const pv = (n: PostNet) => preview(n.net, text, title, n.net === 'mastodon' && n.mastodonLimit ? n.mastodonLimit : undefined)
+  const textFor = (n: NetId) => variants[n] ?? text
+  const pv = (n: PostNet) => preview(n.net, textFor(n.net), title, n.net === 'mastodon' && n.mastodonLimit ? n.mastodonLimit : undefined)
   const chosen = connected.filter((n) => pick.has(n.net))
   const blocked = chosen.filter((n) => !pv(n).ok)
+  const rewritable = chosen.filter((n) => ['bluesky', 'mastodon', 'linkedin', 'x'].includes(n.net))
+  const rewrite = () => {
+    setRewriting(true)
+    setMsg('')
+    setVariants({})
+    window.stm.social.rewrite(text, rewritable.map((n) => n.net)).then((r) => {
+      const v = rewritable.flatMap((n) => { const t = (r.texts as Partial<Record<NetId, string>>)[n.net]; return t ? [{ net: n.net, text: t }] : [] })
+      const bad = Object.entries(r.rejected).map(([k, w]) => `${NET_NAME[k as NetId] ?? k}: ${w}`)
+      setRewrites(v)
+      if (bad.length) setMsg(`Not kept: ${bad.join(' ')}`)
+    }, (e) => setMsg(clean(e))).finally(() => setRewriting(false))
+  }
   const post = async () => {
-    const list = chosen.map((n) => `${NET_NAME[n.net]} (${n.host})`).join('\n')
+    const list = chosen.map((n) => `${NET_NAME[n.net]} (${n.host})${variants[n.net] ? ' with its own rewritten text' : ''}`).join('\n')
     if (!(await confirmDialog({ title: 'Post now?', message: `This text goes out now, as a public post where the network makes it public, to:\n\n${list}\n\nNothing else gets it.`, confirm: `Post to ${chosen.length}` }))) return
     setBusy(true)
     setResults(null)
-    window.stm.post.send(chosen.map((n) => n.net), text, title).then(setResults, (e) => setMsg(clean(e))).finally(() => setBusy(false))
+    window.stm.post.send(chosen.map((n) => n.net), text, title, Object.fromEntries(chosen.flatMap((n) => (variants[n.net] ? [[n.net, variants[n.net]]] : [])))).then(setResults, (e) => setMsg(clean(e))).finally(() => setBusy(false))
   }
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
@@ -54,11 +68,11 @@ export function PostEverywhere(props: { onClose: () => void; text?: string; titl
         </header>
         <div className="pe-body" style={{ display: 'grid', gap: 12, padding: 16, overflow: 'auto' }}>
           <label className="chart-name" htmlFor="pe-text">Post</label>
-          <textarea id="pe-text" rows={6} value={text} onChange={(e) => (setText(e.target.value), setResults(null), setRewrites(null))} placeholder="Text and links. No images in this version." />
+          <textarea id="pe-text" rows={6} value={text} onChange={(e) => (setText(e.target.value), setResults(null), setRewrites(null), setVariants({}))} placeholder="Text and links. No images in this version." />
           {pick.has('devto') && <input aria-label="Title for DEV" value={title} placeholder="Title (DEV only)" onChange={(e) => setTitle(e.target.value)} />}
           <div className="ob-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="ghost" disabled={!text.trim() || !chosen.length} data-tip="The rewrite step is not wired yet, so no versions exist to review.">Rewrite for each network</button>
-            <span className="faint">Not available yet.</span>
+            <button className="ghost" disabled={rewriting || !text.trim() || !rewritable.length} data-tip="Asks the small model for one version per network. You review each one before it is used." onClick={rewrite}>{rewriting ? 'Rewriting…' : 'Rewrite for each network'}</button>
+            <span className="faint">{rewritable.length ? 'One request, only when you click. Nothing is posted by it.' : 'Pick Bluesky, Mastodon, LinkedIn or X to rewrite.'}</span>
           </div>
           {rewrites && (
             <Suspense fallback={<div className="faint">Loading…</div>}>
@@ -83,6 +97,7 @@ export function PostEverywhere(props: { onClose: () => void; text?: string; titl
                   <b>{NET_NAME[n.net]}</b>
                   <span className="faint">{n.host} · {p.count}{p.limit !== null ? ` / ${p.limit}` : ''}</span>
                 </label>
+                {pick.has(n.net) && text.trim() && variants[n.net] && <div className="faint">Rewritten text for this network</div>}
                 {pick.has(n.net) && text.trim() && <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }} className="faint">{n.net === 'devto' ? `${title}\n\n${p.text}` : p.text}</pre>}
                 {pick.has(n.net) && p.problem && text.trim() && <div className="error">{p.problem}</div>}
                 {r && (r.ok ? <div>{r.url ? <a href={r.url} target="_blank" rel="noreferrer">{r.url}</a> : 'Posted.'}</div> : <div className="error">{r.error}</div>)}

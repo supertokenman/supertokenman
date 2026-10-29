@@ -59,17 +59,21 @@ export function registerPostEverywhere(ipcMain: IpcMain, account: (n: Net) => Pr
     if (!ACCOUNTS.includes(n as Net)) throw new Error('Unknown network.')
     return n as Net
   }
-  ipcMain.handle('post:send', async (_e, nets: unknown, text: unknown, title: unknown) => {
+  ipcMain.handle('post:send', async (_e, nets: unknown, text: unknown, title: unknown, texts?: unknown) => {
     const t = String(text ?? '').trim()
     const ti = String(title ?? '')
     const list = (Array.isArray(nets) ? nets : []).map(okNet)
+    // optional per-network wording (accepted rewrites); a network with none gets the one text
+    const own = texts && typeof texts === 'object' ? (texts as Record<string, unknown>) : {}
+    const textOf = (n: Net) => (typeof own[n] === 'string' && (own[n] as string).trim() ? (own[n] as string).trim() : t)
     return Promise.all(list.map(async (n): Promise<P.Result> => {
       const c = await account(n).catch(() => null)
       if (!c) return { net: n, ok: false, error: 'Not connected.' }
-      const p = P.preview(n, t, ti, n === 'mastodon' ? (mastoLimit(c) ?? undefined) : undefined)
+      const tn = textOf(n)
+      const p = P.preview(n, tn, ti, n === 'mastodon' ? (mastoLimit(c) ?? undefined) : undefined)
       if (!p.ok) return { net: n, ok: false, error: p.problem }
       try {
-        return { net: n, ok: true, url: await send(n, c, t, ti) }
+        return { net: n, ok: true, url: await send(n, c, tn, ti) }
       } catch (e) {
         // the error text only, every secret masked; never the request, which carries the credential
         let m = (e as Error).message
