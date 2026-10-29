@@ -244,6 +244,8 @@ contextBridge.exposeInMainWorld('stm', {
   newSession: (opts) => ipcRenderer.invoke('session:new', opts || {}),
   closeSession: (sid) => ipcRenderer.invoke('session:close', sid),
   release: (sid) => ipcRenderer.invoke('chat:release', sid),
+  panelUsage: (sid) => ipcRenderer.invoke('panel:usage', sid),
+  panelCap: (sid, cap) => ipcRenderer.invoke('panel:cap', sid, cap),
   countTokens: (text, model) => ipcRenderer.invoke('tokens:count', text, model),
   memoryNode: (id) => ipcRenderer.invoke('memory:node', id),
   guardInject: (text) => ipcRenderer.invoke('guard:inject', text),

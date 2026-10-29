@@ -143,7 +143,7 @@ import { alertDialog, confirmDialog, ContextMenuHost, DialogHost } from './ui'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
 
-import { WebAppsDrawer } from './WebApps'
+const WebAppsDrawer = lazy(() => import('./WebApps').then((m) => ({ default: m.WebAppsDrawer })))
 
 import { noPanels, reducePanels, type PanelAction, type Panels } from './state'
 
@@ -1785,7 +1785,7 @@ export function App() {
         )}
       </div>
       )}
-      {waMounted && <WebAppsDrawer open={wa} app={waApp} onApp={setWaApp} width={waWidth} onResize={setWaWidth} onUnread={setWaUnread} onClose={() => setWa(false)} />}
+      {waMounted && <Suspense fallback={null}><WebAppsDrawer open={wa} app={waApp} onApp={setWaApp} width={waWidth} onResize={setWaWidth} onUnread={setWaUnread} onClose={() => setWa(false)} /></Suspense>}
       </div>
     </div>
   )

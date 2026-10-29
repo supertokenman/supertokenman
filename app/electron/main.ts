@@ -163,6 +163,7 @@ import { companion } from './companion.js'
 import { runFilter, throughFilters } from './filterbox.js'
 import { EXAMPLE_PLAYBOOK, parsePlaybook, stepPrompt, type PbRun } from '../shared/playbook.js'
 import * as WT from '../shared/worktasks.js'
+import * as PU from '../shared/panelusage.js'
 import * as ISO from '../shared/isolate.js'
 import * as RT from '../shared/routines.js'
 import * as SI from '../shared/skillimport.js'
@@ -349,6 +350,10 @@ const OUTSIDE_TOOL = (tool: string) => /^(WebFetch|WebSearch|Read|Bash|Grep)$/.t
 // budgets: each panel's cost so far and its recent turns, today's spend by project and persona, and the
 // message a limit is holding until the person lets it through
 const panelCost = new Map<string, { total: number; recent: number[] }>()
+// usage each panel's CLI reported, and the panel's own cap
+const panelUse = new Map<string, PU.Usage>()
+const panelCap = new Map<string, PU.Cap>()
+const useOf = (sid: string) => panelUse.get(sid) ?? PU.empty('Claude Code')
 const personaOf = new Map<string, string>()
 const held = new Map<string, { text: string; attachments: Attachment[] }>()
 const budgetWarned = new Map<string, string>()
@@ -594,6 +599,8 @@ ipcMain.handle('wt:decide', (_e, id: string, decision: string) => {
 function budgetVerdict(sid: string) {
   const st = settings()
   const p = panelCost.get(sid) ?? { total: 0, recent: [] }
+  const cv = PU.capVerdict(useOf(sid), panelCap.get(sid) ?? {})
+  if (!cv.ok) return { ok: false as const, scope: 'panel' as const, spent: 0, limit: 0, estimate: estimateTurn(p.recent), reason: cv.reason }
   const tk = workTasks().find((t) => t.status === 'open' && t.sids.includes(sid))
   if (tk) {
     const v = WT.taskVerdict(tk, estimateTurn(p.recent))
@@ -603,6 +610,7 @@ function budgetVerdict(sid: string) {
 }
 function track(sid: string, e: { kind?: string; windows?: { kind: string; percentUsed: number; resetsAt?: string }[]; model?: string; costUsd?: number; inputTokens?: number; outputTokens?: number; cacheRead?: number; cacheWrite?: number; tokens?: number; path?: string; durationMs?: number; cacheTtlMs?: number }) {
   if (e.kind === 'limits' && e.windows) {
+    panelUse.set(sid, PU.addWindows(useOf(sid), e.windows))
     // the newest reading of the plan's windows, for the menu bar
     liveLimits = [...(liveLimits ?? []).filter((w) => !e.windows!.some((x) => x.kind === w.kind)), ...e.windows]
     refreshTray()
@@ -625,6 +633,7 @@ function track(sid: string, e: { kind?: string; windows?: { kind: string; percen
     const kept = seenBy.get(sid)?.settle() ?? 0
     if (kept) (savings.save('reread', Math.min(kept / 4, 25_000), modelOf.get(sid)), meterAdd(sid, 'reread', Math.min(kept / 4, 25_000)))
   }
+  if (e.kind === 'turn') panelUse.set(sid, PU.addTurn(useOf(sid), e))
   if (e.kind === 'turn') savings.turn(modelOf.get(sid) ?? '', e.costUsd ?? 0, (e.inputTokens ?? 0) + (e.outputTokens ?? 0) + (e.cacheRead ?? 0) + (e.cacheWrite ?? 0), e.cacheRead ?? 0)
   else if (e.kind === 'cut') (savings.save('condenser', e.tokens ?? 0, modelOf.get(sid)), meterAdd(sid, 'condenser', e.tokens ?? 0))
 }
@@ -2054,6 +2063,8 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   const iso = isolated.get(sid)
   if (iso) (isolated.delete(sid), execFile('docker', ['rm', '-f', iso.name], () => undefined))
   panelCost.delete(sid)
+  panelUse.delete(sid)
+  panelCap.delete(sid)
   personaOf.delete(sid)
   budgetWarned.delete(sid)
   closeTerminal(String(sid))
@@ -2453,6 +2464,13 @@ ipcMain.handle('chat:release', (_e, sid: string) => {
   held.delete(sid)
   send(sid, { kind: 'released' })
   if (h) get(sid)?.send(h.text, h.attachments)
+})
+ipcMain.handle('panel:usage', (_e, sid: string) => ({ usage: useOf(String(sid)), cap: panelCap.get(String(sid)) ?? {} }))
+ipcMain.handle('panel:cap', (_e, sid: string, cap: PU.Cap) => {
+  const c = PU.cleanCap(cap ?? {})
+  if (c.usd || c.tokens) panelCap.set(String(sid), c)
+  else panelCap.delete(String(sid))
+  return c
 })
 ipcMain.handle('chat:drop', (_e, sid: string) => {
   held.delete(sid)
