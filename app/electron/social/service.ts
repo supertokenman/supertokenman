@@ -11,7 +11,8 @@ import { authorizeUrl, exchange, pkce, redirectFor, refreshed, waitForCode } fro
 import { catchUp } from '../../shared/missed.js'
 import { nextSlotFor, type NetSlots } from '../../shared/postslots.js'
 import { cleanItem, dueNetworks, problem, textFor, type Item } from './queue.js'
-import { credName, readCred, secretsOf, writeCred, type VaultLike } from './store.js'
+import { deleteCred, migrateVault, readCred, secretsOf, writeCred, type MigrationReport, type VaultLike } from './store.js'
+import { normHandle } from '../../shared/triage.js'
 
 export type SocialDeps = {
   vault: VaultLike
@@ -32,11 +33,11 @@ export function socialService(d: SocialDeps) {
   const doFetch = d.doFetch ?? fetch
   const f = (c: Cred | null) => makeFetcher(doFetch, () => secretsOf(c))
 
-  async function cred(n: NetworkId): Promise<Cred> {
-    const c = readCred(d.vault, n)
+  async function cred(n: NetworkId, handle?: string): Promise<Cred> {
+    const c = readCred(d.vault, n, handle)
     if (!c) throw new Error(`${NETWORKS[n].name} is not connected.`)
     const fresh = await (n === 'bluesky' ? bskyRefresh(f(c), c) : refreshed(OAUTH[n], f(c), c)).catch(() => null)
-    if (fresh) writeCred(d.vault, n, fresh)
+    if (fresh) writeCred(d.vault, n, fresh, handle)
     return fresh ?? c
   }
 
@@ -64,6 +65,9 @@ export function socialService(d: SocialDeps) {
     }
     const profile = await NETWORKS[n].profile(c, f(c))
     if (n === 'linkedin') c.ids = { person: profile.id }
+    // the handle names the account when the vault key is migrated; secrets are not touched
+    const h = normHandle(String(profile.handle ?? ''))
+    if (h) c.ids = { ...c.ids, handle: h }
     writeCred(d.vault, n, c)
     return profile
   }
@@ -79,13 +83,16 @@ export function socialService(d: SocialDeps) {
     const c = await exchange(spec, f(null), n, clientId.trim(), clientSecret?.trim() || undefined, await code, p.verifier)
     const profile = await NETWORKS[n].profile(c, f(c))
     if (n === 'linkedin') c.ids = { person: profile.id }
+    // the handle names the account when the vault key is migrated; secrets are not touched
+    const h = normHandle(String(profile.handle ?? ''))
+    if (h) c.ids = { ...c.ids, handle: h }
     writeCred(d.vault, n, c)
     return profile
   }
 
   function disconnect(n: AccountId) {
     d.guard()
-    d.vault.delete(credName(n))
+    deleteCred(d.vault, n)
   }
 
   /** The networks that connect by pasting keys, as Post everywhere and Mentions see them: no secrets. */
@@ -105,8 +112,8 @@ export function socialService(d: SocialDeps) {
   /** The saved credential for the main process only, refreshed when it is about to expire. */
   const account = async (n: AccountId): Promise<Cred | null> => (readCred(d.vault, n) ? (n in NETWORKS ? cred(n as NetworkId) : readCred(d.vault, n)) : null)
 
-  const call = async <T>(n: NetworkId, fn: (c: Cred) => Promise<T>) => {
-    const c = await cred(n)
+  const call = async <T>(n: NetworkId, fn: (c: Cred) => Promise<T>, handle?: string) => {
+    const c = await cred(n, handle)
     return fn(c)
   }
 
@@ -182,6 +189,17 @@ export function socialService(d: SocialDeps) {
   }
   const removeItem = (id: string) => (writeQueue(readQueue().filter((x) => x.id !== id)), readQueue())
 
+  /** Moves SOCIAL_<NET> to SOCIAL_<NET>_<HANDLE> once; errors keep the old keys and are never fatal. */
+  function migrate(): MigrationReport {
+    const handles: Record<string, string | undefined> = {}
+    try {
+      for (const n of Object.keys(NETWORKS).concat(ACCOUNTS)) handles[n] = readCred(d.vault, n as AccountId)?.ids?.handle
+      return migrateVault(d.vault, handles)
+    } catch {
+      return { copied: [], removed: [], kept: [] }
+    }
+  }
+
   let running = false
   async function tick() {
     if (running) return
@@ -220,7 +238,7 @@ export function socialService(d: SocialDeps) {
     mentions: (n: NetworkId) => call(n, (c) => OPEN(n).mentions(c, f(c))),
     like: (n: NetworkId, id: string) => call(n, (c) => OPEN(n).like(c, f(c), id)),
     repost: (n: NetworkId, id: string) => call(n, (c) => OPEN(n).repost(c, f(c), id)),
-    posts: (n: NetworkId) => call(n, (c) => NETWORKS[n].posts(c, f(c))),
+    posts: (n: NetworkId, handle?: string) => call(n, (c) => NETWORKS[n].posts(c, f(c)), handle),
     comments: (n: NetworkId, postId: string) => call(n, (c) => (NETWORKS[n].comments ? NETWORKS[n].comments!(c, f(c), postId) : Promise.resolve([]))),
     reply: (n: NetworkId, commentId: string, text: string, postId?: string) =>
       call(n, (c) => {
@@ -242,6 +260,7 @@ export function socialService(d: SocialDeps) {
     postNow,
     skip,
     nextSlot,
+    migrate,
     tick,
   }
 }

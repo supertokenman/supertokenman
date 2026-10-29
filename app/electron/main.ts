@@ -4727,7 +4727,7 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => setTimeout(() => void tickTriggers(), 15_000))
   // the social queue: approved items go out at their time
   setInterval(() => void social.tick(), 60_000)
-  setTimeout(() => social.catchUp(), 20_000)
+  setTimeout(() => { social.migrate(); social.catchUp() }, 20_000)
   powerMonitor.on('resume', () => setTimeout(() => social.catchUp(), 20_000))
   powerMonitor.on('suspend', lockNow)
   if (process.platform === 'darwin') app.dock?.setIcon(join(here, '..', '..', 'build', 'icon.png'))

@@ -3,7 +3,7 @@ import { makeFetcher } from './core'
 import { NETWORKS, metaIds, xAuth } from './networks'
 import { authorizeUrl, refreshed, redirectFor } from './oauth'
 import { cleanItem, dueNetworks, problem, stateOf } from './queue'
-import { credName, readCred, secretsOf, writeCred } from './store'
+import { credName, deleteCred, migrateVault, readCred, secretsOf, writeCred } from './store'
 
 /** A fetch that answers from a table of URL fragments, and records what was asked. */
 function fake(table: [string, unknown, number?][]) {
@@ -130,5 +130,63 @@ describe('held posts', () => {
     expect(i.held).toBe(true)
     expect(dueNetworks(i, 5000)).toEqual([])
     expect(dueNetworks({ ...i, held: undefined }, 5000)).toEqual(['x'])
+  })
+})
+
+describe('vault migration', () => {
+  const fake = (init: Record<string, string>, opts: { failSet?: (n: string) => boolean; drop?: (n: string) => boolean } = {}) => {
+    const m = new Map(Object.entries(init))
+    return {
+      m,
+      get: (n: string) => m.get(n),
+      set: (n: string, v: string) => {
+        if (opts.failSet?.(n)) throw new Error('disk full')
+        if (!opts.drop?.(n)) m.set(n, v)
+      },
+      delete: (n: string) => void m.delete(n),
+      list: () => [...m.keys()].map((name) => ({ name })),
+    }
+  }
+  const cred = JSON.stringify({ accessToken: 'SECRET-A' })
+
+  it('migrates SOCIAL_X once', () => {
+    const v = fake({ SOCIAL_X: cred, SOCIAL_BLUESKY: cred, OTHER: 'z' })
+    const r = migrateVault(v, { x: 'Ana' })
+    expect([...v.m.keys()].sort()).toEqual(['OTHER', 'SOCIAL_BLUESKY_DEFAULT', 'SOCIAL_X_ANA'])
+    expect(r.kept).toEqual([])
+    expect(migrateVault(v, { x: 'Ana' })).toEqual({ copied: [], removed: [], kept: [] })
+    expect(v.m.get('SOCIAL_X_ANA')).toBe(cred)
+  })
+
+  it('reads keep working before, after and with the old key already gone', () => {
+    const v = fake({ SOCIAL_X: cred })
+    expect(readCred(v, 'x')?.accessToken).toBe('SECRET-A')
+    migrateVault(v, {})
+    expect(readCred(v, 'x')?.accessToken).toBe('SECRET-A')
+    expect(readCred(v, 'x', 'default')?.accessToken).toBe('SECRET-A')
+    writeCred(v, 'x', { accessToken: 'NEW' })
+    expect([...v.m.keys()]).toEqual(['SOCIAL_X_DEFAULT'])
+    expect(readCred(v, 'x')?.accessToken).toBe('NEW')
+    deleteCred(v, 'x')
+    expect(readCred(v, 'x')).toBeNull()
+  })
+
+  it('old key kept on failure', () => {
+    const failing = fake({ SOCIAL_X: cred }, { failSet: () => true })
+    expect(migrateVault(failing, {}).kept).toEqual(['SOCIAL_X'])
+    expect(failing.m.get('SOCIAL_X')).toBe(cred)
+    const lossy = fake({ SOCIAL_X: cred }, { drop: () => true }) // set returns but nothing stored
+    expect(migrateVault(lossy, {}).kept).toEqual(['SOCIAL_X'])
+    expect(readCred(lossy, 'x')?.accessToken).toBe('SECRET-A')
+  })
+
+  it('does not delete the old key when a different value already sits at the new key', () => {
+    const v = fake({ SOCIAL_X: cred, SOCIAL_X_DEFAULT: JSON.stringify({ accessToken: 'OTHER' }) })
+    expect(migrateVault(v, {}).kept).toEqual(['SOCIAL_X'])
+    expect(v.m.has('SOCIAL_X')).toBe(true)
+  })
+
+  it('never puts a secret in the report', () => {
+    expect(JSON.stringify(migrateVault(fake({ SOCIAL_X: cred }), {}))).not.toContain('SECRET')
   })
 })
