@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { PROJECT_TEMPLATES } from '../shared/projecttemplates'
 import { pickProjectFolder } from './FolderPicker'
 import { IconClose } from './icons'
+import { Checkbox, Radio } from './ui'
 
 /** New project from a template: pick one and a folder, see which files exist, keep or replace each, write. */
 export function NewFromTemplate(props: { onClose: () => void; onOpen: (dir: string, persona: string) => void }) {
@@ -37,7 +38,7 @@ export function NewFromTemplate(props: { onClose: () => void; onOpen: (dir: stri
           <p className="faint">Writes a CLAUDE.md, skills in .claude/skills and a persona in .supertokenman/personas. Files already there are kept unless you tick them.</p>
           {PROJECT_TEMPLATES.map((x) => (
             <label key={x.id} className="row">
-              <input type="radio" name="tpl" checked={x.id === id} onChange={() => setId(x.id)} /> <b>{x.name}</b> <span className="faint">{x.what}</span>
+              <Radio name="tpl" checked={x.id === id} onChange={() => setId(x.id)} /> <b>{x.name}</b> <span className="faint">{x.what}</span>
             </label>
           ))}
           <p className="faint">Persona: {t.persona.name}. Skills: {t.skills.map((s) => s.name).join(', ')}.</p>
@@ -51,7 +52,7 @@ export function NewFromTemplate(props: { onClose: () => void; onOpen: (dir: stri
                   {f.path}{' '}
                   {f.exists ? (
                     <label className="faint">
-                      <input type="checkbox" checked={replace.includes(f.path)} onChange={(e) => setReplace(e.target.checked ? [...replace, f.path] : replace.filter((p) => p !== f.path))} /> already there, replace
+                      <Checkbox checked={replace.includes(f.path)} onChange={(e) => setReplace(e.target.checked ? [...replace, f.path] : replace.filter((p) => p !== f.path))} /> already there, replace
                     </label>
                   ) : (
                     <span className="faint">new</span>
