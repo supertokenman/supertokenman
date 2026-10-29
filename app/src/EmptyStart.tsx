@@ -50,13 +50,19 @@ function Dots() {
         }),
       )
     }
-    draw()
-    const ro = new ResizeObserver(draw)
+    // drawn once the first frame is out, not before it; one redraw per frame however many changes arrive
+    let raf = 0
+    const later = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(draw)
+    }
+    later()
+    const ro = new ResizeObserver(later)
     ro.observe(el)
-    // a theme change rewrites the root's variables
-    const mo = new MutationObserver(draw)
-    mo.observe(document.documentElement, { attributes: true })
-    return () => (ro.disconnect(), mo.disconnect())
+    // a theme change rewrites the root's style, class or data-theme; not data-blurred, which flips on every focus change
+    const mo = new MutationObserver(later)
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] })
+    return () => (cancelAnimationFrame(raf), ro.disconnect(), mo.disconnect())
   }, [])
   return (
     <div className="es-dots" ref={box} aria-hidden="true">

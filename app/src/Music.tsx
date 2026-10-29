@@ -19,10 +19,13 @@ export function useSpotify(open: boolean) {
   useEffect(() => {
     poll.current()
     // no one sees the player while the window is hidden: ask again the moment it shows
-    const t = setInterval(() => !document.hidden && poll.current(), open ? 1500 : 8000)
-    const show = () => !document.hidden && poll.current()
+    // and none while the window is out of focus and the sheet is shut: each poll starts an osascript
+    const seen = () => !document.hidden && (open || document.hasFocus())
+    const t = setInterval(() => seen() && poll.current(), open ? 1500 : 15000)
+    const show = () => seen() && poll.current()
     document.addEventListener('visibilitychange', show)
-    return () => (clearInterval(t), document.removeEventListener('visibilitychange', show))
+    window.addEventListener('focus', show)
+    return () => (clearInterval(t), document.removeEventListener('visibilitychange', show), window.removeEventListener('focus', show))
   }, [open])
   const [, tick] = useState(0)
   useEffect(() => {
