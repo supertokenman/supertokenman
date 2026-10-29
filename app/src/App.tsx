@@ -44,6 +44,7 @@ import { SpecSheet } from './Spec'
 
 
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { resumeLabels } from './resumeLabels'
 
 import { Panel } from './Panel'
 
@@ -914,6 +915,23 @@ export function App() {
       // storage full or blocked: the workspace is just not kept
     }
   }, [p])
+  const [resumeList, setResumeList] = useState(false)
+  // the offer steps aside on its own once the person moves on: another panel opened, or typing started
+  const firstCount = useRef(0)
+  useEffect(() => {
+    if (!lastTime.length) return
+    if (!firstCount.current) firstCount.current = p.order.length
+    else if (p.order.length > firstCount.current) setLastTime([])
+  }, [p.order.length, lastTime.length])
+  useEffect(() => {
+    if (!lastTime.length) return
+    const key = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) setLastTime([])
+    }
+    window.addEventListener('keydown', key)
+    return () => window.removeEventListener('keydown', key)
+  }, [lastTime.length])
   const reopen = async () => {
     const list = lastTime
     setLastTime([])
@@ -1464,11 +1482,14 @@ export function App() {
           </div>
         )}
       {lastTime.length > 0 && (
-        <div className="resume-bar" role="status">
-          <StateMark state="warn" label="Last time" />
-          <span>Pick up where you left off: {lastTime.map((w) => w.cwd.split('/').filter(Boolean).slice(-1)[0]).join(', ')}</span>
-          <button className="primary small" onClick={() => void reopen()}>Reopen {lastTime.length === 1 ? 'it' : `all ${lastTime.length}`}</button>
-          <button className="ghost small" onClick={() => setLastTime([])}>Not now</button>
+        <div className="resume-pill" role="status" aria-label="Panels from last time">
+          <span className="rp-text">Reopen {lastTime.length === 1 ? '1 panel' : `${lastTime.length} panels`} from last time</span>
+          <button className="ghost small" aria-expanded={resumeList} onClick={() => setResumeList(!resumeList)}>{resumeList ? 'Hide' : 'Show'}</button>
+          <button className="primary small" onClick={() => void reopen()}>Reopen</button>
+          <button className="ghost small icon rp-close" aria-label="Not now" data-tip="Not now" onClick={() => setLastTime([])}>
+            <svg viewBox="0 0 12 12" aria-hidden><path d="M3 3l6 6M9 3l-6 6" /></svg>
+          </button>
+          {resumeList && <div className="rp-list">{resumeLabels(lastTime.map((w) => w.cwd)).join(', ')}</div>}
         </div>
       )}
 

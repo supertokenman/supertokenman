@@ -15,6 +15,7 @@ import { SandboxChip } from './Sandbox'
 import { RemoteChip } from './RemoteChip'
 import { WorktreeChip } from './Worktree'
 import { LinksChip } from './PanelLinks'
+import { PanelMore } from './PanelMore'
 import { heldText } from '../shared/budget'
 import { ACCESS } from '../shared/personas'
 import { askOnce, SHRINK } from './localStream'
@@ -573,7 +574,7 @@ export function Panel(props: {
       {dropping && <div className="drop-veil"><span>Drop to attach</span></div>}
       <header className="panel-bar">
         <StateMark state={s.busy ? 'busy' : s.asleep ? 'off' : s.model ? 'up' : 'warn'} label={s.busy ? 'Working' : s.asleep ? 'Asleep: the next message resumes it' : s.model ? 'Ready' : 'Starting'} />
-        <span className="path" data-tip={s.cwd}>
+        <span className="path" data-tip={`${s.cwd}\nPanel id ${sid}, for messages between panels`}>
           <span className="path-parent">{folder.slice(-2, -1)[0] ?? ''}/</span>
           {folder.at(-1) ?? '...'}
         </span>
@@ -589,7 +590,6 @@ export function Panel(props: {
             {s.persona.name}
           </span>
         )}
-        <LinksChip sid={sid} />
         {s.sandbox && <SandboxChip cwd={s.cwd} />}
         {s.remote && (
           <RemoteChip sid={sid} remote={s.remote} onPreview={(url) => (dispatch({ kind: 'preview-url', url }), setTab('preview'))} onDone={(note, close) => (dispatch({ kind: 'note', text: note }), close && props.onClose())} />
@@ -603,7 +603,6 @@ export function Panel(props: {
             onDone={(note, close) => window.dispatchEvent(new CustomEvent('stm:close-panels', { detail: { sids: close, note, repo: s.worktree?.repo } }))}
           />
         )}
-        <span className="pid" data-tip="Panel id, for messages between panels">{sid}</span>
         {s.model && <span className="badge">{s.model.replace(/^claude-/, '').replace(/-(\d+)-(\d+)$/, ' $1.$2')}</span>}
         {s.cacheTtl && s.lastTurnAt && !s.busy && <CacheChip at={s.lastTurnAt} ttl={s.cacheTtl} tokens={s.context?.tokens ?? 0} model={s.model} money={props.money} />}
         {saved && <span className="saved-note">{saved}</span>}
@@ -623,14 +622,17 @@ export function Panel(props: {
             <IconRemember /> Remember
           </button>
         )}
-        {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
-        <Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense>
-        <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
-        <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
-        {!s.sandbox && <IsolateChip sid={sid} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />}
-        {lastReply && (
-          <button className="ghost small" data-tip="Export this conversation as Markdown or HTML, credentials masked" onClick={() => setExporting(true)}>Export</button>
-        )}
+        <PanelMore sid={sid}>
+          <LinksChip sid={sid} />
+          {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
+          <Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense>
+          <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
+          <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
+          {!s.sandbox && <IsolateChip sid={sid} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />}
+          {lastReply && (
+            <button className="ghost small" data-tip="Export this conversation as Markdown or HTML, credentials masked" onClick={() => setExporting(true)}>Export</button>
+          )}
+        </PanelMore>
         <div className="segmented" role="tablist">
           <button role="tab" aria-selected={tab === 'chat'} onClick={() => setTab('chat')}>Chat</button>
           <button role="tab" aria-selected={tab === 'changes'} onClick={() => setTab('changes')}>
