@@ -243,6 +243,18 @@ Planned for 0.1.20:
 2. Phase 2: read comments and mentions on those posts and draft replies that go out only after approval.
 3. Phase 3: Instagram, TikTok and YouTube, after their app reviews.
 
+## Social scheduling and growth
+
+Planned for 0.1.20, on the accounts above. Each feature is off until you click it and adds no host.
+- Per-network queue with weekly time slots; "Add to queue" gives each network its own next free slot.
+- Best time and Hit share from your own measured posts; "Not enough data yet" below the minimum.
+- Missed-post catch-up: scheduled posts go out only while the app is open; very late ones are held for you.
+- Rewrite for each network, reviewed side by side; an accepted version posts as that network's own text.
+- Evergreen rewording, saved as an unapproved draft; Mentions triage.
+- Several accounts per network, projects with a brand kit, hook library with a fill from the small model,
+  niche import from a pasted list or a picked CSV or JSON file (up to 2 MB).
+- Open: a background agent that posts with the window closed (new surface, not planned).
+
 ## Later
 
 - New project from a template: persona, skills and CLAUDE.md set up in one step.
