@@ -230,6 +230,19 @@ Needs a decision first:
 Left out: a server with Postgres (Rakazo), against local-first; API keys kept in a plain config file
 (OpenMausBot), where our vault already does better.
 
+## Planned for 0.1.21: a phone panel
+
+From reading the Mobilerun quickstart (docs.mobilerun.ai) on 2026-10-29: an agent that drives a real phone
+by taps, swipes and typing. Ideas only, no code; not tested by us.
+
+1. A phone panel for developers: Claude Code drives an Android emulator or a phone on a cable (adb), and
+   later the iOS Simulator on the Mac (xcrun simctl). The screen is mirrored beside the chat, each tap
+   is logged, and taps go through the usual approvals. Local, no host called.
+2. Post through the phone app, for networks whose API needs an app review (Instagram, TikTok): the
+   person's own account on their own phone, off by default, every post approved first. The app says
+   plainly that these networks' terms forbid automated use whatever the purpose, so the account can be
+   limited or banned, and the person decides.
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
