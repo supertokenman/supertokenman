@@ -283,6 +283,12 @@ by typecheck and unit tests; not yet run in the real app.
 3. While you were away: a card with the events since the last time you were at the window (turns and cost,
    approvals waiting, trigger runs, errors), with Read aloud on macOS. Local only.
 
+## Dictate anywhere (macOS)
+
+- [x] Dictation into any app: a global shortcut (default Option+Shift+D, toggle: press to start, press to stop, since a global shortcut reports only key down), a local whisper.cpp engine, paste with Cmd+V and the clipboard put back. Off by default; optional Clean up through the small-model path. Built and checked by typecheck and unit tests; permissions and pasting into other apps not yet run on a Mac.
+- [ ] macOS on-device speech recognition once it can be reached without compiling a native module.
+- [ ] True press-and-hold, which needs a key-up event (a native listener).
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;

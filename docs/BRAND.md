@@ -278,6 +278,8 @@ mono label). Only features released up to 0.1.19.
 
 ## Changelog
 
+- Dictate anywhere: the dictation pill. A 232 by 44 px floating plate with the brand's cut corner (top right, 10 px), a 1 px drawn border, `--raised` fill and mono 12px text, no emoji and no native control. It sits at the bottom centre of the screen the pointer is on, never takes focus (the app being typed into keeps it), and shows the state by the border and mark: Listening (accent border, five accent level bars that follow the voice), Transcribing and Cleaning up (muted border, accent square pulsing slowly), Inserted (green border and square, gone after 1.4 s), Copied. Press Cmd+V, Set up a local engine and errors (red border, 4 to 5 s). Reduced motion stops the pulse and the bars' easing. The Settings rows use the existing switch, hotkey key and notice styles; the setup state is a sunken block with the hairline border.
+
 - Phase 16: top-bar selects follow the button shape (cut corner, drawn border, accent bar on focus, mono uppercase label); the Modules sheet shows modules that are off at reduced opacity and the ones on with an accent top rule.
 
 - Phase 51: ADR status as outlined mono tags (proposed gold, accepted green, rejected/deprecated red, superseded muted with the ADR that replaced it); capacity results as `Stat` tiles; the weekly exercise as a large line with an accent rule.

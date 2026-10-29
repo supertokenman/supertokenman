@@ -36,6 +36,7 @@ import * as TM from '../shared/teambundle.js'
 import * as OV from '../shared/overnight.js'
 import { parseWhen } from '../shared/teamwhen.js'
 import { DEFAULT_HOTKEY, validHotkey } from '../shared/hotkey.js'
+import { setupDictation } from './dictation.js'
 import { mailService } from './mail/service.js'
 import { crawl, extract, onRead, readPage, saveWebConfig, setWebDir, setWebStore, webConfig, webDir, webReady } from './web/reader.js'
 import type { CacheRule } from '../shared/leanfetch.js'
@@ -313,7 +314,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -4932,12 +4933,26 @@ app.whenReady().then(() => {
     decrypt: (b) => safeStorage.decryptString(b),
   })
   registerHotkey(settings().hotkey ?? DEFAULT_HOTKEY)
+  dictation = setupDictation({
+    prefs: () => settings().dictation ?? {},
+    save: (p) => saveSettings({ ...settings(), dictation: p }),
+    quickAccel: () => hotkey || settings().hotkey || DEFAULT_HOTKEY,
+    small: (prompt) => small(prompt),
+    preload: join(here, 'preload.cjs'),
+    load: async (w, hash) => {
+      if (process.env.VITE_DEV) return void (await w.loadURL(`http://localhost:5173/#${hash}`))
+      serveUi()
+      await w.loadURL(`${UI_URL}#${hash}`)
+    },
+  })
+  dictation.register()
   syncWebhook()
   return createWindow()
 })
 // quick search from any app, like Spotlight: brings the window with the palette open; Esc on a
 // summoned palette goes back to the app the person was in
 let hotkey = ''
+let dictation: ReturnType<typeof setupDictation> | null = null
 let summonedFromElsewhere = false
 function registerHotkey(accel: string) {
   if (hotkey) globalShortcut.unregister(hotkey)
