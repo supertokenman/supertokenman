@@ -40,7 +40,7 @@ What the app keeps so a project never starts from zero:
 
 A panel is one Claude Code session in one project folder.
 - New panel: Cmd+T (pick a folder). Close: Cmd+W. Up to four or more side by side; Layout in the top bar: Auto (4 panels make a 2x2 grid), Grid, Columns or Canvas.
-- Canvas layout: panels become cards on a surface. Drag a card by its header to move it, drag the empty background (or hold Space and drag) to pan, Ctrl/Cmd + scroll or pinch to zoom, and Fit frames every card. Linked panels are joined by a line labelled auto or waits (and today's cost when known). Spots and view are remembered.
+- Canvas layout: panels become cards on a surface. Drag a card by its header to move it, drag the empty background (or hold Space and drag) to pan, Ctrl/Cmd + scroll or pinch to zoom, and Fit frames every card. Linked panels are joined by a line labelled auto or waits (and today's cost when known). Spots and view are remembered. Room (bottom right, with two or more linked panels): one message to the linked panels; the panel named with @name answers, and Next turn passes the question and the last reply to the next panel over its link, charged to that link, within its cap and with the usual approvals.
 - Tabs: Chat, Changes (every edit Claude made, to review), Git, Terminal, Browse (see Browse) and CI when the repo has it.
 - Terminal: the person's own shell in the panel's folder, interactive (vim, htop, prompts work), alive as long as the panel. It has the vault secrets marked for commands, nothing else. Send output to Claude (or the selection) adds it to the message as a chip. Cmd+K clears it.
 - The bar shows the running program with a clock, and how long the last one took.

@@ -219,6 +219,7 @@ import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
 import * as ME from '../shared/modeleval.js'
+import * as RM from '../shared/room.js'
 import * as RL from '../shared/reviewloop.js'
 import * as RN from '../shared/reviewnotes.js'
 import * as PF from '../shared/projectfiles.js'
@@ -6055,6 +6056,59 @@ const asPanel = (a: Record<string, unknown>, what: string, detail = '') => {
   logs().info('stm:panel', `${sid} ${what}${detail ? ` ${detail}` : ''}`)
   return sid
 }
+/** A message from one panel to another: the link's cap checked, the turn charged to it, sent or left waiting per the link. */
+function deliverLinked(from: string, to: string, text: string, body: string) {
+  const link = PB.linkOf(links(), from, to)
+  const capped = PB.overCap(link, dayOf(new Date()))
+  if (capped) throw new Error(capped)
+  if (link) linkTurn.set(to, from)
+  const how = PB.deliveryOf(link)
+  if (how === 'auto') {
+    // the person turned auto on for this link: sent as if typed, with the same brake and approvals
+    refuseSecrets(text)
+    const v = budgetVerdict(to)
+    if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
+    tracePrompt(to, body, `Panel ${panelName(from)}`)
+    if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, body, true)
+    sessions.get(to)!.step(withGoal(body, goals.get(to) ?? null), `Panel ${panelName(from)}`).catch(() => undefined)
+  } else {
+    // never sent on its own: it waits in the composer until the person presses send
+    if (!win || win.isDestroyed()) throw new Error('The app window is closed; the message could not be queued.')
+    win.webContents.send('panel:inbox', to, body, false)
+    send(to, { kind: 'note', text: `A message from panel ${panelName(from)} is in the composer. Read it and press send, or clear it.` })
+  }
+  return how
+}
+const room = { members: [] as RM.Member[], ask: '', spoken: [] as string[] }
+// the room, only from the window: the person names who answers, and asks for each further turn
+ipcMain.handle('room:post', (_e, sids: string[], text: string) => {
+  const members = [...new Set((sids ?? []).map(String))].filter((s) => sessions.has(s)).map((sid) => ({ sid, name: panelName(sid) }))
+  const bad = RM.checkRoom(members, (a, b) => Boolean(PB.linkOf(links(), a, b)))
+  if (bad) throw new Error(bad)
+  const ask = String(text ?? '').slice(0, 100_000)
+  if (!ask.trim()) throw new Error('Nothing to send.')
+  const to = RM.firstSpeaker(ask, members)
+  refuseSecrets(ask)
+  const v = budgetVerdict(to)
+  if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
+  Object.assign(room, { members, ask, spoken: [to] })
+  tracePrompt(to, ask, 'Room')
+  if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, ask, true)
+  sessions.get(to)!.step(withGoal(ask, goals.get(to) ?? null), 'Room').catch(() => undefined)
+  logs().info('stm:panel', `room: ${to} answers first of ${members.length} (by the person, in the window)`)
+  return { panel: to, left: members.length - 1 }
+})
+ipcMain.handle('room:next', () => {
+  const t = RM.nextTurn(room.members, room.spoken)
+  if (!t) throw new Error(room.spoken.length ? 'Everyone in the room has had a turn.' : 'Send a room message first.')
+  const from = [...room.spoken].reverse().find((s) => PB.linkOf(links(), s, t.to))
+  if (!from) throw new Error(`${panelName(t.to)} is not linked to anyone who has spoken.`)
+  const text = RM.turnText(room.ask, panelName(from), lastReply.get(from)?.text ?? '')
+  const how = deliverLinked(from, t.to, text, PB.labelled(panelName(from), text))
+  room.spoken.push(t.to)
+  logs().info('stm:panel', `room: ${from} -> ${t.to} ${how}`)
+  return { panel: t.to, delivery: how, left: room.members.length - room.spoken.length }
+})
 const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
   whoami: (a) => {
     const sid = asPanel(a, 'whoami')
@@ -6090,25 +6144,7 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     if (!text.trim()) throw new Error('Nothing to send.')
     if (a.counted !== false) sendLimit.take(from)
     const body = PB.labelled(panelName(from), text)
-    const link = PB.linkOf(links(), from, to)
-    const capped = PB.overCap(link, dayOf(new Date()))
-    if (capped) throw new Error(capped)
-    if (link) linkTurn.set(to, from)
-    const how = PB.deliveryOf(link)
-    if (how === 'auto') {
-      // the person turned auto on for this link: sent as if typed, with the same brake and approvals
-      refuseSecrets(text)
-      const v = budgetVerdict(to)
-      if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
-      tracePrompt(to, body, `Panel ${panelName(from)}`)
-      if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, body, true)
-      sessions.get(to)!.step(withGoal(body, goals.get(to) ?? null), `Panel ${panelName(from)}`).catch(() => undefined)
-    } else {
-      // never sent on its own: it waits in the composer until the person presses send
-      if (!win || win.isDestroyed()) throw new Error('The app window is closed; the message could not be queued.')
-      win.webContents.send('panel:inbox', to, body, false)
-      send(to, { kind: 'note', text: `A message from panel ${panelName(from)} is in the composer. Read it and press send, or clear it.` })
-    }
+    const how = deliverLinked(from, to, text, body)
     logs().info('stm:panel', `${from} -> ${to} ${how} (${text.length} chars)`)
     return { panel: to, delivery: how }
   },
