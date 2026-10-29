@@ -27,6 +27,8 @@ export type Trigger = {
   hoursOnly?: boolean
   /** folders it may read or write and commands it may run; the app refuses the rest */
   scope?: import('./triggerscope.js').Scope
+  /** starts from a POST to the app's 127.0.0.1 receiver with this trigger's token (shared/webhook.ts) */
+  webhook?: boolean
 }
 
 export const EVERY = [15, 30, 60, 120, 240, 480]
@@ -90,6 +92,7 @@ export function cleanTrigger(t: Partial<Trigger>): Trigger {
     gate: t.gate === true,
     hoursOnly: t.hoursOnly === true,
     scope: cleanScope(t.scope),
+    webhook: t.webhook === true,
   }
 }
 

@@ -98,6 +98,8 @@ import { contentService } from './content/service.js'
 import { paths as enginePaths } from './content/engines.js'
 import { cleanConfig, PROVIDERS, typeOf, upload, type StorageConfig, type StorageKeys } from './content/storage.js'
 import type { NetworkId } from './social/core.js'
+import * as WH from '../shared/webhook.js'
+import { createServer as createHttpServer, type Server } from 'node:http'
 import { cleanTrigger, isDue, newReviews, type Trigger } from '../shared/triggers.js'
 import { cleanPrefs, Gate, passwordPrompt, type LockPrefs } from './lock.js'
 import { CATALOG, OPEN_SHIM, routeLogins, serversFor } from './integrations.js'
@@ -1120,9 +1122,10 @@ ipcMain.handle('triggers:save', (_e, t: Partial<Trigger>) => {
   const i = list.findIndex((x) => x.id === next.id)
   // a changed schedule starts counting from now, not from a run under the old one
   saveTriggers(i >= 0 ? list.map((x, k) => (k === i ? { ...next, lastRun: x.lastRun, armedAt: Date.now() } : x)) : [...list, { ...next, lastRun: undefined, armedAt: Date.now() }])
+  syncWebhook()
   return triggers()
 })
-ipcMain.handle('triggers:delete', (_e, id: string) => (saveTriggers(triggers().filter((x) => x.id !== id)), triggers()))
+ipcMain.handle('triggers:delete', (_e, id: string) => (saveTriggers(triggers().filter((x) => x.id !== id)), vault?.delete(WH.vaultName(id)), syncWebhook(), triggers()))
 ipcMain.handle('triggers:run', (_e, id: string) => {
   const t = triggers().find((x) => x.id === id)
   if (t) fire(t)
@@ -1138,6 +1141,48 @@ function fireTimed(t: Trigger, extra = '') {
   if (t.hoursOnly && !withinHours(inboxData().hours, new Date())) return
   fire(t, extra)
 }
+// webhook triggers: listens on 127.0.0.1 only while a trigger has the webhook on; token in the vault, never logged
+let hookServer: Server | null = null
+const hookHit = WH.limiter()
+function syncWebhook() {
+  const on = triggers().some((t) => t.webhook)
+  if (on && !hookServer) {
+    hookServer = createHttpServer((req, res) => {
+      const end = (status: number, error?: string) => (res.writeHead(status, { 'content-type': 'application/json' }), res.end(JSON.stringify(error ? { error } : { ok: true })))
+      const c = WH.checkRequest({ method: req.method, url: req.url, host: req.headers.host, auth: req.headers.authorization, origin: req.headers.origin })
+      if (!c.ok) return end(c.status, c.error)
+      const t = triggers().find((x) => x.id === c.id && x.webhook)
+      const want = t && vault?.get(WH.vaultName(t.id))
+      if (!t || !want || !WH.sameToken(c.token, want)) return end(401, 'bad token')
+      if (!hookHit(t.id, Date.now())) return end(429, 'too many')
+      let body = ''
+      let size = 0
+      req.on('data', (d: Buffer) => {
+        size += d.length
+        if (size > WH.MAX_BODY) return (end(413, 'body too large'), req.destroy())
+        body += d.toString('utf8')
+      })
+      req.on('end', () => {
+        if (size > WH.MAX_BODY || res.writableEnded) return
+        fire(t, WH.untrusted(body))
+        end(202)
+      })
+    })
+    hookServer.on('error', (e) => (logs().error('webhook', `127.0.0.1:${WH.PORT}: ${(e as Error).message}`), (hookServer = null)))
+    hookServer.listen(WH.PORT, '127.0.0.1')
+  } else if (!on && hookServer) {
+    hookServer.close()
+    hookServer = null
+  }
+}
+/** The token for a webhook trigger, made on first ask; the window shows it only in the curl line. */
+ipcMain.handle('triggers:webhook', (_e, id: string) => {
+  const t = triggers().find((x) => x.id === id)
+  if (!t || !vault) return null
+  const name = WH.vaultName(t.id)
+  if (!vault.get(name)) vault.set(name, WH.makeToken((n) => randomBytes(n)))
+  return { curl: WH.curlLine(t.id, vault.get(name)!), listening: !!hookServer }
+})
 let reviewsSeen: Set<string> | null = null
 async function tickTriggers() {
   const now = Date.now()
@@ -4490,6 +4535,7 @@ app.whenReady().then(() => {
     decrypt: (b) => safeStorage.decryptString(b),
   })
   registerHotkey(settings().hotkey ?? DEFAULT_HOTKEY)
+  syncWebhook()
   return createWindow()
 })
 // quick search from any app, like Spotlight: brings the window with the palette open; Esc on a
