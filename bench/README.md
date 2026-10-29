@@ -1,8 +1,8 @@
 # Token benchmark
 
-Compares the same tasks run with a feature off (variant A) and on (variant B),
-recording tokens, cost and pass rate per run. Examples of features: capability
-card vs old guide, terse inter-panel mode, token-kit hooks.
+Compares the same tasks run under different app variants, recording tokens,
+cost and pass rate per run. The variants are the old guide (A), the capability
+card (B), terse inter-agent mode (C) and output condensing (D).
 
 Layout:
 
@@ -12,6 +12,7 @@ Layout:
   - `{ "kind": "command", "run": "npm test" }`: passes when the command exits 0 in the task dir.
   - `{ "kind": "contains", "file": "<path>", "text": "<str>" }`: passes when the file contains the text.
     `"file": "@reply"` checks the final text reply of Claude instead of a file.
+- `lib/variants.mjs`: the variants and the environment each one sets. `lib/variants.test.mjs` tests it.
 - `lib/score.mjs`: pure scoring (`parseRecords`, `aggregate`, `compare`, `buildReport`, `formatReport`). No I/O.
 - `lib/score.test.mjs`: unit tests. They never call `claude`.
 
@@ -24,8 +25,18 @@ Requires the `claude` CLI on PATH and Node 18+.
 node bench/run.mjs --variant A --task all --out results.jsonl
 node bench/run.mjs --variant B --task all --out results.jsonl
 
-# print the comparison table (A = baseline, B = variant)
+# the variant can also come from the environment
+BENCH_VARIANT=C node bench/run.mjs --task all --out results.jsonl
+
+# print the comparison table (A = baseline, B = variant by default)
 node bench/run.mjs --report results.jsonl
+node bench/run.mjs --report results.jsonl --baseline B --compare C
+```
+
+Unit tests (they never call `claude`; there is no package.json here, so run them from the repository root):
+
+```sh
+node --test bench/lib/*.test.mjs
 ```
 
 Options:
@@ -40,13 +51,27 @@ A run passes only when the check passes and a result record was produced.
 
 ## Variants
 
-The runner sets `BENCH_VARIANT` to `A` or `B` in the child environment. The
-application under test reads this variable to switch the feature:
+`--variant` (or `BENCH_VARIANT` when the flag is absent) is one of:
 
-- `A`: baseline, feature off.
-- `B`: variant, feature on.
+| Variant | App state |
+| --- | --- |
+| A | old guide: the previous system-prompt text for the app and its actions rule |
+| B | capability card (the shipped default), terse and condensing off |
+| C | B with terse inter-agent mode on |
+| D | B with output condensing on |
 
-The hooks are not implemented here. The app must read `BENCH_VARIANT` itself.
+Each variant differs from B in one thing. The runner sets `BENCH_VARIANT` and three variables in
+the child environment, from `lib/variants.mjs`:
+
+- `STM_PROMPT_VARIANT`: `old` or `card`.
+- `STM_TERSE`: `1` or `0`, forcing the "Terse replies between agents" setting.
+- `STM_CONDENSE`: `1` or `0`, forcing the "Condense long command output" setting.
+
+The app reads them in `app/shared/variant.ts`, only when it is not packaged. A packaged build
+ignores them, and with none set it uses the card and the person's own settings (both switches are
+on by default). The runner calls `claude -p`, so a run measures the app only when that call goes
+through the app's own panel session, for example from a development build. Without the app the
+three variables change nothing and the runs are the same variant.
 
 ## Scoring
 

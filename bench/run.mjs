@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildReport, formatReport, parseRecords } from './lib/score.mjs';
+import { pickVariant, variantEnv } from './lib/variants.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const TASKS_DIR = join(here, 'tasks');
@@ -18,10 +19,12 @@ const CLAUDE_TIMEOUT_MS = 15 * 60 * 1000;
 const CHECK_TIMEOUT_MS = 5 * 60 * 1000;
 
 const USAGE = `usage:
-  node bench/run.mjs --variant A|B --task <id|all> --out <file.jsonl> [--keep] [--extra-args "<claude flags>"]
-  node bench/run.mjs --report <file.jsonl>
+  node bench/run.mjs --variant A|B|C|D --task <id|all> --out <file.jsonl> [--keep] [--extra-args "<claude flags>"]
+  node bench/run.mjs --report <file.jsonl> [--baseline A] [--compare B]
 
-A = baseline (feature off), B = variant (feature on). The app reads BENCH_VARIANT.`;
+--variant defaults to the BENCH_VARIANT environment variable.
+A = old guide, B = capability card, C = B + terse inter-agent mode, D = B + output condensing.
+The app reads STM_PROMPT_VARIANT, STM_TERSE and STM_CONDENSE in a development run (see bench/README.md).`;
 
 function parseArgs(argv) {
   const opts = {};
@@ -34,6 +37,8 @@ function parseArgs(argv) {
     switch (a) {
       case '--report': opts.report = next(); break;
       case '--variant': opts.variant = next(); break;
+      case '--baseline': opts.baseline = next(); break;
+      case '--compare': opts.compare = next(); break;
       case '--task': opts.task = next(); break;
       case '--out': opts.out = next(); break;
       case '--extra-args': opts.extraArgs = next(); break;
@@ -131,7 +136,7 @@ async function runTask(task, variant, { keep, extraArgs }) {
   try {
     writeSetup(dir, task.setup?.files);
     const args = ['-p', task.prompt, '--output-format', 'stream-json', '--verbose', ...extraArgs];
-    const env = { ...process.env, BENCH_VARIANT: variant };
+    const env = { ...process.env, ...variantEnv(variant) };
     const r = await run('claude', args, { cwd: dir, env, timeoutMs: CLAUDE_TIMEOUT_MS });
     const parsed = parseRecords(r.stdout);
     const check = r.error
@@ -173,11 +178,15 @@ async function main(argv) {
 
   if (opts.report) {
     const lines = readFileSync(opts.report, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
-    console.log(formatReport(buildReport(lines)));
+    const baseline = opts.baseline ?? 'A';
+    const compare = opts.compare ?? 'B';
+    if (!pickVariant(baseline, {}) || !pickVariant(compare, {})) { console.error(USAGE); return 2; }
+    console.log(formatReport(buildReport(lines, { baseline, variant: compare })));
     return 0;
   }
 
-  if (!['A', 'B'].includes(opts.variant) || !opts.task || !opts.out) {
+  opts.variant = pickVariant(opts.variant);
+  if (!opts.variant || !opts.task || !opts.out) {
     console.error(USAGE);
     return 2;
   }
