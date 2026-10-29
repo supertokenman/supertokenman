@@ -167,6 +167,7 @@ export type Bridge = {
   routerAsk: (text: string, localOnly?: boolean) => Promise<{ id: string | null; where: 'local' | 'claude' | 'none' }>
   savings: { get: (days: number) => Promise<{ summary: Summary; sources: { id: Source; name: string; what: string; method: 'measured' | 'from the tool' | 'estimated' }[] }> }
   overhead: { panels: () => Promise<{ sid: string; cwd: string; model: string }[]>; get: (sid: string) => Promise<(Overhead & { warmUsd: number; coldUsd: number }) | null> }
+  agents: { get: () => Promise<{ terse: boolean; condense: boolean; forced: { terse: boolean; condense: boolean } }>; set: (key: 'terse' | 'condense', on: boolean) => Promise<boolean> }
   lean: { get: () => Promise<{ on: boolean; off: string[]; saves: number }>; set: (on: boolean) => Promise<boolean> }
   connectIntegration: (id: string) => Promise<'connected' | 'failed'>
   cli: { status: (cli: 'aws' | 'gcloud' | 'az' | 'railway') => Promise<(import('../electron/clilogin').CliStatus & { runner?: string }) | null>; login: (cli: 'aws' | 'gcloud' | 'az' | 'railway') => Promise<{ started: boolean; hint?: string }> }
@@ -965,9 +966,11 @@ export type Bridge = {
   teamBundle: {
     exportTo: () => Promise<string | null>
     importFrom: () => Promise<boolean>
-    onReview: (fn: (r: { team: import('../shared/teambundle').Team; lines: string[] }) => void) => () => void
+    onReview: (fn: (r: { team: import('../shared/teambundle').Team; lines: string[]; provision?: { id: string; from: string } }) => void) => () => void
+    onClose: (fn: (id: string) => void) => () => void
     prepare: (team: import('../shared/teambundle').Team, base: string) => Promise<{ name: string; cwd: string; persona?: string; instructions: string }[]>
-    apply: (team: import('../shared/teambundle').Team, opened: Record<string, string>) => Promise<{ links: number; triggers: number }>
+    apply: (team: import('../shared/teambundle').Team, opened: Record<string, string>, provId?: string) => Promise<{ links: number; triggers: number; loop: boolean }>
+    cancel: (provId: string) => Promise<void>
   }
   away: {
     get: () => Promise<AwayCard>

@@ -37,6 +37,35 @@ function LeanTools() {
   )
 }
 
+/** Two switches for what panels send each other and what long command output looks like to Claude. */
+function AgentTraffic() {
+  const [a, setA] = useState<Awaited<ReturnType<typeof window.stm.agents.get>> | null>(null)
+  useEffect(() => void window.stm.agents.get().then(setA), [])
+  if (!a) return null
+  const flip = async (key: 'terse' | 'condense', on: boolean) => {
+    await window.stm.agents.set(key, on)
+    setA(await window.stm.agents.get())
+  }
+  return (
+    <div className="sv-over-list">
+      <div className="sv-lean">
+        <div>
+          <div className="sv-over-sub">Terse replies between agents</div>
+          <div className="faint sv-small">Messages from one panel to another end with a request to reply in facts, file paths and the next step. Never added to what you type.</div>
+        </div>
+        <Switch checked={a.terse} disabled={a.forced.terse} onChange={(e) => void flip('terse', e.target.checked)} />
+      </div>
+      <div className="sv-lean">
+        <div>
+          <div className="sv-over-sub">Condense long command output</div>
+          <div className="faint sv-small">A Bash result over 10,000 characters reaches Claude as its start, end and errors; the whole is saved under .stm/outputs in the project. Add # raw to a command to get it whole.</div>
+        </div>
+        <Switch checked={a.condense} disabled={a.forced.condense} onChange={(e) => void flip('condense', e.target.checked)} />
+      </div>
+    </div>
+  )
+}
+
 /** The context compactor's stages: what the app adds to prompts, without repeats; cutting is opt-in. */
 function Compactor() {
   const [st, setSt] = useState<Stage[] | null>(null)
@@ -148,6 +177,7 @@ function Overhead(props: { money: (usd: number) => string }) {
             </div>
           )}
           <LeanTools />
+          <AgentTraffic />
           <Compactor />
           {o.deferred > 0 && <div className="faint sv-small">Another {kTok(o.deferred)} tokens of tool definitions wait until Claude searches for them, and cost nothing until then.</div>}
         </>

@@ -4,7 +4,7 @@ import { pickProjectFolder } from './FolderPicker'
 import { IconClose } from './icons'
 
 /** A team bundle read from a file: what it would create, listed before anything is made. */
-export function TeamImport(props: { team: Team; lines: string[]; onClose: () => void; onCreate: (base: string) => Promise<string> }) {
+export function TeamImport(props: { team: Team; lines: string[]; from?: string; onClose: () => void; onCreate: (base: string) => Promise<string> }) {
   const [dir, setDir] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
@@ -33,6 +33,7 @@ export function TeamImport(props: { team: Team; lines: string[]; onClose: () => 
         </header>
         <div className="sheet-body">
           {props.team.description && <p className="faint">{props.team.description}</p>}
+          {props.from && <p className="faint">Proposed by the agent in panel {props.from}. Nothing is made until you press Create.</p>}
           <p className="faint">Create makes these. Folders are made under the one you pick. Triggers come in turned off.</p>
           <ul>{props.lines.map((l) => <li key={l}>{l}</li>)}</ul>
           <p>

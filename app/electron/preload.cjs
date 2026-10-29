@@ -57,6 +57,10 @@ contextBridge.exposeInMainWorld('stm', {
     panels: () => ipcRenderer.invoke('overhead:panels'),
     get: (sid) => ipcRenderer.invoke('overhead:get', sid),
   },
+  agents: {
+    get: () => ipcRenderer.invoke('agents:get'),
+    set: (key, on) => ipcRenderer.invoke('agents:set', key, on),
+  },
   lean: {
     get: () => ipcRenderer.invoke('lean:get'),
     set: (on) => ipcRenderer.invoke('lean:set', on),
@@ -881,8 +885,15 @@ contextBridge.exposeInMainWorld('stm', {
       ipcRenderer.on('team:review', l)
       return () => ipcRenderer.removeListener('team:review', l)
     },
+    // a team an agent proposed was answered or dropped: its sheet closes
+    onClose: (fn) => {
+      const l = (_e, id) => fn(id)
+      ipcRenderer.on('team:review:close', l)
+      return () => ipcRenderer.removeListener('team:review:close', l)
+    },
     prepare: (team, base) => ipcRenderer.invoke('team:prepare', team, base),
-    apply: (team, opened) => ipcRenderer.invoke('team:apply', team, opened),
+    apply: (team, opened, provId) => ipcRenderer.invoke('team:apply', team, opened, provId),
+    cancel: (provId) => ipcRenderer.invoke('team:cancel', provId),
   },
   away: {
     get: () => ipcRenderer.invoke('away:get'),

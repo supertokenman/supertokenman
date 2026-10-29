@@ -53,7 +53,13 @@ import { dayKey, ledger, priceOf, SOURCES, summarize } from './ledger.js'
 import { HEADROOM_PORT, HEADROOM_URL, headroomBin, headroomDir, headroomHealthy, headroomStats, setHeadroomDir, startHeadroom, stopHeadroom } from './headroom.js'
 import { setEndpointResolver, askLocal, chatLocal, emptyStats, OLLAMA, loadedModels, localModels, OLLAMA_PATHS, ollamaVersion, pullModel, smallTasks, SUGGESTED, type ChatMsg, type SmallStats } from './small.js'
 import { rereads } from './reread.js'
-import { APP_GUIDE, MANUAL_TOOL, manualServer, MEMORY_TOOLS, memoryServer } from './guide.js'
+import { LEGACY_ACTIONS_RULE, LEGACY_GUIDE, manualServer, MEMORY_TOOLS, memoryServer, STM_OPEN_TOOLS, type StmActions } from './guide.js'
+import { capCard } from '../shared/capcard.js'
+import { variantOf } from '../shared/variant.js'
+import { tersed } from '../shared/terse.js'
+import * as CO from '../shared/condense.js'
+import * as PV from '../shared/provision.js'
+import { linkSpec, loopSpec, type LinkSpec, type LoopSpec } from '../shared/stmtools.js'
 import { briefFor, decisionsOf, saveStopped, STOPPED_PROMPT, transcriptOf } from './brief.js'
 import { draftConstitution, parseTasks } from '../shared/spec.js'
 import { countTokens } from './tokens.js'
@@ -307,7 +313,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { terseAgents?: boolean; condenseOutput?: boolean; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -333,6 +339,12 @@ function settings(): Settings {
   }
   return settingsCache
 }
+// bench variants (development runs only) can force the guide and the two agent settings; see bench/README.md
+const variant = () => variantOf(process.env, app.isPackaged)
+/** Messages from one panel to another end with a short ask for a terse reply. On unless the person turned it off. */
+const terseOn = () => variant().terse ?? settings().terseAgents !== false
+/** Long Bash results reach Claude condensed, the whole kept in a file. On unless the person turned it off. */
+const condenseOn = () => variant().condense ?? settings().condenseOutput !== false
 function writeAtomic(file: string, text: string) {
   const tmp = `${file}.${process.pid}.tmp`
   writeFileSync(tmp, text)
@@ -809,6 +821,17 @@ ipcMain.handle('away:say', () => {
   const args = OV.sayArgs(OV.speech(awayLast))
   return new Promise<void>((done, fail) => execFile('say', args, { timeout: 120_000 }, (e) => (e ? fail(new Error('say failed: ' + e.message)) : done())))
 })
+/** Turns a review loop on between two open panels; the person's terminal, the review sheet and an approved agent call all end here. */
+function beginLoop(build: string, review: string, rounds: number, maxUsd: number): string {
+  if (reviewLoops.has(build) || reviewLoops.has(review)) throw new Error('One of these panels is already in a review loop. Stop it with: stm loop stop <panel>')
+  const l = RL.newLoop(build, review, rounds, maxUsd)
+  reviewLoops.set(build, l)
+  reviewLoops.set(review, l)
+  const text = `Review loop on: when ${panelName(build)} finishes a turn, its reply goes to ${panelName(review)}; the review comes back until APPROVED, ${l.maxRounds} rounds or $${l.maxUsd.toFixed(2)}. Each step still asks before edits and commands.`
+  for (const p of [build, review]) send(p, { kind: 'note', text })
+  logs().info('stm:loop', `${build}/${review} started (${l.maxRounds} rounds, $${l.maxUsd})`)
+  return text
+}
 /** After a turn in a review loop: pass the reply on, or end the loop and say why in both panels. */
 function loopStep(sid: string, costUsd: number, isError: boolean) {
   const l = reviewLoops.get(sid)
@@ -827,7 +850,8 @@ function loopStep(sid: string, costUsd: number, isError: boolean) {
   reviewLoops.set(l.build, r.loop)
   reviewLoops.set(l.review, r.loop)
   if ('stop' in r.step) return end(r.step.stop)
-  const { to, text } = r.step.send
+  const { to } = r.step.send
+  const text = tersed(r.step.send.text, terseOn())
   try {
     if (!sessions.has(to)) throw new Error(`panel ${to} is closed.`)
     refuseSecrets(text)
@@ -1899,7 +1923,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
   if (memC.before > memC.after) (savings.save('compactor', memC.before - memC.after, modelOf.get(sid)), meterAdd(sid, 'compactor', memC.before - memC.after))
   const memText = memRaw ? memC.text : memRaw
   const ruleParts = [
-    { name: 'App guide', text: APP_GUIDE },
+    { name: 'App guide', text: variant().guide === 'old' ? LEGACY_GUIDE : capCard() },
     { name: 'Decisions rule', text: vaultDir() ? DECISION_RULE : '' },
     { name: 'Memory rule', text: vaultDir() ? MEMORY_RULE : '' },
     { name: 'Constitution', text: constitutionOf(home) },
@@ -1910,7 +1934,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     { name: 'Offload rule', text: OFFLOAD_RULE },
     { name: 'Code rule', text: CB.CODE_RULE },
     { name: 'Office rule', text: officeFound?.ok ? CB.OFFICE_RULE : '' },
-    { name: 'App actions', text: APP_ACTIONS_RULE },
+    { name: 'App actions', text: variant().guide === 'old' ? LEGACY_ACTIONS_RULE : '' },
   ]
   bandOf.set(sid, { project: projectName(home), styles: persona ? (persona.styles ?? []) : (settings().styles ?? []) })
   traceParts.set(sid, contextParts([{ name: persona ? `Persona: ${persona.name}` : 'Persona', text: persona ? personaPrompt(persona) : '' }, ...ruleParts, { name: 'Project memory', text: opts.resume ? '' : memText }]))
@@ -1920,7 +1944,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     effort: (['low', 'medium', 'high', 'xhigh', 'max'] as const).find((e) => e === opts.effort),
     query: boxed ? (args) => query({ ...args, options: { ...args.options, spawnClaudeCodeProcess: spawnInSandbox(boxed, cwd) } }) : query,
     persona: persona ? personaPrompt(persona) : undefined,
-    mcpServers: inProcess({ ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
+    plugins: boxed || remote ? undefined : ensureSkillPlugin() ? [{ type: 'local' as const, path: ensureSkillPlugin()! }] : undefined,
+    mcpServers: inProcess({ ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(stmActions(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
     // Claude's Bash sees only the credentials marked for commands
     // through Headroom's compressing proxy when it is on and answering; straight to Anthropic otherwise
     env: { ...claudeTraffic(process.env), ...vault.commandEnv(), STM_PANEL: sid, ...(boxed || remote ? {} : panelEnv(sid)), ...(settings().headroom && headroomLive ? { ANTHROPIC_BASE_URL: HEADROOM_URL } : {}) },
@@ -1929,7 +1954,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     // tools a panel here does not need stay out of every turn, unless the person wants them all
     // a read-only persona has no editing tools at all; one that edits freely is not asked before an edit
     disallowedTools: [...(settings().fullTools ? [] : LEAN_OFF), ...(persona?.access === 'read' ? ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'] : []), ...blockedFor(persona)],
-    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, MANUAL_TOOL, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
+    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, ...STM_OPEN_TOOLS, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
     resume: opts.resume,
     ...(remote ? { spawn: remoteSpawn(remote.host, remote.dir) } : {}),
     resumeAt: opts.resume ? opts.resumeAt : undefined,
@@ -1937,7 +1962,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     memory: memText,
     // a tool result from outside that tries to give orders: Claude is told to treat it as data, the panel shows it
     beforeEdit: (tool: string) => dgBeforeEdit(sid, tool),
-    rewriteOutput: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => symRewrite(sid, tool, input, response, id),
+    rewriteOutput: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => symRewrite(sid, tool, input, response, id) ?? condenseBash(sid, tool, input, response, id),
     onStop: (again: boolean) => dgStop(sid, again),
     loop: () => loopConfig(settings().loopGuard),
     afterTool: (tool: string, input: Record<string, unknown>, output: string) => {
@@ -3307,6 +3332,12 @@ ipcMain.handle('overhead:get', async (_e, sid: string) => {
   // warm: read from the prompt cache; cold (first turn, or after the cache lapsed): written at 1.25x input
   return { ...o, warmUsd: (o.fixed * cached) / 1e6, coldUsd: (o.fixed * input * 1.25) / 1e6 }
 })
+ipcMain.handle('agents:get', () => ({ terse: terseOn(), condense: condenseOn(), forced: { terse: variant().terse !== undefined, condense: variant().condense !== undefined } }))
+ipcMain.handle('agents:set', (_e, key: string, on: boolean) => {
+  if (key !== 'terse' && key !== 'condense') throw new Error('Unknown setting.')
+  saveSettings({ ...settings(), ...(key === 'terse' ? { terseAgents: Boolean(on) } : { condenseOutput: Boolean(on) }) })
+  return Boolean(on)
+})
 ipcMain.handle('lean:get', () => ({ on: !settings().fullTools, off: LEAN_OFF, saves: LEAN_SAVES }))
 ipcMain.handle('lean:set', (_e, on: boolean) => {
   saveSettings({ ...settings(), fullTools: !on })
@@ -3576,13 +3607,6 @@ ipcMain.handle('remote:check', async (_e, host: string, dir: string) => {
   return { claude: v.claude || null, git: v.git || null, dir: v.dir === 'yes', repo: v.repo === 'yes' }
 })
 ipcMain.handle('remote:hosts', () => sshTargets().map((t) => t.name))
-// the agent's way to ask the app for things only the app does, each one approved in the panel like a tool
-const APP_ACTIONS_RULE = `# Asking the app
-From Bash you can ask SuperTokenMan, the app around you, for actions; the person approves each one in the panel:
-- \`stm ask test\`: run the project's tests in this folder and get the result.
-- \`stm ask scan deps\` or \`stm ask scan secrets\`: a dependency (Trivy) or secret (TruffleHog) scan of this folder.
-- \`stm ask preview http://localhost:PORT\`: show a local page in the panel's Preview tab.
-Use them instead of installing or running those tools yourself. A denied request is final for this turn.`
 // a panel from an issue: open issues of the folder's GitHub repo, and the spec written into the panel's worktree
 const ISSUE_RE = /^[\w.-]+\/[\w.-]+$/
 ipcMain.handle('issue:list', async (_e, cwd: string) => {
@@ -5785,6 +5809,25 @@ function symRewrite(sid: string, tool: string, input: Record<string, unknown>, r
   send(sid, { kind: 'note', text: `Short-term compression: ${SY.whatOf(tool, input)} (${(p.chars / 1024).toFixed(0)} KB of ${p.kind}) went to Claude as one line and a summary, about ${p.savedTokens.toLocaleString()} tokens kept out. The original is in ${rel}.` })
   return t.put(p.line)
 }
+/** A long Bash result reaches Claude condensed (head, tail, errors); the whole of it is kept in the project's .stm/outputs. A result of a failed command is left alone: Claude Code does not let a hook replace it. */
+function condenseBash(sid: string, tool: string, input: Record<string, unknown>, response: unknown, id: string): unknown {
+  if (tool !== 'Bash' || !condenseOn() || typeof input.command !== 'string' || CO.skipCommand(input.command)) return undefined
+  const cwd = shells.get(sid)?.cwd
+  const t = SY.textOf(response)
+  if (!cwd || !t || t.text.length <= CO.MIN_CHARS) return undefined
+  const file = join(cwd, '.stm', 'outputs', `${String(id).replace(/[^\w-]+/g, '').slice(-40) || Date.now().toString(36)}.txt`)
+  const r = CO.condensedResult(t.text, file)
+  if (!r) return undefined
+  try {
+    mkdirSync(join(cwd, '.stm', 'outputs'), { recursive: true })
+    writeFileSync(file, t.text)
+  } catch {
+    // the whole could not be kept: Claude gets the output as it was
+    return undefined
+  }
+  send(sid, { kind: 'note', text: `Condensed a long command result (${r.inLines} to ${r.outLines} lines). The whole is in ${relative(cwd, file)}.` })
+  return t.put(r.text)
+}
 ipcMain.handle('sym:get', (_e, sid: string) => ({ on: symOn.has(String(sid)), items: symLog.get(String(sid)) ?? [] }))
 ipcMain.handle('sym:set', (_e, sid: string, on: boolean) => (on === true ? symOn.add(String(sid)) : symOn.delete(String(sid)), symOn.has(String(sid))))
 ipcMain.handle('sym:original', (_e, sid: string, id: string) => {
@@ -5897,6 +5940,17 @@ ipcMain.on('cli:opened', (_e, req: string, sid: string) => {
   cliOpens.get(String(req))?.(String(sid))
   cliOpens.delete(String(req))
 })
+/** Asks the window to open a panel, as the command line does; resolves with its id. */
+function openInWindow(r: { cwd: string; model?: string; persona?: string }): Promise<string> {
+  if (!win || win.isDestroyed()) return Promise.reject(new Error('The app window is closed; open it to start a panel.'))
+  const req = `p${Date.now().toString(36)}${++openSeq}`
+  return new Promise<string>((ok, fail) => {
+    cliOpens.set(req, ok)
+    win!.webContents.send('cli:open', { req, ...r })
+    setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
+  })
+}
+let openSeq = 0
 const panelId = (p: unknown) => {
   const id = String(p ?? '')
   if (!sessions.has(id)) throw new Error(`No panel "${id}". See them with: stm panels`)
@@ -6107,16 +6161,8 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
   },
   // `stm loop`: a review loop between two open panels, started from the person's terminal
   loopStart: (a) => {
-    const build = panelId(a.build)
-    const review = panelId(a.review)
-    if (reviewLoops.has(build) || reviewLoops.has(review)) throw new Error('One of these panels is already in a review loop. Stop it with: stm loop stop <panel>')
-    const l = RL.newLoop(build, review, Number(a.rounds ?? 3), Number(a.maxUsd ?? 2))
-    reviewLoops.set(build, l)
-    reviewLoops.set(review, l)
-    const text = `Review loop on: when ${panelName(build)} finishes a turn, its reply goes to ${panelName(review)}; the review comes back until APPROVED, ${l.maxRounds} rounds or $${l.maxUsd.toFixed(2)}. Each step still asks before edits and commands.`
-    for (const p of [build, review]) send(p, { kind: 'note', text })
-    logs().info('stm:loop', `${build}/${review} started (${l.maxRounds} rounds, $${l.maxUsd})`)
-    return { text: `${text}\nNow send the task to ${panelName(build)}.` }
+    const text = beginLoop(panelId(a.build), panelId(a.review), Number(a.rounds ?? 3), Number(a.maxUsd ?? 2))
+    return { text: `${text}\nNow send the task to ${panelName(panelId(a.build))}.` }
   },
   loopStop: (a) => {
     const l = reviewLoops.get(panelId(a.panel))
@@ -6248,6 +6294,7 @@ const asPanel = (a: Record<string, unknown>, what: string, detail = '') => {
 }
 /** A message from one panel to another: the link's cap checked, the turn charged to it, sent or left waiting per the link. */
 function deliverLinked(from: string, to: string, text: string, body: string) {
+  body = tersed(body, terseOn())
   const link = PB.linkOf(links(), from, to)
   const capped = PB.overCap(link, dayOf(new Date()))
   if (capped) throw new Error(capped)
@@ -6331,12 +6378,7 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     if (!existsSync(cwd)) throw new Error(`No folder ${cwd}.`)
     spawnLimit.take(from)
     if (!win || win.isDestroyed()) throw new Error('The app window is closed; open it to start a panel.')
-    const req = `p${Date.now().toString(36)}`
-    const sid = await new Promise<string>((ok, fail) => {
-      cliOpens.set(req, ok)
-      win!.webContents.send('cli:open', { req, cwd, model })
-      setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
-    })
+    const sid = await openInWindow({ cwd, model })
     saveLinks(PB.addLink(links(), from, sid))
     logs().info('stm:panel', `${from} spawned ${sid} in ${cwd}`)
     const prompt = String(a.prompt ?? '').slice(0, 100_000)
@@ -6482,6 +6524,7 @@ function teamReview(file: string) {
   const size = statSync(file).size
   if (size > 1_000_000) throw new Error('That file is too big to be a team bundle.')
   const team = TM.parseBundle(readFileSync(file, 'utf8'))
+  endProvisions('The person opened another team file instead; nothing was created.')
   toWin('team:review', { team, lines: TM.reviewLines(team) })
   return team
 }
@@ -6514,15 +6557,29 @@ ipcMain.handle('team:prepare', (_e, team: unknown, base: string) => {
   })
 })
 // the panels are open: links between them, and the triggers, turned off
-ipcMain.handle('team:apply', (_e, team: unknown, opened: Record<string, string>) => {
-  const t = teamCheck(team)
+ipcMain.handle('team:apply', (_e, team: unknown, opened: Record<string, string>, provId?: string) => {
+  // a team an agent proposed: the plan kept here, not the one the window sends back
+  const pv = provId ? provisions.get(String(provId)) : undefined
+  try {
+    return applyBundle(pv ? pv.p.team : teamCheck(team), opened, pv)
+  } catch (e) {
+    pv?.done(`Creating the team failed: ${(e as Error).message}`)
+    throw e
+  }
+})
+ipcMain.handle('team:cancel', (_e, provId: string) => {
+  provisions.get(String(provId))?.done('The person cancelled; nothing was created.')
+})
+function applyBundle(t: TM.Team, opened: Record<string, string>, pv?: Provisioning) {
   const sid = (n: string) => (sessions.has(String(opened?.[n])) ? String(opened[n]) : undefined)
   let ls = links()
   for (const l of t.links) {
     const a = sid(l.a)
     const b = sid(l.b)
     if (!a || !b) continue
-    ls = PB.addLink(ls, a, b).map((x) => (PB.linkOf([x], a, b) ? { ...x, auto: l.auto, capUsd: l.capUsd } : x))
+    // a link that starts on its own, with no cap of its own, takes the team's cap
+    const capUsd = l.capUsd ?? (l.auto && pv ? pv.p.capUsd : undefined)
+    ls = PB.addLink(ls, a, b).map((x) => (PB.linkOf([x], a, b) ? { ...x, auto: l.auto, capUsd } : x))
   }
   saveLinks(ls)
   const stamp = Date.now()
@@ -6532,8 +6589,137 @@ ipcMain.handle('team:apply', (_e, team: unknown, opened: Record<string, string>)
   })
   saveTriggers([...triggers(), ...made.map((x) => ({ ...x, armedAt: stamp }))])
   logs().info('stm:panel', `team ${t.name} imported: ${t.panels.length} panels, ${t.links.length} links, ${made.length} triggers (off), confirmed in the window`)
-  return { links: t.links.length, triggers: made.length }
-})
+  let loop = ''
+  const lp = pv?.p.loop
+  if (lp) {
+    const build = sid(lp.build)
+    const review = sid(lp.review)
+    try {
+      if (!build || !review) throw new Error('its panels did not open')
+      beginLoop(build, review, lp.rounds, lp.maxUsd)
+      loop = `Review loop started: ${lp.build} builds, ${lp.review} reviews, up to ${lp.rounds} rounds, stops at $${lp.maxUsd.toFixed(2)}.`
+    } catch (e) {
+      loop = `The review loop did not start: ${(e as Error).message}.`
+    }
+  }
+  pv?.done(
+    `The person pressed Create. Opened ${Object.entries(opened).map(([n, id]) => `${n} (${id})`).join(', ')}; ${t.links.length} links; ${made.length} triggers, all turned off. ${loop || 'No review loop was set.'} Panel instructions are in each composer, not sent.`,
+  )
+  return { links: t.links.length, triggers: made.length, loop: Boolean(loop) && !loop.startsWith('The review loop did not') }
+}
+// Agent tools (mcp__stm__*). A plan only reads. Provision waits on the review sheet; the other four are asked in the panel
+// (canUseTool) before they get here, so each one below runs after a yes.
+type Provisioning = { p: PV.Provision; done: (result: string) => void }
+const provisions = new Map<string, Provisioning>()
+let provSeq = 0
+function endProvisions(why: string) {
+  for (const pv of [...provisions.values()]) pv.done(why)
+}
+/** A panel by its id or its name; a name two panels share is not guessed. */
+function panelRef(x: string): string {
+  const n = String(x).trim()
+  if (sessions.has(n)) return n
+  const hits = hub.list('').filter((p) => p.name === n && sessions.has(p.panel))
+  if (hits.length !== 1) throw new Error(hits.length ? `Several panels are named "${n}"; use the id from stm panels.` : `No panel "${n}". See them with: stm panels`)
+  return hits[0]!.panel
+}
+const skillDir = () => join(app.getAppPath(), 'resources', 'skills', 'supertokenman')
+/** The skill's text for the manual tool: topic "provision" is SKILL.md without its header, "provision/<name>" a reference. */
+function skillText(part?: string): string | null {
+  try {
+    const file = part ? join(skillDir(), 'references', `${part}.md`) : join(skillDir(), 'SKILL.md')
+    return readFileSync(file, 'utf8').replace(/^---\n[\s\S]*?\n---\n/, '').trim()
+  } catch {
+    return null
+  }
+}
+let skillPlugin: string | null | undefined
+/** The skill as a local plugin in the app's data folder, where Claude Code can read it (the app's own files may sit in an archive). */
+function ensureSkillPlugin(): string | null {
+  if (skillPlugin !== undefined) return skillPlugin
+  try {
+    const dest = join(app.getPath('userData'), 'plugins', 'stm')
+    mkdirSync(join(dest, '.claude-plugin'), { recursive: true })
+    writeFileSync(join(dest, '.claude-plugin', 'plugin.json'), JSON.stringify({ name: 'stm', version: app.getVersion(), description: 'SuperTokenMan skill: plan and start a team of panels' }, null, 2))
+    rmSync(join(dest, 'skills'), { recursive: true, force: true })
+    cpSync(skillDir(), join(dest, 'skills', 'supertokenman'), { recursive: true })
+    skillPlugin = dest
+  } catch (e) {
+    logs().warn('stm:skill', `the skill could not be made available: ${(e as Error).message}`)
+    skillPlugin = null
+  }
+  return skillPlugin
+}
+function stmActions(sid: string): StmActions {
+  const plan = (b: { bundle: string; loop?: { build: string; review: string; rounds?: number; maxUsd?: number }; capUsd?: number }) => PV.planFromBundle(b.bundle, { loop: b.loop, capUsd: b.capUsd })
+  return {
+    plan: (b) => {
+      const p = plan(b)
+      return { previewLines: PV.previewLines(p), summaryForAgent: PV.summaryForAgent(p) }
+    },
+    provision: (b) => {
+      const p = plan(b)
+      if (!win || win.isDestroyed()) throw new Error('The app window is closed; open it to review a team.')
+      endProvisions('Another team was proposed; this one was dropped and nothing was created.')
+      const id = `pv${Date.now().toString(36)}${++provSeq}`
+      logs().info('stm:panel', `${sid} proposed team ${p.team.name} (${p.team.panels.length} panels, cap ${p.capUsd})`)
+      return new Promise<string>((resolve) => {
+        const timer = setTimeout(() => {
+          provisions.delete(id)
+          toWin('team:review:close', id)
+          resolve('The person did not answer in 15 minutes; nothing was created.')
+        }, 15 * 60_000)
+        provisions.set(id, { p, done: (r) => (clearTimeout(timer), provisions.delete(id), toWin('team:review:close', id), resolve(r)) })
+        toWin('team:review', { team: p.team, lines: PV.previewLines(p), provision: { id, from: panelName(sid) } })
+      })
+    },
+    open: async (a) => {
+      const cwd = resolve(panelDir(sid), a.folder)
+      if (!existsSync(cwd) || !statSync(cwd).isDirectory()) throw new Error(`No folder ${cwd}.`)
+      const persona = a.persona ? personas().find((x) => x.id === a.persona || x.name === a.persona)?.id : undefined
+      if (a.persona && !persona) throw new Error(`No persona "${a.persona}".`)
+      spawnLimit.take(sid)
+      const id = await openInWindow({ cwd, ...(persona ? { persona } : {}) })
+      const goal = a.goal?.trim()
+      if (goal) {
+        goals.set(id, { text: goal.slice(0, 600), at: Date.now() })
+        toWin('chat:event', id, { kind: 'goal', goal: goals.get(id)?.text ?? null })
+      }
+      logs().info('stm:panel', `${sid} opened ${id} in ${cwd} (approved in the panel)`)
+      return `Opened ${panelName(id)} (${id}) in ${cwd}. It is not linked to any panel and has no task yet.`
+    },
+    link: (spec: LinkSpec) => {
+      const s2 = linkSpec(spec)
+      const a = panelRef(s2.a)
+      const b = panelRef(s2.b)
+      const old = PB.linkOf(links(), a, b)
+      // a cap the link already has stays unless this call sets one
+      const capUsd = s2.capUsd ?? old?.capUsd
+      saveLinks(PB.addLink(links(), a, b).map((x) => (PB.linkOf([x], a, b) ? { ...x, auto: s2.auto, capUsd } : x)))
+      logs().info('stm:panel', `${sid} linked ${a} and ${b} (auto ${s2.auto}, cap ${capUsd ?? 'none'}; approved in the panel)`)
+      return `Linked ${panelName(a)} and ${panelName(b)}: ${s2.auto ? 'messages start on their own' : 'messages wait for the person'}, ${capUsd !== undefined ? `cap $${capUsd.toFixed(2)} a day` : 'no cap'}.`
+    },
+    loop: (spec: LoopSpec) => {
+      const l = loopSpec(spec)
+      const text = beginLoop(panelRef(l.build), panelRef(l.review), l.rounds, l.maxUsd)
+      logs().info('stm:loop', `${sid} started a loop (approved in the panel)`)
+      return `${text} Send the task to ${l.build}.`
+    },
+    trigger: (t) => {
+      const panel = panelRef(t.panel)
+      const when = parseWhen(t.when)
+      if (!when) throw new Error(`Cannot read the schedule "${t.when}". Use words like "Every day at 02:00" or "Mon to Fri at 09:00".`)
+      const bad = (x: string) => /^([\\/]|~|[A-Za-z]:)/.test(x) || x.split(/[\\/]/).includes('..')
+      for (const x of [...(t.read ?? []), ...(t.write ?? [])]) if (bad(x)) throw new Error(`Scope folders must stay inside the project: ${x}`)
+      const scope = t.read?.length || t.write?.length || t.commands?.length ? { read: t.read ?? [], write: t.write ?? [], commands: (t.commands ?? []).filter((c) => !/[\r\n]/.test(c)) } : undefined
+      const made = cleanTrigger({ name: t.name, cwd: panelDir(panel), persona: personaOf.get(panel) ?? '', prompt: t.prompt, when, scope, enabled: false })
+      saveTriggers([...triggers(), { ...made, armedAt: Date.now() }])
+      logs().info('stm:panel', `${sid} created trigger ${made.id} (off; approved in the panel)`)
+      return `Trigger "${made.name}" created for ${panelName(panel)}, turned off. The person reads its scope under Triggers and turns it on.`
+    },
+    skill: (part) => skillText(part),
+  }
+}
 Object.assign(cliHandlers, {
   teamExport: (a: Record<string, unknown>) => {
     const file = resolve(String(a.file ?? ''))

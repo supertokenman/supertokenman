@@ -206,7 +206,7 @@ try {
   } else if (cmd === 'eval') print(await call('evalRun', { cwd: flags.cwd || process.cwd(), models: flags.models, effort: flags.effort, maxUsd: flags['max-usd'], yes: Boolean(flags.yes) }), (d) => d.text)
   else if (cmd === 'loop') {
     // a loop sends between panels without the composer: the person starts it, not an agent in a panel
-    if (process.env.STM_PANEL_ID && rest[0] !== 'stop') die('Start a review loop from your own terminal, not from inside a panel.')
+    if (process.env.STM_PANEL_ID && rest[0] !== 'stop') die('Start a review loop from your own terminal, not from inside a panel. In a panel, ask the person with the loop_start tool of the stm MCP server.')
     if (rest[0] === 'stop') {
       if (!rest[1]) die('Usage: stm loop stop <panel>')
       print(await call('loopStop', { panel: rest[1] }), (d) => d.text)
@@ -251,7 +251,7 @@ try {
     if (kind === 'test' && !d.ok) process.exitCode = 1
   } else if (cmd === 'team') {
     // a panel's agent does not start these: export writes a file, import opens the review sheet in the window
-    if (process.env.STM_PANEL_ID) die('Run stm team from your own terminal, not from inside a panel.')
+    if (process.env.STM_PANEL_ID) die('Run stm team from your own terminal, not from inside a panel. In a panel, use the team_plan and team_provision tools of the stm MCP server.')
     const [op, file] = rest
     if (!['export', 'import'].includes(op) || !file) die('Usage: stm team export <file>   or   stm team import <file>')
     if (op === 'export') print(await call('teamExport', { file: resolve(file) }), (d) => `Wrote ${d.file}.`)

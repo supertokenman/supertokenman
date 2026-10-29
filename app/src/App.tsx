@@ -445,7 +445,7 @@ export function App() {
   const [bwOpen, setBwOpen] = useState(false)
   const [radarOpen, setRadarOpen] = useState(false)
   const [ciOpen, setCiOpen] = useState(false)
-  const [teamIn, setTeamIn] = useState<{ team: import('../shared/teambundle').Team; lines: string[] } | null>(null)
+  const [teamIn, setTeamIn] = useState<{ team: import('../shared/teambundle').Team; lines: string[]; provision?: { id: string; from: string } } | null>(null)
   const [awayCard, setAwayCard] = useState<import('./bridge').AwayCard | null>(null)
   const [xrOpen, setXrOpen] = useState(false)
   const [stkOpen, setStkOpen] = useState(false)
@@ -845,6 +845,8 @@ export function App() {
   )
   // a team file to review (File menu or stm team import); panels are made only when the person confirms in the sheet
   useEffect(() => window.stm.teamBundle.onReview(setTeamIn), [])
+  // an agent's proposal that was answered or dropped elsewhere (timeout, a newer proposal) closes its sheet
+  useEffect(() => window.stm.teamBundle.onClose((id) => setTeamIn((t) => (t?.provision?.id === id ? null : t))), [])
   useEffect(() => window.stm.away.onShow(setAwayCard), [])
   // pointer, wheel and key input tell the main process the person is here (at most every 10 s)
   useEffect(() => {
@@ -1645,7 +1647,12 @@ export function App() {
           <TeamImport
             team={teamIn.team}
             lines={teamIn.lines}
-            onClose={() => setTeamIn(null)}
+            from={teamIn.provision?.from}
+            onClose={() => {
+              // closing a team an agent proposed answers it: nothing was created
+              if (teamIn.provision) void window.stm.teamBundle.cancel(teamIn.provision.id)
+              setTeamIn(null)
+            }}
             onCreate={async (base) => {
               const plan = await window.stm.teamBundle.prepare(teamIn.team, base)
               const opened: Record<string, string> = {}
@@ -1653,9 +1660,9 @@ export function App() {
                 opened[x.name] = await open(x.cwd, undefined, x.persona)
                 if (x.instructions) window.dispatchEvent(new CustomEvent('stm:prefill', { detail: { sid: opened[x.name], text: `${x.instructions}\n\n`, quiet: true } }))
               }
-              const r = await window.stm.teamBundle.apply(teamIn.team, opened)
+              const r = await window.stm.teamBundle.apply(teamIn.team, opened, teamIn.provision?.id)
               setTeamIn(null)
-              return `Opened ${plan.length} panels, ${r.links} links, ${r.triggers} triggers (off).`
+              return `Opened ${plan.length} panels, ${r.links} links, ${r.triggers} triggers (off).${r.loop ? ' Review loop started.' : ''}`
             }}
           />
         )}

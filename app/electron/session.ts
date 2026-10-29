@@ -5,6 +5,7 @@ import { editOf, type FileEdit } from './diff.js'
 import { toOverhead } from './overhead.js'
 import { filesNote, type Attachment } from '../shared/attach.js'
 import { ttlOf } from '../shared/cache.js'
+import { cardSummary } from '../shared/stmtools.js'
 import { LoopGuard, messageCost, tripHeadline, type LoopConfig, type LoopTrip } from '../shared/loopguard.js'
 import type { CanUseTool, Options, PermissionResult, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 
@@ -73,6 +74,8 @@ export function summarize(name: string, input: Record<string, unknown>): string 
   const s = (v: unknown) => String(v ?? '')
   if (name.endsWith('__message_panel')) return `to ${s(input.panel)}: ${s(input.message).replace(/\s+/g, ' ').slice(0, 140)}`
   if (name.endsWith('__list_panels')) return 'list the open panels'
+  const card = cardSummary(name, input)
+  if (card) return card
   if (name === 'Bash') return s(input.command).replace(/\s+/g, ' ').slice(0, 160)
   if ('file_path' in input) return s(input.file_path)
   if ('pattern' in input) return s(input.pattern)
@@ -98,7 +101,7 @@ export class Session {
 
   constructor(
     private emit: (e: UiEvent) => void,
-    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null>; loop?: () => LoopConfig },
+    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; plugins?: Options['plugins']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null>; loop?: () => LoopConfig },
   ) {}
 
   private read = (path: string) => {
@@ -186,6 +189,8 @@ export class Session {
         canUseTool,
         settingSources: ['user', 'project', 'local'],
         mcpServers: this.opts.mcpServers,
+        // the app's skill, as a local plugin in its data folder
+        ...(this.opts.plugins?.length ? { plugins: this.opts.plugins } : {}),
         allowedTools: this.opts.allowedTools,
         ...(this.opts.disallowedTools?.length ? { disallowedTools: this.opts.disallowedTools } : {}),
         env: this.opts.env,

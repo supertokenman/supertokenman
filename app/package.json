@@ -78,6 +78,7 @@
       "dist-electron/**",
       "build/icon.png",
       "cli/**",
+      "resources/skills/**",
       "package.json",
       "!node_modules/@anthropic-ai/claude-agent-sdk-*-musl/**",
       "!**/node_modules/**/*.map",
