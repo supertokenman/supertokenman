@@ -16,16 +16,20 @@ export const MAX_INSTRUCTIONS = 8000
 const META = ['folder', 'persona', 'auto', 'cap', 'panel', 'when']
 
 /** Markdown for a team; empty optional fields are written as empty values so the file reads as a form. */
+// a line of prose that looks like a heading gets a backslash, so it stays prose
+const esc = (t: string) => t.replace(/^(\\*)(#{1,2} )/gm, '\\$1$2')
+const unesc = (t: string) => t.replace(/^\\(\\*#{1,2} )/gm, '$1')
+
 export function toMarkdown(t: Team): string {
   const out: string[] = [`# Team: ${t.name}`, '', t.description.trim(), '']
   for (const p of t.panels) {
-    out.push(`## Panel: ${p.name}`, `- folder: ${p.folder}`, `- persona: ${p.persona ?? ''}`, '', p.instructions.trim(), '')
+    out.push(`## Panel: ${p.name}`, `- folder: ${p.folder}`, `- persona: ${p.persona ?? ''}`, '', esc(p.instructions.trim()), '')
   }
   for (const l of t.links) {
     out.push(`## Link: ${l.a} <-> ${l.b}`, `- auto: ${l.auto ? 'yes' : 'no'}`, `- cap: ${l.capUsd ?? ''}`, '')
   }
   for (const r of t.triggers) {
-    out.push(`## Trigger: ${r.name}`, `- panel: ${r.panel}`, `- when: ${r.when}`, '', r.prompt.trim(), '')
+    out.push(`## Trigger: ${r.name}`, `- panel: ${r.panel}`, `- when: ${r.when}`, '', esc(r.prompt.trim()), '')
   }
   return out.join('\n')
 }
@@ -60,7 +64,7 @@ export function parseBundle(md: string): Team {
       if (/^([\\/]|~|[A-Za-z]:)/.test(folder) || folder.split(/[\\/]/).includes('..'))
         throw new Error(`Folders must stay inside the project: ${folder} (panel ${s.name})`)
       const persona = (meta.persona ?? '').trim() || undefined
-      panels.push({ name: s.name, folder, ...(persona ? { persona } : {}), instructions: prose.slice(0, MAX_INSTRUCTIONS) })
+      panels.push({ name: s.name, folder, ...(persona ? { persona } : {}), instructions: unesc(prose).slice(0, MAX_INSTRUCTIONS) })
     } else if (s.kind === 'Link') {
       const m = /^(.*?)\s*<->\s*(.*)$/.exec(s.name)
       if (!m || !m[1].trim() || !m[2].trim()) throw new Error(`A link needs two panels: "## Link: <panel A> <-> <panel B>", got "${s.name}".`)
@@ -74,7 +78,7 @@ export function parseBundle(md: string): Team {
       if (!s.name) throw new Error('Every trigger needs a name after "## Trigger:".')
       const panel = (meta.panel ?? '').trim()
       if (!panel) throw new Error(`Trigger ${s.name} has no panel.`)
-      triggers.push({ name: s.name, panel, when: (meta.when ?? '').trim(), prompt: prose })
+      triggers.push({ name: s.name, panel, when: (meta.when ?? '').trim(), prompt: unesc(prose) })
     }
   }
 

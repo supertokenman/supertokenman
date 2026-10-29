@@ -67,4 +67,8 @@ describe('team bundle', () => {
     expect(lines).toContain('Link api <-> web, waits, cap $2.00')
     expect(lines).toContain('Trigger nightly for api (0 3 * * *) (comes in turned off)')
   })
+  it('keeps a prose line that looks like a heading', () => {
+    const t: Team = { name: 'x', description: 'd', panels: [{ name: 'api', folder: '.', instructions: '## Panel: not a panel\n# notes\nok' }], links: [], triggers: [] }
+    expect(parseBundle(toMarkdown(t)).panels[0]!.instructions).toBe('## Panel: not a panel\n# notes\nok')
+  })
 })
