@@ -1,10 +1,16 @@
-A fix for a black window after updating.
+Panels that talk in a room, and a few things set up in one step.
 
-- Right after an update the app could start before its files were all in place and stay black, with
-  nothing in the log. It now shows "Starting SuperTokenMan...", tries again on its own a few times,
-  writes the miss to the log, and if it still cannot read its files, says to quit and open it again.
-- Everything else from 0.1.17 is unchanged: the canvas, stm read, link cost and cap, the review loop
-  and stm learn.
+- Group room on the canvas: one message to the linked panels; the panel named with @name answers,
+  and "Next turn" passes the question and last reply on. Each turn goes over a link and is charged
+  to it, with the usual approvals.
+- Triggers from a local webhook: turn it on for a trigger and a POST to 127.0.0.1:47821 with that
+  trigger's own token starts it. Nothing listens beyond this Mac; the payload reaches the run as data.
+- A browser per panel: sign-ins in a panel's browser stay in that panel, apart from your own browser.
+  Clear sign-ins, or close the panel, to wipe them.
+- Usage per panel: a chip shows the session's cost, tokens and the rate-limit windows the CLI reports
+  ("not reported" when it says nothing). Set a cap and the next message waits for you.
+- New project from a template: web app, CLI tool, data analysis or docs site writes a persona, skills
+  and CLAUDE.md in one step, keeping files already there. In the File menu and as `stm new`.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
