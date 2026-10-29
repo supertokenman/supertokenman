@@ -43,6 +43,7 @@ export function InboxButton({ items, onGo }: { items: Need[]; onGo: (n: Need) =>
               <svg width="14" height="14" viewBox="0 0 14 14" className="l2">{SHAPE[2]}</svg> later
             </span>
           </div>
+          <div className="inbox-list">
           {items.length === 0 && (
             <div className="inbox-empty">
               <svg viewBox="0 0 120 60" aria-hidden="true"><circle cx="30" cy="30" r="18" /><path d="M58 30h40" /><path d="M86 20l12 10-12 10" /></svg>
@@ -53,11 +54,12 @@ export function InboxButton({ items, onGo }: { items: Need[]; onGo: (n: Need) =>
             <button key={n.id} role="menuitem" className={`inbox-item l${n.level}`} style={{ animationDelay: `${i * 20}ms` }} onClick={() => { setOpen(false); onGo(n) }}>
               <svg width="14" height="14" viewBox="0 0 14 14" className={`l${n.level}`}>{SHAPE[n.level]}</svg>
               <span className="inbox-text">
-                <span className="inbox-title">{n.title}</span>
+                <span className="inbox-title" data-tip={n.title}>{n.title}</span>
                 {n.detail && <span className="inbox-detail">{n.detail}</span>}
               </span>
             </button>
           ))}
+          </div>
         </div>
       )}
     </div>
