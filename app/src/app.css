@@ -4470,3 +4470,28 @@ table.tbl tbody tr:last-child > td { border-bottom: 0; }
 .es-hint kbd { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 @media (hover: hover) and (pointer: fine) { .es-card:hover { background: var(--hover); border-color: var(--accent); } }
 @media (max-width: 520px) { .es-cards { grid-template-columns: minmax(0, 1fr); } .es-head { font-size: 28px; } }
+
+/* Dictate anywhere: Settings rows */
+.dict-box { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 4px 12px; border-left: 2px solid var(--accent-soft); }
+.dict-sub { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+.dict-setup { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--border-strong); background: var(--sunken); }
+.dict-path { flex: 1; min-width: 0; height: 28px; padding: 0 8px; font-family: var(--mono); font-size: 12px; color: var(--text); background: var(--sunken); border: 1px solid var(--border-strong); }
+.dict-ok { font-family: var(--mono); font-size: 12px; color: var(--green); }
+.dict-off { font-family: var(--mono); font-size: 12px; color: var(--red); }
+
+/* Dictate anywhere: the floating pill (its own window; see docs/BRAND.md) */
+html.dpill-root, html.dpill-root body, html.dpill-root #root { background: transparent !important; overflow: hidden; }
+.dpill { --cut: 10px; width: 232px; height: 44px; padding: 1px; background: var(--border-strong); clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); transition: background 160ms var(--ease); }
+.dpill-in { height: 100%; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--raised); clip-path: polygon(0 0, calc(100% - var(--cut) + 1px) 0, 100% calc(var(--cut) - 1px), 100% 100%, 0 100%); font-size: 12.5px; color: var(--text); }
+.dpill.listening { background: var(--accent); }
+.dpill.inserted { background: var(--green); }
+.dpill.error, .dpill.setup, .dpill.copied { background: var(--red); }
+.dpill-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 12px; letter-spacing: 0.02em; }
+.dpill-dot { width: 8px; height: 8px; background: var(--muted); flex: none; }
+.dpill.transcribing .dpill-dot, .dpill.cleaning .dpill-dot { background: var(--accent); animation: dpill-pulse 1.1s var(--ease) infinite; }
+.dpill.inserted .dpill-dot { background: var(--green); }
+.dpill.error .dpill-dot, .dpill.setup .dpill-dot, .dpill.copied .dpill-dot { background: var(--red); }
+.dpill-bars { display: flex; align-items: center; gap: 3px; height: 18px; flex: none; }
+.dpill-bars i { display: block; width: 3px; height: 18px; background: var(--accent); transform-origin: center; transition: transform 80ms linear; }
+@keyframes dpill-pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .dpill.transcribing .dpill-dot, .dpill.cleaning .dpill-dot { animation: none; } .dpill-bars i { transition: none; } }

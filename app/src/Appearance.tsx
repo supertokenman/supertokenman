@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { TranscriptToggle } from './Transcript'
+const DictationSettings = lazy(() => import('./DictationSettings').then((x) => ({ default: x.DictationSettings })))
 import { IconClose } from './icons'
 import { LOADERS, LoaderMark, loaderStyle, setLoaderStyle } from './Thinking'
 import { TouchIdSettings } from './Lock'
@@ -216,6 +217,9 @@ export function Appearance(props: { current: string; onPick: (id: string) => voi
             <ClaudeUsageToggle />
             <LoopGuardSettings />
             <TranscriptToggle />
+            <Suspense fallback={null}>
+              <DictationSettings />
+            </Suspense>
             <TouchIdSettings />
           </div>
           <div className="touchid">

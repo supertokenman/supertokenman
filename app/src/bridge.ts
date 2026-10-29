@@ -97,6 +97,19 @@ export type Bridge = {
     test: () => Promise<{ url: string; publicOk: boolean }>
     upload: (path: string) => Promise<string>
   }
+  dictation: {
+    status: () => Promise<DictationStatus>
+    enable: (on: boolean) => Promise<DictationStatus>
+    shortcut: (accel: string) => Promise<DictationStatus>
+    model: (path: string) => Promise<DictationStatus>
+    cleanup: (on: boolean) => Promise<DictationStatus>
+    open: (what: 'accessibility' | 'microphone') => Promise<void>
+    audio: (wav: Uint8Array) => Promise<void>
+    micFailed: (why: string) => Promise<void>
+    onState: (cb: (s: { state: import('../shared/dictation').PillState; detail: string }) => void) => () => void
+    onRecord: (cb: () => void) => () => void
+    onStop: (cb: () => void) => () => void
+  }
   hotkey: {
     get: () => Promise<{ accel: string; active: boolean }>
     set: (accel: string) => Promise<{ accel: string; active: boolean }>
@@ -1071,3 +1084,5 @@ export type BwState = import('../electron/bitwarden').Status & { links: { name: 
 export type RadarCfg = { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }
 
 export type PostNet = { net: import('../shared/social').Net; connected: boolean; host: string | null; handle?: string; mastodonLimit?: number }
+
+export type DictationStatus = { supported: boolean; on: boolean; accel: string; label: string; note: string; active: boolean; model: string; cleanup: boolean; engine: import('../shared/dictation').EngineState; accessibility: boolean | null; mic: string }

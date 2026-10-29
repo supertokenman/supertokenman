@@ -7,12 +7,18 @@ import './app.css'
 import './motion.css'
 import './ui/ui.css'
 
-createRoot(document.getElementById('root')!).render(
-  <Crash>
-    <App />
-  </Crash>,
-)
-requestAnimationFrame(() => handOver())
+// the dictation pill is its own small window: the same page, with nothing of the app drawn
+const pill = location.hash === '#dictation-pill'
+if (pill) {
+  void import('./DictationPill').then(({ DictationPill }) => createRoot(document.getElementById('root')!).render(<DictationPill />))
+} else {
+  createRoot(document.getElementById('root')!).render(
+    <Crash>
+      <App />
+    </Crash>,
+  )
+  requestAnimationFrame(() => handOver())
+}
 installTooltips()
 // the window out of focus: steady-state ornaments (a running container's breathing dot) hold still,
 // so a window left open beside other work does no style work at all. Busy marks keep moving.
