@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto'
 // The Electron main process: one window, several Claude Code sessions (one per panel), IPC between them.
 import { readFile as readFileAsync } from 'node:fs/promises'
 import { guardIpc, lockPermissions, reportIpcErrors, UI_SCHEME, UI_URL, uiFile } from './hardening.js'
@@ -190,6 +190,8 @@ import * as AN from '../shared/anomaly.js'
 import * as CTR from '../shared/containers.js'
 import * as BWN from './bitwarden.js'
 import * as RD from '../shared/radar.js'
+import * as MN from '../shared/mentions.js'
+import { parseBrief } from '../shared/postbrief.js'
 import * as ACT from '../shared/act.js'
 import * as GT from './gitea.js'
 import * as KONG from '../shared/kong.js'
@@ -301,7 +303,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -4082,6 +4084,159 @@ ipcMain.handle('radar:notify', async (_e, text: string) => {
   if (!n) throw new Error('Set your ntfy address first.')
   const r = await fetch(n, { method: 'POST', body: String(text ?? '').slice(0, 3000), headers: { Title: 'Topic radar' } })
   if (!r.ok) throw new Error(`ntfy answered ${r.status}`)
+  return true
+})
+
+// Mentions: someone asks for a brief in a mention; a draft reply waits for the person's click. Polls only while
+// on and the app is open; credentials in the vault, never logged and never sent back to the window.
+const MN_VAULT = { bluesky: 'MENTIONS_BLUESKY_PASSWORD', mastodon: 'MENTIONS_MASTODON_TOKEN', x: 'MENTIONS_X_KEYS' } as const
+const mnCfg = (): MN.Config => ({ ...MN.DEFAULTS, ...settings().mentions?.cfg })
+const mnState = () => settings().mentions ?? { cfg: MN.DEFAULTS, seen: [], sent: [], queue: [] }
+const mnSave = (p: Partial<NonNullable<Settings['mentions']>>) => (saveSettings({ ...settings(), mentions: { ...mnState(), ...p } }), toWin('mentions:changed'))
+const mnReady = () => ({ bluesky: !!(mnCfg().bsky.handle && vault?.get(MN_VAULT.bluesky)), mastodon: !!(mnCfg().masto.instance && vault?.get(MN_VAULT.mastodon)), x: !!(mnCfg().x.userId && vault?.get(MN_VAULT.x)) })
+const mnFetch = async <T>(r: MN.Req): Promise<T> => {
+  const res = await fetch(r.url, { method: r.method, headers: r.headers, body: r.body, signal: AbortSignal.timeout(20_000) })
+  // the status only: a body could echo a credential
+  if (!res.ok) throw new Error(`${new URL(r.url).host} answered ${res.status}`)
+  return (await res.json()) as T
+}
+const xKeys = (): import('../shared/oauth1.js').Keys => JSON.parse(vault.get(MN_VAULT.x) ?? '{}')
+const xSign = () => ({ nonce: randomBytes(16).toString('hex'), timestamp: Math.floor(Date.now() / 1000) })
+const hmacSha1 = (k: string, t: string) => createHmac('sha1', k).update(t).digest('base64')
+let bskySess: { jwt: string; did: string } | null = null
+const bskyLogin = async () => {
+  if (bskySess) return bskySess
+  const c = mnCfg().bsky
+  const r = await mnFetch<{ accessJwt: string; did: string }>(MN.bsky.session(c.pds, c.handle, vault.get(MN_VAULT.bluesky) ?? ''))
+  return (bskySess = { jwt: r.accessJwt, did: r.did })
+}
+async function mnFind(): Promise<MN.Mention[]> {
+  const c = mnCfg()
+  const ok = mnReady()
+  const out: MN.Mention[] = []
+  if (ok.bluesky) {
+    const s = await bskyLogin()
+    for (const m of MN.bskyMentions(await mnFetch(MN.bsky.notifications(c.bsky.pds, s.jwt)))) {
+      if (m.parentUri && MN.isRequest(m.text, MN.keywordsOf(c.keywords)) && !mnState().seen.includes(m.key)) {
+        const p = MN.bskyPost(await mnFetch<Parameters<typeof MN.bskyPost>[0]>(MN.bsky.thread(c.bsky.pds, s.jwt, m.parentUri)).catch(() => ({})))
+        if (p) m.post = p
+      }
+      out.push(m)
+    }
+  }
+  if (ok.mastodon) {
+    const t = vault.get(MN_VAULT.mastodon) ?? ''
+    for (const m of MN.mastoMentions(await mnFetch(MN.masto.notifications(c.masto.instance, t)))) {
+      if (m.parentId && MN.isRequest(m.text, MN.keywordsOf(c.keywords)) && !mnState().seen.includes(m.key)) {
+        const p = await mnFetch<Parameters<typeof MN.mastoPost>[0]>(MN.masto.status(c.masto.instance, t, m.parentId)).catch(() => null)
+        if (p) m.post = MN.mastoPost(p)
+      }
+      out.push(m)
+    }
+  }
+  if (ok.x) out.push(...MN.xMentions(await mnFetch(MN.x.mentions(c.x.userId, xKeys(), hmacSha1, xSign()))))
+  return out
+}
+async function mnBrief(m: MN.Mention) {
+  const { text } = await small(MN.mentionBriefPrompt(m))
+  const b = parseBrief(text)
+  if (!b.ok) throw new Error('The brief was not in the expected format.')
+  return MN.composeReply(m.net, b, m.net === 'mastodon' ? `${m.author} ` : '')
+}
+let mnTimer: ReturnType<typeof setTimeout> | null = null
+let mnFails = 0
+let mnLast: { at: number; error?: string } = { at: 0 }
+async function mnPoll() {
+  mnTimer = null
+  if (!mnCfg().on) return
+  try {
+    const st = mnState()
+    const seen = new Set(st.seen)
+    const kw = MN.keywordsOf(mnCfg().keywords)
+    const found = MN.fresh(await mnFind(), seen).filter((m) => MN.isRequest(m.text, kw))
+    const queue = [...found.map((m): MN.Item => ({ ...m, state: 'briefing', draft: [] })), ...st.queue].slice(0, 100)
+    mnSave({ seen: MN.keepSeen(seen), queue })
+    for (const m of found) {
+      const draft = await mnBrief(m).then((d) => ({ draft: d, state: 'ready' as const }), (e: Error) => ({ draft: [], state: 'failed' as const, error: e.message }))
+      mnSave({ queue: mnState().queue.map((q) => (q.key === m.key ? { ...q, ...draft } : q)) })
+    }
+    mnFails = 0
+    mnLast = { at: Date.now() }
+  } catch (e) {
+    mnFails++
+    bskySess = null
+    mnLast = { at: Date.now(), error: (e as Error).message }
+  }
+  mnSchedule()
+}
+function mnSchedule() {
+  if (mnTimer) clearTimeout(mnTimer)
+  mnTimer = null
+  if (!mnCfg().on) return
+  // backoff on errors: double each time, up to an hour
+  const every = Math.max(1, mnCfg().everyMin) * 60_000
+  mnTimer = setTimeout(() => void mnPoll(), Math.min(3600_000, every * 2 ** Math.min(mnFails, 5)))
+}
+app.whenReady().then(() => mnCfg().on && mnSchedule())
+app.on('will-quit', () => mnTimer && clearTimeout(mnTimer))
+ipcMain.handle('mentions:get', () => {
+  const s = mnState()
+  return { cfg: mnCfg(), ready: mnReady(), queue: s.queue, sentLastHour: s.sent.filter((t) => Date.now() - t < 3600_000).length, last: mnLast }
+})
+ipcMain.handle('mentions:save', (_e, cfg: MN.Config) => {
+  const c: MN.Config = {
+    on: !!cfg?.on,
+    everyMin: Math.max(1, Math.min(60, Math.round(Number(cfg?.everyMin) || 2))),
+    keywords: String(cfg?.keywords ?? '').slice(0, 2000),
+    maxPerHour: Math.max(1, Math.min(60, Math.round(Number(cfg?.maxPerHour) || 10))),
+    bsky: { handle: String(cfg?.bsky?.handle ?? '').trim().slice(0, 253), pds: String(cfg?.bsky?.pds ?? '').trim().slice(0, 200) || MN.DEFAULTS.bsky.pds },
+    masto: { instance: String(cfg?.masto?.instance ?? '').trim().slice(0, 200) },
+    x: { userId: String(cfg?.x?.userId ?? '').replace(/\D/g, '').slice(0, 30) },
+  }
+  if (c.bsky.handle !== mnCfg().bsky.handle || c.bsky.pds !== mnCfg().bsky.pds) bskySess = null
+  mnSave({ cfg: c })
+  mnFails = 0
+  mnSchedule()
+  return true
+})
+// a credential goes in and never comes back out
+ipcMain.handle('mentions:secret', (_e, net: MN.Net, value: string) => {
+  const name = MN_VAULT[net]
+  if (!name) throw new Error('Unknown network.')
+  if (!value) vault.delete(name)
+  else if (net === 'x') {
+    const k = JSON.parse(String(value)) as Record<string, string>
+    if (!['consumerKey', 'consumerSecret', 'token', 'tokenSecret'].every((f) => typeof k[f] === 'string' && k[f].trim())) throw new Error('All four X keys are needed.')
+    vault.set(name, JSON.stringify(k))
+  } else vault.set(name, String(value).trim())
+  if (net === 'bluesky') bskySess = null
+  toWin('mentions:changed')
+  return mnReady()
+})
+ipcMain.handle('mentions:check', () => (mnFails = 0, mnPoll()))
+ipcMain.handle('mentions:skip', (_e, key: string) => mnSave({ queue: mnState().queue.map((q) => (q.key === key ? { ...q, state: 'skipped' as const } : q)) }))
+ipcMain.handle('mentions:clear', () => mnSave({ queue: mnState().queue.filter((q) => q.state === 'ready' || q.state === 'briefing') }))
+// posting happens only here, on the person's click on Approve
+ipcMain.handle('mentions:approve', async (_e, key: string, draft: string[]) => {
+  const st = mnState()
+  const q = st.queue.find((x) => x.key === key)
+  if (!q || q.state !== 'ready') throw new Error('This mention is no longer waiting.')
+  const c = mnCfg()
+  if (!MN.canReply(st.sent, Date.now(), c.maxPerHour)) throw new Error(`The limit of ${c.maxPerHour} replies an hour is reached. Try later.`)
+  const parts = (Array.isArray(draft) ? draft : []).map((p) => String(p).trim()).filter(Boolean).slice(0, 3)
+  if (!parts.length) throw new Error('The reply is empty.')
+  if (parts.some((p) => MN.graphemes(p) > MN.LIMIT[q.net])) throw new Error(`Each post must fit ${MN.LIMIT[q.net]} characters.`)
+  if (q.net !== 'bluesky' && parts.length > 1) throw new Error('One post only here.')
+  if (q.net === 'bluesky') {
+    const s = await bskyLogin()
+    let parent = q.reply.parent!
+    for (const p of parts) {
+      const r = await mnFetch<MN.Ref>(MN.bsky.post(c.bsky.pds, s.jwt, s.did, p, { root: q.reply.root!, parent }, new Date()))
+      parent = { uri: r.uri, cid: r.cid }
+    }
+  } else if (q.net === 'mastodon') await mnFetch(MN.masto.post(c.masto.instance, vault.get(MN_VAULT.mastodon) ?? '', parts[0], q.id, q.reply.visibility ?? 'public', q.key))
+  else await mnFetch(MN.x.post(parts[0], q.id, xKeys(), hmacSha1, xSign()))
+  mnSave({ sent: [...st.sent.filter((t) => Date.now() - t < 3600_000), Date.now()], queue: mnState().queue.map((x) => (x.key === key ? { ...x, state: 'sent' as const, draft: parts } : x)) })
   return true
 })
 ipcMain.handle('news:setup', () => ({ rsshub: settings().rsshub ?? '', rules: settings().feedRules ?? [], senders: settings().newsletterSenders ?? [], briefing: { ...FD.DEFAULT_SCHEDULE, ...settings().briefing }, model: settings().smallModel ?? '', briefings: listBriefings() }))

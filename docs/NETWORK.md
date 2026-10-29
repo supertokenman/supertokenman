@@ -56,6 +56,9 @@ No telemetry, analytics or crash reports are sent to us; there is no server of o
 | Web reader, embedded videos, web apps | the page you open | opening it |
 | Video transcripts | none from the app: it reads a subtitle or audio file you give, or text you paste. A link other than YouTube runs **your own** `yt-dlp` (not shipped by us) on this machine; that tool contacts the video's site under your responsibility, captions only, never with browser cookies. Audio goes to **your own** `whisper.cpp` (and `ffmpeg`) locally. YouTube links are not fetched at all | Settings > Appearance > Video transcripts (off by default), then Transcript or `stm transcript` |
 | Sites added as drawer apps | the site's own address and the extra hosts you list; its icon once, from the same site, when you add it | adding the site, then opening it |
+| Mentions on Bluesky | the PDS host you sign in to (bsky.social by default): sign-in, your notifications, the post a mention replies to; a reply only when you click Approve | turning on Mentions with a Bluesky handle and app password; polls every 2 minutes by default (1 at least), less often after errors, and stops when the app quits |
+| Mentions on Mastodon | the instance you name: your mention notifications, the post a mention replies to; a reply only when you click Approve | turning on Mentions with an instance and access token; same interval, stops when the app quits |
+| Mentions on X | api.x.com (`/2/users/:id/mentions`; `/2/tweets` only when you click Approve), with your own keys | turning on Mentions with your own X API keys (reading needs a paid tier on X); same interval, stops when the app quits |
 
 The release update check runs only in a packaged Mac build that carries `app-update.yml`. Since 0.1.13
 netwatch forces the app's release path (`STM_UPDATE_RELEASE_MODE=1`, the automatic check's wait cut to

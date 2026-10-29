@@ -345,6 +345,16 @@ export type Bridge = {
     draft: (hits: import('../shared/radar').Hit[]) => Promise<{ text: string; by: string }>
     notify: (text: string) => Promise<boolean>
   }
+  mentions: {
+    get: () => Promise<{ cfg: import('../shared/mentions').Config; ready: Record<import('../shared/mentions').Net, boolean>; queue: import('../shared/mentions').Item[]; sentLastHour: number; last: { at: number; error?: string } }>
+    save: (cfg: import('../shared/mentions').Config) => Promise<boolean>
+    secret: (net: import('../shared/mentions').Net, value: string) => Promise<Record<import('../shared/mentions').Net, boolean>>
+    check: () => Promise<void>
+    approve: (key: string, draft: string[]) => Promise<boolean>
+    skip: (key: string) => Promise<void>
+    clear: () => Promise<void>
+    onChange: (fn: () => void) => () => void
+  }
   bitwarden: {
     status: () => Promise<BwState>
     unlock: (password: string) => Promise<BwState>

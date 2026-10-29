@@ -531,6 +531,20 @@ contextBridge.exposeInMainWorld('stm', {
     draft: (hits) => ipcRenderer.invoke('radar:draft', hits),
     notify: (text) => ipcRenderer.invoke('radar:notify', text),
   },
+  mentions: {
+    get: () => ipcRenderer.invoke('mentions:get'),
+    save: (cfg) => ipcRenderer.invoke('mentions:save', cfg),
+    secret: (net, value) => ipcRenderer.invoke('mentions:secret', net, value),
+    check: () => ipcRenderer.invoke('mentions:check'),
+    approve: (key, draft) => ipcRenderer.invoke('mentions:approve', key, draft),
+    skip: (key) => ipcRenderer.invoke('mentions:skip', key),
+    clear: () => ipcRenderer.invoke('mentions:clear'),
+    onChange: (fn) => {
+      const h = () => fn()
+      ipcRenderer.on('mentions:changed', h)
+      return () => ipcRenderer.removeListener('mentions:changed', h)
+    },
+  },
   bitwarden: {
     status: () => ipcRenderer.invoke('bw:status'),
     unlock: (password) => ipcRenderer.invoke('bw:unlock', password),

@@ -185,6 +185,7 @@ const PubCalendarSheet = lazy(() => import('./PubCalendar').then((m) => ({ defau
 const ObserveSheet = lazy(() => import('./Observe').then((m) => ({ default: m.ObserveSheet })))
 const MonitorsSheet = lazy(() => import('./Monitors').then((m) => ({ default: m.MonitorsSheet })))
 const ModelServersSheet = lazy(() => import('./ModelServers').then((m) => ({ default: m.ModelServersSheet })))
+const MentionsSheet = lazy(() => import('./Mentions').then((m) => ({ default: m.MentionsSheet })))
 const PostBriefSheet = lazy(() => import('./PostBrief').then((m) => ({ default: m.PostBriefSheet })))
 const ShotToCodeSheet = lazy(() => import('./ShotToCode').then((m) => ({ default: m.ShotToCodeSheet })))
 const WorkbenchSheet = lazy(() => import('./Workbench').then((m) => ({ default: m.WorkbenchSheet })))
@@ -442,6 +443,7 @@ export function App() {
   const [bwOpen, setBwOpen] = useState(false)
   const [radarOpen, setRadarOpen] = useState(false)
   const [briefOpen, setBriefOpen] = useState(false)
+  const [mentionsOpen, setMentionsOpen] = useState(false)
   const [briefSid, setBriefSid] = useState<string | null>(null)
   const [ciOpen, setCiOpen] = useState(false)
   const [xrOpen, setXrOpen] = useState(false)
@@ -1183,6 +1185,7 @@ export function App() {
       ['image-xray', 'Image X-ray: Docker layers and waste', 'docker image layers size waste dive dockerfile slim', () => setXrOpen(true)],
       ['run-ci', 'Run CI here with act, before the push', 'github actions workflow ci act local docker job run test', () => setCiOpen(true)],
       ['post-brief', 'Brief a post: summary and the best prompt from a link or screenshot', 'brief post link url screenshot summary summarize x twitter linkedin threads reddit youtube article prompt deeper', () => setBriefOpen(true)],
+      ['mentions', 'Mentions: draft a brief for people who ask you in a mention', 'mentions bluesky mastodon x twitter reply summarize summary resumo resumen prompt brief approve queue', () => setMentionsOpen(true)],
       ['topic-radar', 'Topic radar: your topics in your feeds', 'radar trends topics keywords feeds news count ranking summary ntfy', () => setRadarOpen(true)],
       ['bitwarden', 'Bitwarden or Vaultwarden: link secrets', 'bitwarden vaultwarden bw secrets password keys link', () => setBwOpen(true)],
       ['app-containers', 'App containers: what the app runs in Docker, live', 'docker containers isolate self-hosting stats events stop remove', () => setCtrOpen(true)],
@@ -1637,6 +1640,7 @@ export function App() {
           }}
         />
       </Presence>
+      <Presence show={mentionsOpen}><MentionsSheet onClose={() => setMentionsOpen(false)} /></Presence>
       <Presence show={radarOpen}><TopicRadar onClose={() => setRadarOpen(false)} /></Presence>
       <Presence show={bwOpen}><BitwardenSheet onClose={() => setBwOpen(false)} /></Presence>
       <Presence show={ctrOpen}><AppContainers onClose={() => setCtrOpen(false)} /></Presence>
