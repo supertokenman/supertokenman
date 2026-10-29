@@ -13,8 +13,10 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/supertoken-display.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/visuals.css">
 <script>document.documentElement.classList.add('js')</script>
 <script src="assets/site.js" defer></script>
+<script src="assets/visuals.js" defer></script>
 </head>
 <body>
 
@@ -32,19 +34,30 @@
 </header>
 
 <main>
-  <section class="hero">
-    <canvas class="field" aria-hidden="true"></canvas>
+  <section class="hero v2 dotgrid" data-tilt-zone>
     <div class="wrap">
-      <div class="film" aria-hidden="true"><span>Every token.</span><span>In plain sight.</span></div>
-      <div class="rule" aria-hidden="true"></div>
-      <h1 class="display split">Your whole dev day in one window.</h1>
-      <p class="lead">A Mac app for Claude Code. Run it in parallel panels, approve what it touches, see what every turn costs, and keep what it learns about your project.</p>
-      <div class="cta">
-        <a class="btn" href="/download/">Download for Mac</a>
-        <a class="btn ghost" href="/docs/demo/">Try the live demo</a>
-        <a class="link" href="/docs/">How it works</a>
+      <div class="hero-grid">
+        <div class="hero-text">
+          <div class="dots motif" aria-hidden="true" data-dots="#####.#####.#####/#...#.#...#.*****/#...#.#...#.*****/#####.#####.*****"></div>
+          <div class="nlabel">nº 1 · every token, in plain sight</div>
+          <h1 class="display split">your whole dev day in one window.</h1>
+          <p class="lead">A Mac app for Claude Code. Run it in parallel panels, approve what it touches, see what every turn costs, and keep what it learns about your project.</p>
+          <div class="cta">
+            <a class="btn" href="/download/">Download for Mac</a>
+            <a class="btn ghost" href="/docs/demo/">Try the live demo</a>
+            <a class="link" href="/docs/">How it works</a>
+          </div>
+          <p class="demo-note"><a class="link" href="/docs/demo/">Live demo</a>: the real interface with sample data, running in your browser. Nothing is sent anywhere.</p>
+        </div>
+        <div class="scene" aria-hidden="true">
+          <div class="stack" data-tilt="14">
+            <figure class="l1"><img src="assets/search.jpg" alt="" width="1280" height="800"></figure>
+            <figure class="l2"><img src="assets/content.jpg" alt="" width="1280" height="800"></figure>
+            <figure class="l3"><img src="assets/panels.jpg" alt="" width="1280" height="800"></figure>
+            <span class="tag">COST PER TURN</span>
+          </div>
+        </div>
       </div>
-      <p class="demo-note"><a class="link" href="/docs/demo/">Live demo</a>: the real interface with sample data, running in your browser. Nothing is sent anywhere.</p>
       <div class="film-app" id="film" role="img" aria-label="A session in SuperTokenMan: you ask Claude to run the tests and fix what fails, it asks to run npm test, you allow it, the tests pass and the cost of the turn appears at the top">
         <div class="fa-top"><span class="fa-dot"></span><span class="opt">stmt/</span><b>acme</b><span class="opt">· worktree fix-tests</span>
           <span class="fa-meter"><span class="label opt">This turn</span><span class="fa-cost" data-cost>US$0.00</span></span></div>
@@ -62,6 +75,32 @@
         <div class="fa-comp"><span>Ask Claude, or type a command</span><span class="label">Cmd Enter</span></div>
       </div>
       <p class="fa-caption label">Recreated in code from the app. Numbers are illustrative.</p>
+    </div>
+  </section>
+
+  <section class="features dotgrid" id="features">
+    <div class="wrap">
+      <div class="nlabel">nº 2 · what it does</div>
+      <h2>four things, one window.</h2>
+      <div class="flips">
+        <button class="flip" type="button" aria-pressed="false"><span class="inner">
+          <span class="face front"><span class="hint">Panels</span><b>many panels.</b><span class="dots" aria-hidden="true" data-dots="####.####.####/#..#.#..#.#**#/#..#.#..#.#**#/#..#.#..#.#**#/####.####.####"></span></span>
+          <span class="face back"><span class="hint">Panels</span><p>Run Claude Code in parallel panels, each in its own git worktree, so two tasks never write over each other.</p></span>
+        </span></button>
+        <button class="flip" type="button" aria-pressed="false"><span class="inner">
+          <span class="face front"><span class="hint">Tasks</span><b>one budget.</b><span class="dots" aria-hidden="true" data-dots="####.......####/#..#.......#..#/#..#*******#..#/#..#.......#..#/####.......####"></span></span>
+          <span class="face back"><span class="hint">Tasks</span><p>Group panels under a task with one budget and one timeline.</p></span>
+        </span></button>
+        <button class="flip" type="button" aria-pressed="false"><span class="inner">
+          <span class="face front"><span class="hint">Approvals</span><b>ask first.</b><span class="dots" aria-hidden="true" data-dots="#############/#...........#/#.#######...#/#...........#/#.###..****.#/#############"></span></span>
+          <span class="face back"><span class="hint">Approvals</span><p>Tool calls wait for your approval, unless you let a persona run the safe ones alone.</p></span>
+        </span></button>
+        <button class="flip" type="button" aria-pressed="false"><span class="inner">
+          <span class="face front"><span class="hint">Cost</span><b>every turn, priced.</b><span class="dots" aria-hidden="true" data-dots="#############/#+++++++++++#/#+++++++++++#/#############"></span></span>
+          <span class="face back"><span class="hint">Cost</span><p>The cost of each turn sits above the chat. Budgets per project, persona and task are checked before each turn starts.</p></span>
+        </span></button>
+      </div>
+      <p class="hint-line nlabel">Tap a card to turn it.</p>
     </div>
   </section>
 

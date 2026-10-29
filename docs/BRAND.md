@@ -242,6 +242,17 @@ sunken background, the brand's 45 degree cut at the top right (12px), and a 1px 
 The focused panel's edge is the accent. Over a scene the space is transparent, so the scene shows
 between the cards. Panels do not resize by hand yet, so there is no handle in the space.
 
+## Landing visuals (decided 2026-10-29)
+
+The home's top felt institutional; it now borrows a calm recipe (dot grid, heavy lowercase headline, small mono numbers, one highlighted block) in our own parts. Pieces and rules: `.claude/skills/landing-visuals/`.
+- Fonts: no serif. Headlines on the landing use the system sans at weight 800, lowercase, tight, ending with a period; SuperToken Display stays for the name and numbers. A serif would have to be self-hosted and none we hold fits; no font is loaded from another host.
+- Paper and dot grid: hero and feature sections sit on `--paper` (`#f7f4ee` light, `#141412` dark) with a faint 22px dot grid. Small labels read "nº 1 · ..." in mono, lowercase.
+- Dot-matrix motif: drawings of our own things only (panels side by side, the link line between panels, an approval card, the token meter filling), ink dots with the accent marking the one part that matters. Drawn on canvas from a tiny text spec.
+- Accent use: one accent block per drawing or scene (the focused panel, the link, Allow, the filled meter, the scene's tag). Never a second accent colour.
+- 3D: real app screens stacked in depth, framed with the 45 degree cut, tilting with a fine pointer. Feature cards are buttons that turn over to one sentence of existing site copy. No drop shadows.
+- Motion rules: sparse; meters fill only while on screen; no tilt on touch; with reduced motion nothing moves and a card shows its back in place of the front when pressed.
+- Budget: the landing visuals add 1.6 KB gzip of JS and 1.8 KB of CSS, and no new image.
+
 ## Changelog
 
 - Phase 16: top-bar selects follow the button shape (cut corner, drawn border, accent bar on focus, mono uppercase label); the Modules sheet shows modules that are off at reduced opacity and the ones on with an accent top rule.
