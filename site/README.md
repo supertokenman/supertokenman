@@ -21,7 +21,10 @@ a scripted turn, a `npm test` approval to Allow, a diff and the cost moving. Sam
 no network request (its CSP has `connect-src 'none'`). Source: `app/demo.html` and `app/src/demo/`,
 never part of the Electron build. Rebuild it after UI changes with `cd app && npm run build:demo`,
 which writes `site/demo/` (committed); `npm run build` here copies it to `docs/demo/`, a folder the
-Pages build command already copies, so the Pages settings do not change.
+Pages build command already copies, so the Pages settings do not change. `?autoplay=1`
+(`app/src/demo/autoplay.ts`) plays the turn by itself in a loop for the home page's hero, which embeds it
+in a sandboxed frame; the feature pictures `assets/feature-*.webp` and `assets/hero-demo.webp` are
+screenshots of the demo with sample data.
 
 ## Before the first deploy
 

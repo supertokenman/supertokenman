@@ -11,3 +11,14 @@
 .demo-link { color: var(--accent, #d97757); font-weight: 600; white-space: nowrap; }
 @media (max-width: 600px) { .demo-banner { left: 8px; right: 8px; bottom: 8px; max-width: none; } .demo-text { font-size: 11px; } }
 .demo-close { background: none; border: 0; color: var(--muted, #aaa); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
+
+/* ?autoplay=1 (autoplay.ts): the cursor that clicks Allow, the press on the button, the fade between loops */
+.demo-cursor { position: fixed; left: 0; top: 0; z-index: 9500; pointer-events: none; margin: -2px 0 0 -2px; }
+.demo-cursor.go { transition: transform 1s cubic-bezier(.22, 1, .36, 1); }
+.demo-cursor::before { content: ''; position: absolute; left: -16px; top: -16px; width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255, 106, 43, .35); transform: scale(0); opacity: 0; transition: transform .3s ease, opacity .3s ease; }
+.demo-cursor.down::before { transform: scale(1); opacity: 1; }
+.demo-cursor.gone { opacity: 0; transition: transform 1s cubic-bezier(.22, 1, .36, 1), opacity .5s ease; }
+.demo-press { outline: 2px solid var(--accent, #ff6a2b); outline-offset: 3px; transform: scale(.96); transition: transform .12s ease; }
+.demo-auto body { transition: opacity .45s ease; }
+.demo-leaving body { opacity: 0; }

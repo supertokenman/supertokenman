@@ -242,6 +242,38 @@ sunken background, the brand's 45 degree cut at the top right (12px), and a 1px 
 The focused panel's edge is the accent. Over a scene the space is transparent, so the scene shows
 between the cards. Panels do not resize by hand yet, so there is no handle in the space.
 
+## Landing visuals (decided 2026-10-29)
+
+- Colour, "Noite" (chosen 2026-10-29 from three options): the site is dark by default, background
+  #0c0d10, ink #eef0f4, accent a vivid orange #ff6a2b (#e8551c on the light variant "Sinal", used only
+  when a page sets data-theme="light"). Why: cream with a terracotta near #d97757 is the most common
+  AI-made look and close to Anthropic's own; the app's screens are dark and sit in a dark page. The app
+  moves to the same orange in its own change.
+
+The home's top felt institutional; it now borrows a calm recipe (dot grid, heavy lowercase headline, small mono numbers, one highlighted block) in our own parts. Pieces and rules: `.claude/skills/landing-visuals/`.
+- Fonts: no serif. Headlines on the landing use the system sans at weight 800, lowercase, tight, ending with a period; SuperToken Display stays for the name and numbers. A serif would have to be self-hosted and none we hold fits; no font is loaded from another host.
+- Paper and dot grid: hero and feature sections sit on `--paper` (`#f7f4ee` light, `#141412` dark) with a faint 22px dot grid. Small labels read "nº 1 · ..." in mono, lowercase.
+- Dot-matrix motif: drawings of our own things only (panels side by side, the link line between panels, an approval card, the token meter filling), ink dots with the accent marking the one part that matters. Drawn on canvas from a tiny text spec.
+- Accent use: one accent block per drawing or scene (the focused panel, the link, Allow, the filled meter, the scene's tag). Never a second accent colour.
+- 3D (replaced 2026-10-29): the tilted stack of screenshots was unreadable and showed the empty app. The hero
+  now plays the real interface: the live demo at `/docs/demo/?autoplay=1` (app/src/demo/autoplay.ts) in a
+  sandboxed frame, flat, about 1100px wide, with one flat accent plate behind it as the only depth. A
+  visible cursor presses Allow on `npm test`, then opens Changes; the page loops, pauses off screen, and
+  keeps a still poster (`hero-demo.webp`) with reduced motion and on phones. The demo uses Noite as its
+  theme. Feature cards show a crop of the demo UI with content on the front (sample data, said under the
+  cards), the dot motif small beside the label, and turn over to one sentence of
+- Motion rules: sparse; meters fill only while on screen; no tilt on touch; with reduced motion nothing moves and a card shows its back in place of the front when pressed.
+- Budget: the landing visuals JS stays under 3 KB gzip. Images: hero poster 99 KB and six feature crops
+  of 40 to 62 KB (WebP, 2x). The demo frame (about 280 KB gzip, mostly the app bundle) loads only after
+  the page has, on screens wider than 700px and without reduced motion.
+
+## Landing message: the team first (decided 2026-10-29)
+
+The landing leads with a team of Claude Code agents working together, not with cost. Hero: "your Claude Code
+team, in one window." Six cards: canvas and group room, `stm loop`, approve with an edit or deny with a note,
+`stm learn`, triggers with a scope, cost per turn. Cost stays as a trust signal (the last card and the hero's
+mono label). Only features released up to 0.1.19.
+
 ## Changelog
 
 - Phase 16: top-bar selects follow the button shape (cut corner, drawn border, accent bar on focus, mono uppercase label); the Modules sheet shows modules that are off at reduced opacity and the ones on with an accent top rule.
