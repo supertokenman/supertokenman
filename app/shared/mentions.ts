@@ -1,13 +1,14 @@
 // Mentions: someone mentions you asking for a summary; the app briefs the post their mention replies to
 // and drafts a reply that waits for your click. Pure: detection, dedupe, request builders, the reply, the rate guard.
-import { authHeader, type Hmac, type Keys } from './oauth1.js'
+import { bskyWebUrl, count, htmlText, httpsBase, LIMITS, type Ref, type Req } from './social.js'
+
+export type { Ref }
 
 export type Net = 'bluesky' | 'mastodon' | 'x'
 export const NET_NAME: Record<Net, string> = { bluesky: 'Bluesky', mastodon: 'Mastodon', x: 'X' }
-/** characters (graphemes on Bluesky) per post */
-export const LIMIT: Record<Net, number> = { bluesky: 300, mastodon: 500, x: 280 }
+/** characters per post, counted as each network counts (social.ts); Mastodon's can be set per account */
+export const limitOf = (net: Net, mastodon?: number) => (net === 'mastodon' && mastodon ? mastodon : LIMITS[net]!)
 
-export type Ref = { uri: string; cid: string }
 export type Mention = {
   /** `${net}:${id}`, the dedupe key */
   key: string
@@ -24,8 +25,9 @@ export type Mention = {
 }
 export type Item = Mention & { state: 'briefing' | 'ready' | 'sent' | 'skipped' | 'failed'; draft: string[]; error?: string }
 
-export type Config = { on: boolean; everyMin: number; keywords: string; maxPerHour: number; bsky: { handle: string; pds: string }; masto: { instance: string }; x: { userId: string } }
-export const DEFAULTS: Config = { on: false, everyMin: 2, keywords: '', maxPerHour: 10, bsky: { handle: '', pds: 'https://bsky.social' }, masto: { instance: '' }, x: { userId: '' } }
+/** Rules only: the accounts are the shared ones (accounts.ts). */
+export type Config = { on: boolean; everyMin: number; keywords: string; maxPerHour: number }
+export const DEFAULTS: Config = { on: false, everyMin: 2, keywords: '', maxPerHour: 10 }
 
 // English, Portuguese, Spanish
 export const KEYWORDS = ['summarize', 'summarise', 'summary', 'tl;dr', 'tldr', 'prompt', 'brief', 'resumo', 'resuma', 'resume', 'resumir', 'resumen', 'resúmelo', 'explica', 'explain']
@@ -78,74 +80,48 @@ export function mentionBriefPrompt(m: Pick<Mention, 'net' | 'author' | 'text' | 
   ].join('\n')
 }
 
-export const graphemes = (s: string): number => {
-  const Seg = (Intl as unknown as { Segmenter?: new (l?: string, o?: { granularity: string }) => { segment: (s: string) => Iterable<unknown> } }).Segmenter
-  return Seg ? [...new Seg(undefined, { granularity: 'grapheme' }).segment(s)].length : [...s].length
-}
-const cut = (s: string, n: number) => {
-  if (graphemes(s) <= n) return s
+const cut = (net: Net, s: string, n: number) => {
+  if (count(net, s) <= n) return s
   const w = s.slice(0, Math.max(0, n * 2)).split(' ')
-  while (w.length > 1 && graphemes(w.join(' ') + '…') > n) w.pop()
+  while (w.length > 1 && count(net, w.join(' ') + '…') > n) w.pop()
   const r = w.join(' ')
-  return (graphemes(r + '…') <= n ? r : [...r].slice(0, n - 1).join('')) + '…'
+  if (count(net, r + '…') <= n) return r + '…'
+  let out = ''
+  for (const ch of r) if (count(net, out + ch + '…') <= n) out += ch
+  else break
+  return out + '…'
 }
 
 /**
  * The draft reply: summary and best prompt, fitting the network. Bluesky splits into a numbered thread of
  * up to 3 posts; Mastodon and X stay one post (the prompt is shortened if needed). `lead` is "@user " for Mastodon.
  */
-export function composeReply(net: Net, b: { summary: string; prompt: string }, lead = ''): string[] {
-  const max = LIMIT[net]
+export function composeReply(net: Net, b: { summary: string; prompt: string }, lead = '', max = limitOf(net)): string[] {
   const whole = `${lead}${b.summary.trim()}\n\nBest prompt: ${b.prompt.trim()}`
-  if (graphemes(whole) <= max) return [whole]
+  if (count(net, whole) <= max) return [whole]
   if (net !== 'bluesky') {
-    const head = `${lead}${cut(b.summary.trim(), Math.floor(max / 2))}\n\nBest prompt: `
-    return [head + cut(b.prompt.trim(), max - graphemes(head))]
+    const head = `${lead}${cut(net, b.summary.trim(), Math.floor(max / 2))}\n\nBest prompt: `
+    return [head + cut(net, b.prompt.trim(), max - count(net, head))]
   }
   const room = max - ' (1/3)'.length
   const words = whole.split(/(?<=\s)/)
   const parts: string[] = []
   let cur = ''
   for (const w of words) {
-    if (graphemes(cur + w) > room && cur) (parts.push(cur.trim()), (cur = ''))
+    if (count(net, cur + w) > room && cur) (parts.push(cur.trim()), (cur = ''))
     cur += w
   }
   if (cur.trim()) parts.push(cur.trim())
   const p = parts.slice(0, 3)
-  if (parts.length > 3) p[2] = cut(p[2] + ' ' + parts.slice(3).join(' '), room)
-  return p.map((x, i) => (p.length > 1 ? `${cut(x, room)} (${i + 1}/${p.length})` : cut(x, max)))
+  if (parts.length > 3) p[2] = cut(net, p[2] + ' ' + parts.slice(3).join(' '), room)
+  return p.map((x, i) => (p.length > 1 ? `${cut(net, x, room)} (${i + 1}/${p.length})` : cut(net, x, max)))
 }
 
-/** Bluesky link facets: byte offsets in UTF-8. */
-export function linkFacets(text: string): { index: { byteStart: number; byteEnd: number }; features: { $type: string; uri: string }[] }[] {
-  const te = new TextEncoder()
-  const out: ReturnType<typeof linkFacets> = []
-  for (const m of text.matchAll(/https?:\/\/[^\s<>"')\]]+[^\s<>"')\].,;:!?]/g)) {
-    const byteStart = te.encode(text.slice(0, m.index)).length
-    out.push({ index: { byteStart, byteEnd: byteStart + te.encode(m[0]).length }, features: [{ $type: 'app.bsky.richtext.facet#link', uri: m[0] }] })
-  }
-  return out
-}
-
-export type Req = { method: 'GET' | 'POST'; url: string; headers: Record<string, string>; body?: string }
-const json = (h: Record<string, string> = {}) => ({ 'content-type': 'application/json', ...h })
-const base = (u: string) => u.trim().replace(/\/+$/, '').replace(/^(?!https?:\/\/)/, 'https://')
 
 // Bluesky (AT Protocol), on the person's PDS
 export const bsky = {
-  session: (pds: string, handle: string, password: string): Req => ({ method: 'POST', url: `${base(pds)}/xrpc/com.atproto.server.createSession`, headers: json(), body: JSON.stringify({ identifier: handle.replace(/^@/, ''), password }) }),
-  notifications: (pds: string, jwt: string): Req => ({ method: 'GET', url: `${base(pds)}/xrpc/app.bsky.notification.listNotifications?limit=50`, headers: { authorization: `Bearer ${jwt}` } }),
-  thread: (pds: string, jwt: string, uri: string): Req => ({ method: 'GET', url: `${base(pds)}/xrpc/app.bsky.feed.getPostThread?uri=${encodeURIComponent(uri)}&depth=0&parentHeight=0`, headers: { authorization: `Bearer ${jwt}` } }),
-  post: (pds: string, jwt: string, did: string, text: string, reply: { root: Ref; parent: Ref }, now: Date): Req => {
-    const facets = linkFacets(text)
-    return {
-      method: 'POST',
-      url: `${base(pds)}/xrpc/com.atproto.repo.createRecord`,
-      headers: json({ authorization: `Bearer ${jwt}` }),
-      body: JSON.stringify({ repo: did, collection: 'app.bsky.feed.post', record: { $type: 'app.bsky.feed.post', text, createdAt: now.toISOString(), reply, ...(facets.length ? { facets } : {}) } }),
-    }
-  },
-  webUrl: (uri: string, handle: string) => `https://bsky.app/profile/${handle}/post/${uri.split('/').pop()}`,
+  notifications: (pds: string, jwt: string): Req => ({ method: 'GET', url: `${httpsBase(pds)}/xrpc/app.bsky.notification.listNotifications?limit=50`, headers: { authorization: `Bearer ${jwt}` } }),
+  thread: (pds: string, jwt: string, uri: string): Req => ({ method: 'GET', url: `${httpsBase(pds)}/xrpc/app.bsky.feed.getPostThread?uri=${encodeURIComponent(uri)}&depth=0&parentHeight=0`, headers: { authorization: `Bearer ${jwt}` } }),
 }
 
 type BskyNote = { uri: string; cid: string; reason: string; indexedAt: string; author: { handle: string }; record: { text?: string; reply?: { root: Ref; parent: Ref } } }
@@ -154,7 +130,7 @@ export function bskyMentions(r: { notifications?: BskyNote[] }): (Mention & { pa
   return (r.notifications ?? [])
     .filter((n) => n.reason === 'mention' || n.reason === 'reply')
     .map((n) => {
-      const url = bsky.webUrl(n.uri, n.author.handle)
+      const url = bskyWebUrl(n.author.handle, n.uri)
       const self = { uri: n.uri, cid: n.cid }
       return {
         key: `bluesky:${n.uri}`, net: 'bluesky' as const, id: n.uri, author: `@${n.author.handle}`, text: n.record.text ?? '', url, at: Date.parse(n.indexedAt) || 0,
@@ -166,19 +142,16 @@ export function bskyMentions(r: { notifications?: BskyNote[] }): (Mention & { pa
 }
 export function bskyPost(r: { thread?: { post?: { uri: string; author: { handle: string }; record: { text?: string } } } }) {
   const p = r.thread?.post
-  return p ? { author: `@${p.author.handle}`, text: p.record.text ?? '', url: bsky.webUrl(p.uri, p.author.handle) } : null
+  return p ? { author: `@${p.author.handle}`, text: p.record.text ?? '', url: bskyWebUrl(p.author.handle, p.uri) } : null
 }
 
 // Mastodon, on the instance the person names
 export const masto = {
-  notifications: (inst: string, token: string): Req => ({ method: 'GET', url: `${base(inst)}/api/v1/notifications?types[]=mention&limit=40`, headers: { authorization: `Bearer ${token}` } }),
-  status: (inst: string, token: string, id: string): Req => ({ method: 'GET', url: `${base(inst)}/api/v1/statuses/${encodeURIComponent(id)}`, headers: { authorization: `Bearer ${token}` } }),
-  context: (inst: string, token: string, id: string): Req => ({ method: 'GET', url: `${base(inst)}/api/v1/statuses/${encodeURIComponent(id)}/context`, headers: { authorization: `Bearer ${token}` } }),
-  post: (inst: string, token: string, text: string, inReplyTo: string, visibility: string, idem: string): Req => ({ method: 'POST', url: `${base(inst)}/api/v1/statuses`, headers: json({ authorization: `Bearer ${token}`, 'idempotency-key': idem }), body: JSON.stringify({ status: text, in_reply_to_id: inReplyTo, visibility }) }),
+  notifications: (inst: string, token: string): Req => ({ method: 'GET', url: `${httpsBase(inst)}/api/v1/notifications?types[]=mention&limit=40`, headers: { authorization: `Bearer ${token}` } }),
+  status: (inst: string, token: string, id: string): Req => ({ method: 'GET', url: `${httpsBase(inst)}/api/v1/statuses/${encodeURIComponent(id)}`, headers: { authorization: `Bearer ${token}` } }),
+  context: (inst: string, token: string, id: string): Req => ({ method: 'GET', url: `${httpsBase(inst)}/api/v1/statuses/${encodeURIComponent(id)}/context`, headers: { authorization: `Bearer ${token}` } }),
 }
 
-/** plain text from Mastodon's HTML content */
-export const stripHtml = (h: string) => h.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>\s*<p>/gi, '\n\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim()
 
 type MastoStatus = { id: string; content: string; url?: string; uri?: string; visibility?: string; in_reply_to_id?: string | null; account: { acct: string } }
 export function mastoMentions(r: { id: string; type: string; created_at?: string; status?: MastoStatus }[]): (Mention & { parentId?: string })[] {
@@ -186,7 +159,7 @@ export function mastoMentions(r: { id: string; type: string; created_at?: string
     .filter((n) => n.type === 'mention' && n.status)
     .map((n) => {
       const s = n.status!
-      const text = stripHtml(s.content)
+      const text = htmlText(s.content)
       const url = s.url ?? s.uri ?? ''
       return {
         key: `mastodon:${s.id}`, net: 'mastodon' as const, id: s.id, author: `@${s.account.acct}`, text, url, at: Date.parse(n.created_at ?? '') || 0,
@@ -196,20 +169,12 @@ export function mastoMentions(r: { id: string; type: string; created_at?: string
       }
     })
 }
-export const mastoPost = (s: MastoStatus) => ({ author: `@${s.account.acct}`, text: stripHtml(s.content), url: s.url ?? s.uri ?? '' })
+export const mastoPost = (s: MastoStatus) => ({ author: `@${s.account.acct}`, text: htmlText(s.content), url: s.url ?? s.uri ?? '' })
 
 // X API v2, user context with the person's own keys (reading mentions needs a paid tier on X)
-export const X_API = 'https://api.x.com'
-export const x = {
-  mentions: (userId: string, k: Keys, hmac: Hmac, o: { nonce: string; timestamp: number }, sinceId?: string): Req => {
-    const url = `${X_API}/2/users/${encodeURIComponent(userId)}/mentions?expansions=author_id,referenced_tweets.id,referenced_tweets.id.author_id&tweet.fields=created_at,referenced_tweets&user.fields=username&max_results=20${sinceId ? `&since_id=${encodeURIComponent(sinceId)}` : ''}`
-    return { method: 'GET', url, headers: { authorization: authHeader('GET', url, k, hmac, o) } }
-  },
-  post: (text: string, inReplyTo: string, k: Keys, hmac: Hmac, o: { nonce: string; timestamp: number }): Req => {
-    const url = `${X_API}/2/tweets`
-    return { method: 'POST', url, headers: json({ authorization: authHeader('POST', url, k, hmac, o) }), body: JSON.stringify({ text, reply: { in_reply_to_tweet_id: inReplyTo } }) }
-  },
-}
+// X API v2 with the person's own keys (reading mentions needs a paid tier on X); main signs the URL
+export const xMentionsUrl = (userId: string, sinceId?: string) =>
+  `https://api.x.com/2/users/${encodeURIComponent(userId)}/mentions?expansions=author_id,referenced_tweets.id,referenced_tweets.id.author_id&tweet.fields=created_at,referenced_tweets&user.fields=username&max_results=20${sinceId ? `&since_id=${encodeURIComponent(sinceId)}` : ''}`
 type XTweet = { id: string; text: string; author_id?: string; created_at?: string; referenced_tweets?: { type: string; id: string }[] }
 export function xMentions(r: { data?: XTweet[]; includes?: { tweets?: XTweet[]; users?: { id: string; username: string }[] } }): Mention[] {
   const user = (id?: string) => `@${r.includes?.users?.find((u) => u.id === id)?.username ?? 'unknown'}`

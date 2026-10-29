@@ -2,7 +2,9 @@
 // queue file and the scheduler. The window only ever gets what this returns: no tokens.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { bluesky, bskyRefresh, bskySession, mastoCred, mastodon } from './open.js'
-import type { Cred, NetworkId } from './core.js'
+import type { AccountId, Cred, NetworkId } from './core.js'
+import { ACCOUNTS, credFromFields, hostOf, mastoLimit } from '../../shared/accounts.js'
+import type { Net } from '../../shared/social.js'
 import { makeFetcher } from './core.js'
 import { metaIds, NETWORKS, OAUTH, ORDER, SETUP } from './networks.js'
 import { authorizeUrl, exchange, pkce, redirectFor, refreshed, waitForCode } from './oauth.js'
@@ -79,10 +81,27 @@ export function socialService(d: SocialDeps) {
     return profile
   }
 
-  function disconnect(n: NetworkId) {
+  function disconnect(n: AccountId) {
     d.guard()
     d.vault.delete(credName(n))
   }
+
+  /** The networks that connect by pasting keys, as Post everywhere and Mentions see them: no secrets. */
+  const accounts = () =>
+    ACCOUNTS.map((n) => {
+      const c = readCred(d.vault, n)
+      return { net: n, connected: Boolean(c), host: c ? hostOf(n, c) : null, mastodonLimit: n === 'mastodon' ? mastoLimit(c) : undefined }
+    })
+
+  /** One connection per network, shared by every feature. Bluesky signs in now and keeps only the session. */
+  async function connectFields(n: Net, fields: Record<string, unknown>) {
+    d.guard()
+    writeCred(d.vault, n, n === 'bluesky' ? await bskySession(f(null), fields) : credFromFields(n, fields))
+    return accounts()
+  }
+
+  /** The saved credential for the main process only, refreshed when it is about to expire. */
+  const account = async (n: AccountId): Promise<Cred | null> => (readCred(d.vault, n) ? (n in NETWORKS ? cred(n as NetworkId) : readCred(d.vault, n)) : null)
 
   const call = async <T>(n: NetworkId, fn: (c: Cred) => Promise<T>) => {
     const c = await cred(n)
@@ -185,6 +204,9 @@ export function socialService(d: SocialDeps) {
         if (!NETWORKS[n].reply) throw new Error(`${NETWORKS[n].name} does not allow replies through its API.`)
         return NETWORKS[n].reply!(c, f(c), commentId, text, postId)
       }),
+    accounts,
+    connectFields,
+    account,
     queue: readQueue,
     saveItem,
     approve,

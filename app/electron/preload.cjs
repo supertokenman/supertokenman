@@ -523,10 +523,12 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('act:line', h)
     },
   },
+  accounts: {
+    status: () => ipcRenderer.invoke('accounts:status'),
+    connect: (net, fields) => unlocked('connect an account').then(() => ipcRenderer.invoke('accounts:connect', net, fields)),
+    disconnect: (net) => unlocked('disconnect an account').then(() => ipcRenderer.invoke('accounts:disconnect', net)),
+  },
   post: {
-    status: () => ipcRenderer.invoke('post:status'),
-    connect: (net, fields) => ipcRenderer.invoke('post:connect', net, fields),
-    disconnect: (net) => ipcRenderer.invoke('post:disconnect', net),
     send: (nets, text, title) => ipcRenderer.invoke('post:send', nets, text, title),
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)
@@ -545,7 +547,6 @@ contextBridge.exposeInMainWorld('stm', {
   mentions: {
     get: () => ipcRenderer.invoke('mentions:get'),
     save: (cfg) => ipcRenderer.invoke('mentions:save', cfg),
-    secret: (net, value) => ipcRenderer.invoke('mentions:secret', net, value),
     check: () => ipcRenderer.invoke('mentions:check'),
     approve: (key, draft) => ipcRenderer.invoke('mentions:approve', key, draft),
     skip: (key) => ipcRenderer.invoke('mentions:skip', key),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeFetcher } from './core'
-import { NETWORKS, metaIds } from './networks'
+import { NETWORKS, metaIds, xAuth } from './networks'
 import { authorizeUrl, refreshed, redirectFor } from './oauth'
 import { cleanItem, dueNetworks, problem, stateOf } from './queue'
 import { credName, readCred, secretsOf, writeCred } from './store'
@@ -110,5 +110,16 @@ describe('store', () => {
     m.set(credName('threads'), { v: ' THR ' })
     expect(readCred(v, 'threads')).toEqual({ accessToken: 'THR' })
     expect(secretsOf({ accessToken: 'A', clientSecret: 'S', ids: { pageToken: 'P' } })).toEqual(['A', 'S', 'P'])
+  })
+  it('keeps X as one connection: four pasted keys sign with OAuth 1.0a, a sign-in token as Bearer', () => {
+    const m = new Map<string, { v: string }>()
+    const v = { get: (n: string) => m.get(n)?.v, set: (n: string, val: string) => void m.set(n, { v: val }), delete: (n: string) => void m.delete(n) }
+    const keys = { consumerKey: 'ck', consumerSecret: 'cs', token: 't', tokenSecret: 'ts' }
+    writeCred(v, 'x', { accessToken: '', keys })
+    const c = readCred(v, 'x')!
+    expect(c.keys).toEqual(keys)
+    expect(secretsOf(c)).toEqual(['ck', 'cs', 't', 'ts'])
+    expect(xAuth(c, 'POST', 'https://api.x.com/2/tweets')).toMatch(/^OAuth oauth_consumer_key="ck".*oauth_signature="/)
+    expect(xAuth({ accessToken: 'B' }, 'GET', 'https://api.x.com/2/users/me')).toBe('Bearer B')
   })
 })

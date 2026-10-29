@@ -337,11 +337,14 @@ export type Bridge = {
     stop: () => Promise<boolean>
     onLine: (fn: (line: string) => void) => () => void
   }
-  post: {
+  /** the social accounts Post everywhere and Mentions share; secrets go in and never come back */
+  accounts: {
     status: () => Promise<PostNet[]>
-    connect: (net: import('../shared/posteverywhere').NetId, fields: Record<string, string>) => Promise<PostNet[]>
-    disconnect: (net: import('../shared/posteverywhere').NetId) => Promise<PostNet[]>
-    send: (nets: import('../shared/posteverywhere').NetId[], text: string, title: string) => Promise<import('../shared/posteverywhere').Result[]>
+    connect: (net: import('../shared/social').Net, fields: Record<string, string>) => Promise<PostNet[]>
+    disconnect: (net: import('../shared/social').Net) => Promise<PostNet[]>
+  }
+  post: {
+    send: (nets: import('../shared/social').Net[], text: string, title: string) => Promise<import('../shared/posteverywhere').Result[]>
     onOpen: (fn: (r: { text: string; title: string }) => void) => () => void
   }
   radar: {
@@ -353,9 +356,8 @@ export type Bridge = {
     notify: (text: string) => Promise<boolean>
   }
   mentions: {
-    get: () => Promise<{ cfg: import('../shared/mentions').Config; ready: Record<import('../shared/mentions').Net, boolean>; queue: import('../shared/mentions').Item[]; sentLastHour: number; last: { at: number; error?: string } }>
+    get: () => Promise<{ cfg: import('../shared/mentions').Config; ready: Record<import('../shared/mentions').Net, boolean>; limits: Record<import('../shared/mentions').Net, number>; queue: import('../shared/mentions').Item[]; sentLastHour: number; last: { at: number; error?: string } }>
     save: (cfg: import('../shared/mentions').Config) => Promise<boolean>
-    secret: (net: import('../shared/mentions').Net, value: string) => Promise<Record<import('../shared/mentions').Net, boolean>>
     check: () => Promise<void>
     approve: (key: string, draft: string[]) => Promise<boolean>
     skip: (key: string) => Promise<void>
@@ -1036,4 +1038,4 @@ export type BwState = import('../electron/bitwarden').Status & { links: { name: 
 
 export type RadarCfg = { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }
 
-export type PostNet = { net: import('../shared/posteverywhere').NetId; connected: boolean; host: string | null; mastodonLimit?: number }
+export type PostNet = { net: import('../shared/social').Net; connected: boolean; host: string | null; mastodonLimit?: number }

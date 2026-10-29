@@ -25,6 +25,9 @@ import { cancel as ciCancel, finished, github as githubApi, jobs as ciJobs, log 
 import { describe as describeLink, nowPlaying, osascript, script as spotifyScript, type Command, type Saved } from './spotify.js'
 import { Vault } from './vault.js'
 import { registerPostEverywhere } from './posteverywhere.js'
+import { ACCOUNTS, mastoLimit, pdsOf } from '../shared/accounts.js'
+import { bskyRecord, count, mastoStatus, xTweet, X_TWEETS, type Net as SocialNet, type Req as SocialReq } from '../shared/social.js'
+import { xAuth } from './social/networks.js'
 import { cleanPersona, fromMarkdown, personaPrompt, STARTERS, toMarkdown, type Persona } from '../shared/personas.js'
 import { choosePrompt } from '../shared/router.js'
 import { DEFAULT_HOTKEY, validHotkey } from '../shared/hotkey.js'
@@ -1382,6 +1385,22 @@ ipcMain.handle('social:status', () => social.status())
 ipcMain.handle('social:connectToken', (_e, n: string, token: string) => social.connectToken(asNet(n), String(token)))
 ipcMain.handle('social:connectOAuth', (_e, n: string, id: string, secret?: string) => social.connectOAuth(asNet(n), String(id), secret ? String(secret) : undefined))
 ipcMain.handle('social:disconnect', (_e, n: string) => social.disconnect(asNet(n)))
+// the accounts Post everywhere and Mentions share: one per network, pasted once, read back by neither window
+const asAccount = (n: unknown) => {
+  if (!ACCOUNTS.includes(n as SocialNet)) throw new Error('Unknown network.')
+  return n as SocialNet
+}
+ipcMain.handle('accounts:status', () => social.accounts())
+ipcMain.handle('accounts:connect', async (_e, n: unknown, fields: Record<string, unknown>) => {
+  const r = await social.connectFields(asAccount(n), fields ?? {})
+  toWin('mentions:changed')
+  return r
+})
+ipcMain.handle('accounts:disconnect', (_e, n: unknown) => {
+  social.disconnect(asAccount(n))
+  toWin('mentions:changed')
+  return social.accounts()
+})
 ipcMain.handle('social:profile', (_e, n: string) => social.profile(asNet(n)))
 ipcMain.handle('social:timeline', (_e, n: string) => social.timeline(asNet(n)))
 ipcMain.handle('social:like', (_e, n: string, id: string) => social.like(asNet(n), String(id)))
@@ -4090,59 +4109,64 @@ ipcMain.handle('radar:notify', async (_e, text: string) => {
 
 // Mentions: someone asks for a brief in a mention; a draft reply waits for the person's click. Polls only while
 // on and the app is open; credentials in the vault, never logged and never sent back to the window.
-const MN_VAULT = { bluesky: 'MENTIONS_BLUESKY_PASSWORD', mastodon: 'MENTIONS_MASTODON_TOKEN', x: 'MENTIONS_X_KEYS' } as const
-const mnCfg = (): MN.Config => ({ ...MN.DEFAULTS, ...settings().mentions?.cfg })
+const mnCfg = (): MN.Config => {
+  const { on, everyMin, keywords, maxPerHour } = { ...MN.DEFAULTS, ...settings().mentions?.cfg }
+  return { on, everyMin, keywords, maxPerHour }
+}
 const mnState = () => settings().mentions ?? { cfg: MN.DEFAULTS, seen: [], sent: [], queue: [] }
 const mnSave = (p: Partial<NonNullable<Settings['mentions']>>) => (saveSettings({ ...settings(), mentions: { ...mnState(), ...p } }), toWin('mentions:changed'))
-const mnReady = () => ({ bluesky: !!(mnCfg().bsky.handle && vault?.get(MN_VAULT.bluesky)), mastodon: !!(mnCfg().masto.instance && vault?.get(MN_VAULT.mastodon)), x: !!(mnCfg().x.userId && vault?.get(MN_VAULT.x)) })
-const mnFetch = async <T>(r: MN.Req): Promise<T> => {
+// the shared accounts (Accounts, one per network); X also needs the numeric user id to read mentions
+const mnAcct = (n: MN.Net) => social.account(n).catch(() => null)
+const mnReady = async () => {
+  const [b, m, x] = await Promise.all([mnAcct('bluesky'), mnAcct('mastodon'), mnAcct('x')])
+  return { bluesky: !!b, mastodon: !!m, x: !!x?.ids?.userId }
+}
+const mnFetch = async <T>(r: SocialReq): Promise<T> => {
   const res = await fetch(r.url, { method: r.method, headers: r.headers, body: r.body, signal: AbortSignal.timeout(20_000) })
   // the status only: a body could echo a credential
   if (!res.ok) throw new Error(`${new URL(r.url).host} answered ${res.status}`)
   return (await res.json()) as T
 }
-const xKeys = (): import('../shared/oauth1.js').Keys => JSON.parse(vault.get(MN_VAULT.x) ?? '{}')
-const xSign = () => ({ nonce: randomBytes(16).toString('hex'), timestamp: Math.floor(Date.now() / 1000) })
-const hmacSha1 = (k: string, t: string) => createHmac('sha1', k).update(t).digest('base64')
-let bskySess: { jwt: string; did: string } | null = null
-const bskyLogin = async () => {
-  if (bskySess) return bskySess
-  const c = mnCfg().bsky
-  const r = await mnFetch<{ accessJwt: string; did: string }>(MN.bsky.session(c.pds, c.handle, vault.get(MN_VAULT.bluesky) ?? ''))
-  return (bskySess = { jwt: r.accessJwt, did: r.did })
+const mnNeed = async (n: MN.Net) => {
+  const c = await mnAcct(n)
+  if (!c) throw new Error(`Connect ${MN.NET_NAME[n]} in Accounts first.`)
+  return c
 }
 async function mnFind(): Promise<MN.Mention[]> {
   const c = mnCfg()
-  const ok = mnReady()
   const out: MN.Mention[] = []
-  if (ok.bluesky) {
-    const s = await bskyLogin()
-    for (const m of MN.bskyMentions(await mnFetch(MN.bsky.notifications(c.bsky.pds, s.jwt)))) {
+  const [bs, ma, xa] = await Promise.all([mnAcct('bluesky'), mnAcct('mastodon'), mnAcct('x')])
+  if (bs) {
+    for (const m of MN.bskyMentions(await mnFetch(MN.bsky.notifications(pdsOf(bs), bs.accessToken)))) {
       if (m.parentUri && MN.isRequest(m.text, MN.keywordsOf(c.keywords)) && !mnState().seen.includes(m.key)) {
-        const p = MN.bskyPost(await mnFetch<Parameters<typeof MN.bskyPost>[0]>(MN.bsky.thread(c.bsky.pds, s.jwt, m.parentUri)).catch(() => ({})))
+        const p = MN.bskyPost(await mnFetch<Parameters<typeof MN.bskyPost>[0]>(MN.bsky.thread(pdsOf(bs), bs.accessToken, m.parentUri)).catch(() => ({})))
         if (p) m.post = p
       }
       out.push(m)
     }
   }
-  if (ok.mastodon) {
-    const t = vault.get(MN_VAULT.mastodon) ?? ''
-    for (const m of MN.mastoMentions(await mnFetch(MN.masto.notifications(c.masto.instance, t)))) {
+  if (ma) {
+    const t = ma.accessToken
+    const inst = ma.ids?.server ?? ''
+    for (const m of MN.mastoMentions(await mnFetch(MN.masto.notifications(inst, t)))) {
       if (m.parentId && MN.isRequest(m.text, MN.keywordsOf(c.keywords)) && !mnState().seen.includes(m.key)) {
-        const p = await mnFetch<Parameters<typeof MN.mastoPost>[0]>(MN.masto.status(c.masto.instance, t, m.parentId)).catch(() => null)
+        const p = await mnFetch<Parameters<typeof MN.mastoPost>[0]>(MN.masto.status(inst, t, m.parentId)).catch(() => null)
         if (p) m.post = MN.mastoPost(p)
       }
       out.push(m)
     }
   }
-  if (ok.x) out.push(...MN.xMentions(await mnFetch(MN.x.mentions(c.x.userId, xKeys(), hmacSha1, xSign()))))
+  if (xa?.ids?.userId) {
+    const url = MN.xMentionsUrl(xa.ids.userId)
+    out.push(...MN.xMentions(await mnFetch({ method: 'GET', url, headers: { Authorization: xAuth(xa, 'GET', url) } })))
+  }
   return out
 }
 async function mnBrief(m: MN.Mention) {
   const { text } = await small(MN.mentionBriefPrompt(m))
   const b = parseBrief(text)
   if (!b.ok) throw new Error('The brief was not in the expected format.')
-  return MN.composeReply(m.net, b, m.net === 'mastodon' ? `${m.author} ` : '')
+  return MN.composeReply(m.net, b, m.net === 'mastodon' ? `${m.author} ` : '', MN.limitOf(m.net, m.net === 'mastodon' ? mastoLimit(await mnAcct('mastodon')) : undefined))
 }
 let mnTimer: ReturnType<typeof setTimeout> | null = null
 let mnFails = 0
@@ -4165,7 +4189,6 @@ async function mnPoll() {
     mnLast = { at: Date.now() }
   } catch (e) {
     mnFails++
-    bskySess = null
     mnLast = { at: Date.now(), error: (e as Error).message }
   }
   mnSchedule()
@@ -4180,9 +4203,9 @@ function mnSchedule() {
 }
 app.whenReady().then(() => mnCfg().on && mnSchedule())
 app.on('will-quit', () => mnTimer && clearTimeout(mnTimer))
-ipcMain.handle('mentions:get', () => {
+ipcMain.handle('mentions:get', async () => {
   const s = mnState()
-  return { cfg: mnCfg(), ready: mnReady(), queue: s.queue, sentLastHour: s.sent.filter((t) => Date.now() - t < 3600_000).length, last: mnLast }
+  return { cfg: mnCfg(), ready: await mnReady(), limits: { bluesky: MN.limitOf('bluesky'), mastodon: MN.limitOf('mastodon', mastoLimit(await mnAcct('mastodon'))), x: MN.limitOf('x') }, queue: s.queue, sentLastHour: s.sent.filter((t) => Date.now() - t < 3600_000).length, last: mnLast }
 })
 ipcMain.handle('mentions:save', (_e, cfg: MN.Config) => {
   const c: MN.Config = {
@@ -4190,29 +4213,11 @@ ipcMain.handle('mentions:save', (_e, cfg: MN.Config) => {
     everyMin: Math.max(1, Math.min(60, Math.round(Number(cfg?.everyMin) || 2))),
     keywords: String(cfg?.keywords ?? '').slice(0, 2000),
     maxPerHour: Math.max(1, Math.min(60, Math.round(Number(cfg?.maxPerHour) || 10))),
-    bsky: { handle: String(cfg?.bsky?.handle ?? '').trim().slice(0, 253), pds: String(cfg?.bsky?.pds ?? '').trim().slice(0, 200) || MN.DEFAULTS.bsky.pds },
-    masto: { instance: String(cfg?.masto?.instance ?? '').trim().slice(0, 200) },
-    x: { userId: String(cfg?.x?.userId ?? '').replace(/\D/g, '').slice(0, 30) },
   }
-  if (c.bsky.handle !== mnCfg().bsky.handle || c.bsky.pds !== mnCfg().bsky.pds) bskySess = null
   mnSave({ cfg: c })
   mnFails = 0
   mnSchedule()
   return true
-})
-// a credential goes in and never comes back out
-ipcMain.handle('mentions:secret', (_e, net: MN.Net, value: string) => {
-  const name = MN_VAULT[net]
-  if (!name) throw new Error('Unknown network.')
-  if (!value) vault.delete(name)
-  else if (net === 'x') {
-    const k = JSON.parse(String(value)) as Record<string, string>
-    if (!['consumerKey', 'consumerSecret', 'token', 'tokenSecret'].every((f) => typeof k[f] === 'string' && k[f].trim())) throw new Error('All four X keys are needed.')
-    vault.set(name, JSON.stringify(k))
-  } else vault.set(name, String(value).trim())
-  if (net === 'bluesky') bskySess = null
-  toWin('mentions:changed')
-  return mnReady()
 })
 ipcMain.handle('mentions:check', () => (mnFails = 0, mnPoll()))
 ipcMain.handle('mentions:skip', (_e, key: string) => mnSave({ queue: mnState().queue.map((q) => (q.key === key ? { ...q, state: 'skipped' as const } : q)) }))
@@ -4226,17 +4231,18 @@ ipcMain.handle('mentions:approve', async (_e, key: string, draft: string[]) => {
   if (!MN.canReply(st.sent, Date.now(), c.maxPerHour)) throw new Error(`The limit of ${c.maxPerHour} replies an hour is reached. Try later.`)
   const parts = (Array.isArray(draft) ? draft : []).map((p) => String(p).trim()).filter(Boolean).slice(0, 3)
   if (!parts.length) throw new Error('The reply is empty.')
-  if (parts.some((p) => MN.graphemes(p) > MN.LIMIT[q.net])) throw new Error(`Each post must fit ${MN.LIMIT[q.net]} characters.`)
+  const acct = await mnNeed(q.net)
+  const max = MN.limitOf(q.net, mastoLimit(acct))
+  if (parts.some((p) => count(q.net, p) > max)) throw new Error(`Each post must fit ${max} characters.`)
   if (q.net !== 'bluesky' && parts.length > 1) throw new Error('One post only here.')
   if (q.net === 'bluesky') {
-    const s = await bskyLogin()
     let parent = q.reply.parent!
     for (const p of parts) {
-      const r = await mnFetch<MN.Ref>(MN.bsky.post(c.bsky.pds, s.jwt, s.did, p, { root: q.reply.root!, parent }, new Date()))
+      const r = await mnFetch<MN.Ref>(bskyRecord(pdsOf(acct), acct.accessToken, acct.ids?.did ?? '', p, new Date().toISOString(), { root: q.reply.root!, parent }))
       parent = { uri: r.uri, cid: r.cid }
     }
-  } else if (q.net === 'mastodon') await mnFetch(MN.masto.post(c.masto.instance, vault.get(MN_VAULT.mastodon) ?? '', parts[0], q.id, q.reply.visibility ?? 'public', q.key))
-  else await mnFetch(MN.x.post(parts[0], q.id, xKeys(), hmacSha1, xSign()))
+  } else if (q.net === 'mastodon') await mnFetch(mastoStatus(acct.ids?.server ?? '', acct.accessToken, parts[0], q.key, { inReplyTo: q.id, visibility: q.reply.visibility ?? 'public' }))
+  else await mnFetch(xTweet(parts[0], xAuth(acct, 'POST', X_TWEETS), q.id))
   mnSave({ sent: [...st.sent.filter((t) => Date.now() - t < 3600_000), Date.now()], queue: mnState().queue.map((x) => (x.key === key ? { ...x, state: 'sent' as const, draft: parts } : x)) })
   return true
 })
@@ -6441,7 +6447,7 @@ ipcMain.handle('panel:linkAuto', (_e, a: string, b: string, on: boolean) => {
 })
 registerTranscripts(ipcMain, cliHandlers, app.getPath('userData'))
 // Post everywhere: off until a network is connected; posts only after the window's confirm
-registerPostEverywhere(ipcMain, () => vault)
+registerPostEverywhere(ipcMain, (n) => social.account(n))
 let cli: ReturnType<typeof startCli> | null = null
 app.whenReady().then(() => {
   try {
