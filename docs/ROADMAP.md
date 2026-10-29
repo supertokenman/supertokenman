@@ -232,6 +232,8 @@ Left out: a server with Postgres (Rakazo), against local-first; API keys kept in
 
 - Brief a post: summary and the best prompt from any link or screenshot.
 - Mentions: when someone mentions you asking for a summary, a draft reply with the brief waits for your approval (Bluesky, Mastodon; X with your own paid API access).
+- Accounts: one connection per network, shared by Post everywhere and Mentions.
+
 ## Post everywhere
 
 Planned for 0.1.20:
