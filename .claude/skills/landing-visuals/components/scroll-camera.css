@@ -1,0 +1,12 @@
+/* Scroll camera. Without the script (or with reduced motion) panes are a plain column. */
+.cam-pane { margin: 0 auto 32px; max-width: 720px; }
+.cam-pane img { display: block; width: 100%; height: auto; }
+.cam.cam-on { height: var(--cam-len, 300vh); position: relative; }
+.cam-on .cam-stage { position: sticky; top: 0; height: 100vh; overflow: clip; perspective: 1000px; }
+.cam-on .cam-world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; will-change: transform; }
+.cam-on .cam-pane {
+  position: absolute; margin: 0; width: min(640px, 80vw); left: calc(min(640px, 80vw) / -2); top: -180px;
+  transform: translate3d(calc(var(--x) * 1px), calc(var(--y) * 1px), calc(var(--z) * 1px)) rotateY(var(--ry, 0deg));
+  opacity: .35; transition: opacity 300ms ease;
+}
+.cam-on .cam-pane[data-near] { opacity: 1; }

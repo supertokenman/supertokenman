@@ -1,0 +1,30 @@
+<!doctype html>
+<!-- Skill demo, not part of the site. Open through scripts/demo-shots.js, which serves this folder under
+     /__demo/ on the site's local server so the images are same-origin. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>landing-visuals demo</title>
+<link rel="stylesheet" href="/assets/site.css"><link rel="stylesheet" href="scroll-camera.css">
+<style>
+  body { background: var(--bg); color: var(--ink); margin: 0; }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 48px 16px; }
+  .halftone { margin: 0; max-width: 900px; }
+  .halftone canvas { display: block; }
+  .cam-pane figcaption { font: 13px var(--ui); color: var(--muted); padding-top: 8px; }
+</style></head><body>
+<main>
+  <section class="wrap" id="halftone">
+    <h2>panels, as dots.</h2>
+    <figure class="halftone" data-halftone="/assets/panels.jpg" data-cell="6" data-accent="0.57,0.8,0.22,0.1"
+      role="img" aria-label="The app with several panels side by side"></figure>
+  </section>
+  <section class="cam" id="camera" data-camera style="--cam-len: 320vh">
+    <div class="cam-stage"><div class="cam-world">
+      <figure class="cam-pane" style="--x:0; --y:0; --z:0; --ry:0deg"><img src="/assets/panels.jpg" alt="Panels side by side"><figcaption>panels</figcaption></figure>
+      <figure class="cam-pane" style="--x:900; --y:-60; --z:-500; --ry:-18deg"><img src="/assets/search.jpg" alt="Search across sessions"><figcaption>search</figcaption></figure>
+      <figure class="cam-pane" style="--x:1700; --y:40; --z:-1100; --ry:-30deg"><img src="/assets/triggers.jpg" alt="Triggers"><figcaption>triggers</figcaption></figure>
+    </div></div>
+  </section>
+  <section class="wrap"><p>end of demo.</p></section>
+</main>
+<script src="halftone.js"></script><script src="scroll-camera.js"></script>
+</body></html>
