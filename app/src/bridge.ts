@@ -171,6 +171,11 @@ export type Bridge = {
     setTriageOn: (on: boolean) => Promise<boolean>
     triage: (m: { id: string; author: string; text: string }[]) => Promise<{ on: boolean; labels: Record<string, import('../shared/socialprompts').TriageLabel>; skipped: Record<string, string> }>
     connected: () => Promise<NetworkId[]>
+    rewrite: (text: string, networks: string[]) => Promise<{ texts: Partial<Record<NetworkId, string>>; rejected: Partial<Record<NetworkId, string>> }>
+    hooks: (template: string, label: string, topic: string, projectId?: string) => Promise<{ hooks: string[]; rejected: string[] }>
+    reword: (text: string, network: NetworkId) => Promise<{ text: string }>
+    classify: (captions: { id: string; text: string }[]) => Promise<{ labels: Record<string, import('../shared/socialprompts').NicheLabel>; rejected: string[] }>
+    readImport: (path: string) => Promise<string>
     projects: () => Promise<{ list: import('../shared/socaccounts').Project[]; skipped: number }>
     setProjects: (list: import('../shared/socaccounts').Project[]) => Promise<import('../shared/socaccounts').Project[]>
   }

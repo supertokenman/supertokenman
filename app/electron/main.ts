@@ -1474,6 +1474,55 @@ ipcMain.handle('social:setProjects', async (_e, projects: unknown) => {
   saveSettings({ ...settings(), socialProjects: r.list })
   return r.list
 })
+// the small-model helpers: each runs only when the person clicks its button, one call per click, nothing posted
+ipcMain.handle('social:rewrite', async (_e, text: unknown, networks: unknown) => {
+  const { rewritePrompt, parseRewrite, NETWORK_IDS } = await import('../shared/socialprompts.js')
+  const t = String(text ?? '').trim().slice(0, 10_000)
+  const nets = (Array.isArray(networks) ? networks : []).filter((n): n is NetworkId => NETWORK_IDS.includes(n as NetworkId)).slice(0, 9)
+  if (!t || !nets.length) throw new Error('Write a post and pick a network that can be rewritten first.')
+  const r = parseRewrite((await small(rewritePrompt(t, nets))).text, { text: t }, nets)
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+ipcMain.handle('social:hooks', async (_e, template: unknown, label: unknown, topic: unknown, projectId?: unknown) => {
+  const { hookPrompt, parseHooks } = await import('../shared/socialprompts.js')
+  const { SLOT } = await import('../shared/hookfmt.js')
+  const { EMPTY_BRAND_KIT } = await import('../shared/brandkit.js')
+  const tpl = String(template ?? '')
+  const subject = String(topic ?? '').trim().slice(0, 2000)
+  if (tpl.length > 200 || tpl.split(SLOT).length !== 2) throw new Error(`The format needs exactly one ${SLOT}.`)
+  if (!subject) throw new Error('Write the topic first.')
+  const kit = (await goodProjects(settings().socialProjects)).list.find((p) => p.id === projectId)?.brandKit ?? EMPTY_BRAND_KIT
+  const format = { id: 'choice' as const, label: String(label ?? '').slice(0, 40), template: tpl }
+  const r = parseHooks((await small(hookPrompt(format, subject, kit))).text, format, kit)
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+ipcMain.handle('social:reword', async (_e, text: unknown, network: unknown) => {
+  const { evergreenPrompt, parseEvergreen, NETWORK_IDS } = await import('../shared/socialprompts.js')
+  const t = String(text ?? '').trim().slice(0, 10_000)
+  if (!t || !NETWORK_IDS.includes(network as NetworkId)) throw new Error('Pick a post on a network that can be reworded.')
+  const r = parseEvergreen((await small(evergreenPrompt(t, network as NetworkId))).text, { text: t }, network as NetworkId)
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+ipcMain.handle('social:classify', async (_e, captions: unknown) => {
+  const { nichePrompt, parseNiche } = await import('../shared/socialprompts.js')
+  const list = (Array.isArray(captions) ? captions : []).slice(0, 100).map((c: { id?: unknown; text?: unknown }) => ({ id: String(c?.id ?? ''), text: String(c?.text ?? '').slice(0, 1000) })).filter((c) => c.id && c.text)
+  if (!list.length) throw new Error('No captions to sort.')
+  const r = parseNiche((await small(nichePrompt(list))).text, list.map((c) => c.id))
+  if (!r.ok) throw new Error(r.error)
+  return r.value
+})
+// a CSV, JSON or text export the person picked in the app's file picker: up to 2 MB, returned as text, never opened as a link
+ipcMain.handle('social:readImport', (_e, path: unknown) => {
+  const p = pickPaths([path])[0]
+  if (!p || !['csv', 'json', 'txt'].includes(extname(p).slice(1).toLowerCase())) throw new Error('Pick a .csv, .json or .txt file.')
+  const st = statSync(p)
+  if (!st.isFile()) throw new Error('Not a file.')
+  if (st.size > 2 * 1024 * 1024) throw new Error('Files up to 2 MB.')
+  return readFileSync(p, 'utf8')
+})
 ipcMain.handle('social:connected', () => social.status().filter((x) => x.connected).map((x) => x.id))
 ipcMain.handle('social:remove', (_e, id: string) => social.removeItem(String(id)))
 
