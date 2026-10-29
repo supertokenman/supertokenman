@@ -1,0 +1,1 @@
+const e=o=>Math.ceil(o.length/3.6);function s(o){const t=[`${Math.max(0,o.inputTokens).toLocaleString("en-US")} new input`,`${o.cacheRead.toLocaleString("en-US")} from cache`,`${o.outputTokens.toLocaleString("en-US")} written`];return o.tools.length&&t.push(`${o.tools.length} tool call${o.tools.length===1?"":"s"}`),t.join(" · ")}export{e as r,s as w};

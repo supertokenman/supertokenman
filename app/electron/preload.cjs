@@ -915,6 +915,28 @@ contextBridge.exposeInMainWorld('stm', {
     roomPost: (sids, text) => ipcRenderer.invoke('room:post', sids, text),
     roomNext: () => ipcRenderer.invoke('room:next'),
   },
+  teamBundle: {
+    exportTo: () => ipcRenderer.invoke('team:export'),
+    importFrom: () => ipcRenderer.invoke('team:import'),
+    onReview: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('team:review', l)
+      return () => ipcRenderer.removeListener('team:review', l)
+    },
+    prepare: (team, base) => ipcRenderer.invoke('team:prepare', team, base),
+    apply: (team, opened) => ipcRenderer.invoke('team:apply', team, opened),
+  },
+  away: {
+    get: () => ipcRenderer.invoke('away:get'),
+    onShow: (fn) => {
+      const l = (_e, c) => fn(c)
+      ipcRenderer.on('away:show', l)
+      return () => ipcRenderer.removeListener('away:show', l)
+    },
+    setCard: (on) => ipcRenderer.invoke('away:setting', on),
+    say: () => ipcRenderer.invoke('away:say'),
+    touch: () => ipcRenderer.send('away:touch'),
+  },
   stmCli: {
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)
@@ -1140,6 +1162,7 @@ contextBridge.exposeInMainWorld('stm', {
   killProcess: (pid, force) => ipcRenderer.invoke('ports:kill', pid, force),
   git: (op, sid, ...args) => ipcRenderer.invoke(`git:${op}`, sid, ...args),
   pickFolder: () => ipcRenderer.invoke('session:pick'),
+  template: { plan: (id, dir) => ipcRenderer.invoke('template:plan', id, dir), apply: (id, dir, replace) => ipcRenderer.invoke('template:apply', id, dir, replace) },
   findRepos: () => ipcRenderer.invoke('folders:repos'),
   setPrivate: (on) => ipcRenderer.invoke('privacy:set', on),
   runShell: (sid, command) => ipcRenderer.invoke('shell:run', sid, command),

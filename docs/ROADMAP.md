@@ -199,6 +199,8 @@ panel" (in progress):
 9. Agents and teams as files: personas, triggers and saved teams stored as Markdown/YAML in the
    project, versioned with git. (AgentUse, ADK, PraisonAI) Done for personas and triggers: stm files
    export / import (plan first, --yes applies, imported triggers arrive off). Saved teams: not yet.
+   Done (2026-10-28): new project from a template (File menu, stm new --template): persona, skills and
+   CLAUDE.md in one step; files already there are kept unless picked to replace. app/shared/projecttemplates.ts.
 10. Recommended MCP servers: a short opt-in list, local only, starting with a profiler that reports
     evidence. Off by default; each host in docs/NETWORK.md. (Flameox)
 
@@ -228,7 +230,7 @@ Needs a decision first:
 Left out: a server with Postgres (Rakazo), against local-first; API keys kept in a plain config file
 (OpenMausBot), where our vault already does better.
 
-## Planned for 0.1.20
+## Planned for a later release
 
 - Brief a post: summary and the best prompt from any link or screenshot.
 - Mentions: when someone mentions you asking for a summary, a draft reply with the brief waits for your approval (Bluesky, Mastodon; X with your own paid API access).
@@ -236,7 +238,7 @@ Left out: a server with Postgres (Rakazo), against local-first; API keys kept in
 
 ## Post everywhere
 
-Planned for 0.1.20:
+Planned for a later release:
 1. Phase 1: one post, a preview per network (limits, what would be cut), confirm, then each
    network's own API from this Mac: Bluesky, Mastodon, LinkedIn, X, Telegram, Discord (webhook),
    DEV. Text and links only. No service in the middle.
@@ -245,7 +247,7 @@ Planned for 0.1.20:
 
 ## Social scheduling and growth
 
-Planned for 0.1.20, on the accounts above. Each feature is off until you click it and adds no host.
+Planned for a later release, on the accounts above. Each feature is off until you click it and adds no host.
 - Per-network queue with weekly time slots; "Add to queue" gives each network its own next free slot.
 - Best time and Hit share from your own measured posts; "Not enough data yet" below the minimum.
 - Missed-post catch-up: scheduled posts go out only while the app is open; very late ones are held for you.
@@ -255,9 +257,33 @@ Planned for 0.1.20, on the accounts above. Each feature is off until you click i
   niche import from a pasted list or a picked CSV or JSON file (up to 2 MB).
 - Open: a background agent that posts with the window closed (new surface, not planned).
 
-## Later
 
-- New project from a template: persona, skills and CLAUDE.md set up in one step.
+## Planned for 0.1.21: a phone panel
+
+From reading the Mobilerun quickstart (docs.mobilerun.ai) on 2026-10-29: an agent that drives a real phone
+by taps, swipes and typing. Ideas only, no code; not tested by us.
+
+1. A phone panel for developers: Claude Code drives an Android emulator or a phone on a cable (adb), and
+   later the iOS Simulator on the Mac (xcrun simctl). The screen is mirrored beside the chat, each tap
+   is logged, and taps go through the usual approvals. Local, no host called.
+2. Post through the phone app, for networks whose API needs an app review (Instagram, TikTok): the
+   person's own account on their own phone, off by default, every post approved first. The app says
+   plainly that these networks' terms forbid automated use whatever the purpose, so the account can be
+   limited or banned, and the person decides.
+
+## Planned for 0.1.21: panels that ask each other, team bundles, a summary of the night
+
+Ideas from Codync, OpenMausBot and Noodle (all Apache-2.0; ideas only, no code taken). Built and checked
+by typecheck and unit tests; not yet run in the real app.
+
+1. Panels ask each other: stm ask <panel> "question" between linked panels, the answer coming back as the
+   asker's next message, through the same caps, budget and approvals as stm send.
+2. Team bundle: File, Export team... and Import team... (also stm team export|import), one Markdown file
+   with panels, links and triggers; import lists what it would make and creates nothing until confirmed.
+3. While you were away: a card with the events since the last time you were at the window (turns and cost,
+   approvals waiting, trigger runs, errors), with Read aloud on macOS. Local only.
+
+## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
   after there are users.

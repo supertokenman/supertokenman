@@ -1,10 +1,11 @@
-A fix for a black window after updating.
+A fix for Intel Macs, where no panel could start.
 
-- Right after an update the app could start before its files were all in place and stay black, with
-  nothing in the log. It now shows "Starting SuperTokenMan...", tries again on its own a few times,
-  writes the miss to the log, and if it still cannot read its files, says to quit and open it again.
-- Everything else from 0.1.17 is unchanged: the canvas, stm read, link cost and cap, the review loop
-  and stm learn.
+- On Intel Macs, New panel did nothing: the Intel build shipped without the Claude binary for Intel,
+  so every new panel failed to start. The Intel build now carries its own binary, and the release
+  check fails if a build lacks the binary for its cpu. Apple silicon builds already carried theirs.
+- If a panel cannot open, the window now says why instead of doing nothing.
+- Also in this version: a new start screen with your recent folders, Open a folder... and New
+  project from template...
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:

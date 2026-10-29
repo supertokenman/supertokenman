@@ -11,9 +11,12 @@ export const PANEL_HELP = `From inside a panel (STM_PANEL_ID is set; "$STM_CLI" 
                                      the project's shared notes (.supertokenman/notes, 64 KB each)
   stm read <panel>                   a linked panel's goal and last reply (read only, credentials masked)
   stm link <panel>                   record a link between this panel and another
-  stm links                          the panels linked to this one`
+  stm links                          the panels linked to this one
+  stm ask <panel> "question"         ask a linked panel for help; its answer comes back to you as your next message`
 
 const ONLY_IN_PANEL = new Set(['whoami', 'spawn', 'note', 'link', 'links', 'read'])
+// stm ask test|scan|preview keep their meaning (the panel's own checks)
+const OWN_ASK = new Set(['test', 'scan', 'preview'])
 
 /**
  * The request a panel command sends to the app, or null when `cmd` is not a panel command here
@@ -48,6 +51,12 @@ export function panelRequest(cmd, rest, flags, env) {
     if (panel === 'new') throw new Error('From a panel, open one with: stm spawn --prompt "text"')
     return { cmd: 'psend', args: { ...id, panel, text } }
   }
+  if (cmd === 'ask' && !OWN_ASK.has(rest[0])) {
+    const [panel, ...words] = rest
+    const question = words.join(' ')
+    if (!panel || !question.trim()) throw new Error('Usage: stm ask <panel> "question"')
+    return { cmd: 'pask', args: { ...id, panel, question } }
+  }
   if (cmd === 'note') {
     const [op, name, ...words] = rest
     if (!['get', 'set', 'append'].includes(op) || !name) throw new Error('Usage: stm note get|set|append <name> [text]')
@@ -65,6 +74,7 @@ export function panelText(cmd, d) {
   if (cmd === 'pspawn') return d.id
   if (cmd === 'pread') return [`${d.panel}  ${d.name}${d.busy ? '  (working)' : ''}`, d.goal ? `goal: ${d.goal}` : '', d.reply ? `last reply${d.at ? ` (${new Date(d.at).toISOString().slice(11, 16)} UTC)` : ''}:\n${d.reply}` : 'No reply yet.'].filter(Boolean).join('\n')
   if (cmd === 'psend') return d.delivery === 'auto' ? `Sent to ${d.panel} (auto-send is on for this link).` : `Queued in ${d.panel}'s composer; the person there sends it.`
+  if (cmd === 'pask') return d.delivery === 'auto' ? `Asked ${d.panel} (auto-send is on for this link). The answer comes back as your next message.` : `Queued in ${d.panel}'s composer; the person there sends it. The answer comes back as your next message.`
   if (cmd === 'pnote') return d.text !== undefined ? d.text : `Saved ${d.name} (${d.size} bytes).`
   return JSON.stringify(d)
 }

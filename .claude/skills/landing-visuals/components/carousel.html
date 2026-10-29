@@ -1,0 +1,31 @@
+<!-- Perspective carousel: a list with real Previous/Next buttons and a live label; arrow keys work when
+     focused. Side items sit back in Z; reduced motion = plain swap, no transition. Self-contained. -->
+<div class="pc" role="region" aria-roledescription="carousel" aria-label="Screens" tabindex="0">
+  <ul class="pc-track">
+    <li><img src="assets/panels.jpg" alt="Panels side by side" width="1280" height="800"></li>
+    <li><img src="assets/content.jpg" alt="A content sheet" width="1280" height="800"></li>
+    <li><img src="assets/search.jpg" alt="Search" width="1280" height="800"></li>
+  </ul>
+  <div class="pc-ctl"><button type="button" data-d="-1">Previous</button><span aria-live="polite" class="pc-n"></span><button type="button" data-d="1">Next</button></div>
+</div>
+<style>
+.pc { perspective: 1200px; outline-offset: 4px; }
+.pc-track { position: relative; list-style: none; margin: 0; padding: 0; aspect-ratio: 16/10; transform-style: preserve-3d; }
+.pc-track li { position: absolute; inset: 0 15%; transition: transform .6s cubic-bezier(.2,.7,.2,1), opacity .6s; }
+.pc-track img { width: 100%; height: auto; border: 1px solid var(--line); }
+.pc-ctl { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 16px; font: 13px var(--mono); }
+@media (prefers-reduced-motion: reduce) { .pc-track li { transition: none; } }
+</style>
+<script>
+document.querySelectorAll('.pc').forEach((pc) => {
+  const items = [...pc.querySelectorAll('li')], n = pc.querySelector('.pc-n'); let i = 0
+  const show = () => { items.forEach((li, k) => { const d = ((k - i + items.length + 1) % items.length) - 1
+    li.style.transform = `translateX(${d * 55}%) translateZ(${d ? -220 : 0}px) rotateY(${d * -30}deg)`
+    li.style.opacity = d ? .55 : 1; li.style.zIndex = d ? 0 : 1; li.inert = !!d })
+    n.textContent = `${i + 1} of ${items.length}` }
+  const go = (d) => { i = (i + d + items.length) % items.length; show() }
+  pc.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => go(+b.dataset.d)))
+  pc.addEventListener('keydown', (e) => e.key === 'ArrowLeft' ? go(-1) : e.key === 'ArrowRight' && go(1))
+  show()
+})
+</script>
