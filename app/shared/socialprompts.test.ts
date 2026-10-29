@@ -85,3 +85,39 @@ describe('triage (F5)', () => {
     expect(parseTriage('here you go', ids).ok).toBe(false)
   })
 })
+
+import { accountRewritePrompt, hookPrompt, nichePrompt, parseAccountRewrite, parseHooks, parseNiche } from './socialprompts'
+import { BUILTIN_FORMATS } from './hookfmt'
+import { EMPTY_BRAND_KIT } from './brandkit'
+
+describe('growth prompts (H8)', () => {
+  const kit = { ...EMPTY_BRAND_KIT, tone: 'dry', bannedWords: ['synergy'] }
+  const when = BUILTIN_FORMATS.find((f) => f.id === 'when')!
+  it('hook prompt carries the brand kit and the topic as content', () => {
+    const p = hookPrompt(when, 'my cat', kit)
+    expect(p).toContain('Tone: dry')
+    expect(p).toContain('<topic>')
+    expect(p).toMatch(/strict JSON/)
+  })
+  it('parseHooks fills the template and drops repeats and banned words', () => {
+    const r = parseHooks(JSON.stringify({ slots: ['your cat sits', 'Your cat sits', 'synergy wins', '', 5] }), when, kit)
+    expect(r).toEqual({ ok: true, value: { hooks: ['When your cat sits'], rejected: ['Your cat sits', 'synergy wins', '', ''] } })
+    expect(parseHooks('nope', when, kit).ok).toBe(false)
+    expect(parseHooks('{"slots":"x"}', when, kit).ok).toBe(false)
+  })
+  it('niche classify keeps known labels only', () => {
+    expect(nichePrompt([{ id: 'a', text: 'Facts: x' }])).toContain('"sendto"')
+    const r = parseNiche('{"a":"facts","b":"weird"}', ['a', 'b', 'c'])
+    expect(r).toEqual({ ok: true, value: { labels: { a: 'facts' }, rejected: ['b', 'c'] } })
+  })
+  it('per-account rewrite: several accounts on one network never get identical text', () => {
+    const accts = [{ id: 'x:ana', kit }, { id: 'x:bob' }, { id: 'x:cy' }]
+    expect(accountRewritePrompt('Ship it', 'x', accts)).toContain('"x:bob"')
+    const raw = JSON.stringify({ 'x:ana': 'We shipped.', 'x:bob': ' we  shipped. ', 'x:cy': 'Ship it' })
+    const r = parseAccountRewrite(raw, { text: 'Ship it' }, 'x', accts)
+    expect(r.ok && r.value.texts).toEqual({ 'x:ana': 'We shipped.' })
+    expect(r.ok && r.value.rejected).toEqual({ 'x:bob': 'Same text as another account.', 'x:cy': 'Same text as another account.' })
+    const ok = parseAccountRewrite(JSON.stringify({ 'x:ana': 'A', 'x:bob': 'B', 'x:cy': 'synergy' }), { text: 'Ship it' }, 'x', accts)
+    expect(ok.ok && Object.keys(ok.value.texts)).toEqual(['x:ana', 'x:bob', 'x:cy'])
+  })
+})
