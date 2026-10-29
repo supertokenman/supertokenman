@@ -1,14 +1,11 @@
-A fix for updates that stopped at "Restarting".
+A fix for Intel Macs, where no panel could start.
 
-- Installing an update could stop at "Restarting. Reopens by itself." and never restart: the
-  window's closing animation held the close, and that cancelled the quit that installs the update.
-  Force quitting then could leave a black window. The update now restarts, every update step is
-  written to the log, and if the app has not restarted after a minute it says so and links to the
-  releases page.
-- If you are stuck on an older version, download this one from the releases page once; later
-  updates install from inside the app.
-- Also in this version: `stm ask` between linked panels, teams as one Markdown file (File, Export
-  team... and Import team...), and the "While you were away" card.
+- On Intel Macs, New panel did nothing: the Intel build shipped without the Claude binary for Intel,
+  so every new panel failed to start. The Intel build now carries its own binary, and the release
+  check fails if a build lacks the binary for its cpu. Apple silicon builds already carried theirs.
+- If a panel cannot open, the window now says why instead of doing nothing.
+- Also in this version: a new start screen with your recent folders, Open a folder... and New
+  project from template...
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:

@@ -34,6 +34,10 @@ jobs:
           node-version: 22
           # no dependency cache: a cache written by another run could be swapped in before signing
       - run: npm ci
+      # npm ci on this Apple silicon runner installs only the arm64 Claude binary; the Intel build
+      # needs the darwin-x64 one too, at the same version as the SDK. --force skips the cpu check.
+      - name: Claude binary for Intel
+        run: npm install --no-save --force "@anthropic-ai/claude-agent-sdk-darwin-x64@$(node -p "require('@anthropic-ai/claude-agent-sdk/package.json').version")"
       - run: npm test
       - name: App Store Connect key to a file
         env:
