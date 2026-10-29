@@ -255,9 +255,17 @@ The home's top felt institutional; it now borrows a calm recipe (dot grid, heavy
 - Paper and dot grid: hero and feature sections sit on `--paper` (`#f7f4ee` light, `#141412` dark) with a faint 22px dot grid. Small labels read "nº 1 · ..." in mono, lowercase.
 - Dot-matrix motif: drawings of our own things only (panels side by side, the link line between panels, an approval card, the token meter filling), ink dots with the accent marking the one part that matters. Drawn on canvas from a tiny text spec.
 - Accent use: one accent block per drawing or scene (the focused panel, the link, Allow, the filled meter, the scene's tag). Never a second accent colour.
-- 3D: real app screens stacked in depth, framed with the 45 degree cut, tilting with a fine pointer. Feature cards are buttons that turn over to one sentence of existing site copy. No drop shadows.
+- 3D (replaced 2026-10-29): the tilted stack of screenshots was unreadable and showed the empty app. The hero
+  now plays the real interface: the live demo at `/docs/demo/?autoplay=1` (app/src/demo/autoplay.ts) in a
+  sandboxed frame, flat, about 1100px wide, with one flat accent plate behind it as the only depth. A
+  visible cursor presses Allow on `npm test`, then opens Changes; the page loops, pauses off screen, and
+  keeps a still poster (`hero-demo.webp`) with reduced motion and on phones. The demo uses Noite as its
+  theme. Feature cards show a crop of the demo UI with content on the front (sample data, said under the
+  cards), the dot motif small beside the label, and turn over to one sentence of
 - Motion rules: sparse; meters fill only while on screen; no tilt on touch; with reduced motion nothing moves and a card shows its back in place of the front when pressed.
-- Budget: the landing visuals add 1.6 KB gzip of JS and 1.8 KB of CSS, and no new image.
+- Budget: the landing visuals JS stays under 3 KB gzip. Images: hero poster 99 KB and six feature crops
+  of 40 to 62 KB (WebP, 2x). The demo frame (about 280 KB gzip, mostly the app bundle) loads only after
+  the page has, on screens wider than 700px and without reduced motion.
 
 ## Landing message: the team first (decided 2026-10-29)
 

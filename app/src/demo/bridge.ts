@@ -3,13 +3,17 @@
 // value, so a sheet that needs the machine shows its empty state. Built only by `vite build --mode demo`
 // (demo.html), never part of the Electron app.
 import type { Bridge, UiEvent } from '../bridge'
+import { AUTO, clickAllow, gate, loopLater } from './autoplay'
 
 type Ev = UiEvent | { kind: string; [k: string]: unknown }
 type Listener = (sid: string, e: Ev) => void
 
 const listeners = new Set<Listener>()
 const emit = (sid: string, e: Ev) => listeners.forEach((fn) => fn(sid, e as never))
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const wait = async (ms: number) => {
+  await gate()
+  await new Promise((r) => setTimeout(r, AUTO.on && AUTO.still ? 0 : ms))
+}
 
 // sample projects: made-up folders, made-up numbers (labelled as sample in the banner)
 const PROJECTS = [
@@ -21,6 +25,7 @@ const MODEL = 'claude-sonnet-5'
 let opened = 0
 const cost: Record<string, number> = { 'demo-1': 0, 'demo-2': 0, 'demo-3': 0 }
 const pending: Record<string, () => void> = {}
+const caps: Record<string, { usd?: number; tokens?: number }> = {}
 let cliOpen: ((r: { req: string; cwd?: string }) => void) | null = null
 
 async function stream(sid: string, text: string, ms = 18) {
@@ -73,8 +78,11 @@ async function history(sid: string, prompt: string, reply: string, add: number) 
 async function script() {
   await wait(600)
   cliOpen?.({ req: 'demo-2', cwd: PROJECTS[1]!.cwd })
-  await wait(150)
-  cliOpen?.({ req: 'demo-3', cwd: PROJECTS[2]!.cwd })
+  // playing in the home page: two panels side by side, big enough to read
+  if (!AUTO.on) {
+    await wait(150)
+    cliOpen?.({ req: 'demo-3', cwd: PROJECTS[2]!.cwd })
+  }
   await wait(300)
   void history('demo-2', 'Add rate limiting to POST /orders, 20 requests a minute per key.',
     'Done. `src/routes/orders.ts` now goes through a token bucket keyed on the API key (20 a minute, burst of 5), and a 429 says when to retry. I added two tests in `test/orders.test.ts`; the suite passes.', 0.21)
@@ -95,6 +103,7 @@ async function script() {
   emit(sid, { kind: 'context', tokens: 42100, window: 200000, percent: 21 })
   await stream(sid, 'Now the tests. ')
   emit(sid, { kind: 'permission', id: 'ask-1', tool: 'Bash', summary: 'npm test', risk: { level: 'ask', why: 'runs a command in your project' }, why: 'a command that runs code in your project', cls: 'write' })
+  if (AUTO.on) void clickAllow()
   await new Promise<void>((r) => (pending['ask-1'] = r))
 }
 
@@ -112,6 +121,7 @@ async function afterAllow(sid: string, allow: boolean) {
   emit(sid, { kind: 'assistant', text: reply, tools: [] })
   turn(sid, 0.05, 31800, 1120, 52300)
   emit(sid, { kind: 'context', tokens: 51200, window: 200000, percent: 26 })
+  if (AUTO.on) void loopLater()
 }
 
 async function reply(sid: string, text: string) {
@@ -140,6 +150,12 @@ const known = {
     }
   },
   send: async (sid: string, text: string) => void reply(sid, text),
+  // the panel's usage chip: sample numbers that follow the scripted turns
+  panelUsage: async (sid: string) => ({
+    usage: { cli: 'Claude Code', turns: Math.round((cost[sid] ?? 0) / 0.03), usd: cost[sid] ?? 0, tokens: Math.round((cost[sid] ?? 0) * 410000), windows: { five_hour: { percentUsed: 18 } } },
+    cap: caps[sid] ?? { usd: 2 },
+  }),
+  panelCap: async (sid: string, c: { usd?: number; tokens?: number }) => (caps[sid] = c),
   panelBus: { onInbox: () => () => undefined, links: async () => ({}), onLinks: () => () => undefined, setAuto: async () => ({}) },
   stmCli: {
     onOpen: (fn: typeof cliOpen) => {

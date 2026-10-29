@@ -1,4 +1,4 @@
-// Landing visuals: dot-matrix drawings, pointer tilt, flip cards. No libraries, no network.
+// Landing visuals: dot-matrix drawings, the live demo in the hero, flip cards. No libraries, no network.
 // Source of these pieces: .claude/skills/landing-visuals/. With reduced motion everything is still.
 ;(() => {
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -37,16 +37,32 @@
     requestAnimationFrame(loop)
   }
 
-  // Tilt: [data-tilt] follows the pointer inside its parent, up to data-tilt degrees.
-  if (!still && matchMedia('(pointer: fine)').matches) {
-    document.querySelectorAll('[data-tilt]').forEach((el) => {
-      const max = +el.dataset.tilt || 8, zone = el.closest('[data-tilt-zone]') || el
-      zone.addEventListener('pointermove', (e) => {
-        const r = zone.getBoundingClientRect(), px = (e.clientX - r.left) / r.width - 0.5, py = (e.clientY - r.top) / r.height - 0.5
-        el.style.setProperty('--rx', (-py * max).toFixed(2) + 'deg'); el.style.setProperty('--ry', (px * max).toFixed(2) + 'deg')
-      })
-      zone.addEventListener('pointerleave', () => { el.style.removeProperty('--rx'); el.style.removeProperty('--ry') })
-    })
+  // The live demo in the hero: the real interface with sample data (/docs/demo/?autoplay=1), playing its
+  // scripted turn by itself. The poster shows first; the frame (about 450 KB gzip) loads once the page
+  // has, and only on screens wide enough to read it. Off screen it is told to pause. Reduced motion
+  // keeps the poster, a still frame of the finished turn.
+  const live = document.getElementById('live')
+  if (live && !still && matchMedia('(min-width: 701px)').matches) {
+    const box = live.querySelector('.live-frame')
+    const start = () => {
+      const f = document.createElement('iframe')
+      f.src = live.dataset.src
+      f.title = 'SuperTokenMan live demo, playing by itself'
+      f.setAttribute('sandbox', 'allow-scripts allow-same-origin')
+      f.setAttribute('loading', 'eager')
+      f.setAttribute('tabindex', '-1')
+      f.setAttribute('aria-hidden', 'true')
+      f.width = 1280; f.height = 780
+      const fit = () => f.style.setProperty('--s', (box.clientWidth / 1280).toFixed(4))
+      fit(); new ResizeObserver(fit).observe(box)
+      const say = (m) => f.contentWindow && f.contentWindow.postMessage({ stm: m }, location.origin)
+      let seen = true
+      new IntersectionObserver(([e]) => { seen = e.isIntersecting; say(seen ? 'play' : 'pause') }).observe(live)
+      f.addEventListener('load', () => { say(seen ? 'play' : 'pause'); setTimeout(() => live.classList.add('on'), 500) })
+      box.appendChild(f)
+    }
+    if (document.readyState === 'complete') start()
+    else addEventListener('load', start, { once: true })
   }
 
   // Flip cards are buttons; aria-pressed says which face is up.

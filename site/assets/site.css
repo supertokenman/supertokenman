@@ -136,40 +136,6 @@ img { max-width: 100%; display: block; }
 .js .reveal-text { opacity: 0; transform: translate(-12px, 12px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
 .js .reveal-text.in { opacity: 1; transform: none; }
 
-/* ---- the film (A): a session recreated in code, in the app's Paper colors */
-.film-app { --p-bg: #faf9f5; --p-surface: #f2f0e8; --p-raised: #e9e6db; --p-line: #dcd8cb; --p-ink: #1f1e1b; --p-muted: #6b6962; --p-faint: #8c8980; --p-acc: #ba5936; --p-green: #3f7d3a;
-  max-width: 1000px; margin: 64px auto 0; text-align: left; background: var(--p-bg); color: var(--p-ink); border: 1px solid var(--p-line); font: 14px/1.5 var(--ui);
-  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%); opacity: 0; animation: appear 1s .9s var(--ease) forwards; }
-.fa-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--p-surface); border-bottom: 1px solid var(--p-line); font: 12px var(--mono); color: var(--p-muted); }
-.fa-top b { color: var(--p-ink); font-weight: 600; }
-.fa-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--p-green); }
-.fa-meter { margin-left: auto; display: flex; align-items: baseline; gap: 8px; }
-.fa-cost { font: 18px var(--display); color: var(--p-ink); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
-.fa-cost span { display: inline-block; }
-.fa-cost span.f { animation: flap .14s cubic-bezier(.3,.7,.2,1) both; }
-@keyframes flap { from { clip-path: inset(0 0 50% 0); transform: translateY(-30%); } }
-.fa-body { padding: 22px 22px 18px; display: grid; gap: 14px; min-height: 330px; align-content: start; }
-.fa-msg { max-width: 72%; }
-.fa-you { justify-self: end; background: var(--p-raised); padding: 9px 13px; }
-.fa-claude { color: var(--p-ink); }
-.fa-step { opacity: 0; transform: translateY(6px); transition: opacity .45s var(--ease), transform .45s var(--ease); }
-.fa-step.on { opacity: 1; transform: none; }
-.fa-ask { border: 1px solid color-mix(in srgb, var(--p-acc) 45%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--p-acc) 9%, transparent), transparent 70%), var(--p-surface); padding: 12px; display: grid; gap: 10px; max-width: 520px; }
-.fa-ask-head { display: flex; gap: 8px; align-items: center; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--p-acc); }
-.fa-ask-head em { font-style: normal; color: var(--p-ink); text-transform: none; letter-spacing: 0; font-weight: 400; }
-.fa-cmd { margin: 0; font: 12px/1.5 var(--mono); background: var(--p-bg); border: 1px solid var(--p-line); padding: 9px 12px; }
-.fa-actions { display: flex; justify-content: flex-end; gap: 6px; }
-.fa-b { font: 13px var(--ui); padding: 6px 14px; border: 1px solid var(--p-line); background: var(--p-bg); color: var(--p-ink); }
-.fa-b.allow { background: var(--p-acc); border-color: var(--p-acc); color: #fff; clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%); transition: transform .12s, filter .12s; }
-.fa-b.allow.press { transform: scale(.95); filter: brightness(1.15); }
-.fa-ask.done { opacity: .55; }
-.fa-ask.done .fa-actions { display: none; }
-.fa-run { font: 12px/1.6 var(--mono); color: var(--p-muted); border-left: 2px solid var(--p-line); padding-left: 12px; }
-.fa-run b { color: var(--p-green); font-weight: 600; }
-.fa-comp { margin: 0 22px 18px; border: 1px solid var(--p-line); padding: 10px 12px; color: var(--p-faint); font-size: 13px; display: flex; justify-content: space-between; }
-.fa-caption { max-width: 1000px; margin: 12px auto 0; text-align: right; }
-@media (max-width: 600px) { .fa-msg { max-width: 92%; } .fa-body { padding: 16px; min-height: 360px; } .fa-comp { margin: 0 16px 16px; } .fa-top .opt { display: none; } }
-
 /* ---- inner pages: download, security, docs, changelog */
 .page-head { padding: 96px 0 48px; }
 .page-head h1 { font-size: clamp(38px, 6vw, 64px); max-width: 14em; margin: 14px 0 0; }
@@ -234,7 +200,6 @@ td:first-child { color: var(--ink); font-weight: 500; }
 
 /* the film comes in tilted and lies flat as the page scrolls */
 .hero { perspective: 1400px; }
-.js .film-app { transform: rotateX(calc((1 - var(--flat, 0)) * 18deg)) scale(calc(.92 + var(--flat, 0) * .08)); transform-origin: 50% 0; }
 
 /* story: the text scrolls, the screen stays and changes with it */
 .story { border-top: 1px solid var(--line); }
@@ -270,7 +235,7 @@ td:first-child { color: var(--ink); font-weight: 500; }
 
 @media (prefers-reduced-motion: reduce) {
   .progress { display: none; }
-  .split .w > span, .js .film-app, .js .cascade > div, .story-shots .shot { transition: none; transform: none; }
+  .split .w > span, .js .cascade > div, .story-shots .shot { transition: none; transform: none; }
   .step { opacity: 1; }
 }
 
