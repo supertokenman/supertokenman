@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Attachment } from '../shared/attach'
 import { friendly } from './errors'
 import { isLocalUrl } from './preview'
+import { panelPartition } from '../shared/panelbrowser'
 import { ExplainBox } from './Explain'
 import { pickFile } from './FilePicker'
 
@@ -21,7 +22,8 @@ type View = HTMLWebViewElement & {
 const WIDTHS = { full: 0, tablet: 820, phone: 390 } as const
 const PHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
 /** Sites that are not this machine get their own kept session, apart from the web apps and from localhost. */
-const partitionOf = (u: string, persona?: string) => (isLocalUrl(u) ? 'preview' : persona ? `persist:browse-${persona}` : 'persist:browse')
+// a persona shares its sign-ins across its panels; any other panel keeps its own, apart from your browser
+const partitionOf = (u: string, persona?: string, panel?: string) => (isLocalUrl(u) ? 'preview' : persona ? `persist:browse-${persona}` : panel ? panelPartition(panel) : 'persist:browse')
 
 type Log = { level: 'log' | 'warn' | 'error'; text: string; where: string; at: number }
 type Net = { method: string; url: string; status?: number; error?: string; at: number }
@@ -72,7 +74,7 @@ const short = (u: string, n = 90) => (u.length > n ? `${u.slice(0, n - 1)}…` :
  * reaches for: pick an element, the console and failed requests, a marked-up screenshot, a phone
  * view. Whatever is picked goes into the message, for Claude to see.
  */
-export function PreviewView({ servers, onAttach, persona }: { servers: Server[]; onAttach: (add: Attachment[], note?: { label: string; text: string }) => void; persona?: string }) {
+export function PreviewView({ servers, onAttach, persona, panel }: { panel?: string; servers: Server[]; onAttach: (add: Attachment[], note?: { label: string; text: string }) => void; persona?: string }) {
   const [url, setUrl] = useState(servers[0]?.url ?? '')
   const [typed, setTyped] = useState(url)
   const [size, setSize] = useState<keyof typeof WIDTHS>('full')
@@ -247,6 +249,11 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
             Reference image
           </button>
           <span className="spacer-flex" />
+          {panel && !persona && (
+            <button className="br-tool" onClick={() => void window.stm.clearBrowse(panel).then(() => setUrl(''))} data-tip="Sign out of every site in this panel's browser">
+              Clear sign-ins
+            </button>
+          )}
           <button className={`br-tool ${drawer === 'console' ? 'on' : ''}`} onClick={() => setDrawer(drawer === 'console' ? null : 'console')} data-tip="Console">
             <svg viewBox="0 0 16 16" aria-hidden><path d="M2 3h12v10H2zM4.5 6.5 6.5 8l-2 1.5M8 10h3" /></svg>
             Console{errors ? <span className="br-count err">{errors}</span> : null}
@@ -260,7 +267,7 @@ export function PreviewView({ servers, onAttach, persona }: { servers: Server[];
       {state.error && <div className="notice error">{friendly(state.error)}</div>}
       {url ? (
         <div className="preview-stage">
-          <webview ref={ref} key={url} className="preview-view" src={url} partition={partitionOf(url, persona)} style={WIDTHS[size] ? { width: WIDTHS[size] } : undefined} />
+          <webview ref={ref} key={url} className="preview-view" src={url} partition={partitionOf(url, persona, panel)} style={WIDTHS[size] ? { width: WIDTHS[size] } : undefined} />
         </div>
       ) : (
         <PreviewEmpty onOpen={go} />

@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('stm', {
     save: (t) => ipcRenderer.invoke('triggers:save', t),
     remove: (id) => ipcRenderer.invoke('triggers:delete', id),
     run: (id) => ipcRenderer.invoke('triggers:run', id),
+    webhook: (id) => ipcRenderer.invoke('triggers:webhook', id),
     runs: () => ipcRenderer.invoke('runs:list'),
     begin: (sid, t, resume) => ipcRenderer.invoke('runs:begin', sid, t, resume),
     gate: (run, ok) => ipcRenderer.invoke('runs:gate', run, ok),
@@ -84,6 +85,7 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('local:pull', l)
     },
   },
+  clearBrowse: (sid) => ipcRenderer.invoke('browse:clear', sid),
   onBrowseNet: (fn) => {
     const l = (_e, v) => fn(v)
     ipcRenderer.on('browse:net', l)
@@ -244,6 +246,8 @@ contextBridge.exposeInMainWorld('stm', {
   newSession: (opts) => ipcRenderer.invoke('session:new', opts || {}),
   closeSession: (sid) => ipcRenderer.invoke('session:close', sid),
   release: (sid) => ipcRenderer.invoke('chat:release', sid),
+  panelUsage: (sid) => ipcRenderer.invoke('panel:usage', sid),
+  panelCap: (sid, cap) => ipcRenderer.invoke('panel:cap', sid, cap),
   countTokens: (text, model) => ipcRenderer.invoke('tokens:count', text, model),
   memoryNode: (id) => ipcRenderer.invoke('memory:node', id),
   guardInject: (text) => ipcRenderer.invoke('guard:inject', text),
@@ -866,6 +870,8 @@ contextBridge.exposeInMainWorld('stm', {
     },
     setAuto: (a, b, on) => ipcRenderer.invoke('panel:linkAuto', a, b, on),
     setCap: (a, b, usd) => ipcRenderer.invoke('panel:linkCap', a, b, usd),
+    roomPost: (sids, text) => ipcRenderer.invoke('room:post', sids, text),
+    roomNext: () => ipcRenderer.invoke('room:next'),
   },
   stmCli: {
     onOpen: (fn) => {

@@ -4439,3 +4439,7 @@ table.tbl tbody tr:last-child > td { border-bottom: 0; }
 .loop-steps code { font: 12px/1.5 var(--mono); overflow-wrap: anywhere; }
 .loop-tool { font-weight: 600; }
 .loop-card .ask-actions { flex-wrap: wrap; }
+.cv-room { position: absolute; right: 12px; bottom: 56px; width: min(420px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--raised); color: var(--text); z-index: 5; cursor: auto; }
+.cv-room textarea { width: 100%; resize: vertical; }
+.cv-room-who, .cv-room-row span { font-size: 12px; opacity: 0.8; }
+.cv-room-row { display: flex; align-items: center; gap: 6px; }

@@ -84,6 +84,7 @@ export type Bridge = {
     save: (t: Trigger) => Promise<Trigger[]>
     remove: (id: string) => Promise<Trigger[]>
     run: (id: string) => Promise<void>
+    webhook: (id: string) => Promise<{ curl: string; listening: boolean } | null>
     runs: () => Promise<import('../shared/runs').Run[]>
     begin: (sid: string, t: { id: string; name: string; prompt: string; gate?: boolean }, resume?: string) => Promise<void>
     gate: (run: string, ok: boolean) => Promise<void>
@@ -179,6 +180,7 @@ export type Bridge = {
     onDelta: (fn: (id: string, text: string) => void) => () => void
     onPull: (fn: (p: { name: string; status: string; done: number }) => void) => () => void
   }
+  clearBrowse: (sid: string) => Promise<void>
   onBrowseNet: (fn: (v: { wc: number; method: string; url: string; status?: number; error?: string; at: number }) => void) => () => void
   onPanelFocus: (fn: (sid: string) => void) => () => void
   devices: {
@@ -675,6 +677,8 @@ export type Bridge = {
   stopShell: (sid: string, id: string) => Promise<void>
   send: (sid: string, text: string, attachments?: import('../shared/attach').Attachment[], why?: string) => Promise<void | { held: true }>
   release: (sid: string) => Promise<void>
+  panelUsage: (sid: string) => Promise<{ usage: import('../shared/panelusage').Usage; cap: import('../shared/panelusage').Cap }>
+  panelCap: (sid: string, cap: import('../shared/panelusage').Cap) => Promise<import('../shared/panelusage').Cap>
   countTokens: (text: string, model?: string) => Promise<{ tokens: number; exact: boolean }>
   worktree: {
     stat: (sid: string) => Promise<{ files: number; added: number; removed: number; list: { path: string; added: number; removed: number }[] } | null>
@@ -956,7 +960,7 @@ export type Bridge = {
     history: (uuid: string) => Promise<import('../electron/deploys').Deployment[]>
     onEvent: (fn: (e: DeployEvent) => void) => () => void
   }
-  panelBus: { onInbox: (fn: (sid: string, text: string, sent: boolean) => void) => () => void; links: () => Promise<Record<string, PanelLinkView[]>>; onLinks: (fn: (v: Record<string, PanelLinkView[]>) => void) => () => void; setAuto: (a: string, b: string, on: boolean) => Promise<Record<string, PanelLinkView[]>>; setCap: (a: string, b: string, usd: number) => Promise<Record<string, PanelLinkView[]>> }
+  panelBus: { onInbox: (fn: (sid: string, text: string, sent: boolean) => void) => () => void; links: () => Promise<Record<string, PanelLinkView[]>>; onLinks: (fn: (v: Record<string, PanelLinkView[]>) => void) => () => void; setAuto: (a: string, b: string, on: boolean) => Promise<Record<string, PanelLinkView[]>>; setCap: (a: string, b: string, usd: number) => Promise<Record<string, PanelLinkView[]>>; roomPost?: (sids: string[], text: string) => Promise<{ panel: string; left: number }>; roomNext?: () => Promise<{ panel: string; delivery: string; left: number }> }
   stmCli: { onOpen: (fn: (r: { req: string; cwd?: string; persona?: string; model?: string }) => void) => () => void; opened: (req: string, sid: string) => void; install: () => Promise<{ file: string; onPath: boolean; hint: string }> }
   vec: { status: (cwd: string) => Promise<{ model: string | null; models: string[]; size: number; total: number; project: string }>; model: (m: string | null) => Promise<string | null>; build: (cwd: string) => Promise<{ total: number; done: number }> }
   memtest: (cwd: string, question: string, where: 'local' | 'claude') => Promise<{ without: string; withMem: string; backedWithout: number; backedWith: number; agree: number }>

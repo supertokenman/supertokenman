@@ -55,6 +55,7 @@ export const toolName = (n: string) =>
 // first words that are almost always a command, not a question
 // the terminal (xterm, a third of the start-up bundle) and Preview load the first time their tab opens
 const PreviewView = lazy(() => import('./PreviewView').then((m) => ({ default: m.PreviewView })))
+const UsageChip = lazy(() => import('./UsageChip').then((m) => ({ default: m.UsageChip })))
 const TermView = lazy(() => import('./TermView').then((m) => ({ default: m.TermView })))
 
 const COMMANDS = /^(git|npm|npx|pnpm|yarn|bun|node|deno|python3?|pip3?|uv|ls|cd|cat|grep|rg|find|make|cargo|go|docker|kubectl|wrangler|supabase|neonctl|gh|curl|brew|tsc|vitest|jest|pytest|ruby|bundle|rails|php|composer|mvn|gradle|terraform|aws|gcloud|ssh|scp|rm|mv|cp|mkdir|touch|echo|export|source|chmod|tail|head|ps|kill|open|code)(\s|$)/
@@ -623,6 +624,7 @@ export function Panel(props: {
           </button>
         )}
         {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
+        <Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense>
         <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
         <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
         {!s.sandbox && <IsolateChip sid={sid} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />}
@@ -653,7 +655,7 @@ export function Panel(props: {
       <div className="hud" data-tip={WHY[mood]} role="img" aria-label={WHY[mood]} dangerouslySetInnerHTML={{ __html: themed(hudMini(hudView(s, money, Date.now()))) }} />
 
       {/* stays mounted once opened, so switching tabs keeps the page and its state */}
-      {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><Suspense fallback={null}><PreviewView servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></Suspense></section>}
+      {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><Suspense fallback={null}><PreviewView panel={sid} servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></Suspense></section>}
       {(tab === 'terminal' || termed) && <section className="preview-host" hidden={tab !== 'terminal'}><Suspense fallback={null}><TermView sid={sid} active={tab === 'terminal'} onAttach={(note) => attachFromBrowser([], note)} /></Suspense></section>}
       <main ref={scroller} className="scroll" hidden={tab === 'preview' || tab === 'terminal'}>
         <div className="column">

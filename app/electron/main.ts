@@ -4,6 +4,7 @@ import { readFile as readFileAsync } from 'node:fs/promises'
 import { guardIpc, lockPermissions, reportIpcErrors, UI_SCHEME, UI_URL, uiFile } from './hardening.js'
 import { errlog, report as diagReport } from './errlog.js'
 import { loopConfig } from '../shared/loopguard.js'
+import { isPanelPartition, panelPartition, profileDir, withProfile } from '../shared/panelbrowser.js'
 import { badge, contextMenu, keepBounds, menuTemplate, savedBounds, windowStateFile } from './native.js'
 import { crashReporter, app, BrowserWindow, Menu, nativeImage, Tray, globalShortcut, net, Notification, protocol, dialog, ipcMain, nativeTheme, powerMonitor, safeStorage, systemPreferences, session as electronSession, shell as desktop, webContents as allWebContents } from 'electron'
 import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, symlinkSync, unlinkSync, watch, writeFileSync } from 'node:fs'
@@ -98,6 +99,8 @@ import { contentService } from './content/service.js'
 import { paths as enginePaths } from './content/engines.js'
 import { cleanConfig, PROVIDERS, typeOf, upload, type StorageConfig, type StorageKeys } from './content/storage.js'
 import type { NetworkId } from './social/core.js'
+import * as WH from '../shared/webhook.js'
+import { createServer as createHttpServer, type Server } from 'node:http'
 import { cleanTrigger, isDue, newReviews, type Trigger } from '../shared/triggers.js'
 import { cleanPrefs, Gate, passwordPrompt, type LockPrefs } from './lock.js'
 import { CATALOG, OPEN_SHIM, routeLogins, serversFor } from './integrations.js'
@@ -163,6 +166,7 @@ import { companion } from './companion.js'
 import { runFilter, throughFilters } from './filterbox.js'
 import { EXAMPLE_PLAYBOOK, parsePlaybook, stepPrompt, type PbRun } from '../shared/playbook.js'
 import * as WT from '../shared/worktasks.js'
+import * as PU from '../shared/panelusage.js'
 import * as ISO from '../shared/isolate.js'
 import * as RT from '../shared/routines.js'
 import * as SI from '../shared/skillimport.js'
@@ -219,6 +223,7 @@ import { withRule } from '../shared/corrections.js'
 import { addChoice, kindOf, presetOf, vote, type Choice, type Kind, type Tally, type Winner } from '../shared/arena.js'
 import { evalPrompt, grade, parseCases, rewritePrompt, type EvalResult } from '../shared/evals.js'
 import * as ME from '../shared/modeleval.js'
+import * as RM from '../shared/room.js'
 import * as RL from '../shared/reviewloop.js'
 import * as RN from '../shared/reviewnotes.js'
 import * as PF from '../shared/projectfiles.js'
@@ -350,6 +355,10 @@ const OUTSIDE_TOOL = (tool: string) => /^(WebFetch|WebSearch|Read|Bash|Grep)$/.t
 // budgets: each panel's cost so far and its recent turns, today's spend by project and persona, and the
 // message a limit is holding until the person lets it through
 const panelCost = new Map<string, { total: number; recent: number[] }>()
+// usage each panel's CLI reported, and the panel's own cap
+const panelUse = new Map<string, PU.Usage>()
+const panelCap = new Map<string, PU.Cap>()
+const useOf = (sid: string) => panelUse.get(sid) ?? PU.empty('Claude Code')
 const personaOf = new Map<string, string>()
 const held = new Map<string, { text: string; attachments: Attachment[] }>()
 const budgetWarned = new Map<string, string>()
@@ -595,6 +604,8 @@ ipcMain.handle('wt:decide', (_e, id: string, decision: string) => {
 function budgetVerdict(sid: string) {
   const st = settings()
   const p = panelCost.get(sid) ?? { total: 0, recent: [] }
+  const cv = PU.capVerdict(useOf(sid), panelCap.get(sid) ?? {})
+  if (!cv.ok) return { ok: false as const, scope: 'panel' as const, spent: 0, limit: 0, estimate: estimateTurn(p.recent), reason: cv.reason }
   const tk = workTasks().find((t) => t.status === 'open' && t.sids.includes(sid))
   if (tk) {
     const v = WT.taskVerdict(tk, estimateTurn(p.recent))
@@ -604,6 +615,7 @@ function budgetVerdict(sid: string) {
 }
 function track(sid: string, e: { kind?: string; windows?: { kind: string; percentUsed: number; resetsAt?: string }[]; model?: string; costUsd?: number; inputTokens?: number; outputTokens?: number; cacheRead?: number; cacheWrite?: number; tokens?: number; path?: string; durationMs?: number; cacheTtlMs?: number }) {
   if (e.kind === 'limits' && e.windows) {
+    panelUse.set(sid, PU.addWindows(useOf(sid), e.windows))
     // the newest reading of the plan's windows, for the menu bar
     liveLimits = [...(liveLimits ?? []).filter((w) => !e.windows!.some((x) => x.kind === w.kind)), ...e.windows]
     refreshTray()
@@ -626,13 +638,14 @@ function track(sid: string, e: { kind?: string; windows?: { kind: string; percen
     const kept = seenBy.get(sid)?.settle() ?? 0
     if (kept) (savings.save('reread', Math.min(kept / 4, 25_000), modelOf.get(sid)), meterAdd(sid, 'reread', Math.min(kept / 4, 25_000)))
   }
+  if (e.kind === 'turn') panelUse.set(sid, PU.addTurn(useOf(sid), e))
   if (e.kind === 'turn') savings.turn(modelOf.get(sid) ?? '', e.costUsd ?? 0, (e.inputTokens ?? 0) + (e.outputTokens ?? 0) + (e.cacheRead ?? 0) + (e.cacheWrite ?? 0), e.cacheRead ?? 0)
   else if (e.kind === 'cut') (savings.save('condenser', e.tokens ?? 0, modelOf.get(sid)), meterAdd(sid, 'condenser', e.tokens ?? 0))
 }
 /** A message to the window, dropped once it is gone (during quit, panels and helpers may still speak). */
 /** The panel's browser for sites that are not this machine: its own storage, apart from the web apps;
  * a persona gets its own (persist:browse-<id>), so each keeps its own sign-ins. */
-const isBrowse = (p: string) => p === BROWSE || /^persist:browse-[a-z0-9-]{1,40}$/.test(p)
+const isBrowse = (p: string) => p === BROWSE || isPanelPartition(p) || /^persist:browse-[a-z0-9-]{1,40}$/.test(p)
 const browseSessions = new Set<Electron.Session>()
 const watched = new Set<string>()
 // requests that failed in the panel's browser, for its Network list: errors and 4xx/5xx only
@@ -1133,9 +1146,10 @@ ipcMain.handle('triggers:save', (_e, t: Partial<Trigger>) => {
   const i = list.findIndex((x) => x.id === next.id)
   // a changed schedule starts counting from now, not from a run under the old one
   saveTriggers(i >= 0 ? list.map((x, k) => (k === i ? { ...next, lastRun: x.lastRun, armedAt: Date.now() } : x)) : [...list, { ...next, lastRun: undefined, armedAt: Date.now() }])
+  syncWebhook()
   return triggers()
 })
-ipcMain.handle('triggers:delete', (_e, id: string) => (saveTriggers(triggers().filter((x) => x.id !== id)), triggers()))
+ipcMain.handle('triggers:delete', (_e, id: string) => (saveTriggers(triggers().filter((x) => x.id !== id)), vault?.delete(WH.vaultName(id)), syncWebhook(), triggers()))
 ipcMain.handle('triggers:run', (_e, id: string) => {
   const t = triggers().find((x) => x.id === id)
   if (t) fire(t)
@@ -1151,6 +1165,48 @@ function fireTimed(t: Trigger, extra = '') {
   if (t.hoursOnly && !withinHours(inboxData().hours, new Date())) return
   fire(t, extra)
 }
+// webhook triggers: listens on 127.0.0.1 only while a trigger has the webhook on; token in the vault, never logged
+let hookServer: Server | null = null
+const hookHit = WH.limiter()
+function syncWebhook() {
+  const on = triggers().some((t) => t.webhook)
+  if (on && !hookServer) {
+    hookServer = createHttpServer((req, res) => {
+      const end = (status: number, error?: string) => (res.writeHead(status, { 'content-type': 'application/json' }), res.end(JSON.stringify(error ? { error } : { ok: true })))
+      const c = WH.checkRequest({ method: req.method, url: req.url, host: req.headers.host, auth: req.headers.authorization, origin: req.headers.origin })
+      if (!c.ok) return end(c.status, c.error)
+      const t = triggers().find((x) => x.id === c.id && x.webhook)
+      const want = t && vault?.get(WH.vaultName(t.id))
+      if (!t || !want || !WH.sameToken(c.token, want)) return end(401, 'bad token')
+      if (!hookHit(t.id, Date.now())) return end(429, 'too many')
+      let body = ''
+      let size = 0
+      req.on('data', (d: Buffer) => {
+        size += d.length
+        if (size > WH.MAX_BODY) return (end(413, 'body too large'), req.destroy())
+        body += d.toString('utf8')
+      })
+      req.on('end', () => {
+        if (size > WH.MAX_BODY || res.writableEnded) return
+        fire(t, WH.untrusted(body))
+        end(202)
+      })
+    })
+    hookServer.on('error', (e) => (logs().error('webhook', `127.0.0.1:${WH.PORT}: ${(e as Error).message}`), (hookServer = null)))
+    hookServer.listen(WH.PORT, '127.0.0.1')
+  } else if (!on && hookServer) {
+    hookServer.close()
+    hookServer = null
+  }
+}
+/** The token for a webhook trigger, made on first ask; the window shows it only in the curl line. */
+ipcMain.handle('triggers:webhook', (_e, id: string) => {
+  const t = triggers().find((x) => x.id === id)
+  if (!t || !vault) return null
+  const name = WH.vaultName(t.id)
+  if (!vault.get(name)) vault.set(name, WH.makeToken((n) => randomBytes(n)))
+  return { curl: WH.curlLine(t.id, vault.get(name)!), listening: !!hookServer }
+})
 let reviewsSeen: Set<string> | null = null
 async function tickTriggers() {
   const now = Date.now()
@@ -1721,6 +1777,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
   for (const c of settings().custom ?? [])
     if (c.remote) servers[c.id] = { type: 'stdio', command: 'npx', args: ['-y', 'mcp-remote@0.15.2', c.remote] }
     else if (c.npm) servers[c.id] = { type: 'stdio', command: 'npx', args: ['-y', c.npm] }
+  // a Playwright browser drives this panel's own profile, never the person's browser
+  for (const v of Object.values(servers)) if (v.type === 'stdio' && Array.isArray(v.args)) v.args = withProfile(v.args, profileDir(app.getPath('userData'), sid))
   // reading files is offered only to a model big enough to be trusted with it
   const local = settings().smallModel
   const readOk = local ? (paramsOf((await localModels())?.find((m) => m.name === local)?.params) ?? 0) >= READ_MIN_PARAMS : false
@@ -2060,6 +2118,13 @@ ipcMain.handle('diag:open', () => desktop.openPath(logs().dir))
 ipcMain.handle('diag:selftest', () => {
   throw new Error('Self test: this error was thrown on purpose to check the log.')
 })
+/** Wipes a panel's browser: its partition's cookies and storage, and the Playwright profile folder. */
+async function clearPanelBrowser(sid: string) {
+  await electronSession.fromPartition(panelPartition(sid)).clearStorageData().catch(() => undefined)
+  await electronSession.fromPartition(panelPartition(sid)).clearCache().catch(() => undefined)
+  rmSync(profileDir(app.getPath('userData'), sid), { recursive: true, force: true })
+}
+ipcMain.handle('browse:clear', (_e, sid: string) => clearPanelBrowser(String(sid)))
 ipcMain.handle('session:close', (_e, sid: string) => {
   void noteStopped(sid)
   const rem = remoteOf.get(sid)
@@ -2077,10 +2142,13 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   const iso = isolated.get(sid)
   if (iso) (isolated.delete(sid), execFile('docker', ['rm', '-f', iso.name], () => undefined))
   panelCost.delete(sid)
+  panelUse.delete(sid)
+  panelCap.delete(sid)
   personaOf.delete(sid)
   budgetWarned.delete(sid)
   closeTerminal(String(sid))
   get(sid)?.close()
+  void clearPanelBrowser(sid)
   sessions.delete(sid)
   scopeOf.delete(sid)
   panelKeys.drop(sid)
@@ -2476,6 +2544,13 @@ ipcMain.handle('chat:release', (_e, sid: string) => {
   held.delete(sid)
   send(sid, { kind: 'released' })
   if (h) get(sid)?.send(h.text, h.attachments)
+})
+ipcMain.handle('panel:usage', (_e, sid: string) => ({ usage: useOf(String(sid)), cap: panelCap.get(String(sid)) ?? {} }))
+ipcMain.handle('panel:cap', (_e, sid: string, cap: PU.Cap) => {
+  const c = PU.cleanCap(cap ?? {})
+  if (c.usd || c.tokens) panelCap.set(String(sid), c)
+  else panelCap.delete(String(sid))
+  return c
 })
 ipcMain.handle('chat:drop', (_e, sid: string) => {
   held.delete(sid)
@@ -4494,6 +4569,7 @@ app.whenReady().then(() => {
     decrypt: (b) => safeStorage.decryptString(b),
   })
   registerHotkey(settings().hotkey ?? DEFAULT_HOTKEY)
+  syncWebhook()
   return createWindow()
 })
 // quick search from any app, like Spotlight: brings the window with the palette open; Esc on a
@@ -6080,6 +6156,59 @@ const asPanel = (a: Record<string, unknown>, what: string, detail = '') => {
   logs().info('stm:panel', `${sid} ${what}${detail ? ` ${detail}` : ''}`)
   return sid
 }
+/** A message from one panel to another: the link's cap checked, the turn charged to it, sent or left waiting per the link. */
+function deliverLinked(from: string, to: string, text: string, body: string) {
+  const link = PB.linkOf(links(), from, to)
+  const capped = PB.overCap(link, dayOf(new Date()))
+  if (capped) throw new Error(capped)
+  if (link) linkTurn.set(to, from)
+  const how = PB.deliveryOf(link)
+  if (how === 'auto') {
+    // the person turned auto on for this link: sent as if typed, with the same brake and approvals
+    refuseSecrets(text)
+    const v = budgetVerdict(to)
+    if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
+    tracePrompt(to, body, `Panel ${panelName(from)}`)
+    if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, body, true)
+    sessions.get(to)!.step(withGoal(body, goals.get(to) ?? null), `Panel ${panelName(from)}`).catch(() => undefined)
+  } else {
+    // never sent on its own: it waits in the composer until the person presses send
+    if (!win || win.isDestroyed()) throw new Error('The app window is closed; the message could not be queued.')
+    win.webContents.send('panel:inbox', to, body, false)
+    send(to, { kind: 'note', text: `A message from panel ${panelName(from)} is in the composer. Read it and press send, or clear it.` })
+  }
+  return how
+}
+const room = { members: [] as RM.Member[], ask: '', spoken: [] as string[] }
+// the room, only from the window: the person names who answers, and asks for each further turn
+ipcMain.handle('room:post', (_e, sids: string[], text: string) => {
+  const members = [...new Set((sids ?? []).map(String))].filter((s) => sessions.has(s)).map((sid) => ({ sid, name: panelName(sid) }))
+  const bad = RM.checkRoom(members, (a, b) => Boolean(PB.linkOf(links(), a, b)))
+  if (bad) throw new Error(bad)
+  const ask = String(text ?? '').slice(0, 100_000)
+  if (!ask.trim()) throw new Error('Nothing to send.')
+  const to = RM.firstSpeaker(ask, members)
+  refuseSecrets(ask)
+  const v = budgetVerdict(to)
+  if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
+  Object.assign(room, { members, ask, spoken: [to] })
+  tracePrompt(to, ask, 'Room')
+  if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, ask, true)
+  sessions.get(to)!.step(withGoal(ask, goals.get(to) ?? null), 'Room').catch(() => undefined)
+  logs().info('stm:panel', `room: ${to} answers first of ${members.length} (by the person, in the window)`)
+  return { panel: to, left: members.length - 1 }
+})
+ipcMain.handle('room:next', () => {
+  const t = RM.nextTurn(room.members, room.spoken)
+  if (!t) throw new Error(room.spoken.length ? 'Everyone in the room has had a turn.' : 'Send a room message first.')
+  const from = [...room.spoken].reverse().find((s) => PB.linkOf(links(), s, t.to))
+  if (!from) throw new Error(`${panelName(t.to)} is not linked to anyone who has spoken.`)
+  const text = RM.turnText(room.ask, panelName(from), lastReply.get(from)?.text ?? '')
+  const how = deliverLinked(from, t.to, text, PB.labelled(panelName(from), text))
+  room.spoken.push(t.to)
+  logs().info('stm:panel', `room: ${from} -> ${t.to} ${how}`)
+  return { panel: t.to, delivery: how, left: room.members.length - room.spoken.length }
+})
 const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
   whoami: (a) => {
     const sid = asPanel(a, 'whoami')
@@ -6115,25 +6244,7 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     if (!text.trim()) throw new Error('Nothing to send.')
     if (a.counted !== false) sendLimit.take(from)
     const body = PB.labelled(panelName(from), text)
-    const link = PB.linkOf(links(), from, to)
-    const capped = PB.overCap(link, dayOf(new Date()))
-    if (capped) throw new Error(capped)
-    if (link) linkTurn.set(to, from)
-    const how = PB.deliveryOf(link)
-    if (how === 'auto') {
-      // the person turned auto on for this link: sent as if typed, with the same brake and approvals
-      refuseSecrets(text)
-      const v = budgetVerdict(to)
-      if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
-      tracePrompt(to, body, `Panel ${panelName(from)}`)
-      if (win && !win.isDestroyed()) win.webContents.send('panel:inbox', to, body, true)
-      sessions.get(to)!.step(withGoal(body, goals.get(to) ?? null), `Panel ${panelName(from)}`).catch(() => undefined)
-    } else {
-      // never sent on its own: it waits in the composer until the person presses send
-      if (!win || win.isDestroyed()) throw new Error('The app window is closed; the message could not be queued.')
-      win.webContents.send('panel:inbox', to, body, false)
-      send(to, { kind: 'note', text: `A message from panel ${panelName(from)} is in the composer. Read it and press send, or clear it.` })
-    }
+    const how = deliverLinked(from, to, text, body)
     logs().info('stm:panel', `${from} -> ${to} ${how} (${text.length} chars)`)
     return { panel: to, delivery: how }
   },

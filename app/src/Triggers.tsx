@@ -6,6 +6,7 @@ import { DAYS, describe, EVERY, nextRun, type Trigger, type When } from '../shar
 import { clean } from './errors'
 import type { Run } from '../shared/runs'
 import { Checkbox, Select, TimeField } from './ui'
+import { PORT } from '../shared/webhook'
 
 const ago = (t?: number) => {
   if (!t) return 'Never ran'
@@ -148,6 +149,12 @@ function Editor(props: { t: Trigger; personas: Persona[]; onSave: (t: Trigger) =
         Only in business hours
         <span className="faint">Waits until the hours set in the Inbox open; Run now still runs at once.</span>
       </label>
+      <label className="trig-gate">
+        <Checkbox checked={t.webhook === true} onChange={(e) => set({ webhook: e.target.checked })} />
+        Start from a local webhook
+        <span className="faint">Listens on 127.0.0.1 only, never beyond this Mac. The request body reaches the run marked as untrusted data.</span>
+      </label>
+      {t.webhook && <Hook id={t.id} />}
       <div className="trig-scope">
         <span className="trig-scope-title">Limits for this run</span>
         <span className="faint">One per line or comma. Folders are relative to the project. Empty means no limit of that kind; anything outside a limit is refused, not asked.</span>
@@ -202,6 +209,20 @@ function Editor(props: { t: Trigger; personas: Persona[]; onSave: (t: Trigger) =
         <button className="ghost small" onClick={props.onCancel}>Cancel</button>
         <button className="primary small" disabled={!t.name.trim() || !t.prompt.trim() || (t.when.kind === 'schedule' && !days.length)} onClick={() => props.onSave(t)}>Save</button>
       </div>
+    </div>
+  )
+}
+
+function Hook(props: { id: string }) {
+  const [h, setH] = useState<{ curl: string; listening: boolean } | null | undefined>(undefined)
+  useEffect(() => void window.stm.triggers.webhook(props.id).then(setH, () => setH(null)), [props.id])
+  if (h === undefined) return null
+  if (!h) return <span className="faint">Save to get the curl line.</span>
+  if (!h.listening) return <span className="faint">Port {PORT} on this Mac is taken by another app, so the webhook is off. Free it and save again.</span>
+  return (
+    <div className="trig-hook">
+      <code>{h.curl}</code>
+      <button className="ghost small" onClick={() => void navigator.clipboard.writeText(h.curl).catch(() => undefined)}>Copy</button>
     </div>
   )
 }
