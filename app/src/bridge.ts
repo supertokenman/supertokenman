@@ -1047,4 +1047,4 @@ export type BwState = import('../electron/bitwarden').Status & { links: { name: 
 
 export type RadarCfg = { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }
 
-export type PostNet = { net: import('../shared/social').Net; connected: boolean; host: string | null; mastodonLimit?: number }
+export type PostNet = { net: import('../shared/social').Net; connected: boolean; host: string | null; handle?: string; mastodonLimit?: number }

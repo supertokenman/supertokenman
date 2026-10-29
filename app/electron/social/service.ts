@@ -99,7 +99,7 @@ export function socialService(d: SocialDeps) {
   const accounts = () =>
     ACCOUNTS.map((n) => {
       const c = readCred(d.vault, n)
-      return { net: n, connected: Boolean(c), host: c ? hostOf(n, c) : null, mastodonLimit: n === 'mastodon' ? mastoLimit(c) : undefined }
+      return { net: n, connected: Boolean(c), host: c ? hostOf(n, c) : null, handle: c?.ids?.handle ? String(c.ids.handle) : undefined, mastodonLimit: n === 'mastodon' ? mastoLimit(c) : undefined }
     })
 
   /** One connection per network, shared by every feature. Bluesky signs in now and keeps only the session. */

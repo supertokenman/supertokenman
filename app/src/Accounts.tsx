@@ -7,8 +7,7 @@ import { clean } from './errors'
 
 const Projects = lazy(() => import('./Projects').then((x) => ({ default: x.Projects })))
 
-// The handle is not in PostNet yet (no IPC returns it); read it when the bridge adds it.
-const handleOf = (n?: PostNet): string => (n as (PostNet & { handle?: string }) | undefined)?.handle?.replace(/^@/, '') ?? ''
+const handleOf = (n?: PostNet): string => n?.handle?.replace(/^@/, '') ?? ''
 
 /**
  * The social accounts, one connection per network, shared by Post everywhere, Mentions and Business.
