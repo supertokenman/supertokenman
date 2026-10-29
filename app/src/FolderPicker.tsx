@@ -16,7 +16,7 @@ export function pickProjectFolder(title = 'Open a project folder'): Promise<stri
   return new Promise((resolve) => (ask ? ask({ title, resolve }) : void window.stm.pickFolder().then(resolve)))
 }
 
-const remembered = (): string[] => {
+export const remembered = (): string[] => {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '[]') as string[]
   } catch {
