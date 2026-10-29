@@ -21,7 +21,8 @@ const json = (h: Record<string, string> = {}) => ({ 'Content-Type': 'application
 
 /* ---------- LinkedIn ---------- */
 
-export const LINKEDIN_VERSION = '202510'
+/** Checked against LinkedIn's versioning page in October 2026: 202610 is the latest; versions live at least a year. */
+export const LINKEDIN_VERSION = '202610'
 export const linkedinMe = (c: Cred): Req => ({ method: 'GET', url: 'https://api.linkedin.com/v2/userinfo', headers: { Authorization: `Bearer ${c.accessToken}` } })
 /** LinkedIn's "little text" format treats these as markup; escaped, they show as typed. */
 export const linkedinEscape = (s: string) => s.replace(/[\\|{}@[\]()<>#*_~]/g, (m) => `\\${m}`)
