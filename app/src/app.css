@@ -4142,6 +4142,8 @@ button.remote-chip { cursor: pointer; }
 .tip[data-side='above'] { transform: translateY(3px); }
 .tip.on { opacity: 1; transform: none; }
 /* fields: an accent edge on focus, never the system's blue ring */
+/* search bars with no field box (palette, folder picker, Catalog, mail): no ring either; the caret and the open sheet show focus */
+:is(.pal-input, .search, .mail-search) input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):focus-visible { border-color: transparent !important; box-shadow: none !important; }
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):focus-visible,
 textarea:focus-visible, .ui-select:focus-visible { outline: none; border-color: rgba(var(--accent-rgb), 0.7) !important; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16); }
 :focus:not(:focus-visible) { outline: none; }
