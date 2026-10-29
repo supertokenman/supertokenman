@@ -243,6 +243,18 @@ by taps, swipes and typing. Ideas only, no code; not tested by us.
    plainly that these networks' terms forbid automated use whatever the purpose, so the account can be
    limited or banned, and the person decides.
 
+## Planned for 0.1.21: panels that ask each other, team bundles, a summary of the night
+
+Ideas from Codync, OpenMausBot and Noodle (all Apache-2.0; ideas only, no code taken). Built and checked
+by typecheck and unit tests; not yet run in the real app.
+
+1. Panels ask each other: stm ask <panel> "question" between linked panels, the answer coming back as the
+   asker's next message, through the same caps, budget and approvals as stm send.
+2. Team bundle: File, Export team... and Import team... (also stm team export|import), one Markdown file
+   with panels, links and triggers; import lists what it would make and creates nothing until confirmed.
+3. While you were away: a card with the events since the last time you were at the window (turns and cost,
+   approvals waiting, trigger runs, errors), with Read aloud on macOS. Local only.
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;

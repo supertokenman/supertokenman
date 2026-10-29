@@ -235,10 +235,27 @@ export const MANUAL: Section[] = [
 - stm send <panel> "text": puts "From panel <name>: text" in the front of that panel's composer and a note in the panel. It is never sent by itself: the person there reads it and presses send. Only when the person turns on auto-send for that link (click the "linked:" chip in the panel header) is it sent at once, through the same budget brake and the same tool approvals as typed text. An agent cannot turn auto-send on.
 - stm note get|set|append <name> [text]: notes shared by the panels of one project folder, kept on this machine in .supertokenman/notes/<name>.md (added to the repository's local git exclude), up to 64 KB each.
 - stm link <panel>, stm links: record and list links between panels. Data only for now: the header shows them, and a later canvas will draw them.
+- stm ask <panel> "question": ask a linked panel for help. Only between linked panels. The question goes by the same path as stm send (the link's daily cap, the budget, auto or waiting in the composer, approvals unchanged) as "Panel <name> asks for help"; when that panel's turn ends, its reply goes back to the asking panel as its next message, the same way. Refused if the asker already has 3 open questions, if the answer would loop back (A waits on B, B asks A), or if a question made while answering another is more than 2 deep. Open questions are kept in memory only and dropped when either panel closes. stm ask test, scan and preview keep their own meaning.
 - A panel can only act as itself: the app checks STM_PANEL_ID against STM_PANEL_KEY and refuses an unknown id or a key from another panel.
 - Limits per panel: stm send 10 a minute, stm spawn 5 an hour; over that, the command fails and says when to try again. They can be changed in the settings file (stmLimits: sendPerMin, spawnPerHour). Every action, and every refusal, is written to the app's log (Diagnostics).
 - Nothing here uses the network: it is the same local socket as the rest of stm.
 - For a project's CLAUDE.md: "Other SuperTokenMan panels can help. Run stm whoami to see who you are, stm spawn --prompt to hand off a task, stm send <panel> to message one, and stm note append <name> to leave shared notes. Use "$STM_CLI" if stm is not on PATH."`,
+  },
+  {
+    id: 'team-bundle',
+    title: 'Team bundle: panels, links and triggers as one Markdown file',
+    keys: 'team bundle export import markdown panels links triggers share file stm team folder',
+    body: `File, Export team... writes this window's panels (name, folder relative to their common parent, persona), the links between them (auto and cap) and the triggers whose folder is one of those panels, as one Markdown file you can read and edit. File, Import team... reads one and opens a sheet listing everything it would make; nothing is made until you pick a folder and press Create. Folders are made under the one you pick and must stay inside it; links are set between the new panels; triggers come in turned off, so turn each on yourself under Triggers. A panel's instructions, if the file has any, are put in its composer, not sent. A link that says auto starts on its own: check the list before Create.
+- stm team export <file> writes the file; stm team import <file> opens the same review sheet in the window and creates nothing. Both run from your terminal, not from inside a panel. Panel instructions in the file are the panel persona's: the app keeps none per panel. A trigger's read, write and commands scope is kept; its gate and webhook are not.
+- A trigger's schedule is written as the app shows it ("Mon to Fri at 09:00", "Every 30 min"); one the app cannot read comes in with the default schedule, still off.
+- A trigger's gate, scope and webhook settings are not in the file.`,
+  },
+  {
+    id: 'while-away',
+    title: 'While you were away',
+    keys: 'while you were away overnight summary since idle away card read aloud say what happened approvals waiting cost errors triggers',
+    body: `Cmd+K, While you were away. The app keeps the last 2000 things that happened (a turn ending with its cost, an approval waiting, a trigger run, an error, a review loop ending) in a file in its data folder; nothing leaves this machine. When the window gets focus after an hour without a key press, mouse movement, click or scroll (waking the Mac from sleep counts like coming back), a card lists what happened since: approvals waiting, trigger runs, turns and panels, errors, and what was spent. From the palette it shows what happened since the card was last shown (or the last 12 hours). Read aloud speaks it with the Mac's say command and exists on macOS only. The switch on the card turns off the automatic card; the palette entry stays.
+- Only what the app saw while it was running is counted. If it was closed, those hours are not in the card.`,
   },
   {
     id: 'deploys',

@@ -15,7 +15,7 @@ import { findRepos, repoRoots } from './repos.js'
 import { createServer as netServer } from 'node:net'
 import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { basename, extname, resolve } from 'node:path'
+import { basename, extname, relative, resolve, sep as pathSep } from 'node:path'
 import { Session, type UiEvent } from './session.js'
 import { Hub, SERVER, TOOLS } from './hub.js'
 import { ShellRunner } from './shell.js'
@@ -26,6 +26,11 @@ import { describe as describeLink, nowPlaying, osascript, script as spotifyScrip
 import { Vault } from './vault.js'
 import { cleanPersona, fromMarkdown, personaPrompt, STARTERS, toMarkdown, type Persona } from '../shared/personas.js'
 import { choosePrompt } from '../shared/router.js'
+import { claim as claimAsk, HEAD as ASK_HEAD, type Waiting } from '../shared/askroute.js'
+import * as TB from '../shared/teambus.js'
+import * as TM from '../shared/teambundle.js'
+import * as OV from '../shared/overnight.js'
+import { parseWhen } from '../shared/teamwhen.js'
 import { DEFAULT_HOTKEY, validHotkey } from '../shared/hotkey.js'
 import { mailService } from './mail/service.js'
 import { crawl, extract, onRead, readPage, saveWebConfig, setWebDir, setWebStore, webConfig, webDir, webReady } from './web/reader.js'
@@ -101,7 +106,7 @@ import { cleanConfig, PROVIDERS, typeOf, upload, type StorageConfig, type Storag
 import type { NetworkId } from './social/core.js'
 import * as WH from '../shared/webhook.js'
 import { createServer as createHttpServer, type Server } from 'node:http'
-import { cleanTrigger, isDue, newReviews, type Trigger } from '../shared/triggers.js'
+import { cleanTrigger, describe as describeWhen, isDue, newReviews, type Trigger } from '../shared/triggers.js'
 import { cleanPrefs, Gate, passwordPrompt, type LockPrefs } from './lock.js'
 import { CATALOG, OPEN_SHIM, routeLogins, serversFor } from './integrations.js'
 import { decisions, DECISION_RULE, digest, graphCached, projectMemory, projectName, readDoc, readNote, writeDoc, remember, rememberDecisions, search, sessionNotes, vaultDir } from './memory.js'
@@ -302,7 +307,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
+type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[] }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -686,7 +691,7 @@ const placeOf = (sid: string) => basename(shells.get(sid)?.cwd ?? '') || 'A pane
 const traceParts = new Map<string, ContextPart[]>()
 const traceTurns = new Map<string, TraceTurn[]>()
 const pendingSpans = new Map<string, SpanEvent[]>()
-const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; why?: string; tools: string[]; edits?: number }>()
+const pendingTurn = new Map<string, { id?: string; at: number; prompt: string; why?: string; tools: string[]; edits?: number; askId?: string }>()
 // a panel's goal, given with /goal: carried in front of each message until a reply says GOAL MET
 const goals = new Map<string, Goal>()
 // review loops by build and review panel (one loop per panel), and each panel's last reply for the next step
@@ -707,7 +712,7 @@ function readBands(): Band[] {
     return []
   }
 }
-function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: { name: string }[]; costUsd?: number; inputTokens?: number; outputTokens?: number; cacheRead?: number; isError?: boolean; durationMs?: number }) {
+function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: { name: string }[]; costUsd?: number; inputTokens?: number; outputTokens?: number; cacheRead?: number; isError?: boolean; durationMs?: number; text?: string }) {
   if (e.kind === 'assistant' && e.tools?.length) {
     const p = pendingTurn.get(sid) ?? { at: Date.now(), prompt: '', tools: [] }
     pendingTurn.set(sid, { ...p, tools: [...p.tools, ...e.tools.map((t) => t.name)] })
@@ -733,6 +738,7 @@ function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: {
     }
   }
   loopStep(sid, e.costUsd ?? 0, Boolean(e.isError))
+  answerAsks(sid, (p as { askId?: string }).askId, e.text ?? '', Boolean(e.isError))
   // a turn started by a message from a linked panel: its cost counts against that link
   const via = linkTurn.get(sid)
   if (via && p.prompt.startsWith('From panel ')) {
@@ -743,6 +749,66 @@ function traceEvent(sid: string, e: { kind?: string; span?: SpanEvent; tools?: {
   traceTurns.set(sid, addTurn(traceTurns.get(sid) ?? [], { id: p.id, goal: goals.get(sid)?.text, at: p.at, persona: personaOf.get(sid), model: s?.model, why: p.why, prompt: p.prompt.slice(0, 600), tools: p.tools, costUsd: e.costUsd ?? 0, inputTokens: e.inputTokens ?? 0, outputTokens: e.outputTokens ?? 0, cacheRead: e.cacheRead ?? 0, isError: Boolean(e.isError), ms: e.durationMs, spans }))
   obs.afterTurn(traceTurns.get(sid)![0]!)
 }
+// "While you were away": a ring of the last 2000 things that happened, kept in the app's data folder; no network
+const awayFile = () => join(app.getPath('userData'), 'away.json')
+let awayData: { events: OV.Event[]; seen: number } | null = null
+let awayTimer: ReturnType<typeof setTimeout> | null = null
+function awayState() {
+  if (awayData) return awayData
+  try {
+    const j = JSON.parse(readFileSync(awayFile(), 'utf8')) as { events?: OV.Event[]; seen?: number }
+    awayData = { events: Array.isArray(j.events) ? j.events.slice(-2000) : [], seen: Number(j.seen) || 0 }
+  } catch {
+    awayData = { events: [], seen: 0 }
+  }
+  return awayData
+}
+function awaySave() {
+  if (awayTimer) clearTimeout(awayTimer)
+  awayTimer = null
+  try {
+    writeFileSync(awayFile(), JSON.stringify(awayState()))
+  } catch {
+    // the summary is best effort
+  }
+}
+function awayLog(kind: OV.Event['kind'], panel: string, text?: string, costUsd?: number) {
+  const d = awayState()
+  const t = text ? redact(text, vault?.all() ?? []).text.slice(0, 200) : ''
+  d.events.push({ at: Date.now(), panel, kind, ...(t ? { text: t } : {}), ...(costUsd && costUsd > 0 ? { costUsd } : {}) })
+  if (d.events.length > 2000) d.events.splice(0, d.events.length - 2000)
+  awayTimer ??= setTimeout(awaySave, 5000)
+}
+app.on('will-quit', () => awayData && awaySave())
+// pointer and wheel input is seen by the page (keys also here); waking from sleep counts like coming back to the window
+ipcMain.on('away:touch', (e) => e.sender === win?.webContents && (lastActive = Date.now()))
+void app.whenReady().then(() => powerMonitor.on('resume', awayFocus))
+let awayLast: { title: string; lines: string[] } | null = null
+let lastActive = Date.now()
+function awayCard(from: number) {
+  const d = awayState()
+  const now = Date.now()
+  awayLast = OV.summary(d.events, from, now)
+  d.seen = now
+  awaySave()
+  return { ...awayLast, empty: OV.since(d.events, from).length === 0, canSpeak: process.platform === 'darwin', on: settings().awayCard !== false }
+}
+/** The window gained focus: after an hour without input, the card shows what happened meanwhile. */
+function awayFocus() {
+  const from = lastActive
+  lastActive = Date.now()
+  if (lastActive - from < 60 * 60_000 || settings().awayCard === false) return
+  const c = awayCard(from)
+  if (!c.empty) toWin('away:show', c)
+}
+ipcMain.handle('away:get', () => awayCard(awayState().seen || Date.now() - 12 * 3_600_000))
+ipcMain.handle('away:setting', (_e, on: boolean) => (saveSettings({ ...settings(), awayCard: Boolean(on) }), Boolean(on)))
+ipcMain.handle('away:say', () => {
+  if (process.platform !== 'darwin') throw new Error('Read aloud needs macOS.')
+  if (!awayLast) throw new Error('Nothing to read.')
+  const args = OV.sayArgs(OV.speech(awayLast))
+  return new Promise<void>((done, fail) => execFile('say', args, { timeout: 120_000 }, (e) => (e ? fail(new Error('say failed: ' + e.message)) : done())))
+})
 /** After a turn in a review loop: pass the reply on, or end the loop and say why in both panels. */
 function loopStep(sid: string, costUsd: number, isError: boolean) {
   const l = reviewLoops.get(sid)
@@ -754,6 +820,7 @@ function loopStep(sid: string, costUsd: number, isError: boolean) {
     reviewLoops.delete(l.review)
     for (const p of [l.build, l.review]) send(p, { kind: 'note', text: `Review loop ended: ${why} Spent $${l.spentUsd.toFixed(2)}.` })
     logs().info('stm:loop', `${l.build}/${l.review} ended: ${why}`)
+    awayLog('loop-ended', panelName(l.build), why)
   }
   if (isError) return end('the last turn ended with an error.')
   const r = RL.next(l, sid, reply, costUsd, { build: panelName(l.build), review: panelName(l.review) })
@@ -773,7 +840,18 @@ function loopStep(sid: string, costUsd: number, isError: boolean) {
     end(`${(e as Error).message}`)
   }
 }
-const tracePrompt = (sid: string, prompt: string, why?: string) => pendingTurn.set(sid, { id: `${sid}-t${++turnSeq}`, at: Date.now(), prompt, why, tools: [] })
+// asks: delivered to an idle-or-auto panel (bound as its turn starts) or queued in the composer (claimed when the person sends it)
+const askBind = new Map<string, string>()
+const askWaiting = new Map<string, Waiting[]>()
+function tracePrompt(sid: string, prompt: string, why?: string) {
+  let askId = askBind.get(sid)
+  askBind.delete(sid)
+  if (!askId) {
+    const c = claimAsk(askWaiting.get(sid) ?? [], prompt)
+    if (c) (askId = c.id, askWaiting.set(sid, c.rest))
+  }
+  pendingTurn.set(sid, { id: `${sid}-t${++turnSeq}`, at: Date.now(), prompt, why, tools: [], ...(askId ? { askId } : {}) })
+}
 const turnOf = (sid: string) => pendingTurn.get(sid)?.id
 // outlet filters change how a reply is shown (not what Claude saw); events of a panel keep their order
 const outletChain = new Map<string, Promise<void>>()
@@ -806,6 +884,11 @@ function sendNow(sid: string, e: unknown) {
   // spans go into the trace, not to the window
   if (ev.kind === 'span') return
   quotaWatch(sid, ev)
+  if (ev.kind === 'turn') {
+    awayLog('turn', panelName(sid), undefined, (e as { costUsd?: number }).costUsd)
+    if (ev.isError) awayLog('error', panelName(sid), ev.text)
+  } else if (ev.kind === 'error') awayLog('error', panelName(sid), (e as { message?: string }).message)
+  else if (ev.kind === 'permission') awayLog('approval-waiting', panelName(sid))
   if (ev.kind === 'loop') {
     const l = e as { reason: string; usd: number; tokens: number }
     loopPaused.add(sid)
@@ -926,6 +1009,9 @@ async function createWindow() {
   if (was?.maximized) win.maximize()
   if (!fixed) keepBounds(win, windowStateFile())
   contextMenu(win, !app.isPackaged)
+  win.on('focus', awayFocus)
+  win.on('blur', () => (lastActive = Date.now()))
+  win.webContents.on('before-input-event', () => (lastActive = Date.now()))
   Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate((id) => win && !win.isDestroyed() && win.webContents.send('menu:go', id), { mac: process.platform === 'darwin', dev: !app.isPackaged, name: 'SuperTokenMan' })))
   // a webview shows one of the drawer's web apps on its own sites, or a dev server on this machine in a
   // panel's Preview; never with a preload or Node
@@ -1155,6 +1241,7 @@ ipcMain.handle('triggers:run', (_e, id: string) => {
   if (t) fire(t)
 })
 function fire(t: Trigger, extra = '') {
+  awayLog('trigger-run', t.name)
   saveTriggers(triggers().map((x) => (x.id === t.id ? { ...x, lastRun: Date.now() } : x)))
   if (!win || win.isDestroyed()) return
   win.webContents.send('trigger:fire', { id: t.id, name: t.name, persona: t.persona, cwd: t.cwd, prompt: extra ? `${t.prompt}\n\n${extra}` : t.prompt, gate: t.gate })
@@ -2152,6 +2239,9 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   sessions.delete(sid)
   scopeOf.delete(sid)
   panelKeys.drop(sid)
+  askBind.delete(sid)
+  askWaiting.delete(sid)
+  for (let i = openAsks.length - 1; i >= 0; i--) if (openAsks[i]!.from === sid || openAsks[i]!.to === sid) openAsks.splice(i, 1)
   sourceOf.delete(sid)
   gateway.revoke(sid)
   snapEvents.delete(sid)
@@ -6179,6 +6269,23 @@ function deliverLinked(from: string, to: string, text: string, body: string) {
   }
   return how
 }
+/** Open asks between panels, in memory only; an ask ends when its target's turn ends, or when either panel closes. */
+const openAsks: TB.Ask[] = []
+let askSeq = 0
+/** The target's turn that began with an ask has ended: its reply goes back to the asker as that panel's next message. */
+function answerAsks(sid: string, askId: string | undefined, reply: string, isError: boolean) {
+  const a = askId ? openAsks.find((x) => x.id === askId && x.to === sid) : undefined
+  if (!a) return
+  openAsks.splice(openAsks.indexOf(a), 1)
+  try {
+    if (!sessions.has(a.from)) return
+    const text = isError ? `Panel ${panelName(sid)} could not answer: its turn ended with an error.` : TB.replyText(panelName(sid), a, reply)
+    deliverLinked(sid, a.from, text, PB.labelled(panelName(sid), text))
+  } catch (e) {
+    logs().warn('stm:panel', `answer from ${sid} to ${a.from} not delivered: ${(e as Error).message}`)
+    if (sessions.has(a.from)) send(a.from, { kind: 'note', tone: 'error', text: `The answer from ${panelName(sid)} could not be delivered: ${(e as Error).message}` })
+  }
+}
 const room = { members: [] as RM.Member[], ask: '', spoken: [] as string[] }
 // the room, only from the window: the person names who answers, and asks for each further turn
 ipcMain.handle('room:post', (_e, sids: string[], text: string) => {
@@ -6209,6 +6316,7 @@ ipcMain.handle('room:next', () => {
   logs().info('stm:panel', `room: ${from} -> ${t.to} ${how}`)
   return { panel: t.to, delivery: how, left: room.members.length - room.spoken.length }
 })
+const canOpen = (from: string) => TB.canOpen(openAsks, from)
 const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
   whoami: (a) => {
     const sid = asPanel(a, 'whoami')
@@ -6247,6 +6355,31 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     const how = deliverLinked(from, to, text, body)
     logs().info('stm:panel', `${from} -> ${to} ${how} (${text.length} chars)`)
     return { panel: to, delivery: how }
+  },
+  // a question to a linked panel; its reply comes back to this panel as its next message, by the same rules as stm send
+  pask: async (a) => {
+    const from = asPanel(a, 'ask', `to ${a.panel}`)
+    const to = panelId(a.panel)
+    if (!PB.linkOf(links(), from, to)) throw new Error(`Not linked to ${to}. The person links panels, or run: stm link ${to}`)
+    const full = canOpen(from)
+    if (full) throw new Error(full)
+    if (TB.wouldLoop(openAsks, from, to)) throw new Error(`${panelName(to)} is already waiting on an answer from ${panelName(from)} (or a panel it asked), so this would loop.`)
+    const depth = Math.max(-1, ...openAsks.filter((x) => x.to === from).map((x) => x.depth)) + 1
+    const ask = TB.newAsk(from, to, String(a.question ?? '').slice(0, 100_000), depth, Date.now(), `a${Date.now().toString(36)}${++askSeq}`)
+    sendLimit.take(from)
+    const text = TB.askText(panelName(from), ask)
+    const body = PB.labelled(panelName(from), text)
+    askBind.set(to, ask.id)
+    let how: 'queued' | 'auto'
+    try {
+      how = deliverLinked(from, to, text, body)
+    } finally {
+      askBind.delete(to)
+    }
+    if (how === 'queued') askWaiting.set(to, [...(askWaiting.get(to) ?? []), { id: ask.id, head: body.slice(0, ASK_HEAD) }])
+    openAsks.push(ask)
+    logs().info('stm:panel', `${from} asked ${to} ${how} (depth ${depth})`)
+    return { panel: to, delivery: how, ask: ask.id }
   },
   pnote: (a) => {
     const op = String(a.op ?? '')
@@ -6300,6 +6433,120 @@ ipcMain.handle('panel:linkAuto', (_e, a: string, b: string, on: boolean) => {
   saveLinks(links().map((x) => (x === l ? { ...x, auto: Boolean(on) } : x)))
   logs().info('stm:panel', `link ${a}-${b} auto ${on ? 'on' : 'off'} (by the person, in the window)`)
   return panelLinksView()
+})
+// a team of panels as one Markdown file: this window's panels, the links between them and the triggers that point at them.
+// Import only shows the plan in the window; panels, links and triggers (turned off) are made when the person confirms there.
+function buildTeam(): TM.Team {
+  const sids = [...sessions.keys()]
+  if (!sids.length) throw new Error('No panels are open.')
+  const dirs = sids.map((s) => resolve(panelDir(s) || '.'))
+  let root = dirs[0]!.split(pathSep)
+  for (const d of dirs) {
+    const p = d.split(pathSep)
+    let n = 0
+    while (n < root.length && n < p.length && root[n] === p[n]) n++
+    root = root.slice(0, n)
+  }
+  const base = root.join(pathSep) || pathSep
+  const taken = new Set<string>()
+  const nameOf = new Map<string, string>()
+  for (const sid of sids) {
+    const raw = panelName(sid).replace(/[\r\n]+/g, ' ').replace(/<->/g, '-').trim() || 'panel'
+    let n = raw
+    for (let i = 2; taken.has(n); i++) n = `${raw} ${i}`
+    taken.add(n)
+    nameOf.set(sid, n)
+  }
+  const panelOfDir = new Map<string, string>()
+  const panels = sids.map((sid, i) => {
+    if (!panelOfDir.has(dirs[i]!)) panelOfDir.set(dirs[i]!, nameOf.get(sid)!)
+    const persona = personaOf.get(sid)
+    // the app keeps instructions per persona, not per panel: a panel with a persona carries that persona's
+    const text = persona ? (personas().find((x) => x.id === persona)?.instructions ?? '') : ''
+    return { name: nameOf.get(sid)!, folder: relative(base, dirs[i]!).split(pathSep).join('/') || '.', ...(persona ? { persona } : {}), instructions: redact(text, vault?.all() ?? []).text.slice(0, TM.MAX_INSTRUCTIONS) }
+  })
+  const ls = links().filter((l) => nameOf.has(l.a) && nameOf.has(l.b)).map((l) => ({ a: nameOf.get(l.a)!, b: nameOf.get(l.b)!, auto: l.auto === true, ...(l.capUsd ? { capUsd: l.capUsd } : {}) }))
+  const ts = triggers().flatMap((t) => {
+    const panel = t.cwd ? panelOfDir.get(resolve(t.cwd)) : undefined
+    if (!panel) return []
+    // scope folders are written relative to the panel's folder; one outside it cannot be written and is left out
+    const rel = (l: string[]) => l.flatMap((p) => { const r = p.startsWith('/') ? relative(t.cwd, p) : p; return r && !r.startsWith('..') && !/^([\\/]|[A-Za-z]:)/.test(r) ? [r.split(pathSep).join('/')] : [] })
+    const sc = t.scope ? { read: rel(t.scope.read), write: rel(t.scope.write), commands: t.scope.commands.filter((c) => !/[\r\n]/.test(c)) } : undefined
+    return [{ name: t.name, panel, when: describeWhen(t.when), prompt: t.prompt, ...(sc && (sc.read.length || sc.write.length || sc.commands.length) ? { scope: sc } : {}) }]
+  })
+  return { name: `${basename(base) || 'Team'} team`, description: 'Exported from SuperTokenMan. Panel instructions are the panel persona\'s instructions: the app keeps none per panel, so a panel without a persona has none. Trigger scope folders outside the trigger\'s panel folder, and triggers\' gate and webhook settings, are not included.', panels, links: ls, triggers: ts }
+}
+const teamCheck = (t: unknown) => TM.parseBundle(TM.toMarkdown(t as TM.Team))
+function teamReview(file: string) {
+  if (!win || win.isDestroyed()) throw new Error('The app window is closed; open it to review a team.')
+  const size = statSync(file).size
+  if (size > 1_000_000) throw new Error('That file is too big to be a team bundle.')
+  const team = TM.parseBundle(readFileSync(file, 'utf8'))
+  toWin('team:review', { team, lines: TM.reviewLines(team) })
+  return team
+}
+ipcMain.handle('team:export', async () => {
+  if (!win) return null
+  const r = await dialog.showSaveDialog(win, { title: 'Export team', defaultPath: 'team.md', filters: [{ name: 'Markdown', extensions: ['md'] }] })
+  if (r.canceled || !r.filePath) return null
+  writeFileSync(r.filePath, TM.toMarkdown(buildTeam()))
+  return r.filePath
+})
+ipcMain.handle('team:import', async () => {
+  if (!win) return false
+  const r = await dialog.showOpenDialog(win, { title: 'Import team', properties: ['openFile'], filters: [{ name: 'Markdown', extensions: ['md'] }] })
+  if (r.canceled || !r.filePaths[0]) return false
+  teamReview(r.filePaths[0])
+  return true
+})
+// the folders for the panels, made under the one the person picked; nothing else is made yet
+ipcMain.handle('team:prepare', (_e, team: unknown, base: string) => {
+  const t = teamCheck(team)
+  const root = resolve(String(base ?? ''))
+  if (!existsSync(root)) throw new Error(`No folder ${root}.`)
+  return t.panels.map((p) => {
+    const cwd = resolve(root, p.folder)
+    if (cwd !== root && !cwd.startsWith(root + pathSep)) throw new Error(`Folder ${p.folder} is outside the one you picked.`)
+    mkdirSync(cwd, { recursive: true })
+    // a persona that exists brings its own instructions; the file's are put in the composer only when it does not
+    const known = Boolean(p.persona && personas().some((x) => x.id === p.persona))
+    return { name: p.name, cwd, ...(known ? { persona: p.persona } : {}), instructions: known ? '' : p.instructions }
+  })
+})
+// the panels are open: links between them, and the triggers, turned off
+ipcMain.handle('team:apply', (_e, team: unknown, opened: Record<string, string>) => {
+  const t = teamCheck(team)
+  const sid = (n: string) => (sessions.has(String(opened?.[n])) ? String(opened[n]) : undefined)
+  let ls = links()
+  for (const l of t.links) {
+    const a = sid(l.a)
+    const b = sid(l.b)
+    if (!a || !b) continue
+    ls = PB.addLink(ls, a, b).map((x) => (PB.linkOf([x], a, b) ? { ...x, auto: l.auto, capUsd: l.capUsd } : x))
+  }
+  saveLinks(ls)
+  const stamp = Date.now()
+  const made = t.triggers.flatMap((r, i) => {
+    const id = sid(r.panel)
+    return id ? [cleanTrigger({ id: `tm${stamp.toString(36)}${i}`, name: r.name, cwd: panelDir(id), persona: personaOf.get(id) ?? '', prompt: r.prompt, when: parseWhen(r.when) ?? undefined, scope: r.scope, enabled: false })] : []
+  })
+  saveTriggers([...triggers(), ...made.map((x) => ({ ...x, armedAt: stamp }))])
+  logs().info('stm:panel', `team ${t.name} imported: ${t.panels.length} panels, ${t.links.length} links, ${made.length} triggers (off), confirmed in the window`)
+  return { links: t.links.length, triggers: made.length }
+})
+Object.assign(cliHandlers, {
+  teamExport: (a: Record<string, unknown>) => {
+    const file = resolve(String(a.file ?? ''))
+    if (!a.file) throw new Error('Usage: stm team export <file>')
+    writeFileSync(file, TM.toMarkdown(buildTeam()))
+    return { file }
+  },
+  // shows the plan in the window; nothing is created until the person confirms there
+  teamImport: (a: Record<string, unknown>) => {
+    if (!a.file) throw new Error('Usage: stm team import <file>')
+    const t = teamReview(resolve(String(a.file)))
+    return { name: t.name, panels: t.panels.length, links: t.links.length, triggers: t.triggers.length }
+  },
 })
 registerTranscripts(ipcMain, cliHandlers, app.getPath('userData'))
 let cli: ReturnType<typeof startCli> | null = null
