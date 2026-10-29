@@ -1,0 +1,11 @@
+{
+  "id": "provision-team",
+  "title": "Provision a team from a short spec",
+  "prompt": "Read spec.md and provision the team it describes. Reply with the team bundle in Markdown. The reply must start with a heading of the form `# Team: <name>`, followed by one section per member listing their role and the agents or skills they get.",
+  "setup": {
+    "files": {
+      "spec.md": "# Spec\n\nName: Payments squad\nGoal: ship and maintain the checkout flow.\n\nMembers:\n- Ana, tech lead: reviews PRs, owns architecture decisions. Needs a code-review agent.\n- Bruno, backend: writes API and database changes. Needs a debugging agent.\n- Carla, QA: writes end-to-end tests. Needs a testing-strategy agent.\n"
+    }
+  },
+  "check": { "kind": "contains", "file": "@reply", "text": "# Team:" }
+}

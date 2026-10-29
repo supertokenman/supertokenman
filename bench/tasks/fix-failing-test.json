@@ -1,0 +1,13 @@
+{
+  "id": "fix-failing-test",
+  "title": "Fix a failing unit test",
+  "prompt": "The unit tests in this project fail. Fix the bug in src/sum.js so that `npm test` passes. Do not edit the test file.",
+  "setup": {
+    "files": {
+      "package.json": "{\n  \"name\": \"fix-failing-test\",\n  \"version\": \"1.0.0\",\n  \"type\": \"module\",\n  \"scripts\": { \"test\": \"node --test\" }\n}\n",
+      "src/sum.js": "export function sum(values) {\n  return values.reduce((acc, v) => acc - v, 0);\n}\n",
+      "test/sum.test.js": "import { test } from 'node:test';\nimport assert from 'node:assert/strict';\nimport { sum } from '../src/sum.js';\n\ntest('sum adds numbers', () => {\n  assert.equal(sum([1, 2, 3]), 6);\n});\n\ntest('sum of empty list is 0', () => {\n  assert.equal(sum([]), 0);\n});\n"
+    }
+  },
+  "check": { "kind": "command", "run": "npm test" }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "write-readme-section",
+  "title": "Write a README section",
+  "prompt": "Add a section titled `## Usage` to README.md that documents the `greet(name)` function exported from src/greet.js: what it does, its argument, and a short example call with its output. Keep the existing README content unchanged.",
+  "setup": {
+    "files": {
+      "README.md": "# greeter\n\nA tiny library that greets people.\n",
+      "src/greet.js": "export function greet(name) {\n  return `Hello, ${name}!`;\n}\n"
+    }
+  },
+  "check": { "kind": "contains", "file": "README.md", "text": "## Usage" }
+}

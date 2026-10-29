@@ -1,0 +1,12 @@
+{
+  "id": "add-function-with-test",
+  "title": "Add a function with a test",
+  "prompt": "Add an exported function `slugify(text)` in src/slug.js. It must trim the input, lowercase it, and replace each run of characters that are not a-z or 0-9 with a single hyphen, with no leading or trailing hyphens. Add a test for it in test/slug.test.js using node:test. `npm test` must pass.",
+  "setup": {
+    "files": {
+      "package.json": "{\n  \"name\": \"add-function-with-test\",\n  \"version\": \"1.0.0\",\n  \"type\": \"module\",\n  \"scripts\": { \"test\": \"node --test\" }\n}\n",
+      "src/.gitkeep": ""
+    }
+  },
+  "check": { "kind": "command", "run": "npm test" }
+}

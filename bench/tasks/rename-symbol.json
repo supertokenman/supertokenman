@@ -1,0 +1,14 @@
+{
+  "id": "rename-symbol",
+  "title": "Rename a symbol across three files",
+  "prompt": "Rename the function `getUserName` to `fetchUserName` everywhere in this project: the definition in src/user.js, its use in src/app.js, and the test in test/user.test.js. Keep the behaviour the same. `npm test` must pass.",
+  "setup": {
+    "files": {
+      "package.json": "{\n  \"name\": \"rename-symbol\",\n  \"version\": \"1.0.0\",\n  \"type\": \"module\",\n  \"scripts\": { \"test\": \"node --test\" }\n}\n",
+      "src/user.js": "export function getUserName(user) {\n  return user.name.trim();\n}\n",
+      "src/app.js": "import { getUserName } from './user.js';\n\nexport function greet(user) {\n  return `Hello, ${getUserName(user)}`;\n}\n",
+      "test/user.test.js": "import { test } from 'node:test';\nimport assert from 'node:assert/strict';\nimport { getUserName } from '../src/user.js';\nimport { greet } from '../src/app.js';\n\ntest('getUserName trims the name', () => {\n  assert.equal(getUserName({ name: '  Ada ' }), 'Ada');\n});\n\ntest('greet uses the name', () => {\n  assert.equal(greet({ name: 'Ada' }), 'Hello, Ada');\n});\n"
+    }
+  },
+  "check": { "kind": "command", "run": "npm test" }
+}
