@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('stm', {
     save: (t) => ipcRenderer.invoke('triggers:save', t),
     remove: (id) => ipcRenderer.invoke('triggers:delete', id),
     run: (id) => ipcRenderer.invoke('triggers:run', id),
+    webhook: (id) => ipcRenderer.invoke('triggers:webhook', id),
     runs: () => ipcRenderer.invoke('runs:list'),
     begin: (sid, t, resume) => ipcRenderer.invoke('runs:begin', sid, t, resume),
     gate: (run, ok) => ipcRenderer.invoke('runs:gate', run, ok),

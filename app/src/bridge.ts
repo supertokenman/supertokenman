@@ -84,6 +84,7 @@ export type Bridge = {
     save: (t: Trigger) => Promise<Trigger[]>
     remove: (id: string) => Promise<Trigger[]>
     run: (id: string) => Promise<void>
+    webhook: (id: string) => Promise<{ curl: string; listening: boolean } | null>
     runs: () => Promise<import('../shared/runs').Run[]>
     begin: (sid: string, t: { id: string; name: string; prompt: string; gate?: boolean }, resume?: string) => Promise<void>
     gate: (run: string, ok: boolean) => Promise<void>
