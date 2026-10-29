@@ -30,4 +30,7 @@ describe('oauth1', () => {
     expect(h.startsWith('OAuth oauth_consumer_key="xvz1evFS4wEEPTGEFPHBog", oauth_nonce="kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg", oauth_signature="')).toBe(true)
     expect(h).toContain('oauth_signature_method="HMAC-SHA1", oauth_timestamp="1318622958"')
   })
+  it('signs the X docs example to its published signature', () => {
+    expect(authHeader('POST', url, keys, hmac, o)).toContain('oauth_signature="hCtSmYh%2BiHYCEqBWrE7C7hYmtUk%3D"')
+  })
 })
