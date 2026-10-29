@@ -70,6 +70,7 @@ const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ defaul
 const VaultBoard = lazy(() => import('./VaultBoard').then((x) => ({ default: x.VaultBoard })))
 const PdfTools = lazy(() => import('./PdfTools').then((x) => ({ default: x.PdfTools })))
 const AppContainers = lazy(() => import('./AppContainers').then((x) => ({ default: x.AppContainers })))
+const PostEverywhere = lazy(() => import('./PostEverywhere').then((x) => ({ default: x.PostEverywhere })))
 const TopicRadar = lazy(() => import('./TopicRadar').then((x) => ({ default: x.TopicRadar })))
 const TeamImport = lazy(() => import('./TeamImport').then((x) => ({ default: x.TeamImport })))
 const AwayCard = lazy(() => import('./AwayCard').then((x) => ({ default: x.AwayCard })))
@@ -141,6 +142,7 @@ import { WEB_APPS } from '../shared/webapps'
 
 import { arrange, LAYOUTS, type Layout } from '../shared/layout'
 
+import { EmptyStart } from './EmptyStart'
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 import { FilePickerHost } from './FilePicker'
 import { alertDialog, confirmDialog, ContextMenuHost, DialogHost } from './ui'
@@ -189,6 +191,8 @@ const PubCalendarSheet = lazy(() => import('./PubCalendar').then((m) => ({ defau
 const ObserveSheet = lazy(() => import('./Observe').then((m) => ({ default: m.ObserveSheet })))
 const MonitorsSheet = lazy(() => import('./Monitors').then((m) => ({ default: m.MonitorsSheet })))
 const ModelServersSheet = lazy(() => import('./ModelServers').then((m) => ({ default: m.ModelServersSheet })))
+const MentionsSheet = lazy(() => import('./Mentions').then((m) => ({ default: m.MentionsSheet })))
+const PostBriefSheet = lazy(() => import('./PostBrief').then((m) => ({ default: m.PostBriefSheet })))
 const ShotToCodeSheet = lazy(() => import('./ShotToCode').then((m) => ({ default: m.ShotToCodeSheet })))
 const WorkbenchSheet = lazy(() => import('./Workbench').then((m) => ({ default: m.WorkbenchSheet })))
 const SecuritySheet = lazy(() => import('./Security').then((m) => ({ default: m.SecuritySheet })))
@@ -445,6 +449,11 @@ export function App() {
   const [ctrOpen, setCtrOpen] = useState(false)
   const [bwOpen, setBwOpen] = useState(false)
   const [radarOpen, setRadarOpen] = useState(false)
+  const [briefOpen, setBriefOpen] = useState(false)
+  const [mentionsOpen, setMentionsOpen] = useState(false)
+  const [briefSid, setBriefSid] = useState<string | null>(null)
+  const [postOpen, setPostOpen] = useState<{ text?: string; title?: string } | null>(null)
+  useEffect(() => window.stm.post.onOpen((r) => setPostOpen({ text: r.text, title: r.title })), [])
   const [ciOpen, setCiOpen] = useState(false)
   const [teamIn, setTeamIn] = useState<{ team: import('../shared/teambundle').Team; lines: string[] } | null>(null)
   const [awayCard, setAwayCard] = useState<import('./bridge').AwayCard | null>(null)
@@ -885,7 +894,7 @@ export function App() {
 
   // the first panel opens on the folder the app started in
   useEffect(() => {
-    void open()
+    openOrSay()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -942,7 +951,11 @@ export function App() {
       if (w.sandbox && !(await window.stm.sandbox.prepare(w.cwd).catch(() => ''))) continue
       // a folder that is gone (a worktree merged since) is skipped, not an error
       // a remote panel resumes on its machine (its conversation lives there); unreachable, it is skipped
-      await open(w.remote ? undefined : w.cwd, w.sessionId, w.persona, w.sandbox, w.remote ? { remote: { host: w.remote.host, dir: w.remote.dir, branch: w.remote.branch, repo: w.remote.repo } } : undefined).catch(() => undefined)
+      try {
+        await open(w.remote ? undefined : w.cwd, w.sessionId, w.persona, w.sandbox, w.remote ? { remote: { host: w.remote.host, dir: w.remote.dir, branch: w.remote.branch, repo: w.remote.repo } } : undefined).catch(() => undefined)
+      } catch (e) {
+        showOpenError(e)
+      }
     }
   }
 
@@ -970,7 +983,7 @@ export function App() {
         setPriv((v) => !v)
       } else if (e.key === 't') {
         e.preventDefault()
-        void open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+        openOrSay(p.focus ? p.byId[p.focus]?.cwd : undefined)
       } else if (e.key === 'w' && p.focus) {
         e.preventDefault()
         void window.stm.closeSession(p.focus)
@@ -1076,9 +1089,9 @@ export function App() {
   const menuRef = useRef<(id: string) => void>(() => undefined)
   menuRef.current = (id: string) => {
     if (id === 'menu:palette') return setPalette(true)
-    if (id === 'menu:new-panel') return void open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+    if (id === 'menu:new-panel') return openOrSay(p.focus ? p.byId[p.focus]?.cwd : undefined)
     if (id === 'menu:new-from-template') return setTplOpen(true)
-    if (id === 'menu:open-folder') return void pickProjectFolder().then((dir) => dir && void open(dir))
+    if (id === 'menu:open-folder') return void pickProjectFolder().then((dir) => dir && openOrSay(dir))
     if (id === 'menu:team-export') return void window.stm.teamBundle.exportTo().catch((e: Error) => alertDialog({ title: 'Team', message: e.message }))
     if (id === 'menu:team-import') return void window.stm.teamBundle.importFrom().catch((e: Error) => alertDialog({ title: 'Team', message: e.message }))
     if (id === 'menu:export') return void (p.focus && window.dispatchEvent(new CustomEvent('stm:export', { detail: { sid: p.focus } })))
@@ -1089,6 +1102,10 @@ export function App() {
   useEffect(() => window.stm.onMenu((id) => menuRef.current(id)), [])
   // supertokenman:// links: the window says what the link wants and acts only on Open
   const [link, setLink] = useState<Link | { error: string } | null>(null)
+  // a panel that would not open says why, in a bar, instead of the click doing nothing (the main process logs it too)
+  const [openErr, setOpenErr] = useState<string | null>(null)
+  const showOpenError = (e: unknown) => setOpenErr((e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, '') || 'Unknown error.')
+  const openOrSay = (...a: Parameters<typeof open>) => void open(...a).then(() => setOpenErr(null), showOpenError)
   useEffect(() => {
     const take = async (l: Link | { error: string } | null) => {
       if (!l) return
@@ -1100,7 +1117,7 @@ export function App() {
   }, [])
   const followLink = (l: Link) => {
     setLink(null)
-    if (l.kind === 'open') return void open(l.path)
+    if (l.kind === 'open') return openOrSay(l.path)
     if (l.kind === 'focus') return p.byId[l.panel] ? dispatch({ kind: 'focus', sid: l.panel }) : setLink({ error: `No panel ${l.panel} is open.` })
     if (l.kind === 'pr') return setPrsOpen(true)
     paletteEntries().find((x) => x.id === `go-${l.id}`)?.run()
@@ -1223,6 +1240,9 @@ export function App() {
       ['image-xray', 'Image X-ray: Docker layers and waste', 'docker image layers size waste dive dockerfile slim', () => setXrOpen(true)],
       ['while-away', 'While you were away', 'away overnight summary since idle what happened cost approvals trigger errors read aloud', () => void window.stm.away.get().then(setAwayCard)],
       ['run-ci', 'Run CI here with act, before the push', 'github actions workflow ci act local docker job run test', () => setCiOpen(true)],
+      ['post-brief', 'Brief a post: summary and the best prompt from a link or screenshot', 'brief post link url screenshot summary summarize x twitter linkedin threads reddit youtube article prompt deeper', () => setBriefOpen(true)],
+      ['mentions', 'Mentions: draft a brief for people who ask you in a mention', 'mentions bluesky mastodon x twitter reply summarize summary resumo resumen prompt brief approve queue', () => setMentionsOpen(true)],
+      ['post-everywhere', 'Post everywhere: one post to the networks you connect', 'post publish social bluesky mastodon linkedin x twitter telegram discord dev.to share announce', () => setPostOpen({})],
       ['topic-radar', 'Topic radar: your topics in your feeds', 'radar trends topics keywords feeds news count ranking summary ntfy', () => setRadarOpen(true)],
       ['bitwarden', 'Bitwarden or Vaultwarden: link secrets', 'bitwarden vaultwarden bw secrets password keys link', () => setBwOpen(true)],
       ['app-containers', 'App containers: what the app runs in Docker, live', 'docker containers isolate self-hosting stats events stop remove', () => setCtrOpen(true)],
@@ -1262,8 +1282,8 @@ export function App() {
     ...WEB_APPS.map((a) => ({ id: `app-${a.id}`, group: 'Apps', label: a.name, hint: waUnread[a.id] ? `${waUnread[a.id]} unread` : undefined, run: () => window.dispatchEvent(new CustomEvent('stm:webapp-show', { detail: { app: a.id } })) })),
     ...agenda.events.filter((e) => Date.parse(e.end) > Date.now()).slice(0, 8).map((e) => ({ id: `ev-${e.id}`, group: 'Meetings', label: e.title, hint: new Date(e.start).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }), run: () => (e.join ? join(e.join) : setAgendaOpen(true)) })),
     ...reviews.map((r) => ({ id: `pr-${r.repo}-${r.number}`, group: 'Reviews', label: r.title, hint: `${r.repo} #${r.number}`, run: () => setPrsOpen(true) })),
-    ...dayLogs.flatMap((l) => l.stops).filter((st, i, all) => all.findIndex((x) => x.cwd === st.cwd) === i).slice(0, 8).map((st) => ({ id: `open-${st.cwd}`, group: 'Recent folders', label: st.cwd.split('/').filter(Boolean).slice(-2).join('/'), hint: st.last, run: () => void open(st.cwd, st.sessionId) })),
-    ...found.personas.map((x) => ({ id: `persona-${x.id}`, group: 'Personas', label: `New ${x.name} panel`, keywords: 'persona role', run: () => void open(p.focus ? p.byId[p.focus]?.cwd : undefined, undefined, x.id) })),
+    ...dayLogs.flatMap((l) => l.stops).filter((st, i, all) => all.findIndex((x) => x.cwd === st.cwd) === i).slice(0, 8).map((st) => ({ id: `open-${st.cwd}`, group: 'Recent folders', label: st.cwd.split('/').filter(Boolean).slice(-2).join('/'), hint: st.last, run: () => openOrSay(st.cwd, st.sessionId) })),
+    ...found.personas.map((x) => ({ id: `persona-${x.id}`, group: 'Personas', label: `New ${x.name} panel`, keywords: 'persona role', run: () => openOrSay(p.focus ? p.byId[p.focus]?.cwd : undefined, undefined, x.id) })),
     ...found.pieces.slice(0, 30).map((x) => ({ id: `piece-${x.id}`, group: 'Content', label: x.title, hint: x.stage, keywords: 'video reel post content', run: () => setBizOpen(true) })),
     ...found.secrets.map((n) => ({ id: `secret-${n}`, group: 'Secrets', label: n, hint: 'in the vault', keywords: 'secret key token', run: () => setSheet(true) })),
     ...news.items.slice(0, 40).map((n) => ({ id: `news-${n.id}`, group: 'Stories', label: n.title, hint: n.source, run: () => void window.stm.openUrl(n.link) })),
@@ -1324,7 +1344,7 @@ export function App() {
         </div>
         <div className="top-actions">
           <ModelMenu model={model} effort={effort} onModel={setModel} onEffort={setEffort} />
-          <button className="ghost" onClick={() => void open(p.focus ? p.byId[p.focus]?.cwd : undefined)} data-tip="New panel in the same folder (Cmd+T)" aria-label="New panel in the same folder (Cmd+T)">
+          <button className="ghost" onClick={() => openOrSay(p.focus ? p.byId[p.focus]?.cwd : undefined)} data-tip="New panel in the same folder (Cmd+T)" aria-label="New panel in the same folder (Cmd+T)">
             <IconPanel />
           </button>
           <SandboxButton cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onOpen={(cwd) => open(cwd, undefined, undefined, true)} />
@@ -1341,7 +1361,7 @@ export function App() {
             data-tip="Open a folder in a new panel" aria-label="Open a folder in a new panel"
             onClick={async () => {
               const dir = await pickProjectFolder('Open a folder in a new panel')
-              if (dir) void open(dir)
+              if (dir) openOrSay(dir)
             }}
           >
             <IconFolder />
@@ -1472,6 +1492,14 @@ export function App() {
           <span className="lbl">{priv ? 'Hidden from sharing' : 'Private'}</span>
         </button>
       </header>
+        {openErr && (
+          <div className="deeplink-bar bad" role="alert" aria-label="Panel did not open">
+            <span className="chart-name">Panel</span>
+            <span>Could not open a panel: {openErr}</span>
+            <span className="spacer-flex" />
+            <button className="ghost small" onClick={() => setOpenErr(null)}>Dismiss</button>
+          </div>
+        )}
         {link && (
           <div className={`deeplink-bar ${'error' in link ? 'bad' : ''}`} role="alertdialog" aria-label="Link">
             <span className="chart-name">Link</span>
@@ -1531,7 +1559,7 @@ export function App() {
           yesterday={lastDay(dayLogs)}
           stories={news.items.filter((i) => !news.read.has(i.id))}
           onGo={goNeed}
-          onResume={(cwd, sessionId) => void open(cwd, sessionId)}
+          onResume={(cwd, sessionId) => openOrSay(cwd, sessionId)}
           onStory={() => setNewsOpen(true)}
           onClose={closeToday}
         />
@@ -1683,6 +1711,26 @@ export function App() {
       </Presence>
       <Presence show={awayCard !== null}>{awayCard && <AwayCard card={awayCard} onClose={() => setAwayCard(null)} />}</Presence>
       <Presence show={ciOpen}><RunCi cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} sid={p.focus ?? undefined} onClose={() => setCiOpen(false)} /></Presence>
+      <Presence show={briefOpen}>
+        <PostBriefSheet
+          run={briefSid && p.byId[briefSid] ? { busy: p.byId[briefSid].busy, reply: [...p.byId[briefSid].lines].reverse().find((l) => l.kind === 'assistant')?.text ?? '' } : null}
+          onClose={() => setBriefOpen(false)}
+          onBrief={async (text, images) => {
+            const sid = await open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+            setBriefSid(sid)
+            dispatch({ kind: 'event', sid, action: { kind: 'sent', text, at: Date.now(), images: images.map((i) => `data:${i.mediaType};base64,${i.data}`) } })
+            await window.stm.send(sid, text, images)
+          }}
+          onOpen={async (prompt) => {
+            const sid = await open(p.focus ? p.byId[p.focus]?.cwd : undefined)
+            dispatch({ kind: 'event', sid, action: { kind: 'sent', text: prompt, at: Date.now() } })
+            void window.stm.send(sid, prompt)
+            setBriefOpen(false)
+          }}
+        />
+      </Presence>
+      <Presence show={mentionsOpen}><MentionsSheet onClose={() => setMentionsOpen(false)} /></Presence>
+      <Presence show={!!postOpen}><PostEverywhere text={postOpen?.text} title={postOpen?.title} onClose={() => setPostOpen(null)} /></Presence>
       <Presence show={radarOpen}><TopicRadar onClose={() => setRadarOpen(false)} /></Presence>
       <Presence show={bwOpen}><BitwardenSheet onClose={() => setBwOpen(false)} /></Presence>
       <Presence show={ctrOpen}><AppContainers onClose={() => setCtrOpen(false)} /></Presence>
@@ -1690,7 +1738,7 @@ export function App() {
       <Presence show={boardOpen}><VaultBoard onClose={() => setBoardOpen(false)} /></Presence>
       <Presence show={handoffOpen}><DesignHandoff cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setHandoffOpen(false)} /></Presence>
       <Presence show={mdImgOpen}><MdImages onClose={() => setMdImgOpen(false)} /></Presence>
-      <Presence show={tplOpen}><NewFromTemplate onClose={() => setTplOpen(false)} onOpen={(dir, persona) => (setTplOpen(false), void open(dir, undefined, persona))} /></Presence>
+      <Presence show={tplOpen}><NewFromTemplate onClose={() => setTplOpen(false)} onOpen={(dir, persona) => (setTplOpen(false), openOrSay(dir, undefined, persona))} /></Presence>
       <Presence show={officeOpen}><OfficeFiles onClose={() => setOfficeOpen(false)} /></Presence>
       <Presence show={remoteOpen}><RemotePanelSheet onClose={() => setRemoteOpen(false)} onOpen={async (r) => void (await open(undefined, undefined, undefined, false, { remote: r }))} /></Presence>
       <Presence show={issuesOpen}>
@@ -1758,7 +1806,7 @@ export function App() {
       </Presence>
       <Presence show={personasOpen}>
         <Suspense fallback={null}>
-          <Personas onClose={() => setPersonasOpen(false)} onOpen={(id) => void open(p.focus ? p.byId[p.focus]?.cwd : undefined, undefined, id)} />
+          <Personas onClose={() => setPersonasOpen(false)} onOpen={(id) => openOrSay(p.focus ? p.byId[p.focus]?.cwd : undefined, undefined, id)} />
         </Suspense>
       </Presence>
       <Presence show={teamOpen}>
@@ -1824,7 +1872,7 @@ export function App() {
           onClose={() => setMemory(false)}
           onResume={(id) => {
             setMemory(false)
-            void open((p.focus && p.byId[p.focus]?.cwd) || undefined, id)
+            openOrSay((p.focus && p.byId[p.focus]?.cwd) || undefined, id)
           }}
           onUse={(text) => p.focus && window.dispatchEvent(new CustomEvent('stm:prefill', { detail: { sid: p.focus, text } }))}
         />
@@ -1847,10 +1895,7 @@ export function App() {
       <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
         {p.order.map(panelEl)}
         {p.order.length === 0 && (
-          <div className="empty">
-            <div className="empty-title">No panels open</div>
-            <button className="primary" onClick={() => void open()}>New panel</button>
-          </div>
+          <EmptyStart recents={recentDirs} lastCount={lastTime.length} onFolder={(d) => openOrSay(d)} onPick={() => void pickProjectFolder().then((d) => d && openOrSay(d))} onTemplate={() => setTplOpen(true)} onReopen={() => void reopen()} />
         )}
       </div>
       )}

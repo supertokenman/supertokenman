@@ -2,12 +2,17 @@
 // queue file and the scheduler. The window only ever gets what this returns: no tokens.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { bluesky, bskyRefresh, bskySession, mastoCred, mastodon } from './open.js'
-import type { Cred, NetworkId } from './core.js'
+import type { AccountId, Cred, NetworkId } from './core.js'
+import { ACCOUNTS, credFromFields, hostOf, mastoLimit } from '../../shared/accounts.js'
+import type { Net } from '../../shared/social.js'
 import { makeFetcher } from './core.js'
 import { metaIds, NETWORKS, OAUTH, ORDER, SETUP } from './networks.js'
 import { authorizeUrl, exchange, pkce, redirectFor, refreshed, waitForCode } from './oauth.js'
+import { catchUp } from '../../shared/missed.js'
+import { nextSlotFor, type NetSlots } from '../../shared/postslots.js'
 import { cleanItem, dueNetworks, problem, textFor, type Item } from './queue.js'
-import { credName, readCred, secretsOf, writeCred, type VaultLike } from './store.js'
+import { deleteCred, migrateVault, readCred, secretsOf, writeCred, type MigrationReport, type VaultLike } from './store.js'
+import { normHandle } from '../../shared/triage.js'
 
 export type SocialDeps = {
   vault: VaultLike
@@ -28,11 +33,11 @@ export function socialService(d: SocialDeps) {
   const doFetch = d.doFetch ?? fetch
   const f = (c: Cred | null) => makeFetcher(doFetch, () => secretsOf(c))
 
-  async function cred(n: NetworkId): Promise<Cred> {
-    const c = readCred(d.vault, n)
+  async function cred(n: NetworkId, handle?: string): Promise<Cred> {
+    const c = readCred(d.vault, n, handle)
     if (!c) throw new Error(`${NETWORKS[n].name} is not connected.`)
     const fresh = await (n === 'bluesky' ? bskyRefresh(f(c), c) : refreshed(OAUTH[n], f(c), c)).catch(() => null)
-    if (fresh) writeCred(d.vault, n, fresh)
+    if (fresh) writeCred(d.vault, n, fresh, handle)
     return fresh ?? c
   }
 
@@ -60,6 +65,9 @@ export function socialService(d: SocialDeps) {
     }
     const profile = await NETWORKS[n].profile(c, f(c))
     if (n === 'linkedin') c.ids = { person: profile.id }
+    // the handle names the account when the vault key is migrated; secrets are not touched
+    const h = normHandle(String(profile.handle ?? ''))
+    if (h) c.ids = { ...c.ids, handle: h }
     writeCred(d.vault, n, c)
     return profile
   }
@@ -75,17 +83,37 @@ export function socialService(d: SocialDeps) {
     const c = await exchange(spec, f(null), n, clientId.trim(), clientSecret?.trim() || undefined, await code, p.verifier)
     const profile = await NETWORKS[n].profile(c, f(c))
     if (n === 'linkedin') c.ids = { person: profile.id }
+    // the handle names the account when the vault key is migrated; secrets are not touched
+    const h = normHandle(String(profile.handle ?? ''))
+    if (h) c.ids = { ...c.ids, handle: h }
     writeCred(d.vault, n, c)
     return profile
   }
 
-  function disconnect(n: NetworkId) {
+  function disconnect(n: AccountId) {
     d.guard()
-    d.vault.delete(credName(n))
+    deleteCred(d.vault, n)
   }
 
-  const call = async <T>(n: NetworkId, fn: (c: Cred) => Promise<T>) => {
-    const c = await cred(n)
+  /** The networks that connect by pasting keys, as Post everywhere and Mentions see them: no secrets. */
+  const accounts = () =>
+    ACCOUNTS.map((n) => {
+      const c = readCred(d.vault, n)
+      return { net: n, connected: Boolean(c), host: c ? hostOf(n, c) : null, handle: c?.ids?.handle ? String(c.ids.handle) : undefined, mastodonLimit: n === 'mastodon' ? mastoLimit(c) : undefined }
+    })
+
+  /** One connection per network, shared by every feature. Bluesky signs in now and keeps only the session. */
+  async function connectFields(n: Net, fields: Record<string, unknown>) {
+    d.guard()
+    writeCred(d.vault, n, n === 'bluesky' ? await bskySession(f(null), fields) : credFromFields(n, fields))
+    return accounts()
+  }
+
+  /** The saved credential for the main process only, refreshed when it is about to expire. */
+  const account = async (n: AccountId): Promise<Cred | null> => (readCred(d.vault, n) ? (n in NETWORKS ? cred(n as NetworkId) : readCred(d.vault, n)) : null)
+
+  const call = async <T>(n: NetworkId, fn: (c: Cred) => Promise<T>, handle?: string) => {
+    const c = await cred(n, handle)
     return fn(c)
   }
 
@@ -130,15 +158,47 @@ export function socialService(d: SocialDeps) {
   }
   /** A new time from the calendar: an approved item that has not gone out yet waits for Approve again. */
   const move = (id: string, when: number | null) => {
-    writeQueue(readQueue().map((x) => (x.id === id && !Object.values(x.results).some((r) => r?.ok) ? { ...x, when, approved: x.when === when ? x.approved : false } : x)))
+    writeQueue(readQueue().map((x) => (x.id === id && !Object.values(x.results).some((r) => r?.ok) ? { ...x, when, held: false, approved: x.when === when ? x.approved : false } : x)))
     return readQueue()
   }
+  /** On launch and after sleep: a little late posts now, a lot late is held for the person. Returns how many were held. */
+  function catchUpNow(now = Date.now()) {
+    const { held } = catchUp(readQueue(), now)
+    if (held.length) writeQueue(readQueue().map((x) => (held.some((h) => h.id === x.id) ? { ...x, held: true } : x)))
+    void tick()
+    return held.length
+  }
+  const heldItems = () => readQueue().filter((x) => x.held)
+  const postNow = (id: string) => {
+    writeQueue(readQueue().map((x) => (x.id === id && x.held ? { ...x, held: false, when: Date.now() } : x)))
+    void tick()
+    return heldItems()
+  }
+  /** Skip: the item goes back to a draft; nothing is posted. */
+  const skip = (id: string) => {
+    writeQueue(readQueue().map((x) => (x.id === id && x.held ? { ...x, held: false, approved: false } : x)))
+    return heldItems()
+  }
+  /** The next free slot of one network, taken only by queued items that list that network. */
+  const nextSlot = (slots: NetSlots, network: string, now = new Date()) =>
+    nextSlotFor(slots, network, readQueue().flatMap((i) => (i.networks as string[]).includes(network) ? [{ id: i.id, network, when: i.when }] : []), now)
   const comment = (id: string, text: string) => {
     if (!text.trim()) return readQueue()
     writeQueue(readQueue().map((x) => (x.id === id ? cleanItem({ ...x, comments: [...(x.comments ?? []), { at: Date.now(), text }] }) : x)))
     return readQueue()
   }
   const removeItem = (id: string) => (writeQueue(readQueue().filter((x) => x.id !== id)), readQueue())
+
+  /** Moves SOCIAL_<NET> to SOCIAL_<NET>_<HANDLE> once; errors keep the old keys and are never fatal. */
+  function migrate(): MigrationReport {
+    const handles: Record<string, string | undefined> = {}
+    try {
+      for (const n of Object.keys(NETWORKS).concat(ACCOUNTS)) handles[n] = readCred(d.vault, n as AccountId)?.ids?.handle
+      return migrateVault(d.vault, handles)
+    } catch {
+      return { copied: [], removed: [], kept: [] }
+    }
+  }
 
   let running = false
   async function tick() {
@@ -178,13 +238,16 @@ export function socialService(d: SocialDeps) {
     mentions: (n: NetworkId) => call(n, (c) => OPEN(n).mentions(c, f(c))),
     like: (n: NetworkId, id: string) => call(n, (c) => OPEN(n).like(c, f(c), id)),
     repost: (n: NetworkId, id: string) => call(n, (c) => OPEN(n).repost(c, f(c), id)),
-    posts: (n: NetworkId) => call(n, (c) => NETWORKS[n].posts(c, f(c))),
+    posts: (n: NetworkId, handle?: string) => call(n, (c) => NETWORKS[n].posts(c, f(c)), handle),
     comments: (n: NetworkId, postId: string) => call(n, (c) => (NETWORKS[n].comments ? NETWORKS[n].comments!(c, f(c), postId) : Promise.resolve([]))),
     reply: (n: NetworkId, commentId: string, text: string, postId?: string) =>
       call(n, (c) => {
         if (!NETWORKS[n].reply) throw new Error(`${NETWORKS[n].name} does not allow replies through its API.`)
         return NETWORKS[n].reply!(c, f(c), commentId, text, postId)
       }),
+    accounts,
+    connectFields,
+    account,
     queue: readQueue,
     saveItem,
     approve,
@@ -192,6 +255,12 @@ export function socialService(d: SocialDeps) {
     comment,
     retry,
     removeItem,
+    catchUp: catchUpNow,
+    held: heldItems,
+    postNow,
+    skip,
+    nextSlot,
+    migrate,
     tick,
   }
 }

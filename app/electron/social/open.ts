@@ -3,6 +3,10 @@
 // drawn in the app's design. Bluesky signs in with an app password; Mastodon with a token the person
 // creates on their server. Both live in the vault like the other networks.
 import type { Comment, Cred, Draft, Fetcher, Network, Post, Profile } from './core.js'
+import { blueskyLogin, credFromFields, DEFAULT_PDS, pdsOf } from '../../shared/accounts.js'
+import { htmlText, linkFacets } from '../../shared/social.js'
+
+export { htmlText, linkFacets }
 
 export type FeedItem = {
   id: string
@@ -24,23 +28,26 @@ const json = (body: unknown) => ({ method: 'POST', headers: { 'Content-Type': 'a
 
 /* ---------- Bluesky ---------- */
 
-export const BSKY = process.env.STM_BSKY_API ?? 'https://bsky.social'
-const xrpc = (m: string, q?: Record<string, string>) => `${BSKY}/xrpc/${m}${q ? `?${new URLSearchParams(q)}` : ''}`
+/** The account's own server (PDS); STM_BSKY_API points tests at a fake one. */
+const host = (pds?: string) => process.env.STM_BSKY_API ?? pds ?? DEFAULT_PDS
+const xrpc = (c: Cred | string, m: string, q?: Record<string, string>) => `${host(typeof c === 'string' ? c : pdsOf(c))}/xrpc/${m}${q ? `?${new URLSearchParams(q)}` : ''}`
 const auth = (c: Cred) => ({ Authorization: `Bearer ${c.accessToken}` })
 
-/** "alice.bsky.social xxxx-xxxx-xxxx-xxxx": the handle and an app password, never the account password. */
-export async function bskySession(f: Fetcher, token: string): Promise<Cred> {
-  const [identifier, password] = token.trim().split(/\s+/)
-  if (!identifier || !password) throw new Error('Type your handle and an app password (Settings, App passwords).')
-  if (!/^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/i.test(password)) throw new Error('Use an app password (xxxx-xxxx-xxxx-xxxx), not your account password.')
-  const s = (await f(xrpc('com.atproto.server.createSession'), json({ identifier: identifier.replace(/^@/, ''), password }))) as { accessJwt: string; refreshJwt: string; did: string; handle: string }
-  return { accessToken: s.accessJwt, refreshToken: s.refreshJwt, expiresAt: Date.now() + 90 * 60_000, ids: { did: s.did, handle: s.handle } }
+/**
+ * Signs in with the handle and an app password, never the account password, on the account's own server.
+ * Only the session is saved; the app password is not kept. Business pastes "handle password [server]".
+ */
+export async function bskySession(f: Fetcher, login: string | Record<string, unknown>): Promise<Cred> {
+  const [handle, password, pds] = typeof login === 'string' ? login.trim().split(/\s+/) : []
+  const l = blueskyLogin(typeof login === 'string' ? { handle, password, pds } : login)
+  const s = (await f(xrpc(l.pds, 'com.atproto.server.createSession'), json({ identifier: l.handle, password: l.password }))) as { accessJwt: string; refreshJwt: string; did: string; handle: string }
+  return { accessToken: s.accessJwt, refreshToken: s.refreshJwt, expiresAt: Date.now() + 90 * 60_000, ids: { did: s.did, handle: s.handle, ...(l.pds !== DEFAULT_PDS ? { pds: l.pds } : {}) } }
 }
 
 /** Bluesky's access token lasts about two hours; the refresh one gives a new pair. */
 export async function bskyRefresh(f: Fetcher, c: Cred, now = Date.now()): Promise<Cred | null> {
   if (!c.refreshToken || (c.expiresAt && c.expiresAt - now > 120_000)) return null
-  const s = (await f(xrpc('com.atproto.server.refreshSession'), { method: 'POST', headers: { Authorization: `Bearer ${c.refreshToken}` } })) as { accessJwt: string; refreshJwt: string }
+  const s = (await f(xrpc(c, 'com.atproto.server.refreshSession'), { method: 'POST', headers: { Authorization: `Bearer ${c.refreshToken}` } })) as { accessJwt: string; refreshJwt: string }
   return { ...c, accessToken: s.accessJwt, refreshToken: s.refreshJwt, expiresAt: now + 90 * 60_000 }
 }
 
@@ -73,18 +80,8 @@ export function bskyItem(p: BPost, repostedBy?: string): FeedItem {
   }
 }
 
-/** Links in a post become clickable through facets, with byte offsets in UTF-8. */
-export function linkFacets(text: string) {
-  const out: { index: { byteStart: number; byteEnd: number }; features: { $type: string; uri: string }[] }[] = []
-  for (const m of text.matchAll(/https?:\/\/[^\s<>"]+[^\s<>".,;:!?)\]]/g)) {
-    const byteStart = Buffer.byteLength(text.slice(0, m.index))
-    out.push({ index: { byteStart, byteEnd: byteStart + Buffer.byteLength(m[0]) }, features: [{ $type: 'app.bsky.richtext.facet#link', uri: m[0] }] })
-  }
-  return out
-}
-
 async function bskyCreate(c: Cred, f: Fetcher, collection: string, record: object) {
-  return (await f(xrpc('com.atproto.repo.createRecord'), { ...json({ repo: c.ids?.did, collection, record }), headers: { 'Content-Type': 'application/json', ...auth(c) } })) as { uri: string; cid: string }
+  return (await f(xrpc(c, 'com.atproto.repo.createRecord'), { ...json({ repo: c.ids?.did, collection, record }), headers: { 'Content-Type': 'application/json', ...auth(c) } })) as { uri: string; cid: string }
 }
 
 /** A mention or a reply to the account, for the one inbox: the thread is the conversation's root. */
@@ -100,20 +97,20 @@ export const bluesky: Network & {
   name: 'Bluesky',
   can: { read: true, comments: true, reply: true, publish: true, note: 'Signs in with an app password. Posts up to 300 characters; links become clickable.' },
   async profile(c, f): Promise<Profile> {
-    const p = (await f(xrpc('app.bsky.actor.getProfile', { actor: c.ids!.did! }), { headers: auth(c) })) as { did: string; handle: string; displayName?: string; avatar?: string; followersCount?: number; postsCount?: number }
+    const p = (await f(xrpc(c, 'app.bsky.actor.getProfile', { actor: c.ids!.did! }), { headers: auth(c) })) as { did: string; handle: string; displayName?: string; avatar?: string; followersCount?: number; postsCount?: number }
     return { id: p.did, name: p.displayName || p.handle, handle: `@${p.handle}`, avatar: p.avatar, followers: p.followersCount, posts: p.postsCount, url: `https://bsky.app/profile/${p.handle}` }
   },
   async posts(c, f): Promise<Post[]> {
-    const j = (await f(xrpc('app.bsky.feed.getAuthorFeed', { actor: c.ids!.did!, limit: '25', filter: 'posts_no_replies' }), { headers: auth(c) })) as { feed: { post: BPost }[] }
+    const j = (await f(xrpc(c, 'app.bsky.feed.getAuthorFeed', { actor: c.ids!.did!, limit: '25', filter: 'posts_no_replies' }), { headers: auth(c) })) as { feed: { post: BPost }[] }
     return j.feed.map(({ post: p }) => ({ id: bid(p), text: p.record.text ?? '', at: p.record.createdAt ?? '', url: bskyUrl(p), media: p.embed?.images?.[0]?.thumb, likes: p.likeCount, comments: p.replyCount, shares: p.repostCount }))
   },
   async comments(c, f, postId): Promise<Comment[]> {
-    const j = (await f(xrpc('app.bsky.feed.getPostThread', { uri: splitBid(postId).uri, depth: '1' }), { headers: auth(c) })) as { thread: { replies?: { post?: BPost }[] } }
+    const j = (await f(xrpc(c, 'app.bsky.feed.getPostThread', { uri: splitBid(postId).uri, depth: '1' }), { headers: auth(c) })) as { thread: { replies?: { post?: BPost }[] } }
     return (j.thread.replies ?? []).filter((r) => r.post).map(({ post: p }) => ({ id: bid(p!), author: `@${p!.author.handle}`, text: p!.record.text ?? '', at: p!.record.createdAt ?? '', replies: p!.replyCount ?? 0 }))
   },
   async reply(c, f, commentId, text) {
     const parent = splitBid(commentId)
-    const j = (await f(xrpc('app.bsky.feed.getPosts', { uris: parent.uri }), { headers: auth(c) })) as { posts: BPost[] }
+    const j = (await f(xrpc(c, 'app.bsky.feed.getPosts', { uris: parent.uri }), { headers: auth(c) })) as { posts: BPost[] }
     const root = j.posts[0]?.record.reply?.root ?? parent
     await bskyCreate(c, f, 'app.bsky.feed.post', { $type: 'app.bsky.feed.post', text, facets: linkFacets(text), createdAt: new Date().toISOString(), reply: { root, parent } })
   },
@@ -123,12 +120,12 @@ export const bluesky: Network & {
     return { id: r.uri, url: `https://bsky.app/profile/${c.ids?.handle}/post/${rkey(r.uri)}` }
   },
   async timeline(c, f) {
-    const j = (await f(xrpc('app.bsky.feed.getTimeline', { limit: '40' }), { headers: auth(c) })) as { feed: { post: BPost; reason?: { $type?: string; by?: { handle: string; displayName?: string } } }[] }
+    const j = (await f(xrpc(c, 'app.bsky.feed.getTimeline', { limit: '40' }), { headers: auth(c) })) as { feed: { post: BPost; reason?: { $type?: string; by?: { handle: string; displayName?: string } } }[] }
     return j.feed.map((x) => bskyItem(x.post, x.reason?.$type?.endsWith('reasonRepost') ? (x.reason.by?.displayName || x.reason.by?.handle) : undefined))
   },
   async mentions(c, f) {
     type BNote = { uri: string; cid: string; reason: string; isRead?: boolean; indexedAt: string; author: { handle: string; displayName?: string }; record: { text?: string; createdAt?: string; reply?: { root?: { uri: string } } } }
-    const j = (await f(xrpc('app.bsky.notification.listNotifications', { limit: '50' }), { headers: auth(c) })) as { notifications: BNote[] }
+    const j = (await f(xrpc(c, 'app.bsky.notification.listNotifications', { limit: '50' }), { headers: auth(c) })) as { notifications: BNote[] }
     return j.notifications
       .filter((n) => ['mention', 'reply', 'quote'].includes(n.reason))
       .map((n) => ({ id: `${n.uri}|${n.cid}`, thread: n.record.reply?.root?.uri ?? n.uri, author: { name: n.author.displayName || n.author.handle, handle: `@${n.author.handle}` }, text: n.record.text ?? '', at: n.record.createdAt ?? n.indexedAt, url: `https://bsky.app/profile/${n.author.handle}/post/${rkey(n.uri)}`, unread: !n.isRead }))
@@ -145,28 +142,11 @@ export const bluesky: Network & {
 
 /** "mastodon.social TOKEN": the server and a token made under Preferences, Development. */
 export function mastoCred(token: string): Cred {
-  const [server, t] = token.trim().split(/\s+/)
-  const host = (server ?? '').replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase()
-  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host) || !t) throw new Error('Type your server (like mastodon.social) and the access token.')
-  return { accessToken: t, ids: { server: host } }
+  const [instance, t] = token.trim().split(/\s+/)
+  return credFromFields('mastodon', { instance, token: t })
 }
 const mbase = (c: Cred) => `${process.env.STM_MASTO_API ?? `https://${c.ids!.server}`}/api`
 const mauth = (c: Cred) => ({ Authorization: `Bearer ${c.accessToken}` })
-
-/** Mastodon gives posts as HTML: the app shows them as plain text, paragraphs kept. */
-export function htmlText(html: string) {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>\s*<p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .trim()
-}
 
 type MStatus = { id: string; created_at: string; content: string; url?: string; uri?: string; account: { acct: string; display_name?: string; avatar?: string }; favourites_count?: number; replies_count?: number; reblogs_count?: number; favourited?: boolean; reblogged?: boolean; media_attachments?: { preview_url?: string }[]; reblog?: MStatus | null; in_reply_to_id?: string | null }
 

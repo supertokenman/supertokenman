@@ -230,6 +230,34 @@ Needs a decision first:
 Left out: a server with Postgres (Rakazo), against local-first; API keys kept in a plain config file
 (OpenMausBot), where our vault already does better.
 
+## Planned for a later release
+
+- Brief a post: summary and the best prompt from any link or screenshot.
+- Mentions: when someone mentions you asking for a summary, a draft reply with the brief waits for your approval (Bluesky, Mastodon; X with your own paid API access).
+- Accounts: one connection per network, shared by Post everywhere and Mentions.
+
+## Post everywhere
+
+Planned for a later release:
+1. Phase 1: one post, a preview per network (limits, what would be cut), confirm, then each
+   network's own API from this Mac: Bluesky, Mastodon, LinkedIn, X, Telegram, Discord (webhook),
+   DEV. Text and links only. No service in the middle.
+2. Phase 2: read comments and mentions on those posts and draft replies that go out only after approval.
+3. Phase 3: Instagram, TikTok and YouTube, after their app reviews.
+
+## Social scheduling and growth
+
+Planned for a later release, on the accounts above. Each feature is off until you click it and adds no host.
+- Per-network queue with weekly time slots; "Add to queue" gives each network its own next free slot.
+- Best time and Hit share from your own measured posts; "Not enough data yet" below the minimum.
+- Missed-post catch-up: scheduled posts go out only while the app is open; very late ones are held for you.
+- Rewrite for each network, reviewed side by side; an accepted version posts as that network's own text.
+- Evergreen rewording, saved as an unapproved draft; Mentions triage.
+- Several accounts per network, projects with a brand kit, hook library with a fill from the small model,
+  niche import from a pasted list or a picked CSV or JSON file (up to 2 MB).
+- Open: a background agent that posts with the window closed (new surface, not planned).
+
+
 ## Planned for 0.1.21: a phone panel
 
 From reading the Mobilerun quickstart (docs.mobilerun.ai) on 2026-10-29: an agent that drives a real phone
