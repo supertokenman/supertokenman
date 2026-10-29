@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { PostNet } from './bridge'
 import { ACCOUNT_NAME as NET_NAME } from '../shared/accounts'
 import { preview, type Result } from '../shared/posteverywhere'
@@ -7,6 +7,9 @@ import { Accounts } from './Accounts'
 import { IconClose } from './icons'
 import { clean } from './errors'
 import { Checkbox, confirmDialog } from './ui'
+import type { RewriteVersion } from './RewriteReview'
+
+const RewriteReview = lazy(() => import('./RewriteReview').then((x) => ({ default: x.RewriteReview })))
 
 /** One post, a preview per connected network, and each network's own API after you confirm. */
 export function PostEverywhere(props: { onClose: () => void; text?: string; title?: string }) {
@@ -17,6 +20,9 @@ export function PostEverywhere(props: { onClose: () => void; text?: string; titl
   const [busy, setBusy] = useState(false)
   const [results, setResults] = useState<Result[] | null>(null)
   const [msg, setMsg] = useState('')
+  // rewrites come from the rewrite step (none wired yet); accepted ones wait for a per-network post IPC
+  const [rewrites, setRewrites] = useState<RewriteVersion[] | null>(null)
+  const [, setVariants] = useState<Partial<Record<NetId, string>>>({})
   // newly connected networks start ticked; disconnected ones drop out
   const got = (l: PostNet[]) => setNets((old) => {
     setPick((p) => new Set(l.filter((x) => x.connected && (p.has(x.net) || !old.find((o) => o.net === x.net)?.connected)).map((x) => x.net)))
@@ -48,8 +54,24 @@ export function PostEverywhere(props: { onClose: () => void; text?: string; titl
         </header>
         <div className="pe-body" style={{ display: 'grid', gap: 12, padding: 16, overflow: 'auto' }}>
           <label className="chart-name" htmlFor="pe-text">Post</label>
-          <textarea id="pe-text" rows={6} value={text} onChange={(e) => (setText(e.target.value), setResults(null))} placeholder="Text and links. No images in this version." />
+          <textarea id="pe-text" rows={6} value={text} onChange={(e) => (setText(e.target.value), setResults(null), setRewrites(null))} placeholder="Text and links. No images in this version." />
           {pick.has('devto') && <input aria-label="Title for DEV" value={title} placeholder="Title (DEV only)" onChange={(e) => setTitle(e.target.value)} />}
+          <div className="ob-row" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="ghost" disabled={!text.trim() || !chosen.length} data-tip="The rewrite step is not wired yet, so no versions exist to review.">Rewrite for each network</button>
+            <span className="faint">Not available yet.</span>
+          </div>
+          {rewrites && (
+            <Suspense fallback={<div className="faint">Loading…</div>}>
+              <RewriteReview
+                key={rewrites.map((v) => `${v.net}:${v.text}`).join('|')}
+                original={text}
+                title={title}
+                versions={rewrites}
+                onAccept={(net, t) => setVariants((s) => ({ ...s, [net]: t }))}
+                onReject={(net) => setVariants((s) => { const x = { ...s }; delete x[net]; return x })}
+              />
+            </Suspense>
+          )}
           {!connected.length && <div className="faint">No network is connected. Connect one below; each is off until you do.</div>}
           {connected.map((n) => {
             const p = pv(n)
