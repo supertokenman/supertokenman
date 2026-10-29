@@ -163,14 +163,28 @@ export function PubCalendarSheet(props: { onClose: () => void }) {
   )
 }
 
-/** Places the item on the next free time of its first network. Nothing is approved here. */
-function toNextSlot(it: Item): Promise<Item[]> {
-  const n = it.networks[0]
-  if (!n) return Promise.reject(new Error('Pick a network first.'))
-  return window.stm.social.nextSlot(n).then((at) => {
-    if (at == null) throw new Error(`No free time on ${NAMES[n]} in the next four weeks. Set its times in Time slots first.`)
-    return window.stm.social.move(it.id, at)
-  })
+/**
+ * Places each network of the item on the next free time of that network. A queue item has one time, so a
+ * post for several networks becomes one item per network, each with its own text and slot. Every slot is
+ * found before anything is changed. Nothing is approved here.
+ */
+async function toNextSlot(it: Item): Promise<Item[]> {
+  if (!it.networks.length) throw new Error('Pick a network first.')
+  const at: number[] = []
+  for (const n of it.networks) {
+    const t = await window.stm.social.nextSlot(n)
+    if (t == null) throw new Error(`No free time on ${NAMES[n]} in the next four weeks. Set its times in Time slots first.`)
+    at.push(t)
+  }
+  const [first, ...rest] = it.networks
+  for (const [i, n] of rest.entries()) {
+    await window.stm.social.save({ text: it.variants?.[n]?.trim() ? it.variants[n] : it.text, mediaUrl: it.mediaUrl, mediaKind: it.mediaKind, link: it.link, title: it.title, networks: [n], when: at[i + 1]! })
+  }
+  if (rest.length) {
+    const own = it.variants?.[first!]
+    await window.stm.social.save({ ...it, text: own?.trim() ? own : it.text, variants: undefined, networks: [first!] })
+  }
+  return window.stm.social.move(it.id, at[0]!)
 }
 
 function Card(props: { i: Item; on: boolean; onPick: () => void; onDrag: () => void }) {
@@ -254,7 +268,7 @@ function Editor(props: { it: Item; nets: NetworkId[]; slots: Slot[]; queue: Item
         <span className="spacer-flex" />
         {dirty && !sent && <button className="ghost small" onClick={() => props.act(window.stm.social.save(d))}>Save</button>}
         {!dirty && st === 'draft' && d.when == null && !sent && (
-          <button className="ghost small" data-tip={d.networks[0] ? `Takes the next free time of ${NAMES[d.networks[0]]}` : 'Pick a network first'} disabled={!d.networks[0]} onClick={() => props.act(toNextSlot(props.it))}>Add to queue</button>
+          <button className="ghost small" data-tip={d.networks[0] ? (d.networks.length > 1 ? 'Each network takes its own next free time; the post becomes one item per network' : `Takes the next free time of ${NAMES[d.networks[0]]}`) : 'Pick a network first'} disabled={!d.networks[0]} onClick={() => props.act(toNextSlot(props.it))}>Add to queue</button>
         )}
         {!dirty && st === 'draft' && <button className="primary small" onClick={() => props.act(window.stm.social.approve(d.id, true))}>{d.when == null || d.when <= Date.now() ? 'Approve and post now' : `Approve for ${hhmm(d.when)}`}</button>}
         {!dirty && st === 'scheduled' && <button className="ghost small" onClick={() => props.act(window.stm.social.approve(d.id, false))}>Take approval back</button>}
