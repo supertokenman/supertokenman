@@ -21,3 +21,13 @@ app/shared/settingsfile.test.ts:generic-api-key:26
 e9f7b233e068687dd4c4fe5128066e209060db43:app/shared/leaks.test.ts:github-pat:6
 e9f7b233e068687dd4c4fe5128066e209060db43:app/shared/leaks.test.ts:stripe-access-token:12
 e9f7b233e068687dd4c4fe5128066e209060db43:app/shared/leaks.test.ts:stripe-access-token:22
+# Public OAuth 1.0a test vectors (RFC 5849 section 1.2 and X API docs), not secrets
+5effe2d03f82527f79d69adc4c8d6bc3a5c0e777:app/shared/oauth1.test.ts:generic-api-key:9
+5effe2d03f82527f79d69adc4c8d6bc3a5c0e777:app/shared/oauth1.test.ts:generic-api-key:10
+5effe2d03f82527f79d69adc4c8d6bc3a5c0e777:app/shared/oauth1.test.ts:generic-api-key:11
+5effe2d03f82527f79d69adc4c8d6bc3a5c0e777:app/shared/oauth1.test.ts:generic-api-key:12
+5effe2d03f82527f79d69adc4c8d6bc3a5c0e777:app/shared/oauth1.test.ts:generic-api-key:25
+5effe2d03f82527f79d69adc4c8d6bc3a5c0e777:app/shared/oauth1.test.ts:generic-api-key:30
+d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:77
+d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:78
+d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:82
