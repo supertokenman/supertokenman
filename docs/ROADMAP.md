@@ -232,6 +232,14 @@ Left out: a server with Postgres (Rakazo), against local-first; API keys kept in
 
 - Brief a post: summary and the best prompt from any link or screenshot.
 - Mentions: when someone mentions you asking for a summary, a draft reply with the brief waits for your approval (Bluesky, Mastodon; X with your own paid API access).
+## Post everywhere
+
+Planned for 0.1.20:
+1. Phase 1: one post, a preview per network (limits, what would be cut), confirm, then each
+   network's own API from this Mac: Bluesky, Mastodon, LinkedIn, X, Telegram, Discord (webhook),
+   DEV. Text and links only. No service in the middle.
+2. Phase 2: read comments and mentions on those posts and draft replies that go out only after approval.
+3. Phase 3: Instagram, TikTok and YouTube, after their app reviews.
 
 ## Later
 

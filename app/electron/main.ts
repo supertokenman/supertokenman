@@ -24,6 +24,7 @@ import * as G from './git.js'
 import { cancel as ciCancel, finished, github as githubApi, jobs as ciJobs, log as ciLog, repoOf, rerunFailed, runs as ciRuns, token as ciToken, type Run } from './ci.js'
 import { describe as describeLink, nowPlaying, osascript, script as spotifyScript, type Command, type Saved } from './spotify.js'
 import { Vault } from './vault.js'
+import { registerPostEverywhere } from './posteverywhere.js'
 import { cleanPersona, fromMarkdown, personaPrompt, STARTERS, toMarkdown, type Persona } from '../shared/personas.js'
 import { choosePrompt } from '../shared/router.js'
 import { DEFAULT_HOTKEY, validHotkey } from '../shared/hotkey.js'
@@ -5994,6 +5995,13 @@ const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     }
     return { panel: sid, reply: await done }
   },
+  // opens Post everywhere with the text; the window still shows the networks and asks before posting
+  post: (a) => {
+    if (!win || win.isDestroyed()) throw new Error('The app window is closed; open it to post.')
+    win.webContents.send('post:open', { text: String(a.text ?? '').slice(0, 100_000), title: String(a.title ?? '').slice(0, 300) })
+    win.show()
+    return { opened: true }
+  },
   goal: (a) => {
     const sid = panelId(a.panel)
     const t = String(a.text ?? '').trim()
@@ -6432,6 +6440,8 @@ ipcMain.handle('panel:linkAuto', (_e, a: string, b: string, on: boolean) => {
   return panelLinksView()
 })
 registerTranscripts(ipcMain, cliHandlers, app.getPath('userData'))
+// Post everywhere: off until a network is connected; posts only after the window's confirm
+registerPostEverywhere(ipcMain, () => vault)
 let cli: ReturnType<typeof startCli> | null = null
 app.whenReady().then(() => {
   try {

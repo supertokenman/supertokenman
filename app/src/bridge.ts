@@ -337,6 +337,13 @@ export type Bridge = {
     stop: () => Promise<boolean>
     onLine: (fn: (line: string) => void) => () => void
   }
+  post: {
+    status: () => Promise<PostNet[]>
+    connect: (net: import('../shared/posteverywhere').NetId, fields: Record<string, string>) => Promise<PostNet[]>
+    disconnect: (net: import('../shared/posteverywhere').NetId) => Promise<PostNet[]>
+    send: (nets: import('../shared/posteverywhere').NetId[], text: string, title: string) => Promise<import('../shared/posteverywhere').Result[]>
+    onOpen: (fn: (r: { text: string; title: string }) => void) => () => void
+  }
   radar: {
     get: () => Promise<RadarCfg>
     save: (groups: string, weights: Record<string, number>, ntfy: string) => Promise<RadarCfg>
@@ -1028,3 +1035,5 @@ export type QuotaState = { source: import('../shared/quotapolicy').Source; pause
 export type BwState = import('../electron/bitwarden').Status & { links: { name: string; label: string; field: string; shown: string | null }[] }
 
 export type RadarCfg = { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }
+
+export type PostNet = { net: import('../shared/posteverywhere').NetId; connected: boolean; host: string | null; mastodonLimit?: number }

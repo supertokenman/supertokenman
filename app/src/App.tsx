@@ -68,6 +68,7 @@ const DesignHandoff = lazy(() => import('./DesignHandoff').then((x) => ({ defaul
 const VaultBoard = lazy(() => import('./VaultBoard').then((x) => ({ default: x.VaultBoard })))
 const PdfTools = lazy(() => import('./PdfTools').then((x) => ({ default: x.PdfTools })))
 const AppContainers = lazy(() => import('./AppContainers').then((x) => ({ default: x.AppContainers })))
+const PostEverywhere = lazy(() => import('./PostEverywhere').then((x) => ({ default: x.PostEverywhere })))
 const TopicRadar = lazy(() => import('./TopicRadar').then((x) => ({ default: x.TopicRadar })))
 const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
 const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
@@ -445,6 +446,8 @@ export function App() {
   const [briefOpen, setBriefOpen] = useState(false)
   const [mentionsOpen, setMentionsOpen] = useState(false)
   const [briefSid, setBriefSid] = useState<string | null>(null)
+  const [postOpen, setPostOpen] = useState<{ text?: string; title?: string } | null>(null)
+  useEffect(() => window.stm.post.onOpen((r) => setPostOpen({ text: r.text, title: r.title })), [])
   const [ciOpen, setCiOpen] = useState(false)
   const [xrOpen, setXrOpen] = useState(false)
   const [stkOpen, setStkOpen] = useState(false)
@@ -1186,6 +1189,7 @@ export function App() {
       ['run-ci', 'Run CI here with act, before the push', 'github actions workflow ci act local docker job run test', () => setCiOpen(true)],
       ['post-brief', 'Brief a post: summary and the best prompt from a link or screenshot', 'brief post link url screenshot summary summarize x twitter linkedin threads reddit youtube article prompt deeper', () => setBriefOpen(true)],
       ['mentions', 'Mentions: draft a brief for people who ask you in a mention', 'mentions bluesky mastodon x twitter reply summarize summary resumo resumen prompt brief approve queue', () => setMentionsOpen(true)],
+      ['post-everywhere', 'Post everywhere: one post to the networks you connect', 'post publish social bluesky mastodon linkedin x twitter telegram discord dev.to share announce', () => setPostOpen({})],
       ['topic-radar', 'Topic radar: your topics in your feeds', 'radar trends topics keywords feeds news count ranking summary ntfy', () => setRadarOpen(true)],
       ['bitwarden', 'Bitwarden or Vaultwarden: link secrets', 'bitwarden vaultwarden bw secrets password keys link', () => setBwOpen(true)],
       ['app-containers', 'App containers: what the app runs in Docker, live', 'docker containers isolate self-hosting stats events stop remove', () => setCtrOpen(true)],
@@ -1641,6 +1645,7 @@ export function App() {
         />
       </Presence>
       <Presence show={mentionsOpen}><MentionsSheet onClose={() => setMentionsOpen(false)} /></Presence>
+      <Presence show={!!postOpen}><PostEverywhere text={postOpen?.text} title={postOpen?.title} onClose={() => setPostOpen(null)} /></Presence>
       <Presence show={radarOpen}><TopicRadar onClose={() => setRadarOpen(false)} /></Presence>
       <Presence show={bwOpen}><BitwardenSheet onClose={() => setBwOpen(false)} /></Presence>
       <Presence show={ctrOpen}><AppContainers onClose={() => setCtrOpen(false)} /></Presence>
