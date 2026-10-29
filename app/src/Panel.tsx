@@ -653,7 +653,7 @@ export function Panel(props: {
       <div className="hud" data-tip={WHY[mood]} role="img" aria-label={WHY[mood]} dangerouslySetInnerHTML={{ __html: themed(hudMini(hudView(s, money, Date.now()))) }} />
 
       {/* stays mounted once opened, so switching tabs keeps the page and its state */}
-      {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><Suspense fallback={null}><PreviewView servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></Suspense></section>}
+      {(tab === 'preview' || previewed) && <section className="preview-host" hidden={tab !== 'preview'}><Suspense fallback={null}><PreviewView panel={sid} servers={s.servers} onAttach={attachFromBrowser} persona={s.persona?.id} /></Suspense></section>}
       {(tab === 'terminal' || termed) && <section className="preview-host" hidden={tab !== 'terminal'}><Suspense fallback={null}><TermView sid={sid} active={tab === 'terminal'} onAttach={(note) => attachFromBrowser([], note)} /></Suspense></section>}
       <main ref={scroller} className="scroll" hidden={tab === 'preview' || tab === 'terminal'}>
         <div className="column">
