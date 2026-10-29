@@ -5,6 +5,11 @@ import { accountId } from '../shared/socaccounts'
 import type { Net } from '../shared/social'
 import { clean } from './errors'
 
+const HookLibrary = lazy(() => import('./HookLibrary'))
+const NicheImport = lazy(() => import('./NicheImport'))
+const HitShare = lazy(() => import('./HitShare').then((x) => ({ default: x.HitShare })))
+const TOOLS = [['hooks', 'Hook library'], ['niche', 'Niche import'], ['hits', 'Hit share']] as const
+
 const Projects = lazy(() => import('./Projects').then((x) => ({ default: x.Projects })))
 
 const handleOf = (n?: PostNet): string => n?.handle?.replace(/^@/, '') ?? ''
@@ -20,6 +25,7 @@ export function Accounts(props: { only?: Net[]; note?: string; onChange?: (l: Po
   const [fields, setFields] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [tool, setTool] = useState<(typeof TOOLS)[number][0] | null>(null)
   const got = (l: PostNet[]) => (setNets(l), props.onChange?.(l), setMsg(''))
   useEffect(() => void window.stm.accounts.status().then(got, (e) => setMsg(clean(e))), [])
   const connect = () => {
@@ -67,6 +73,18 @@ export function Accounts(props: { only?: Net[]; note?: string; onChange?: (l: Po
         <Suspense fallback={<div className="faint">Loading projects</div>}>
           <Projects candidates={candidates} />
         </Suspense>
+      )}
+      {!props.only && (
+        <>
+          <div className="ob-row">
+            {TOOLS.map(([id, label]) => <button key={id} className={tool === id ? 'primary small' : 'ghost small'} aria-pressed={tool === id} onClick={() => setTool(tool === id ? null : id)}>{label}</button>)}
+          </div>
+          {tool && (
+            <Suspense fallback={<div className="faint">Loading</div>}>
+              {tool === 'hooks' ? <HookLibrary /> : tool === 'niche' ? <NicheImport /> : <HitShare />}
+            </Suspense>
+          )}
+        </>
       )}
     </section>
   )
