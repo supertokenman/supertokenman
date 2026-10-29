@@ -180,6 +180,7 @@ export type Bridge = {
     onDelta: (fn: (id: string, text: string) => void) => () => void
     onPull: (fn: (p: { name: string; status: string; done: number }) => void) => () => void
   }
+  clearBrowse: (sid: string) => Promise<void>
   onBrowseNet: (fn: (v: { wc: number; method: string; url: string; status?: number; error?: string; at: number }) => void) => () => void
   onPanelFocus: (fn: (sid: string) => void) => () => void
   devices: {

@@ -85,6 +85,7 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('local:pull', l)
     },
   },
+  clearBrowse: (sid) => ipcRenderer.invoke('browse:clear', sid),
   onBrowseNet: (fn) => {
     const l = (_e, v) => fn(v)
     ipcRenderer.on('browse:net', l)

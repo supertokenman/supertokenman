@@ -4,6 +4,7 @@ import { readFile as readFileAsync } from 'node:fs/promises'
 import { guardIpc, lockPermissions, reportIpcErrors, UI_SCHEME, UI_URL, uiFile } from './hardening.js'
 import { errlog, report as diagReport } from './errlog.js'
 import { loopConfig } from '../shared/loopguard.js'
+import { isPanelPartition, panelPartition, profileDir, withProfile } from '../shared/panelbrowser.js'
 import { badge, contextMenu, keepBounds, menuTemplate, savedBounds, windowStateFile } from './native.js'
 import { crashReporter, app, BrowserWindow, Menu, nativeImage, Tray, globalShortcut, net, Notification, protocol, dialog, ipcMain, nativeTheme, powerMonitor, safeStorage, systemPreferences, session as electronSession, shell as desktop, webContents as allWebContents } from 'electron'
 import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, symlinkSync, unlinkSync, watch, writeFileSync } from 'node:fs'
@@ -643,7 +644,7 @@ function track(sid: string, e: { kind?: string; windows?: { kind: string; percen
 /** A message to the window, dropped once it is gone (during quit, panels and helpers may still speak). */
 /** The panel's browser for sites that are not this machine: its own storage, apart from the web apps;
  * a persona gets its own (persist:browse-<id>), so each keeps its own sign-ins. */
-const isBrowse = (p: string) => p === BROWSE || /^persist:browse-[a-z0-9-]{1,40}$/.test(p)
+const isBrowse = (p: string) => p === BROWSE || isPanelPartition(p) || /^persist:browse-[a-z0-9-]{1,40}$/.test(p)
 const browseSessions = new Set<Electron.Session>()
 const watched = new Set<string>()
 // requests that failed in the panel's browser, for its Network list: errors and 4xx/5xx only
@@ -1753,6 +1754,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
   for (const c of settings().custom ?? [])
     if (c.remote) servers[c.id] = { type: 'stdio', command: 'npx', args: ['-y', 'mcp-remote@0.15.2', c.remote] }
     else if (c.npm) servers[c.id] = { type: 'stdio', command: 'npx', args: ['-y', c.npm] }
+  // a Playwright browser drives this panel's own profile, never the person's browser
+  for (const v of Object.values(servers)) if (v.type === 'stdio' && Array.isArray(v.args)) v.args = withProfile(v.args, profileDir(app.getPath('userData'), sid))
   // reading files is offered only to a model big enough to be trusted with it
   const local = settings().smallModel
   const readOk = local ? (paramsOf((await localModels())?.find((m) => m.name === local)?.params) ?? 0) >= READ_MIN_PARAMS : false
@@ -2092,6 +2095,13 @@ ipcMain.handle('diag:open', () => desktop.openPath(logs().dir))
 ipcMain.handle('diag:selftest', () => {
   throw new Error('Self test: this error was thrown on purpose to check the log.')
 })
+/** Wipes a panel's browser: its partition's cookies and storage, and the Playwright profile folder. */
+async function clearPanelBrowser(sid: string) {
+  await electronSession.fromPartition(panelPartition(sid)).clearStorageData().catch(() => undefined)
+  await electronSession.fromPartition(panelPartition(sid)).clearCache().catch(() => undefined)
+  rmSync(profileDir(app.getPath('userData'), sid), { recursive: true, force: true })
+}
+ipcMain.handle('browse:clear', (_e, sid: string) => clearPanelBrowser(String(sid)))
 ipcMain.handle('session:close', (_e, sid: string) => {
   void noteStopped(sid)
   const rem = remoteOf.get(sid)
@@ -2115,6 +2125,7 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   budgetWarned.delete(sid)
   closeTerminal(String(sid))
   get(sid)?.close()
+  void clearPanelBrowser(sid)
   sessions.delete(sid)
   scopeOf.delete(sid)
   panelKeys.drop(sid)
