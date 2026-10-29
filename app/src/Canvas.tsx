@@ -33,6 +33,10 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
   const [links, setLinks] = useState<Record<string, LinkInfo[]>>({})
   const [space, setSpace] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [roomOpen, setRoomOpen] = useState(false)
+  const [roomText, setRoomText] = useState('')
+  const [roomMsg, setRoomMsg] = useState('')
+  const [roomLeft, setRoomLeft] = useState(0)
   const surf = useRef<HTMLDivElement>(null)
   const rects = useMemo(() => place(props.order, pos), [props.order.join('|'), pos])
 
@@ -111,6 +115,28 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
     if (b) setView(fit(Object.values(rects), b.width, b.height))
   }
 
+  const linkedIds = props.order.filter((s) => links[s]?.some((l) => props.order.includes(l.panel)))
+  const nameOf = (s: string) => Object.values(links).flat().find((l) => l.panel === s)?.name ?? s
+  const roomPost = async () => {
+    try {
+      const r = await window.stm.panelBus.roomPost!(linkedIds, roomText)
+      setRoomMsg(`${nameOf(r.panel)} answers. ${r.left} more can take a turn.`)
+      setRoomLeft(r.left)
+      setRoomText('')
+    } catch (e) {
+      setRoomMsg(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e))
+    }
+  }
+  const roomNext = async () => {
+    try {
+      const r = await window.stm.panelBus.roomNext!()
+      setRoomMsg(`Turn passed to ${nameOf(r.panel)}${r.delivery === 'auto' ? '' : ' (waits in its composer)'}. ${r.left} left.`)
+      setRoomLeft(r.left)
+    } catch (e) {
+      setRoomMsg(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e))
+    }
+  }
+
   const pairs = uniquePairs(links).filter(([a, b]) => rects[a] && rects[b])
   return (
     <div ref={surf} className={`canvas ${space ? 'panning' : ''} ${moving ? 'moving' : ''}`} onPointerDownCapture={(e) => space && (e.stopPropagation(), pan(e))} onPointerDown={onSurface}>
@@ -145,7 +171,21 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
         <span className="cv-zoom">{Math.round(view.zoom * 100)}%</span>
         <button className="ghost" onClick={() => setView((v) => zoomAt(v, 1.2, (surf.current?.clientWidth ?? 0) / 2, (surf.current?.clientHeight ?? 0) / 2))} aria-label="Zoom in" data-tip="Zoom in">+</button>
         <button className="ghost" onClick={frame} data-tip="Show every panel">Fit</button>
+        {window.stm.panelBus.roomPost && linkedIds.length >= 2 && (
+          <button className="ghost" onClick={() => setRoomOpen((o) => !o)} aria-expanded={roomOpen} data-tip="One message to the linked panels">Room</button>
+        )}
       </div>
+      {roomOpen && linkedIds.length >= 2 && (
+        <div className="cv-room" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="cv-room-who">To {linkedIds.map((s) => `@${nameOf(s).trim().toLowerCase().replace(/\s+/g, '-')}`).join(' ')}. The named panel answers; the next turn goes over its link.</div>
+          <textarea value={roomText} onChange={(e) => setRoomText(e.target.value)} placeholder="@name your message" rows={3} onKeyDown={(e) => e.key === 'Enter' && (e.metaKey || e.ctrlKey) && void roomPost()} />
+          <div className="cv-room-row">
+            <button onClick={() => void roomPost()} disabled={!roomText.trim()}>Send</button>
+            <button className="ghost" onClick={() => void roomNext()} disabled={roomLeft < 1}>Next turn</button>
+            <span>{roomMsg}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

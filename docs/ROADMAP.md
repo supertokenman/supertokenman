@@ -213,7 +213,7 @@ Noncommercial: ideas only, its code is not to be read for reuse) and Noodle (pdp
 Apache-2.0). Features as their pages describe them, not tested by us. Ideas only, no code.
 
 Planned for 0.1.18, in this order:
-1. Group room on the canvas: one message to several linked panels; the panel named with @name
+1. Done: group room on the canvas: one message to several linked panels; the panel named with @name
    answers, the others in turn when asked, each turn charged to its link. (Codync, Noodle)
 2. Triggers from a local webhook: a receiver on 127.0.0.1 with a per-trigger token starts a trigger
    run; nothing listens beyond this machine and no host is called. (OpenMausBot)
