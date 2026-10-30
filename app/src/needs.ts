@@ -26,6 +26,8 @@ export type Inputs = {
   newsUnread: number
   /** commits waiting in the checkout the app was built from */
   update?: { behind: number; subjects: string[] }
+  /** the runtime state of each panel (panel:state), when main reports it */
+  runs?: Record<string, { state: string; reason?: string }>
   /** cloud resources running two weeks or more */
   forgotten?: { name: string; provider: string; days: number }[]
   now: number
@@ -40,6 +42,10 @@ export function needs(i: Inputs): Need[] {
     if (!s) continue
     // a panel waiting for your yes is the one thing that stops work
     for (const a of s.asks) out.push({ id: `ask-${sid}-${a.id}`, level: 0, kind: 'ask', title: `${folder(s.cwd)} waits for you`, detail: `${a.tool}: ${a.summary}`.slice(0, 120), go: { to: 'panel', sid } })
+    // a panel that asked a question in words, or stopped, blocks you too (an approval is already above)
+    const r = i.runs?.[sid]
+    if (r?.state === 'waiting_input') out.push({ id: `input-${sid}`, level: 0, kind: 'ask', title: `${folder(s.cwd)} asks you something`, go: { to: 'panel', sid } })
+    if (r?.state === 'error') out.push({ id: `error-${sid}`, level: 0, kind: 'ask', title: `${folder(s.cwd)} stopped`, detail: r.reason?.slice(0, 120), go: { to: 'panel', sid } })
     const run = s.ci?.runs[0]
     if (run?.conclusion === 'failure') out.push({ id: `ci-${sid}-${run.id}`, level: 0, kind: 'ci', title: `CI failed on ${s.ci!.branch}`, detail: `${s.ci!.repo} · ${run.workflow}`, at: Date.parse(run.updatedAt), go: { to: 'panel', sid } })
     // a finished answer in a panel you are not looking at

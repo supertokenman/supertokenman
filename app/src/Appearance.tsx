@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { TranscriptToggle } from './Transcript'
+const RuntimeSettings = lazy(() => import('./settings/Runtime').then((x) => ({ default: x.RuntimeSettings })))
 const DictationSettings = lazy(() => import('./DictationSettings').then((x) => ({ default: x.DictationSettings })))
 import { IconClose } from './icons'
 import { LOADERS, LoaderMark, loaderStyle, setLoaderStyle } from './Thinking'
@@ -216,6 +217,9 @@ export function Appearance(props: { current: string; onPick: (id: string) => voi
             <UpdateToggle />
             <ClaudeUsageToggle />
             <LoopGuardSettings />
+            <Suspense fallback={null}>
+              <RuntimeSettings />
+            </Suspense>
             <TranscriptToggle />
             <Suspense fallback={null}>
               <DictationSettings />

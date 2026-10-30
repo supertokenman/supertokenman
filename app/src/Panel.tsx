@@ -1,6 +1,7 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useContext, useRef, useState } from 'react'
 import { Windowed } from './windowed'
 import { pickAttachments } from './FilePicker'
+import { markOf, type PanelRun } from './panelview'
 import { StateMark } from './StateMark'
 import { LoopNotice, LOOP_CONTINUE } from './LoopNotice'
 import { useQueueState } from './queueHook'
@@ -221,6 +222,8 @@ function CacheChip(props: { at: number; ttl: number; tokens: number; model: stri
 
 export function Panel(props: {
   sid: string
+  /** the runtime state kept in main (working, waiting, idle, error) */
+  run?: PanelRun
   s: State
   /** 'lead' or 'worker' when the panel takes part in a lead's work */
   role?: string
@@ -594,7 +597,10 @@ export function Panel(props: {
     >
       {dropping && <div className="drop-veil"><span>Drop to attach</span></div>}
       <header className={`panel-bar${inCanvas ? ' compact' : ''}`}>
-        <StateMark state={s.busy ? 'busy' : s.asleep ? 'off' : s.model ? 'up' : 'warn'} label={s.busy ? 'Working' : s.asleep ? 'Asleep: the next message resumes it' : s.model ? 'Ready' : 'Starting'} />
+        {(() => {
+          const m = s.asleep || !s.model ? null : markOf(props.run)
+          return m ? <StateMark state={m.state} shape={m.shape} label={m.label} /> : <StateMark state={s.busy ? 'busy' : s.asleep ? 'off' : s.model ? 'up' : 'warn'} label={s.busy ? 'Working' : s.asleep ? 'Asleep: the next message resumes it' : s.model ? 'Ready' : 'Starting'} />
+        })()}
         <span className="path" data-tip={`${s.cwd}\nPanel id ${sid}, for messages between panels`}>
           <span className="path-parent">{folder.slice(-2, -1)[0] ?? ''}/</span>
           {folder.at(-1) ?? '...'}

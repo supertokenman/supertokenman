@@ -91,6 +91,8 @@ const AwayCard = lazy(() => import('./AwayCard').then((x) => ({ default: x.AwayC
 const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
 const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
 const ComposeStacks = lazy(() => import('./ComposeStacks').then((x) => ({ default: x.ComposeStacks })))
+const ResumeBanner = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.ResumeBanner })))
+const UpdateConfirm = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.UpdateConfirm })))
 const DiagCheck = lazy(() => import('./DiagCheck').then((x) => ({ default: x.DiagCheck })))
 const Reflect = lazy(() => import('./Reflect').then((x) => ({ default: x.Reflect })))
 const ProjectGraph = lazy(() => import('./ProjectGraph').then((x) => ({ default: x.ProjectGraph })))
@@ -164,7 +166,8 @@ import { MusicChip, useSpotify } from './Music'
 
 const WebAppsDrawer = lazy(() => import('./WebApps').then((m) => ({ default: m.WebAppsDrawer })))
 
-import { noPanels, reducePanels, type PanelAction, type Panels } from './state'
+import { noPanels, reducePanels, type Action, type PanelAction, type Panels } from './state'
+import { gateCount, missingPanels, replayOpen, type PanelRun } from './panelview'
 
 import './bridge'
 import { useMoney } from './currency'
@@ -626,7 +629,21 @@ export function App() {
   const [updating, setUpdating] = useState(false)
   // the update as it runs: its current step, or why it stopped
   const [upd, setUpd] = useState<{ state: 'busy' | 'down'; step: string; pct?: number; tail?: string } | null>(null)
-  useEffect(() => window.stm.onUpdateProgress?.(setUpd), [])
+  // panels at work when the update wants to restart: the person decides (Restart now / Install when I quit)
+  const [gate, setGate] = useState(0)
+  useEffect(
+    () =>
+      window.stm.onUpdateProgress?.((m) => {
+        const n = m.state === 'down' ? gateCount(m.step) : 0
+        setGate(n)
+        setUpd(n ? null : m)
+      }),
+    [],
+  )
+  // the state of each panel, kept in main: the dot, the Needs you list, and what a reopened window replays
+  const [runs, setRuns] = useState<Record<string, PanelRun>>({})
+  const [resumeOffer, setResumeOffer] = useState(0)
+  const haveRef = useRef<string[]>([])
   // the Update button: checks right now, then rebuilds and reopens (or says there is nothing new)
   const runUpdate = async () => {
     setUpdating(true)
@@ -954,6 +971,7 @@ export function App() {
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
   }, [lastTime.length])
+  const reopenRef = useRef<() => Promise<void>>(async () => undefined)
   const reopen = async () => {
     const list = lastTime
     setLastTime([])
@@ -971,6 +989,31 @@ export function App() {
       }
     }
   }
+
+  reopenRef.current = reopen
+  haveRef.current = p.order
+  // a window opened again: panels still running in main come back with their buffered events (their scrollback)
+  const reattach = useCallback(async () => {
+    const rt = window.stm.runtime
+    if (!rt) return
+    const snap = await rt.snapshot().catch(() => null)
+    if (!snap) return
+    setResumeOffer(snap.resumeOffer)
+    setRuns(Object.fromEntries(snap.panels.map((x) => [x.panel, { state: x.state, reason: x.reason, since: x.since }])))
+    for (const x of missingPanels(snap.panels, haveRef.current)) {
+      const o = replayOpen(x)
+      if (!o) continue
+      dispatch({ kind: 'open', ...o })
+      for (const ev of x.log) dispatch({ kind: 'event', sid: o.sid, action: ev as Action })
+    }
+  }, [])
+  useEffect(() => {
+    const rt = window.stm.runtime
+    if (!rt) return
+    void reattach()
+    const off = [rt.onState((v) => setRuns((r) => ({ ...r, [v.sid]: { state: v.state as PanelRun['state'], reason: v.reason, since: v.since } }))), rt.onReattach(() => void reattach()), rt.onResume(() => void reopenRef.current())]
+    return () => off.forEach((f) => f())
+  }, [reattach])
 
   // Cmd+T: a new panel in the focused panel's folder; Cmd+W: close the focused panel
   useEffect(() => {
@@ -1077,6 +1120,7 @@ export function App() {
     newsUnread: news.unread,
     update,
     forgotten,
+    runs,
     now: Date.now(),
   })
   const goNeed = (n: Need) => {
@@ -1359,6 +1403,7 @@ export function App() {
             key={sid}
             sid={sid}
             s={p.byId[sid]!}
+            run={runs[sid]}
             role={lead.leads.includes(sid) ? 'lead' : lead.workers[sid] ? 'worker' : ''}
             workerTitle={lead.workers[sid]?.title}
             onLead={(on) => void window.stm.lead.set(sid, on).catch((e) => dispatch({ kind: 'event', sid, action: { kind: 'note', tone: 'error', text: e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e) } }))}
@@ -1423,6 +1468,20 @@ export function App() {
           <span className="sep" />
           {money(total)}
         </span>
+        {gate > 0 && (
+          <Suspense fallback={null}>
+            <UpdateConfirm
+              live={gate}
+              canQueue={update?.source === 'release'}
+              onNow={() => {
+                setGate(0)
+                setUpd({ state: 'busy', step: 'Restarting' })
+                void window.stm.updateRun(true)
+              }}
+              onLater={() => setGate(0)}
+            />
+          </Suspense>
+        )}
         {upd && (
           <div className={`update-bar ${upd.state}`} role="status">
             <div className="update-head">
@@ -1557,7 +1616,16 @@ export function App() {
             <button className="ghost small" onClick={() => setLink(null)}>{'error' in link ? 'Dismiss' : 'Ignore'}</button>
           </div>
         )}
-      {lastTime.length > 0 && (
+      {lastTime.length > 0 && resumeOffer > 0 && (
+        <Suspense fallback={null}>
+          <ResumeBanner
+            count={resumeOffer}
+            onResume={() => (setResumeOffer(0), void window.stm.runtime.dismissResume(), void reopen())}
+            onDismiss={() => (setResumeOffer(0), setLastTime([]), void window.stm.runtime.dismissResume())}
+          />
+        </Suspense>
+      )}
+      {lastTime.length > 0 && resumeOffer === 0 && (
         <div className="resume-pill" role="status" aria-label="Panels from last time">
           <span className="rp-text">Reopen {lastTime.length === 1 ? '1 panel' : `${lastTime.length} panels`} from last time</span>
           <button className="ghost small" aria-expanded={resumeList} onClick={() => setResumeList(!resumeList)}>{resumeList ? 'Hide' : 'Show'}</button>

@@ -2469,7 +2469,7 @@ button { white-space: nowrap; }
 .sbx-row.deleted b { color: var(--danger, #e5484d); }
 
 /* the update while it runs, and why it stopped */
-.update-bar { position: fixed; right: 12px; top: 56px; z-index: 70; width: min(340px, calc(100vw - 24px)); display: grid; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28); font-size: 12.5px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); animation: cut-in 260ms var(--cut, ease) both; }
+.update-bar { position: fixed; right: 12px; top: 56px; z-index: 70; width: min(340px, calc(100vw - 24px)); display: grid; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border-strong); font-size: 12.5px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); animation: cut-in 260ms var(--cut, ease) both; }
 .update-bar.down { width: min(560px, calc(100vw - 24px)); }
 .update-bar.down { border-color: var(--danger, #e5484d); }
 .update-head { display: flex; align-items: center; gap: 10px; }
@@ -4597,3 +4597,13 @@ html[data-blurred] .panel-bar.compact .sm-mark.busy::after { animation: none; op
 .chan-compose textarea { flex: 1; resize: none; }
 .chan-complete { position: absolute; bottom: 100%; left: 0; display: flex; gap: 4px; background: var(--raised); border: 1px solid var(--border-strong); border-radius: 6px; padding: 4px; }
 .failover-card .ask-actions { flex-wrap: wrap; padding-right: 14px; }
+
+/* runtime: Keep panels running, the resume strip, the update question (flat, no shadow, no pill) */
+.rt-note { margin: -2px 0 6px; font-size: 11.5px; }
+.rt-live { display: grid; gap: 4px; padding: 6px 0 8px; font-size: 12px; }
+.rt-row { display: flex; align-items: center; gap: 8px; }
+.rt-id { margin-left: auto; font-family: var(--mono); }
+.rt-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; background: var(--surface); border-bottom: 1px solid var(--border-strong); border-left: 3px solid var(--accent); font-size: 12.5px; }
+.rt-banner-text { flex: 1; min-width: 200px; }
+.rt-confirm { box-shadow: none; border-left: 3px solid var(--accent); }
+.rt-actions { display: flex; gap: 8px; justify-content: flex-end; }

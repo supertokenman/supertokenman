@@ -22,4 +22,10 @@ describe('inbox', () => {
     const n = needs({ ...base, next: { title: 'Later', inMin: 90 }, renewals: [{ name: 'biaze.dev', inDays: 40 }, { name: 'Workers', inDays: 1 }] })
     expect(n.map((x) => x.title)).toEqual(['Workers renews in 1d'])
   })
+  it('lists a panel that asked a question or stopped', () => {
+    const s = { ...initial, cwd: '/x/engine' }
+    const n = needs({ ...base, panels: { order: ['a', 'b'], byId: { a: s, b: { ...s, cwd: '/x/web' } }, focus: null }, runs: { a: { state: 'waiting_input' }, b: { state: 'error', reason: 'disconnected' } } })
+    expect(n.map((x) => x.title)).toEqual(['engine asks you something', 'web stopped'])
+    expect(n[1]!.detail).toBe('disconnected')
+  })
 })
