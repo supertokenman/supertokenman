@@ -187,6 +187,13 @@ import * as MI from '../shared/memitems.js'
 import * as CD from '../shared/compiledoc.js'
 import * as TP from '../shared/toolprune.js'
 import * as QP from '../shared/quotapolicy.js'
+import * as PQ from '../shared/panelqueue.js'
+import * as FK from '../shared/failkind.js'
+import * as FO from '../shared/failover.js'
+import * as TC from '../shared/teamchannel.js'
+import * as CR from '../shared/chanroute.js'
+import * as CS from './channelstore.js'
+import * as QW from '../shared/qfcwire.js'
 import * as AT from '../shared/archtemplates.js'
 import * as CB from './codebox.js'
 import * as SN from '../shared/snapshot.js'
@@ -316,7 +323,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -627,7 +634,16 @@ function budgetVerdict(sid: string) {
   }
   return checkBudget(st.budget ?? {}, st.budgetSpend ?? emptySpend(dayOf(new Date())), dayOf(new Date()), { project: shells.get(sid)?.cwd ?? '', persona: personaOf.get(sid), panelUsd: p.total, estimateUsd: estimateTurn(p.recent) })
 }
-function track(sid: string, e: { kind?: string; windows?: { kind: string; percentUsed: number; resetsAt?: string }[]; model?: string; costUsd?: number; inputTokens?: number; outputTokens?: number; cacheRead?: number; cacheWrite?: number; tokens?: number; path?: string; durationMs?: number; cacheTtlMs?: number }) {
+function track(sid: string, e: { from?: string; to?: string; reason?: string; resetsAt?: string; kind?: string; windows?: { kind: string; percentUsed: number; resetsAt?: string }[]; model?: string; costUsd?: number; inputTokens?: number; outputTokens?: number; cacheRead?: number; cacheWrite?: number; tokens?: number; path?: string; durationMs?: number; cacheTtlMs?: number }) {
+  if (e.kind === 'failover') {
+    // a switch made after a limit or an outage: one row in the usage log, next to the turns
+    try {
+      appendFileSync(join(app.getPath('userData'), 'failover-log.jsonl'), JSON.stringify({ at: Date.now(), panel: sid, kind: 'failover', from: e.from, to: e.to, reason: e.reason, resetsAt: e.resetsAt ?? null }) + '\n')
+    } catch {
+      // the ledger never stops a switch
+    }
+    return
+  }
   if (e.kind === 'limits' && e.windows) {
     panelUse.set(sid, PU.addWindows(useOf(sid), e.windows))
     // the newest reading of the plan's windows, for the menu bar
@@ -894,6 +910,8 @@ function sendNow(sid: string, e: unknown) {
   if (ev.kind === 'span') return
   quotaWatch(sid, ev)
   leadWatch(sid, e as never)
+  if (ev.kind === 'turn' && ev.isError) failoverCheck(sid, ev.text, (e as { status?: number }).status)
+  else if (ev.kind === 'error') failoverCheck(sid, (e as { message?: string }).message)
   if (ev.kind === 'turn') {
     awayLog('turn', panelName(sid), undefined, (e as { costUsd?: number }).costUsd)
     if (ev.isError) awayLog('error', panelName(sid), ev.text)
@@ -2038,6 +2056,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
   traceParts.set(sid, contextParts([{ name: persona ? `Persona: ${persona.name}` : 'Persona', text: persona ? personaPrompt(persona) : '' }, ...ruleParts, { name: 'Project memory', text: opts.resume ? '' : memText }]))
   const s = new Session((e: UiEvent) => send(sid, e), {
     cwd,
+    onTurnEnd: (ok) => queueTurnEnded(sid, ok),
     model: persona?.model || opts.model || undefined,
     effort: (['low', 'medium', 'high', 'xhigh', 'max'] as const).find((e) => e === opts.effort),
     query: boxed ? (args) => query({ ...args, options: { ...args.options, spawnClaudeCodeProcess: spawnInSandbox(boxed, cwd) } }) : query,
@@ -2360,6 +2379,18 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   void clearPanelBrowser(sid)
   sessions.delete(sid)
   leadForget(sid)
+  // its queue goes with the panel unless another panel of the same folder still uses the key
+  pq.delete(sid)
+  if (![...sessions.keys()].some((o) => o !== sid && pqKey(o) === pqKey(sid)) && settings().panelQueues?.[pqKey(sid)]) {
+    const rest = { ...settings().panelQueues }
+    delete rest[pqKey(sid)]
+    saveSettings({ ...settings(), panelQueues: rest })
+  }
+  cardClose(sid, 'cancelled')
+  lastPrompt.delete(sid)
+  resendCtx.delete(sid)
+  wakeDepth.delete(sid)
+  for (const [id, w] of wakeRecs) if (w.to === sid || w.post.from === sid) wakeRecs.delete(id)
   scopeOf.delete(sid)
   panelKeys.drop(sid)
   askBind.delete(sid)
@@ -2647,6 +2678,14 @@ ipcMain.handle('privacy:set', (_e, on: boolean) => {
   return on
 })
 ipcMain.handle('chat:send', async (_e, sid: string, text: string, attachments?: unknown, why?: string) => {
+  const r = await sendText(sid, text, attachments, why)
+  return r && 'held' in r ? r : undefined
+})
+/**
+ * The whole send path of a typed message: guards, budget, filters, snapshot, then the session. A queued item takes
+ * the same path; when it is blocked it comes back as { blocked } so the queue can pause, and nothing is held for release.
+ */
+async function sendText(sid: string, text: string, attachments?: unknown, why?: string, from?: { queueId?: string }): Promise<{ held: true } | { blocked: string } | undefined> {
   const s = get(sid)
   if (!s) return
   loopPaused.delete(sid)
@@ -2670,11 +2709,16 @@ ipcMain.handle('chat:send', async (_e, sid: string, text: string, attachments?: 
   }
   if (quotaPaused.has(sid)) {
     send(sid, { kind: 'note', tone: 'error', text: QUOTA_HELD })
-    return
+    return from ? { blocked: QUOTA_HELD } : undefined
   }
   if (!String(text ?? '').startsWith('/')) snapEvents.set(sid, SN.record(snapEvents.get(sid) ?? [], [{ kind: 'task', at: Date.now(), text: String(text ?? '').slice(0, 600) }]))
   const v = budgetVerdict(sid)
   if (!v.ok) {
+    // a queued item is not held for release: it stays in the queue, which pauses and says why
+    if (from) {
+      send(sid, { kind: 'note', tone: 'error', text: `The queue is paused: ${v.reason}` })
+      return { blocked: v.reason }
+    }
     held.set(sid, { text: String(text), attachments: files })
     send(sid, { kind: 'held', reason: v.reason, scope: v.scope, spent: v.spent, limit: v.limit, estimate: v.estimate })
     return { held: true }
@@ -2705,8 +2749,11 @@ ipcMain.handle('chat:send', async (_e, sid: string, text: string, attachments?: 
       send(sid, { kind: 'note', text: 'Handed the snapshot back to Claude with this message.' })
     }
   }
+  lastPrompt.set(sid, { text: String(text), files, ...(from?.queueId ? { queueId: from.queueId } : {}), ...(resendCtx.get(sid) ?? {}) })
+  resendCtx.delete(sid)
+  if (from) toWin('chat:event', sid, { kind: 'sent', text: String(text), at: Date.now() })
   s.send(withGoal(out, goals.get(sid) ?? null), files)
-})
+}
 // Phase 67: message filters, kept in the app folder; code runs only in electron/filterbox.ts
 const msgFiltersFile = () => join(app.getPath('userData'), 'message-filters.json')
 let msgFiltersCache: MsgFilter[] | null = null
@@ -3010,7 +3057,11 @@ ipcMain.handle('files:isDir', (_e, path: string) => {
     return false
   }
 })
-ipcMain.handle('chat:interrupt', (_e, sid: string) => get(sid)?.interrupt())
+ipcMain.handle('chat:interrupt', (_e, sid: string) => {
+  // Stop also holds what is queued: it goes on when the person resumes
+  if (pqFor(String(sid)).items.some((x) => x.state === 'waiting')) pqSet(String(sid), PQ.reduce(pqFor(String(sid)), { t: 'pause', reason: 'Stopped: resume to send the rest' }))
+  return get(sid)?.interrupt()
+})
 // loop detection: settings (thresholds, on/off) and a panel's "don't pause again in this session"
 ipcMain.handle('loop:settings', (_e, next?: unknown) => {
   if (next && typeof next === 'object') saveSettings({ ...settings(), loopGuard: loopConfig({ ...loopConfig(settings().loopGuard), ...(next as object) }) })
@@ -3705,6 +3756,7 @@ From Bash you can ask SuperTokenMan, the app around you, for actions; the person
 - \`stm ask test\`: run the project's tests in this folder and get the result.
 - \`stm ask scan deps\` or \`stm ask scan secrets\`: a dependency (Trivy) or secret (TruffleHog) scan of this folder.
 - \`stm ask preview http://localhost:PORT\`: show a local page in the panel's Preview tab.
+- In a team (a lead panel and its workers) there is a shared channel: \`mcp__stm__channel_post\` (kind and text; write @name to wake a teammate), \`mcp__stm__channel_read\` and \`mcp__stm__channel_mentions\`. Use it to hand off work, ask a teammate or report a result; mentions go through the panel links and limits, and some wait for the person to send.
 Use them instead of installing or running those tools yourself. A denied request is final for this turn.`
 // a panel from an issue: open issues of the folder's GitHub repo, and the spec written into the panel's worktree
 const ISSUE_RE = /^[\w.-]+\/[\w.-]+$/
@@ -6577,6 +6629,8 @@ function answerAsks(sid: string, askId: string | undefined, reply: string, isErr
   const a = askId ? openAsks.find((x) => x.id === askId && x.to === sid) : undefined
   if (!a) return
   openAsks.splice(openAsks.indexOf(a), 1)
+  mirrorPost(sid, a.from, 'result', isError ? 'Could not answer: its turn ended with an error.' : reply, askPost.get(a.id))
+  askPost.delete(a.id)
   try {
     if (!sessions.has(a.from)) return
     const text = isError ? `Panel ${panelName(sid)} could not answer: its turn ended with an error.` : TB.replyText(panelName(sid), a, reply)
@@ -6646,6 +6700,7 @@ function leadWatch(sid: string, e: { kind?: string; edit?: { file: string }; tex
   leadWaiters.delete(sid)
   if (blocked) return
   pulse(sid, t.lead)
+  mirrorPost(sid, t.lead, 'result', r.isError ? `Ended with an error: ${r.text}` : r.text || LD.finishedLine(r))
   if (sessions.has(t.lead)) send(t.lead, { kind: 'note', text: LD.finishedLine(r) })
   pushLead()
 }
@@ -6666,6 +6721,7 @@ const leadDeps = (me: string) => ({
     const v = budgetVerdict(w)
     if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
     sendLimit.take(me)
+    mirrorPost(me, w, 'handoff', task)
     tracePrompt(w, text, `Lead ${panelName(me)}`)
     toWin('panel:inbox', w, text, true)
     pulse(me, w)
@@ -6698,6 +6754,422 @@ const leadDeps = (me: string) => ({
     return sid
   },
 })
+// ===== Panel queue, failover with notice, team channel (spec-qfc.md) =====
+// Queue: what the person sent while a turn ran, per panel, kept by folder in the settings; it loads paused.
+const pq = new Map<string, PQ.PanelQueue>()
+const pqKey = (sid: string) => panelDir(sid) || sid
+function pqFor(sid: string): PQ.PanelQueue {
+  let q = pq.get(sid)
+  if (!q) {
+    const saved = settings().panelQueues?.[pqKey(sid)]
+    // a stored queue never starts sending by itself after a restart
+    q = saved?.items?.length ? PQ.reduce(saved, { t: 'loaded' }) : PQ.emptyQueue()
+    pq.set(sid, q)
+  }
+  return q
+}
+const pqView = (sid: string) => ({ queue: pqFor(sid), estimate: PQ.estimate(pqFor(sid), panelCost.get(sid)?.recent ?? []) })
+function pqSet(sid: string, q: PQ.PanelQueue) {
+  if (q === pq.get(sid)) return
+  pq.set(sid, q)
+  const key = pqKey(sid)
+  const all = { ...(settings().panelQueues ?? {}) }
+  if (q.items.length) all[key] = q
+  else delete all[key]
+  saveSettings({ ...settings(), panelQueues: all })
+  toWin('queue:changed', sid, pqView(sid))
+}
+type LastPrompt = { text: string; files: Attachment[]; queueId?: string; hop?: number; attempt?: number; steer?: boolean }
+const lastPrompt = new Map<string, LastPrompt>()
+const resendCtx = new Map<string, { hop?: number; attempt?: number }>()
+
+/** Sends the head item when nothing runs and the queue is not paused; a blocked send puts it back and pauses. */
+async function pqDrain(sid: string) {
+  const s = sessions.get(sid)
+  if (!s) return
+  const q = pqFor(sid)
+  const it = PQ.nextToSend(q, s.busy)
+  if (!it) return
+  pqSet(sid, PQ.reduce(q, { t: 'sent', id: it.id }))
+  wakeStarted(sid, it.askId)
+  const r = await sendText(sid, it.text, [], undefined, { queueId: it.id })
+  const last = lastPrompt.get(sid)
+  if (last && last.queueId === it.id && it.steer === 'interrupt') last.steer = true
+  if (r && 'blocked' in r) pqSet(sid, PQ.reduce(PQ.reduce(pqFor(sid), { t: 'turnEnded', ok: false }), { t: 'pause', reason: r.blocked }))
+}
+/** A turn of the panel ended (the session calls this once its busy flag is current). */
+function queueTurnEnded(sid: string, ok: boolean) {
+  pqSet(sid, PQ.reduce(pqFor(sid), { t: 'turnEnded', ok }))
+  wakeEnded(sid)
+  void pqDrain(sid)
+}
+function pqAct(sid: string, a: PQ.QueueAction) {
+  const s = sessions.get(sid)
+  if (!s) throw new Error('No such panel.')
+  const q = PQ.reduce(pqFor(sid), a)
+  pqSet(sid, q)
+  // an interrupt steer at the head of a busy panel: Stop, then it goes out as the interrupted result arrives
+  if (a.t === 'add' || a.t === 'steer' || a.t === 'move') if (PQ.interruptFor(q, s.busy)) void s.steer().catch(() => undefined)
+  wakesSync(sid)
+  void pqDrain(sid)
+  return pqView(sid)
+}
+const QUEUE_ACTS = new Set(['add', 'edit', 'cancel', 'move', 'steer', 'pause', 'resume'])
+ipcMain.handle('queue:get', (_e, sid: string) => pqView(String(sid)))
+ipcMain.handle('queue:act', (_e, sid: string, a: PQ.QueueAction) => {
+  if (!QUEUE_ACTS.has(a?.t)) throw new Error('Not a queue action.')
+  return pqAct(String(sid), a.t === 'add' ? { ...a, item: { ...a.item, state: 'waiting' } } : a)
+})
+
+// Failover: a classified failure shows a card; the person switches, waits or cancels. Never silent.
+const failPrefsOf = (sid: string): FO.FailoverPrefs => settings().failoverPrefs?.[pqKey(sid)] ?? {}
+type OpenCard = { view: QW.CardView; failure: FK.Failure; decision: FO.Decision; prompt: LastPrompt; timer?: ReturnType<typeof setTimeout> }
+const cards = new Map<string, OpenCard>()
+let cardSeq = 0
+const providerNow = (sid: string) => (sourceOf.get(sid)?.src === 'custom' ? 'custom' : undefined)
+const targetNow = (sid: string): FO.Fallback => ({ model: modelOf.get(sid) ?? sessions.get(sid)?.model, provider: providerNow(sid) })
+function cardClose(sid: string, how: QW.CardView['closed']) {
+  const c = cards.get(sid)
+  if (!c) return
+  if (c.timer) clearTimeout(c.timer)
+  cards.delete(sid)
+  toWin('failover:card', sid, { ...c.view, closed: how })
+}
+function failoverCheck(sid: string, text: string | undefined, status?: number) {
+  const last = lastPrompt.get(sid)
+  // a failure of an interrupt steer is an app stop, not a limit
+  if (!last || last.steer) return
+  const f = FK.classify({ text, status }, liveLimits ?? [], Date.now())
+  const prefs = failPrefsOf(sid)
+  const d = FO.decide(f, prefs, targetNow(sid), { hop: last.hop ?? 0, attempt: last.attempt ?? 0, now: Date.now() })
+  if (d.act === 'none') return
+  if (cards.has(sid)) cardClose(sid, 'cancelled')
+  // the queue stays paused while the card is open
+  if (pqFor(sid).items.length) pqSet(sid, PQ.reduce(pqFor(sid), { t: 'pause', reason: QW.queueHeldFor(QW.reasonText(f)) }))
+  if (d.act === 'switch' && prefs.fallback) {
+    void applySwitch(sid, prefs.fallback, f, true, false).then((err) => {
+      if (err) return showCard(sid, f, { ...d, act: 'card', reason: err }, last)
+      resend(sid, last, 1)
+    })
+    return
+  }
+  showCard(sid, f, d, last)
+}
+function showCard(sid: string, f: FK.Failure, d: FO.Decision, last: LastPrompt) {
+  const view = QW.cardOf({ id: `f${Date.now().toString(36)}${++cardSeq}`, failure: f, decision: d, prefs: failPrefsOf(sid), attempt: last.attempt ?? 0, prompt: last.text, custom: { on: Boolean(settings().customEndpoint?.on), url: settings().customEndpoint?.url ?? '' }, canResume: Boolean(sessions.get(sid)?.sessionId) })
+  cards.set(sid, { view, failure: f, decision: d, prompt: last })
+  toWin('failover:card', sid, view)
+}
+/** The failed prompt goes again: through the queue when it came from there, as a fresh send otherwise. */
+function resend(sid: string, last: LastPrompt, hop: number) {
+  resendCtx.set(sid, { hop: hop || last.hop, attempt: last.attempt })
+  const q = pqFor(sid)
+  if (last.queueId && q.items.some((x) => x.id === last.queueId)) {
+    pqSet(sid, PQ.reduce(q, { t: 'resume' }))
+    void pqDrain(sid)
+    return
+  }
+  pqSet(sid, PQ.reduce(q, { t: 'resume' }))
+  void sendText(sid, last.text, last.files)
+}
+/** Changes the model or the endpoint of the panel, keeping its session. Null when done, else why not. */
+async function applySwitch(sid: string, fb: FO.Fallback, f: FK.Failure, auto: boolean, confirm: boolean): Promise<string | null> {
+  const s = sessions.get(sid)
+  if (!s) return 'No such panel.'
+  const from = targetNow(sid)
+  if (fb.model && !PB.isModel(fb.model)) return `Unknown model ${fb.model}.`
+  if (fb.provider === 'custom') {
+    const c = settings().customEndpoint
+    if (!c?.on || !QP.validCustom(c.url)) return 'The custom endpoint is off. Turn it on in the model menu settings.'
+    // another endpoint restarts the process with a resume of the same session; without a session id nothing could be kept
+    if (!s.sessionId) return 'This panel has no session to resume on the custom endpoint, so the conversation would be lost. Not switched.'
+    const cur = sourceOf.get(sid) ?? { src: 'setup' as QP.Source, base: s.env ?? process.env }
+    if (cur.src !== 'custom') {
+      if (!confirm) return 'Confirm the switch to the custom endpoint first.'
+      const r = QP.envFor('custom', cur.base as Record<string, string | undefined>, { customOn: c.on, customUrl: c.url, localProxy: settings().headroom && headroomLive ? HEADROOM_URL : undefined })
+      if (r.error) return r.error
+      if (!s.setEnv(r.env)) return 'Wait for the panel to finish its turn.'
+      sourceOf.set(sid, { src: 'custom', base: cur.base })
+      gateway.revoke(sid)
+      // the person said yes to this endpoint for this panel: "always" may use it from now on
+      const prefs = failPrefsOf(sid)
+      if (!(prefs.approved ?? []).includes('custom')) failPrefsSet(sid, { ...prefs, approved: [...(prefs.approved ?? []), 'custom'] })
+    }
+  }
+  if (fb.model) {
+    await s.setModel(fb.model)
+    modelOf.set(sid, fb.model)
+  }
+  quotaPaused.delete(sid)
+  const to: FO.Fallback = { model: fb.model ?? from.model, provider: fb.provider ?? from.provider }
+  const note = QW.switchNote(from, to, f, auto)
+  send(sid, { kind: 'note', text: note })
+  track(sid, { kind: 'failover', from: QW.modelLabel(from.model) + (from.provider ? ` (${from.provider})` : ''), to: QW.modelLabel(to.model) + (to.provider ? ` (${to.provider})` : ''), reason: f.kind, resetsAt: f.resetsAt })
+  return null
+}
+function failPrefsSet(sid: string, p: FO.FailoverPrefs) {
+  const all = { ...(settings().failoverPrefs ?? {}) }
+  if (p.fallback || p.always || p.approved?.length) all[pqKey(sid)] = p
+  else delete all[pqKey(sid)]
+  saveSettings({ ...settings(), failoverPrefs: all })
+}
+ipcMain.handle('failover:prefs:get', (_e, sid: string) => ({ prefs: failPrefsOf(String(sid)), custom: { on: Boolean(settings().customEndpoint?.on), url: settings().customEndpoint?.url ?? '' }, models: PB.modelIds() }))
+ipcMain.handle('failover:prefs:set', (_e, sid: string, p: { fallback?: FO.Fallback; always?: boolean }) => {
+  const fb = p.fallback && (p.fallback.model || p.fallback.provider) ? { ...(p.fallback.model ? { model: p.fallback.model } : {}), ...(p.fallback.provider === 'custom' ? { provider: 'custom' } : {}) } : undefined
+  if (fb?.model && !PB.isModel(fb.model)) throw new Error(`Unknown model ${fb.model}.`)
+  const cur = failPrefsOf(String(sid))
+  const next: FO.FailoverPrefs = { ...(fb ? { fallback: fb } : {}), ...(p.always && fb ? { always: true } : {}), ...(cur.approved?.length ? { approved: cur.approved } : {}) }
+  failPrefsSet(String(sid), next)
+  return next
+})
+ipcMain.handle('failover:current', (_e, sid: string) => cards.get(String(sid))?.view ?? null)
+ipcMain.handle('failover:choose', async (_e, sid: string, cardId: string, choice: 'switch' | 'wait' | 'cancel', always?: boolean, confirm?: boolean) => {
+  sid = String(sid)
+  const c = cards.get(sid)
+  if (!c || c.view.id !== cardId) throw new Error('That card is no longer open.')
+  if (choice === 'cancel') {
+    cardClose(sid, 'cancelled')
+    send(sid, { kind: 'note', text: 'Nothing was resent. The queue stays paused.' })
+    return true
+  }
+  if (choice === 'wait') {
+    const until = c.view.waitUntil ?? (FO.backoff(c.prompt.attempt ?? 0) !== null ? new Date(Date.now() + FO.backoff(c.prompt.attempt ?? 0)!).toISOString() : undefined)
+    if (!until) {
+      send(sid, { kind: 'note', tone: 'error', text: 'The retries are used up (1, 2, 5 and 10 minutes). Pick another model or try again later.' })
+      return false
+    }
+    if (c.timer) clearTimeout(c.timer)
+    const last = { ...c.prompt, attempt: (c.prompt.attempt ?? 0) + 1 }
+    c.view = { ...c.view, waiting: { until }, attempt: last.attempt! }
+    c.timer = setTimeout(() => {
+      cards.delete(sid)
+      toWin('failover:card', sid, { ...c.view, closed: 'waited' })
+      // the person chose to wait and resend: a plan pause set by the limit lifts for this resend
+      quotaPaused.delete(sid)
+      send(sid, { kind: 'note', text: `Resending after waiting${c.view.attempt > 1 || !c.view.resetsAt ? ` (try ${c.view.attempt} of ${c.view.maxAttempts})` : ''}.` })
+      resend(sid, last, last.hop ?? 0)
+    }, Math.max(1000, Date.parse(until) - Date.now()))
+    toWin('failover:card', sid, c.view)
+    return true
+  }
+  const fb = failPrefsOf(sid).fallback
+  if (!fb) throw new Error('No fallback is set for this panel.')
+  if (always !== undefined && always !== Boolean(failPrefsOf(sid).always)) failPrefsSet(sid, { ...failPrefsOf(sid), always: Boolean(always) })
+  const err = await applySwitch(sid, fb, c.failure, false, confirm === true)
+  if (err) {
+    send(sid, { kind: 'note', tone: 'error', text: err })
+    return false
+  }
+  cardClose(sid, 'switched')
+  resend(sid, c.prompt, 1)
+  return true
+})
+
+// Channel: one per team (a lead and its workers), a jsonl file per team, mentions routed inside the links, limits and approvals.
+const chanStore = new CS.ChannelStore(join(app.getPath('userData'), 'channels'))
+type ChanTeam = { id: string; name: string; lead: string; members: string[] }
+const teamIdOf = (lead: string) => `lead-${createHash('sha1').update(panelDir(lead) || lead).digest('hex').slice(0, 10)}`
+function teamOfPanel(sid: string): ChanTeam | null {
+  const lead = leadSet.has(sid) ? sid : workerTask.get(sid)?.lead
+  if (!lead || !leadSet.has(lead) || !sessions.has(lead)) return null
+  const members = [lead, ...[...workerTask].filter(([w, t]) => t.lead === lead && sessions.has(w)).map(([w]) => w)]
+  return { id: teamIdOf(lead), name: `${panelName(lead)} team`, lead, members }
+}
+const allTeams = () => [...leadSet].map((l) => teamOfPanel(l)).filter((t): t is ChanTeam => Boolean(t))
+const teamById = (id: string) => allTeams().find((t) => t.id === id)
+/** The @name of a panel in a team: its name as one word, made unique. */
+function handlesOf(t: ChanTeam): { id: string; handle: string; name: string }[] {
+  const used = new Set<string>()
+  return t.members.map((id) => {
+    const base = panelName(id).toLowerCase().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '') || id
+    let h = base
+    for (let n = 2; used.has(h); n++) h = `${base}-${n}`
+    used.add(h)
+    return { id, handle: h, name: panelName(id) }
+  })
+}
+type WakeRec = { id: string; team: string; post: TC.Post; to: string; delivery: CR.Wake['delivery']; why?: string; queueId?: string; active?: boolean; body: string }
+const wakeRecs = new Map<string, WakeRec>()
+const wakeDepth = new Map<string, number>()
+const wakeView = (w: WakeRec) => ({ id: w.id, post: w.post.id, to: w.to, name: panelName(w.to), delivery: w.delivery, ...(w.why ? { why: w.why } : {}), open: Boolean(w.queueId) && !w.active })
+const openWakes = (): CR.OpenWake[] => [...wakeRecs.values()].filter((w) => w.delivery !== 'refused').map((w) => ({ from: w.post.from, to: w.to }))
+function wakesSync(sid: string) {
+  const ids = new Set(pqFor(sid).items.map((x) => x.id))
+  for (const [id, w] of wakeRecs) if (w.to === sid && w.queueId && !w.active && !ids.has(w.queueId)) wakeRecs.delete(id)
+}
+function wakeStarted(sid: string, askId?: string) {
+  const w = askId?.startsWith('w:') ? wakeRecs.get(askId.slice(2)) : undefined
+  if (!w) return
+  w.active = true
+  wakeDepth.set(sid, w.post.depth + 1)
+}
+function wakeEnded(sid: string) {
+  wakeDepth.delete(sid)
+  for (const [id, w] of wakeRecs) if (w.to === sid && w.active) wakeRecs.delete(id)
+}
+const pulseTeam = (t: ChanTeam, from: string) => {
+  if (from === t.lead || from === 'you') for (const w of t.members) w !== t.lead && pulse(t.lead, w)
+  else pulse(from, t.lead)
+}
+const linkView = (): CR.RouteLink[] => links().map((l) => ({ a: l.a, b: l.b, auto: l.auto, capUsd: l.capUsd, spent: l.spent?.day === dayOf(new Date()) ? { usd: l.spent.usd } : undefined }))
+const chanFrom = (t: ChanTeam, p: TC.Post) => (p.from === CR.PERSON ? 'the person' : `panel ${panelName(p.from)}`)
+
+/** Records a post and, unless it only mirrors something that already went the usual way, routes its mentions. */
+function channelPost(t: ChanTeam, from: string, input: { kind: TC.PostKind; text: string; replyTo?: string }, opts: { mirror?: boolean; mentions?: string[] } = {}) {
+  const text = String(input.text ?? '').trim()
+  if (!text) throw new Error('Nothing to post.')
+  if (!['handoff', 'question', 'review', 'result', 'note'].includes(input.kind)) throw new Error('Kind is one of handoff, question, review, result, note.')
+  if (from !== CR.PERSON && !t.members.includes(from)) throw new Error('That panel is not in this team.')
+  if (!opts.mirror) refuseSecrets(text)
+  const hs = handlesOf(t)
+  const mentions = opts.mentions ?? CR.parseMentions(text, hs.map((h) => h.handle)).map((h) => hs.find((x) => x.handle === h)!.id)
+  if (!opts.mirror && from !== CR.PERSON) sendLimit.take(from)
+  const depth = from === CR.PERSON ? 0 : (wakeDepth.get(from) ?? 0)
+  const post = chanStore.add({ id: `c${Date.now().toString(36)}${randomBytes(3).toString('hex')}`, team: t.id, from, kind: input.kind, text, mentions, at: Date.now(), depth, ...(input.replyTo ? { replyTo: String(input.replyTo).slice(0, 64) } : {}) })
+  const wakes: WakeRec[] = []
+  if (!opts.mirror && mentions.length) {
+    const sendLeft = from === CR.PERSON ? 0 : sendLimit.left(from)
+    for (const w of CR.route({ id: post.id, from, text, mentions, depth }, linkView(), openWakes(), { sendLeft })) {
+      const rec: WakeRec = { id: `${post.id}:${w.to}`, team: t.id, post, to: w.to, delivery: w.delivery, why: w.why, body: wakeBody(t, post) }
+      wakeRecs.set(rec.id, rec)
+      wakes.push(rec)
+      if (w.delivery === 'auto') deliverWake(rec, true)
+      else if (w.delivery === 'queued') queueWake(rec)
+    }
+  }
+  pulseTeam(t, from)
+  toWin('channel:posted', t.id, { post, wakes: wakes.map(wakeView) })
+  logs().info('stm:panel', `channel ${t.id}: ${from} posted ${post.kind}${wakes.length ? ` (${wakes.map((w) => `${w.to} ${w.delivery}`).join(', ')})` : ''}`)
+  return { post, wakes }
+}
+const wakeBody = (t: ChanTeam, p: TC.Post) =>
+  p.from === CR.PERSON
+    ? `From the person, in the team channel (${p.kind}): ${p.text}`
+    : PB.labelled(panelName(p.from), `(team channel, ${p.kind}) ${p.text}\n\nAnswer with the mcp__stm__channel_post tool if the team needs your answer.`)
+/** A wake the person sends: it waits in the target's queue, which pauses so nothing leaves on its own. */
+function queueWake(rec: WakeRec) {
+  const id = `w${randomBytes(4).toString('hex')}`
+  rec.queueId = id
+  const q = pqFor(rec.to)
+  let next = PQ.reduce(q, { t: 'add', item: { id, text: rec.body, at: Date.now(), askId: `w:${rec.id}`, state: 'waiting' } })
+  if (next === q) {
+    rec.delivery = 'refused'
+    rec.why = 'The queue of that panel is full.'
+    return
+  }
+  if (!next.paused) next = PQ.reduce(next, { t: 'pause', reason: `A channel post from ${chanFrom(teamById(rec.team)!, rec.post)} waits for you: resume to send` })
+  pqSet(rec.to, next)
+  send(rec.to, { kind: 'note', text: `A team channel post from ${chanFrom(teamById(rec.team)!, rec.post)} is in the queue. Resume the queue to send it, or cancel it.` })
+}
+/** Sent as a message of the poster to the target: the same checks as a linked message with auto on. */
+function deliverWake(rec: WakeRec, charge: boolean) {
+  const to = sessions.get(rec.to)
+  const from = rec.post.from
+  try {
+    if (!to) throw new Error('That panel is closed.')
+    refuseSecrets(rec.body)
+    const v = budgetVerdict(rec.to)
+    if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
+    if (charge && from !== CR.PERSON) sendLimit.take(from)
+    if (from !== CR.PERSON) linkTurn.set(rec.to, from)
+    tracePrompt(rec.to, rec.body, from === CR.PERSON ? 'ChanTeam channel' : `Panel ${panelName(from)}`)
+    toWin('panel:inbox', rec.to, rec.body, true)
+    rec.active = true
+    wakeDepth.set(rec.to, rec.post.depth + 1)
+    to.step(withGoal(rec.body, goals.get(rec.to) ?? null), from === CR.PERSON ? 'ChanTeam channel' : `Panel ${panelName(from)}`).catch(() => undefined)
+  } catch (e) {
+    // not sent on its own: it waits in the queue for the person instead
+    rec.delivery = 'queued'
+    rec.why = (e as Error).message
+    queueWake(rec)
+  }
+}
+const postView = (p: TC.Post) => ({ ...p, name: p.from === CR.PERSON ? 'You' : panelName(p.from) })
+ipcMain.handle('channel:teams', () => allTeams().map((t) => ({ id: t.id, name: t.name, lead: t.lead, members: handlesOf(t) })))
+ipcMain.handle('channel:list', (_e, team: string, o: { before?: number; limit: number }) => {
+  const t = teamById(String(team))
+  if (!t) return { posts: [], wakes: {}, members: [] }
+  const all = chanStore.posts(t.id).filter((p) => o.before === undefined || p.at < o.before)
+  const posts = all.slice(-Math.min(200, Math.max(1, o.limit ?? 50)))
+  const wakes: Record<string, ReturnType<typeof wakeView>[]> = {}
+  for (const w of wakeRecs.values()) if (w.team === t.id && posts.some((p) => p.id === w.post.id)) (wakes[w.post.id] ??= []).push(wakeView(w))
+  return { posts: posts.map(postView), wakes, members: handlesOf(t), more: all.length > posts.length }
+})
+ipcMain.handle('channel:post', (_e, team: string, input: { kind: TC.PostKind; text: string; replyTo?: string }) => {
+  const t = teamById(String(team))
+  if (!t) throw new Error('No such team. A team is a lead panel and its workers.')
+  const r = channelPost(t, CR.PERSON, input)
+  return { post: postView(r.post), wakes: r.wakes.map(wakeView) }
+})
+ipcMain.handle('channel:pin', (_e, team: string, id: string, on: boolean) => {
+  const t = teamById(String(team))
+  if (!t) throw new Error('No such team.')
+  chanStore.pin(t.id, String(id), Boolean(on))
+  toWin('channel:posted', t.id, { pinned: String(id) })
+  return true
+})
+ipcMain.handle('channel:sendNow', async (_e, team: string, wakeId: string) => {
+  const rec = wakeRecs.get(String(wakeId))
+  if (!rec || rec.team !== String(team) || !rec.queueId || rec.active) throw new Error('That post is not waiting in a queue.')
+  const s = sessions.get(rec.to)
+  if (!s) throw new Error('That panel is closed.')
+  if (s.busy) {
+    // at the turn boundary, in front of the rest
+    pqAct(rec.to, { t: 'steer', id: rec.queueId, mode: 'next' })
+    pqAct(rec.to, { t: 'resume' })
+    return { sent: 'next' }
+  }
+  pqAct(rec.to, { t: 'cancel', id: rec.queueId })
+  rec.queueId = undefined
+  rec.delivery = 'auto'
+  wakeRecs.set(rec.id, rec)
+  deliverWake(rec, false)
+  return { sent: 'now' }
+})
+/** Mirrors an exchange that went the usual way (ask, delegate, collect) into the team's channel, without routing it again. */
+function mirrorPost(from: string, other: string, kind: TC.PostKind, text: string, replyTo?: string): string | undefined {
+  try {
+    const t = teamOfPanel(from)
+    if (!t || (other !== CR.PERSON && !t.members.includes(other))) return undefined
+    const mentions = other === CR.PERSON ? [] : [other]
+    return channelPost(t, from, { kind, text: text.slice(0, TC.MAX_BODY), replyTo }, { mirror: true, mentions }).post.id
+  } catch {
+    return undefined
+  }
+}
+const askPost = new Map<string, string>()
+const mentionSeen = new Map<string, number>()
+/** What the stm channel tools of one panel do. */
+function channelDeps(me: string): NonNullable<UiDeps['channel']> {
+  const team = () => {
+    const t = teamOfPanel(me)
+    if (!t) throw new Error('This panel is not in a team. A team is a lead panel and its workers.')
+    return t
+  }
+  const line = (t: ChanTeam, p: TC.Post) => `[${p.id}] ${new Date(p.at).toISOString().slice(11, 16)} ${p.from === CR.PERSON ? 'you' : handlesOf(t).find((h) => h.id === p.from)?.handle ?? p.from} (${p.kind}${p.replyTo ? `, reply to ${p.replyTo}` : ''}): ${p.text.slice(0, 2000)}`
+  return {
+    handles: () => handlesOf(team()).map((h) => `@${h.handle}${h.id === me ? ' (you)' : ''}`),
+    post: async (kind, text, replyTo) => {
+      const t = team()
+      const r = channelPost(t, me, { kind, text, replyTo })
+      return { id: r.post.id, wakes: r.wakes.map((w) => `${handlesOf(t).find((h) => h.id === w.to)?.handle ?? w.to}: ${w.delivery}${w.why ? ` (${w.why})` : ''}`) }
+    },
+    read: (since, limit) => {
+      const t = team()
+      const n = Math.min(50, Math.max(1, limit ?? 20))
+      return chanStore.posts(t.id).filter((p) => since === undefined || p.at > since).slice(-n).map((p) => line(t, p))
+    },
+    mentions: (unreadOnly) => {
+      const t = team()
+      const key = `${t.id}|${me}`
+      const seen = unreadOnly ? mentionSeen.get(key) ?? 0 : 0
+      const found = chanStore.posts(t.id).filter((p) => p.mentions.includes(me) && p.at > seen && p.from !== me)
+      if (found.length) mentionSeen.set(key, Math.max(...found.map((p) => p.at)))
+      return found.slice(-50).map((p) => line(t, p))
+    },
+  }
+}
+
 function uiDeps(me: string): UiDeps {
   const folderOf = (raw: string) => {
     const r = raw.startsWith('~') ? join(homedir(), raw.slice(1)) : raw
@@ -6737,6 +7209,7 @@ function uiDeps(me: string): UiDeps {
     },
     log: (m) => logs().info('stm:ui', `${me} ${m}`),
     lead: leadDeps(me),
+    channel: channelDeps(me),
   }
 }
 // end-to-end tests only: the ui tools of a panel, called as its Claude would
@@ -6833,6 +7306,8 @@ const panelHandlers: Record<string, import('./cliserver.js').CliHandler> = {
     }
     if (how === 'queued') askWaiting.set(to, [...(askWaiting.get(to) ?? []), { id: ask.id, head: body.slice(0, ASK_HEAD) }])
     openAsks.push(ask)
+    const mirrored = mirrorPost(from, to, 'question', `Asked ${panelName(to)}: ${ask.question}`)
+    if (mirrored) askPost.set(ask.id, mirrored)
     logs().info('stm:panel', `${from} asked ${to} ${how} (depth ${depth})`)
     return { panel: to, delivery: how, ask: ask.id }
   },

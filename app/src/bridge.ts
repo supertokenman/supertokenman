@@ -1024,6 +1024,26 @@ export type Bridge = {
     say: () => Promise<void>
     touch: () => void
   }
+  queue: {
+    get: (sid: string) => Promise<QueueView>
+    act: (sid: string, action: import('../shared/panelqueue').QueueAction) => Promise<QueueView>
+    onChanged: (fn: (sid: string, v: QueueView) => void) => () => void
+  }
+  failover: {
+    prefsGet: (sid: string) => Promise<{ prefs: import('../shared/failover').FailoverPrefs; custom: { on: boolean; url: string }; models: string[] }>
+    prefsSet: (sid: string, prefs: { fallback?: { model?: string; provider?: 'custom' }; always?: boolean }) => Promise<import('../shared/failover').FailoverPrefs>
+    current: (sid: string) => Promise<import('../shared/qfcwire').CardView | null>
+    choose: (sid: string, cardId: string, choice: 'switch' | 'wait' | 'cancel', always?: boolean, confirm?: boolean) => Promise<boolean>
+    onCard: (fn: (sid: string, v: import('../shared/qfcwire').CardView) => void) => () => void
+  }
+  channel: {
+    teams: () => Promise<ChannelTeam[]>
+    list: (team: string, o: { before?: number; limit: number }) => Promise<{ posts: ChannelPost[]; wakes: Record<string, ChannelWake[]>; members: { id: string; handle: string; name: string }[]; more?: boolean }>
+    post: (team: string, input: { kind: import('../shared/teamchannel').PostKind; text: string; replyTo?: string }) => Promise<{ post: ChannelPost; wakes: ChannelWake[] }>
+    pin: (team: string, id: string, on: boolean) => Promise<boolean>
+    sendNow: (team: string, wakeId: string) => Promise<{ sent: 'now' | 'next' }>
+    onPosted: (fn: (team: string, v: { post?: ChannelPost; wakes?: ChannelWake[]; pinned?: string }) => void) => () => void
+  }
   lead: { state: () => Promise<LeadView>; set: (sid: string, on: boolean) => Promise<LeadView>; onState: (fn: (v: LeadView) => void) => () => void; onPulse: (fn: (v: { from: string; to: string }) => void) => () => void }
   uiTools: { onCmd: (fn: (r: { req: string; op: 'layout' | 'arrange' | 'state'; arg?: string }) => void) => () => void; onConfirm: (fn: (r: { req: string; from: string; items: { folder: string; title?: string; persona?: string; model?: string }[] }) => void) => () => void; reply: (req: string, value?: boolean | { layout: string; panels?: { id: string; folder: string; title: string; state: string }[] }) => Promise<void> }
   stmCli: { onOpen: (fn: (r: { req: string; cwd?: string; persona?: string; model?: string; worktree?: { label: string } }) => void) => () => void; opened: (req: string, sid: string) => void; install: () => Promise<{ file: string; onPath: boolean; hint: string }> }
@@ -1089,4 +1109,8 @@ export type PostNet = { net: import('../shared/social').Net; connected: boolean;
 
 export type DictationStatus = { supported: boolean; on: boolean; accel: string; label: string; note: string; active: boolean; model: string; cleanup: boolean; engine: import('../shared/dictation').EngineState; accessibility: boolean | null; mic: string }
 
+export type QueueView = { queue: import('../shared/panelqueue').PanelQueue; estimate: import('../shared/panelqueue').Estimate }
+export type ChannelTeam = { id: string; name: string; lead: string; members: { id: string; handle: string; name: string }[] }
+export type ChannelPost = import('../shared/teamchannel').Post & { name: string }
+export type ChannelWake = { id: string; post: string; to: string; name: string; delivery: 'queued' | 'auto' | 'refused'; why?: string; open: boolean }
 export type LeadView = { leads: string[]; workers: Record<string, { lead: string; title: string; error: boolean; finished: boolean; cost: number }> }
