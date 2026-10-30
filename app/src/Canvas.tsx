@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { LeadView, PanelLinkView } from './bridge'
 import { InCanvas } from './InCanvas'
+import { openChannel, useChannelUnread } from './channelOpen'
 import { edgeStatus, type EdgeStatus } from '../shared/lead'
 import { planArrange, checkArrange } from '../shared/uitools'
 import { clampZoom, edgePath, fit, linkEnds, place, planFan, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
@@ -44,6 +45,7 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
   // a pulse is mounted only while it travels (an SVG animation, no script loop) and never when the window is out of focus or the person prefers no motion
   const [pulses, setPulses] = useState<{ id: number; from: string; to: string }[]>([])
   const pulseSeq = useRef(0)
+  const chanUnread = useChannelUnread()
   useEffect(
     () =>
       window.stm.lead.onPulse(({ from, to }) => {
@@ -249,6 +251,11 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
         <span className="cv-zoom">{Math.round(view.zoom * 100)}%</span>
         <button className="ghost" onClick={() => setView((v) => zoomAt(v, 1.2, (surf.current?.clientWidth ?? 0) / 2, (surf.current?.clientHeight ?? 0) / 2))} aria-label="Zoom in" data-tip="Zoom in">+</button>
         <button className="ghost" onClick={frame} data-tip="Show every panel">Fit</button>
+        {(props.lead?.leads.length ?? 0) > 0 && (
+          <button className="ghost chan-btn" onClick={() => openChannel()} data-tip="The shared channel of a lead and its workers">
+            Channel{chanUnread > 0 && <span className="chan-badge" aria-label={`${chanUnread} unread`}>{chanUnread > 99 ? '99+' : chanUnread}</span>}
+          </button>
+        )}
         {window.stm.panelBus.roomPost && linkedIds.length >= 2 && (
           <button className="ghost" onClick={() => setRoomOpen((o) => !o)} aria-expanded={roomOpen} data-tip="One message to the linked panels">Room</button>
         )}
