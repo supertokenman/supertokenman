@@ -197,6 +197,16 @@ pointer and screen readers.
 | down | square | lands filled, with a jolt |
 | off | dashed circle | still |
 
+## Runtime strips (2026-10-30)
+
+The resume strip ("N panels were running") and the update question ("Restart now" / "Install when I
+quit") are flat: a `--surface` fill, a 1px `--border-strong` line and a 3px `--accent` bar on the left.
+No shadow, no pill, no emoji. Buttons are the normal `.primary.small` and `.ghost.small`; the resume
+strip sits under the header and never covers a panel. The panel dot reads the runtime state: working
+is the turning triangle, waiting for approval the cut square, waiting for an answer the swaying
+triangle, ready the circle, stopped the filled square. Settings rows (Keep panels running) are plain
+`.tid-row` lines with a Switch and one muted sentence under them. The update bar lost its shadow.
+
 ## Motion
 
 `--ease: cubic-bezier(0.2, 0.7, 0.2, 1)`. Durations 80 to 320ms. Motion explains a change (arriving,
