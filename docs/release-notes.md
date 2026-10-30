@@ -1,20 +1,17 @@
-Ask a panel to set up your window, schedule posts, and dictate into any app.
+One panel can lead the others, messages wait their turn, and the app opens lighter.
 
-- Ask for a layout and it happens: a panel's Claude can open panels in the folders you name, switch
-  to the canvas, link panels and arrange them. Opening panels starts new sessions, so a sheet lists
-  them and nothing opens until you press Allow.
-- Dictate anywhere: press Option+Shift+D, speak, press again, and the text is pasted where your
-  cursor is, in any app. Transcription runs on this Mac with a local whisper.cpp engine; nothing is
-  sent anywhere. Off by default; Settings shows how to set up the engine and the macOS permissions.
-- Social: a posting queue with weekly time slots per network and per account, best time and hit
-  share from your own measured posts ("Not enough data yet" below the minimum), a rewrite reviewed
-  per network, Mentions triage, evergreen suggestions, several accounts per network grouped in
-  projects with a brand kit, a hook library and niche import. Scheduled posts go out only while the
-  app is open; very late ones wait for you.
-- Lighter when idle: the start screen no longer redraws on every focus change, and the music
-  player stops polling while the window is in the background.
-- A cleaner top: a small "Reopen N panels" pill instead of the banner, and the less used panel
-  controls behind a "..." button. The Needs you list fits long titles.
+- A lead panel: a panel's Claude can hand a task to another panel and collect its answer. The
+  canvas draws the links between panels and shows work moving along them.
+- A queue while a panel is busy: what you send waits in a list you can edit or clear, and goes out
+  when the turn ends. When a panel hits its limit or an error, a card offers to continue on the
+  fallback you set in the panel's "..." tray.
+- A team channel where your panels post to each other, with an unread count on the canvas.
+- Panels can wait on each other: `stm wait` and `stm state` from the terminal, and the same as tools
+  inside a panel. A wait that would loop back on itself is refused.
+- With a panel still working, Update no longer restarts at once: it says so, installs when you
+  quit, and a second press restarts now.
+- A faster start: sheets you open by clicking now load when you open them, so the first screen
+  carries 28 KB less script.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
