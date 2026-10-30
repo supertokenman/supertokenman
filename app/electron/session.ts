@@ -5,6 +5,7 @@ import { editOf, type FileEdit } from './diff.js'
 import { toOverhead } from './overhead.js'
 import { filesNote, type Attachment } from '../shared/attach.js'
 import { ttlOf } from '../shared/cache.js'
+import { planFrom, type Plan, type ToolUse } from '../shared/planview.js'
 import { LoopGuard, messageCost, tripHeadline, type LoopConfig, type LoopTrip } from '../shared/loopguard.js'
 import type { CanUseTool, Options, PermissionResult, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 
@@ -36,6 +37,8 @@ export type UiEvent =
   | { kind: 'gate'; run: string; name: string; step: number; of: number; text: string }
   | { kind: 'gated' }
   | { kind: 'goal'; goal: string | null }
+  | { kind: 'plan'; plan: Plan }
+  | { kind: 'checkpoint'; turn: number; ref: string; at: number; files: number }
 
 export type QueryFn = (p: { prompt: AsyncIterable<SDKUserMessage>; options?: Options }) => Query
 
@@ -85,7 +88,16 @@ const textOf = (content: unknown) =>
 
 export class Session {
   private inbox = new Inbox<SDKUserMessage>()
-  private pending = new Map<string, { resolve: (r: PermissionResult) => void; input: Record<string, unknown>; tool?: string; raw?: Record<string, unknown> }>()
+  private pending = new Map<string, { resolve: (r: PermissionResult) => void; input: Record<string, unknown>; tool?: string; raw?: Record<string, unknown>; bp?: 'before' | 'afterPlan' }>()
+  /** the top-level tool calls of the current run (the person's message to the turn end), for the plan and its counts */
+  private runCalls: ToolUse[] = []
+  private turnsDone = 0
+  /** uuid of the last assistant message and the cost of the last turn, for the checkpoint and its receipt */
+  lastMessageUuid = ''
+  lastCostUsd = 0
+  get turnIndex() {
+    return this.turnsDone
+  }
   private q: Query | null = null
   private nextId = 0
   sessionId = ''
@@ -98,7 +110,7 @@ export class Session {
 
   constructor(
     private emit: (e: UiEvent) => void,
-    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null>; loop?: () => LoopConfig; onTurnEnd?: (ok: boolean) => void },
+    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write'; by?: import('../shared/auditlog.js').AuditBy; rule?: string; bp?: 'before' | 'afterPlan' }; onDecision?: (e: { tool: string; input: Record<string, unknown>; action: 'allow' | 'deny' | 'ask'; by: import('../shared/auditlog.js').AuditBy; rule?: string; bp?: 'before' | 'afterPlan' }) => void; onAnswered?: (e: { tool: string; input: Record<string, unknown>; allow: boolean; bp?: 'before' | 'afterPlan' }) => void; onPlan?: (plan: Plan) => void; onRunStart?: () => void; panelId?: string; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null>; loop?: () => LoopConfig; onTurnEnd?: (ok: boolean) => void },
   ) {}
 
   private read = (path: string) => {
@@ -162,12 +174,13 @@ export class Session {
       new Promise((resolve) => {
         // the persona's autonomy: a safe command it may run alone goes through without a card
         const d = this.opts.decide?.(tool, input)
+        this.opts.onDecision?.({ tool, input, action: d?.action ?? 'ask', by: d?.by ?? 'default', ...(d?.rule ? { rule: d.rule } : {}), ...(d?.bp ? { bp: d.bp } : {}) })
         // an isolated panel: its commands are moved into the container before they run
         const run = this.opts.rewriteInput?.(tool, input) ?? input
         if (d?.action === 'allow') return resolve({ behavior: 'allow', updatedInput: run })
         if (d?.action === 'deny') return resolve({ behavior: 'deny', message: d.reason ?? 'Refused by the app.' })
         const id = `p${++this.nextId}`
-        this.pending.set(id, { resolve, input: run, tool, raw: input })
+        this.pending.set(id, { resolve, input: run, tool, raw: input, ...(d?.bp ? { bp: d.bp } : {}) })
         signal.addEventListener('abort', () => {
           this.pending.delete(id)
           resolve({ behavior: 'deny', message: 'aborted' })
@@ -334,6 +347,27 @@ export class Session {
     }
   }
 
+  /** The plan from this message's tool calls (TodoWrite replaces it; agents and panels started count against the caps). */
+  private plan(content: { type: string; name?: string; input?: Record<string, unknown> }[]) {
+    const calls = content.filter((b) => b.type === 'tool_use' && b.name).map((b) => ({ name: b.name!, input: b.input ?? {} }))
+    if (!calls.length) return
+    this.runCalls.push(...calls)
+    if (!calls.some((c) => /(^|__)(TodoWrite|Task|Agent|delegate|ui_open_panels)$/.test(c.name))) return
+    try {
+      const plan = planFrom({ panel: String(this.opts.panelId ?? ''), sessionId: this.sessionId, turn: this.turnsDone, at: Date.now(), calls: this.runCalls })
+      this.emit({ kind: 'plan', plan })
+      this.opts.onPlan?.(plan)
+    } catch {
+      // a plan that cannot be built is skipped; the turn goes on
+    }
+  }
+
+  /** A new run starts: the person's message, a peer's or a trigger's step. */
+  private runStart() {
+    this.runCalls = []
+    this.opts.onRunStart?.()
+  }
+
   handle(m: SDKMessage) {
     if (m.type === 'system' && m.subtype === 'init') {
       this.sessionId = m.session_id
@@ -361,6 +395,8 @@ export class Session {
         this.loops.spend(c.usd, c.tokens, msg.id)
       }
       for (const b of content) if (b.type === 'tool_use' && b.id && b.name) this.toolNames.set(b.id, b.name)
+      if (m.uuid) this.lastMessageUuid = m.uuid
+      this.plan(content)
       for (const b of content) if (b.type === 'tool_use') this.stopLoop(this.loops.call(b.name ?? '', b.input ?? {}, summarize(b.name ?? '', b.input ?? {})))
       // each file edit once, read before the tool runs (a Write's old text is still on disk)
       for (const b of content)
@@ -392,6 +428,7 @@ export class Session {
         // the HTTP status the API answered with, when the SDK reports it: the failover classifier reads it
         ...(failed && typeof status === 'number' ? { status } : {}),
       })
+      this.lastCostUsd = m.total_cost_usd
       this.stoppedByApp = false
       if (m.subtype === 'success' && !m.is_error) this.opts.onReply?.(m.result)
       this.turns.shift()?.(m.subtype === 'success' ? m.result : m.subtype, m.is_error)
@@ -400,6 +437,7 @@ export class Session {
       void this.measure()
       // after busy is current: the panel's queue sends its next item from here
       this.opts.onTurnEnd?.(!failed)
+      this.turnsDone++
     } else if (m.type === 'rate_limit_event') {
       const info = m.rate_limit_info
       // the type does not say the scale: a fraction or a percent
@@ -479,6 +517,7 @@ export class Session {
 
   send(text: string, attachments: Attachment[] = []) {
     this.lastActivity = Date.now()
+    this.runStart()
     this.loops.reset()
     this.toolNames.clear()
     if (this.opts.loop) this.loops.config = this.opts.loop()
@@ -502,6 +541,7 @@ export class Session {
   /** A message from another panel: shown in this panel, run as a turn, its reply returned. */
   ask(text: string, from: string): Promise<string> {
     this.lastActivity = Date.now()
+    this.runStart()
     this.wake()
     this.emit({ kind: 'peer', from, text })
     return new Promise((resolve, reject) => {
@@ -514,6 +554,7 @@ export class Session {
   /** A trigger's step: shown with where it came from, sent as is, resolved when its turn ends. */
   step(text: string, from: string): Promise<string> {
     this.lastActivity = Date.now()
+    this.runStart()
     this.wake()
     this.emit({ kind: 'peer', from, text })
     return new Promise((resolve, reject) => {
@@ -547,6 +588,9 @@ export class Session {
     if (!p) return
     this.pending.delete(id)
     const note = extra.note?.trim().slice(0, 4000)
+    this.opts.onAnswered?.({ tool: p.tool ?? 'request', input: p.raw ?? p.input, allow, ...(p.bp ? { bp: p.bp } : {}) })
+    // Deny at the breakpoint after the plan ends the turn
+    if (!allow && p.bp === 'afterPlan') void this.interrupt().catch(() => undefined)
     if (!allow) return p.resolve({ behavior: 'deny', message: note ? `Denied in the app. The person says: ${note}` : 'Denied in the app' })
     const command = extra.command?.trim()
     if (!command || p.tool !== 'Bash' || !p.raw || command === p.raw.command) return p.resolve({ behavior: 'allow', updatedInput: p.input })

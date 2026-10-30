@@ -21,3 +21,11 @@ describe('routines', () => {
     expect(checkRoutine(r)).toBeNull()
   })
 })
+
+describe('routine interval floor', () => {
+  it('refuses an interval below the minimum, naming it', () => {
+    const base = { name: 'a', cwd: '/x', skill: 's', when: { kind: 'every' as const, minutes: 3 } }
+    expect(checkRoutine(base)).toMatch(/every 5 minutes/)
+    expect(checkRoutine({ ...base, when: { kind: 'every' as const, minutes: 10 } })).toMatch(/once an hour/)
+  })
+})

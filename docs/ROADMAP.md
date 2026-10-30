@@ -314,6 +314,14 @@ Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or g
 - Vault passwords URL-encoded in database connections; single-step guides without "0 of 1"; the
   Ollama next-step banner.
 
+## Control (spec: `spec-control.md`)
+
+- [ ] Policy gate with readable rules (global and per project), deny before allow, never loosening an ask without an explicit allow.
+- [ ] Daily append-only audit log with redacted arguments, decisions, cost and per-turn file receipts; viewer with filters.
+- [ ] Routine caps: 15-minute minimum, 20 enabled, auto-disable after 10 failures.
+- [ ] Live plan from TodoWrite on panel and canvas, with per-run agent and fan-out caps.
+- [ ] Checkpoints per turn in private git refs, restore to turn N with a forked resume; breakpoints before a tool or after the plan.
+
 ## Planned: background panels, precise state and wait, SSH machines
 
 Spec: `spec-runtime.md`. Optional "Keep panels running" (off by default): panels survive closing the window, with a menu bar count, today's cost and Stop all; after a reboot the layout comes back with an offer to resume, never auto-run. Panel states working, waiting approval, waiting input, idle and error, plus `stm wait --for blocked|idle|done`. Saved SSH hosts with independent reconnect, one at a time in v1.

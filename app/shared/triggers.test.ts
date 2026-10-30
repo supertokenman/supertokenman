@@ -42,3 +42,13 @@ group('triggers', () => {
     expect(cleanTrigger({ when: { kind: 'every', minutes: 7 } }).when).toEqual({ kind: 'every', minutes: 60 })
   })
 })
+
+group('trigger caps fields', () => {
+  it('raises an every interval to the minimum and keeps the failure state', () => {
+    expect(cleanTrigger({ when: { kind: 'every', minutes: 15 } }, 30).when).toEqual({ kind: 'every', minutes: 30 })
+    expect(cleanTrigger({ when: { kind: 'every', minutes: 15 } }).when).toEqual({ kind: 'every', minutes: 15 })
+    const t = cleanTrigger({ failures: 10, disabledReason: 'failures', note: 'off', enabled: false })
+    expect(t).toMatchObject({ failures: 10, disabledReason: 'failures', note: 'off', enabled: false })
+    expect(cleanTrigger({}).disabledReason).toBeUndefined()
+  })
+})
