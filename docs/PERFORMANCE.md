@@ -285,7 +285,12 @@ What it records, against the v1.1 budgets in docs/ROADMAP.md:
 - Idle for 30 s with 1 panel, then with 4: layouts and style recalcs per second (CDP
   `Performance.getMetrics`), CPU and memory of the app and every process under it (`ps` once a
   second), and memory per added panel.
-- Typing 200 characters into the composer, three rounds (since 0.1.12; one before): the median round's
+- Typing 200 characters into the composer, 7 rounds at 1x and at a 4x CPU throttle (CDP
+  `Emulation.setCPUThrottlingRate`): the primary signal is the median per-key script time and per-key
+  task time (CDP `Performance.getMetrics`). Trust these, not the longest frame: in a local Linux xvfb A/B
+  of 0.1.20 and 0.1.22 the per-key script time held steady (1.49 vs 1.55 ms; 8.2 vs 8.9 ms at 4x) while
+  the longest frame overlapped (67 to 100 ms vs 83 to 133 ms). A previous release without these is shown
+  as "new in this version". Older description, now noisy and for reference: three rounds (since 0.1.12; one before), the median round's
   longest frame and frames over 16 and 33 ms (`requestAnimationFrame` gaps), the worst round's longest
   frame, and the longest input to paint (Event Timing). A section measured differently from the previous
   release is left out of the comparison, and PERF.md says so.

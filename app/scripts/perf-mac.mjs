@@ -134,30 +134,39 @@ Object.assign(results.launch, {
   say(`idle ${results.idle.panels} panels: ${JSON.stringify(results.idle.four)}`)
   results.idle.perPanelMb = results.idle.panels > 1 ? (results.idle.four.rssMb - results.idle.one.rssMb) / (results.idle.panels - 1) : null
 
-  // typing: rAF gaps for frames, Event Timing for input to paint. Three rounds of 200 characters: one
-  // round's longest frame is a single sample of a shared virtual machine (0.1.10 to 0.1.11 moved 63 to
-  // 109 ms with the same work per key on Linux), so the median round is the number and the worst is kept.
+  // typing: per-key script and task time (CDP Performance.getMetrics deltas) is the signal: it held
+  // steady (1.49 vs 1.55 ms) between versions where the longest frame did not (67-100 vs 83-133 ms), so
+  // it is taken at 1x and at a 4x CPU throttle, TYPING_ROUNDS rounds each (median). rAF gaps for frames
+  // and Event Timing stay, for reference.
   await l.win.click('.composer textarea')
+  const cdp = await l.win.context().newCDPSession(l.win)
+  await cdp.send('Performance.enable')
   const rounds = []
-  for (let k = 0; k < 3; k++) {
-    await l.win.evaluate(() => {
-      const s = (window.__perf = { frames: [], events: [] })
-      let last = performance.now()
-      const tick = (t) => { s.frames.push(t - last); last = t; if (!s.stop) requestAnimationFrame(tick) }
-      requestAnimationFrame(tick)
-      s.obs = new PerformanceObserver((list) => { for (const e of list.getEntries()) s.events.push(e.duration) })
-      s.obs.observe({ type: 'event', durationThreshold: 16, buffered: false })
-    })
-    await l.win.keyboard.type('the quick brown fox jumps over the lazy dog, '.repeat(5).slice(0, 200), { delay: 30 })
-    await sleep(500)
-    const t = await l.win.evaluate(() => { const s = window.__perf; s.stop = true; s.obs.disconnect(); return { frames: s.frames.slice(1), events: s.events } })
-    rounds.push({ longestFrameMs: Math.max(0, ...t.frames), framesOver16: t.frames.filter((x) => x > 16.7).length, framesOver33: t.frames.filter((x) => x > 33.4).length, frames: t.frames.length, longestInputMs: Math.max(0, ...t.events) })
-    await l.win.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a')
-    await l.win.keyboard.press('Backspace')
-    await sleep(500)
+  for (const throttle of L.TYPING_THROTTLES) {
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: throttle })
+    for (let k = 0; k < L.TYPING_ROUNDS; k++) {
+      await l.win.evaluate(() => {
+        const s = (window.__perf = { frames: [], events: [] })
+        let last = performance.now()
+        const tick = (t) => { s.frames.push(t - last); last = t; if (!s.stop) requestAnimationFrame(tick) }
+        requestAnimationFrame(tick)
+        s.obs = new PerformanceObserver((list) => { for (const e of list.getEntries()) s.events.push(e.duration) })
+        s.obs.observe({ type: 'event', durationThreshold: 16, buffered: false })
+      })
+      const m0 = L.metricsMap(await cdp.send('Performance.getMetrics'))
+      await l.win.keyboard.type('the quick brown fox jumps over the lazy dog, '.repeat(5).slice(0, 200), { delay: 30 })
+      await sleep(500)
+      const m1 = L.metricsMap(await cdp.send('Performance.getMetrics'))
+      const t = await l.win.evaluate(() => { const s = window.__perf; s.stop = true; s.obs.disconnect(); return { frames: s.frames.slice(1), events: s.events } })
+      rounds.push({ throttle, ...L.perKeyMs(m0, m1, 200), longestFrameMs: Math.max(0, ...t.frames), framesOver16: t.frames.filter((x) => x > 16.7).length, framesOver33: t.frames.filter((x) => x > 33.4).length, frames: t.frames.length, longestInputMs: Math.max(0, ...t.events) })
+      await l.win.keyboard.press(process.platform === 'darwin' ? 'Meta+a' : 'Control+a')
+      await l.win.keyboard.press('Backspace')
+      await sleep(500)
+    }
   }
-  const mid = (k) => L.median(rounds.map((r) => r[k]))
-  results.typing = { method: 2, rounds: rounds.length, chars: 200, longestFrameMs: mid('longestFrameMs'), worstFrameMs: Math.max(...rounds.map((r) => r.longestFrameMs)), framesOver16: mid('framesOver16'), framesOver33: mid('framesOver33'), frames: mid('frames'), longestInputMs: mid('longestInputMs'), all: rounds }
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }).catch(() => undefined)
+  await cdp.detach().catch(() => undefined)
+  results.typing = L.summarizeTyping(rounds, 200)
   say(`typing: ${JSON.stringify(results.typing)}`)
   await quit(l)
 }
