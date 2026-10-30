@@ -41,7 +41,7 @@ function itemsOf(input: unknown): PlanItem[] | null {
 }
 
 /** How many panels one spawn call starts: ui_open_panels takes a list, delegate starts one worker. */
-function panelsStarted(name: string, input: unknown): number {
+export function panelsStarted(name: string, input: unknown): number {
   const base = baseName(name)
   if (base === 'delegate') return 1
   if (base === 'ui_open_panels') {

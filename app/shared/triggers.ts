@@ -29,6 +29,11 @@ export type Trigger = {
   scope?: import('./triggerscope.js').Scope
   /** starts from a POST to the app's 127.0.0.1 receiver with this trigger's token (shared/webhook.ts) */
   webhook?: boolean
+  /** consecutive failed runs (shared/routinecaps.ts); a success resets it */
+  failures?: number
+  /** set when the app switched it off after too many failed runs */
+  disabledReason?: 'failures'
+  note?: string
 }
 
 export const EVERY = [15, 30, 60, 120, 240, 480]
@@ -71,11 +76,11 @@ export function newReviews(seen: Set<string> | null, keys: string[]): { fresh: s
   return { fresh: keys.filter((k) => !seen.has(k)), seen: now }
 }
 
-export function cleanTrigger(t: Partial<Trigger>): Trigger {
+export function cleanTrigger(t: Partial<Trigger>, minEvery = 15): Trigger {
   const w = t.when ?? { kind: 'schedule', days: [1, 2, 3, 4, 5], time: '09:00' }
   const when: When =
     w.kind === 'every'
-      ? { kind: 'every', minutes: EVERY.includes(Number(w.minutes)) ? Number(w.minutes) : 60 }
+      ? { kind: 'every', minutes: EVERY.includes(Number(w.minutes)) ? Math.max(Number(w.minutes), minEvery) : 60 }
       : w.kind === 'pr-review'
         ? { kind: 'pr-review' }
         : { kind: 'schedule', days: [...new Set((w.days ?? []).map(Number).filter((d) => d >= 0 && d <= 6))].sort(), time: /^\d{2}:\d{2}$/.test(w.time ?? '') ? w.time! : '09:00' }
@@ -93,6 +98,9 @@ export function cleanTrigger(t: Partial<Trigger>): Trigger {
     hoursOnly: t.hoursOnly === true,
     scope: cleanScope(t.scope),
     webhook: t.webhook === true,
+    ...(typeof t.failures === 'number' && t.failures > 0 ? { failures: Math.floor(t.failures) } : {}),
+    ...(t.disabledReason === 'failures' ? { disabledReason: 'failures' as const } : {}),
+    ...(typeof t.note === 'string' && t.note ? { note: t.note.slice(0, 300) } : {}),
   }
 }
 

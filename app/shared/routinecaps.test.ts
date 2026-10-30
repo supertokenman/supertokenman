@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { afterRun, capDecision, clampCaps, DEFAULT_CAPS, type Capped } from './routinecaps'
+import { afterRun, capDecision, clampCaps, DEFAULT_CAPS, firable, hookAllowed, reenable, type Capped } from './routinecaps'
 
 const every = (minutes: number) => ({ kind: 'every' as const, minutes })
 const item = (id: string, enabled = true, extra: Partial<Capped> = {}): Capped => ({ id, enabled, when: every(60), ...extra })
@@ -76,5 +76,31 @@ describe('clampCaps', () => {
     expect(clampCaps(undefined)).toEqual(DEFAULT_CAPS)
     expect(clampCaps({ minEvery: 1, maxEnabled: 500, maxFailures: 0 })).toEqual({ minEvery: 5, maxEnabled: 50, maxFailures: 3 })
     expect(clampCaps({ minEvery: 'x' as unknown as number, maxEnabled: 7 })).toEqual({ minEvery: 15, maxEnabled: 7, maxFailures: 10 })
+  })
+})
+
+describe('firable, hookAllowed, reenable', () => {
+  const every = { kind: 'every' as const, minutes: 30 }
+  it('keeps the most recently armed items firing beyond the cap, and disables nothing', () => {
+    const list = Array.from({ length: 22 }, (_, i) => ({ id: `t${i}`, enabled: true, when: every, armedAt: i }))
+    const ok = firable(list)
+    expect(ok.size).toBe(20)
+    expect(ok.has('t0')).toBe(false)
+    expect(ok.has('t1')).toBe(false)
+    expect(ok.has('t21')).toBe(true)
+    expect(list.every((x) => x.enabled)).toBe(true)
+  })
+  it('drops a webhook fire inside 15 minutes', () => {
+    expect(hookAllowed(undefined, 1000)).toBe(true)
+    expect(hookAllowed(0, 14 * 60_000)).toBe(false)
+    expect(hookAllowed(0, 15 * 60_000)).toBe(true)
+  })
+  it('re-enable clears the failure state', () => {
+    const t = afterRun<Capped>({ id: 'a', enabled: true, when: every, failures: 9 }, false)
+    expect(t.enabled).toBe(false)
+    const back = reenable(t)
+    expect(back).toMatchObject({ enabled: true, failures: 0 })
+    expect(back.disabledReason).toBeUndefined()
+    expect(back.note).toBeUndefined()
   })
 })

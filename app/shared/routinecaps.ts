@@ -21,7 +21,7 @@ export function clampCaps(input: Partial<Record<keyof Caps, unknown>> | undefine
 }
 
 /** The part of a trigger or routine the caps read. */
-export type Capped = { id: string; enabled: boolean; when: When; failures?: number; disabledReason?: 'failures'; note?: string }
+export type Capped = { id: string; enabled: boolean; when: When; armedAt?: number; failures?: number; disabledReason?: 'failures'; note?: string }
 
 /** A proposed save: the item as it will be after the change. */
 export type CapChange = { id: string; when: When; enabled: boolean }
@@ -57,4 +57,24 @@ export function afterRun<T extends Capped>(t: T, ok: boolean, caps: Caps = DEFAU
     return { ...t, failures, enabled: false, disabledReason: 'failures', note: `Disabled after ${failures} failed runs in a row. Re-enable it to try again.` }
   }
   return { ...t, failures }
+}
+
+/**
+ * Which enabled items may still fire: the `maxEnabled` most recently armed. Settings saved over the cap are
+ * kept as they are (nothing is disabled behind the person's back); the oldest-armed beyond the cap wait.
+ */
+export function firable(list: Capped[], caps: Caps = DEFAULT_CAPS): Set<string> {
+  const on = list.filter((x) => x.enabled).sort((a, b) => (b.armedAt ?? 0) - (a.armedAt ?? 0))
+  return new Set(on.slice(0, caps.maxEnabled).map((x) => x.id))
+}
+
+/** A webhook trigger fires at most once per `minEvery` minutes; a fire inside the window is dropped. */
+export function hookAllowed(last: number | undefined, now: number, caps: Caps = DEFAULT_CAPS): boolean {
+  return last === undefined || now - last >= caps.minEvery * 60_000
+}
+
+/** Re-enabling an item that was disabled for failures: the count and the reason are cleared. */
+export function reenable<T extends Capped>(t: T): T {
+  const { disabledReason: _r, note: _n, ...rest } = t
+  return { ...rest, enabled: true, failures: 0 } as T
 }

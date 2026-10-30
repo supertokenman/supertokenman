@@ -94,4 +94,36 @@ describe('IPC contract', () => {
     // fetching is the only handler that can reach the network, and it is a plain call with no automatic caller
     expect(main.match(/packs\(\)\.fetchGit\(/g)?.length).toBe(1)
   })
+  it('control: every channel is in the contract, handled in main and bridged in the preload', () => {
+    const channels = ['policy:read', 'policy:write', 'policy:test', 'audit:query', 'audit:days', 'plan:get', 'checkpoint:list', 'checkpoint:preview', 'checkpoint:restore', 'breakpoint:set', 'triggers:caps', 'triggers:setCaps']
+    for (const c of channels) {
+      expect(Object.keys(CONTRACT)).toContain(c)
+      expect(handled.has(c)).toBe(true)
+      expect(preload).toContain(`'${c}'`)
+    }
+  })
+  it('control: good arguments pass', () => {
+    expect(checkArgs('policy:read', [])).toBeNull()
+    expect(checkArgs('policy:read', ['/p'])).toBeNull()
+    expect(checkArgs('policy:write', ['project', '/p', 'ask network\n'])).toBeNull()
+    expect(checkArgs('policy:test', ['Bash', { command: 'ls' }])).toBeNull()
+    expect(checkArgs('audit:query', [{ from: 0, to: 10, panel: 'p1', decision: 'deny', text: 'rm', limit: 2000 }])).toBeNull()
+    expect(checkArgs('plan:get', ['p1'])).toBeNull()
+    expect(checkArgs('checkpoint:restore', ['p1', 0])).toBeNull()
+    expect(checkArgs('breakpoint:set', ['p1', [{ kind: 'before', tool: 'Bash' }, { kind: 'afterPlan' }]])).toBeNull()
+    expect(checkArgs('triggers:setCaps', [{ minEvery: 15, maxEnabled: 20, maxFailures: 10 }])).toBeNull()
+  })
+  it('control: bad arguments are refused before the handler runs', () => {
+    expect(checkArgs('policy:write', ['team', '/p', 'x'])).toBeTruthy()
+    expect(checkArgs('policy:write', ['global', '', 'x'.repeat(64_001)])).toBeTruthy()
+    expect(checkArgs('policy:test', ['x'.repeat(201), {}])).toBeTruthy()
+    expect(checkArgs('audit:query', [{ from: 0, to: 10, limit: 2001 }])).toBeTruthy()
+    expect(checkArgs('audit:query', [{ from: 0, to: 10, text: 'x'.repeat(201) }])).toBeTruthy()
+    expect(checkArgs('checkpoint:restore', ['p1', -1])).toBeTruthy()
+    expect(checkArgs('checkpoint:restore', ['p1', 1.5])).toBeTruthy()
+    expect(checkArgs('checkpoint:restore', ['../x', 0])).toBeTruthy()
+    expect(checkArgs('breakpoint:set', ['p1', Array.from({ length: 21 }, () => ({ kind: 'afterPlan' }))])).toBeTruthy()
+    expect(checkArgs('breakpoint:set', ['p1', [{ kind: 'sometimes' }]])).toBeTruthy()
+    expect(checkArgs('triggers:setCaps', [{ minEvery: 15 }])).toBeTruthy()
+  })
 })

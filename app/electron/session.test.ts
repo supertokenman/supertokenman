@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Options, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 import { Session, summarize, type UiEvent } from './session'
+import { gate, PolicyStore } from './policy'
 
 /** A stand-in for the SDK's query: answers each prompt with the scripted messages, asking permission first when told to. */
 function fakeQuery(script: (prompt: string, options: Options) => AsyncGenerator<SDKMessage>) {
@@ -438,5 +439,52 @@ describe('Session turn end, steer and failures', () => {
     expect(ends).toEqual([true])
     expect(s.busy).toBe(false)
     s.close()
+  })
+})
+
+describe('Session with the policy gate and control hooks', () => {
+  it('an ask stays an ask through the gate, the card is shown, and decision and answer are reported', async () => {
+    const events: UiEvent[] = []
+    const seen: string[] = []
+    const store = new PolicyStore('/nonexistent/global.rules')
+    const q = fakeQuery(async function* (_p, options) {
+      void options.canUseTool!('Bash', { command: 'npm test' }, { signal: new AbortController().signal } as never)
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0.5, usage: { input_tokens: 1, output_tokens: 1 } } as unknown as SDKMessage
+    })
+    const s = new Session((e) => events.push(e), {
+      cwd: '/proj',
+      query: q.fn,
+      decide: (tool, input) => gate(tool, input, { action: 'ask', risk: null }, { store, root: '/proj', ctx: { project: '/proj', home: '/h', cwd: '/proj' } }),
+      onDecision: (e) => seen.push(`${e.action}/${e.by}`),
+      onAnswered: (e) => seen.push(e.allow ? 'approved' : 'refused'),
+    })
+    s.start()
+    s.send('go')
+    await settle()
+    const card = events.find((e) => e.kind === 'permission') as Extract<UiEvent, { kind: 'permission' }>
+    expect(card.tool).toBe('Bash')
+    s.answer(card.id, true)
+    expect(seen).toEqual(['ask/default', 'approved'])
+    expect(s.lastCostUsd).toBe(0.5)
+    expect(s.turnIndex).toBe(1)
+  })
+  it('emits the plan from TodoWrite and counts agents, and resets at a new run', async () => {
+    const events: UiEvent[] = []
+    const plans: number[] = []
+    const q = fakeQuery(async function* () {
+      yield { type: 'assistant', uuid: 'u1', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 't1', name: 'TodoWrite', input: { todos: [{ content: 'a', status: 'in_progress', activeForm: 'doing a' }, { content: 'b', status: 'pending' }] } }, { type: 'tool_use', id: 't2', name: 'Task', input: {} }] } } as unknown as SDKMessage
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0, usage: { input_tokens: 1, output_tokens: 1 } } as unknown as SDKMessage
+    })
+    const s = new Session((e) => events.push(e), { cwd: '/proj', query: q.fn, panelId: 'p1', onPlan: (p) => plans.push(p.agents.used) })
+    s.start()
+    s.send('one')
+    await settle()
+    s.send('two')
+    await settle()
+    const got = events.filter((e) => e.kind === 'plan') as Extract<UiEvent, { kind: 'plan' }>[]
+    expect(got).toHaveLength(2)
+    expect(got[0]!.plan).toMatchObject({ panel: 'p1', sessionId: 's1', items: [{ text: 'a', status: 'in_progress', active: 'doing a' }, { text: 'b', status: 'pending' }], agents: { used: 1, cap: 8 } })
+    expect(plans).toEqual([1, 1])
+    expect(s.lastMessageUuid).toBe('u1')
   })
 })

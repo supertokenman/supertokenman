@@ -55,6 +55,19 @@ export function fileFor(date: Date | string, size: number): string {
   return size > ROTATE_BYTES ? `${day}.2.jsonl` : `${day}.jsonl`
 }
 
+/**
+ * The file a day's rows go to when several may exist: the first of `day.jsonl`, `day.2.jsonl`, `day.3.jsonl`...
+ * whose size (`sizeOf`, 0 for a missing file) is within the limit. Rolls on without end, one file per 50 MB.
+ */
+export function pickFile(date: Date | string, sizeOf: (name: string) => number): string {
+  const day = typeof date === 'string' ? date : dayOf(date.getTime())
+  for (let n = 1; n < 10_000; n++) {
+    const name = n === 1 ? `${day}.jsonl` : `${day}.${n}.jsonl`
+    if (sizeOf(name) <= ROTATE_BYTES) return name
+  }
+  return `${day}.10000.jsonl`
+}
+
 const FILE = /^(\d{4})-(\d{2})-(\d{2})(?:\.\d+)?\.jsonl$/
 
 /**

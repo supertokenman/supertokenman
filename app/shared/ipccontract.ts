@@ -102,6 +102,29 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'packs:evalStart': z.tuple([packId, packRoot, text(20_000).min(1), z.string().regex(/^claude-(haiku|sonnet|opus)-[\w-]+$/), z.number().int().min(1).max(200)]),
   'packs:evalResult': z.tuple([z.string().regex(/^[\w-]{1,64}$/, 'an eval id')]),
   'packs:evalDiscard': z.tuple([z.string().regex(/^[\w-]{1,64}$/, 'an eval id')]),
+  // control (spec-control.md): policy rules, the audit log, the plan, checkpoints, breakpoints and trigger caps
+  'policy:read': z.tuple([opt(z.string().max(4096))]),
+  'policy:write': z.tuple([z.enum(['global', 'project']), z.string().max(4096), text(64_000)]),
+  'policy:test': z.tuple([text(200).min(1), z.record(z.string(), z.unknown()), opt(z.string().max(4096))]),
+  'audit:query': z.tuple([
+    z.object({
+      from: z.number(),
+      to: z.number(),
+      panel: opt(z.string().max(64)),
+      tool: opt(z.string().max(200)),
+      decision: opt(z.enum(['allow', 'ask', 'deny', 'approved', 'refused', 'pause'])),
+      text: opt(z.string().max(200)),
+      limit: opt(z.number().int().min(1).max(2000)),
+    }),
+  ]),
+  'audit:days': z.tuple([]),
+  'plan:get': z.tuple([sid]),
+  'checkpoint:list': z.tuple([sid]),
+  'checkpoint:preview': z.tuple([sid, z.number().int().min(0)]),
+  'checkpoint:restore': z.tuple([sid, z.number().int().min(0)]),
+  'breakpoint:set': z.tuple([sid, z.array(z.object({ kind: z.enum(['before', 'afterPlan']), tool: opt(z.string().max(200)) })).max(20)]),
+  'triggers:caps': z.tuple([]),
+  'triggers:setCaps': z.tuple([z.object({ minEvery: z.number().int().min(1), maxEnabled: z.number().int().min(1), maxFailures: z.number().int().min(1) })]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
 }
 

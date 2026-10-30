@@ -16,7 +16,14 @@ import { createServer as netServer } from 'node:net'
 import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { basename, extname, relative, resolve, sep as pathSep } from 'node:path'
-import { Session, type UiEvent } from './session.js'
+import { Session, summarize as summarizeCall, type UiEvent } from './session.js'
+import { AuditLog, retentionDays } from './audit.js'
+import { Checkpoints } from './checkpoints.js'
+import { gate as policyGate, PanelControl, PolicyStore, type Breakpoint, type Existing } from './policy.js'
+import { afterRun, capDecision, clampCaps, firable, hookAllowed, reenable, type Caps, type Capped } from '../shared/routinecaps.js'
+import { parseRules } from '../shared/policyrules.js'
+import type { Plan } from '../shared/planview.js'
+import type { AuditBy, AuditDecision, AuditKind, AuditRow } from '../shared/auditlog.js'
 import { Hub, SERVER, TOOLS } from './hub.js'
 import { ShellRunner } from './shell.js'
 import { CutWatcher, kitHome } from './cuts.js'
@@ -331,7 +338,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; control?: { caps?: Partial<Caps>; auditDays?: number; agentCap?: number; fanoutCap?: number }; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -1364,12 +1371,21 @@ ipcMain.handle('personas:import', async (_e, chosen?: unknown) => {
 
 // triggers: personas that start on their own. The main process keeps time; the window opens the
 // panel and sends the prompt, so a triggered run looks and asks for approval like any other.
-const triggers = (): Trigger[] => (settings().triggers ?? []).map(cleanTrigger)
+const controlCaps = (): Caps => clampCaps(settings().control?.caps)
+const triggers = (): Trigger[] => (settings().triggers ?? []).map((t) => cleanTrigger(t, controlCaps().minEvery))
 const saveTriggers = (list: Trigger[]) => saveSettings({ ...settings(), triggers: list })
 ipcMain.handle('triggers:list', () => triggers())
 ipcMain.handle('triggers:save', (_e, t: Partial<Trigger>) => {
-  const next = cleanTrigger(t)
+  const caps = controlCaps()
   const list = triggers()
+  const old = t.id ? list.find((x) => x.id === t.id) : undefined
+  // an interval under the minimum and a 21st enabled item are refused with the reason (shared/routinecaps.ts)
+  const asked = cleanTrigger(t)
+  const cap = capDecision(cappedAll(), { id: `trigger:${asked.id}`, when: t.when?.kind === 'every' ? { kind: 'every', minutes: Number(t.when.minutes) } : asked.when, enabled: asked.enabled }, Date.now(), caps)
+  if (!cap.ok) throw new Error(cap.reason)
+  // saving it enabled again after the app switched it off for failures clears the count and the note
+  const next0 = cleanTrigger(t, caps.minEvery)
+  const next = old?.disabledReason && next0.enabled ? reenable(next0) : next0
   const i = list.findIndex((x) => x.id === next.id)
   // a changed schedule starts counting from now, not from a run under the old one
   saveTriggers(i >= 0 ? list.map((x, k) => (k === i ? { ...next, lastRun: x.lastRun, armedAt: Date.now() } : x)) : [...list, { ...next, lastRun: undefined, armedAt: Date.now() }])
@@ -1390,12 +1406,15 @@ function fire(t: Trigger, extra = '') {
 }
 /** A trigger that waits for business hours stays due until they open; Run now always runs. */
 function fireTimed(t: Trigger, extra = '') {
+  // settings saved over the enabled cap keep their data; the oldest-armed beyond it wait until some are disabled
+  if (!canFire(`trigger:${t.id}`)) return
   if (t.hoursOnly && !withinHours(inboxData().hours, new Date())) return
   fire(t, extra)
 }
 // webhook triggers: listens on 127.0.0.1 only while a trigger has the webhook on; token in the vault, never logged
 let hookServer: Server | null = null
 const hookHit = WH.limiter()
+const hookLast = new Map<string, number>()
 function syncWebhook() {
   const on = triggers().some((t) => t.webhook)
   if (on && !hookServer) {
@@ -1416,6 +1435,13 @@ function syncWebhook() {
       })
       req.on('end', () => {
         if (size > WH.MAX_BODY || res.writableEnded) return
+        // one fire per 15 minutes (the cap); a fire inside is dropped and audited
+        const now = Date.now()
+        if (!canFire(`trigger:${t.id}`) || !hookAllowed(hookLast.get(t.id), now, controlCaps())) {
+          auditCap(`webhook trigger "${t.name}" dropped: fires at most every ${controlCaps().minEvery} minutes`, 'deny')
+          return end(429, 'too many')
+        }
+        hookLast.set(t.id, now)
         fire(t, WH.untrusted(body))
         end(202)
       })
@@ -2075,6 +2101,189 @@ ipcMain.handle('content:render', (_e, id: string) => C().render(String(id)))
 ipcMain.handle('content:check', (_e, id: string) => C().check(String(id)))
 ipcMain.handle('content:reveal', (_e, path: string) => C().allowed(String(path)) && desktop.showItemInFolder(String(path)))
 
+// Control (spec-control.md): the policy gate, the audit log, caps on triggers and routines, the visible plan,
+// checkpoints and breakpoints. The logic is in shared/; these are the files, the panels and the channels.
+let policySvc: PolicyStore | null = null
+const policyStore = () => (policySvc ??= new PolicyStore(join(app.getPath('userData'), 'policy', 'global.rules')))
+let auditSvc: AuditLog | null = null
+const auditLog = () =>
+  (auditSvc ??= new AuditLog(join(app.getPath('userData'), 'audit'), {
+    known: () => vault?.all() ?? [],
+    // a failed write never changes a decision; the panels are told once
+    onFail: (text) => sessions.forEach((_s, sid) => send(sid, { kind: 'note', tone: 'error', text })),
+  }))
+let cpSvc: Checkpoints | null = null
+const checkpoints = () => (cpSvc ??= new Checkpoints(join(app.getPath('userData'), 'checkpoints')))
+type PanelCtl = { control: PanelControl; project: string; root: string; cwd: string; remote: boolean }
+const ctlOf = new Map<string, PanelCtl>()
+const plans = new Map<string, Plan>()
+const planFile = (sessionId: string) => (/^[\w-]{1,100}$/.test(sessionId) ? join(app.getPath('userData'), 'sessions', `${sessionId}.plan.json`) : null)
+const savePlan = (plan: Plan) => {
+  const f = planFile(plan.sessionId)
+  if (!f) return
+  try {
+    mkdirSync(dirname(f), { recursive: true })
+    writeFileSync(f, JSON.stringify(plan))
+  } catch {
+    // the plan is shown from memory; the file is for a resume
+  }
+}
+const loadPlan = (sessionId: string): Plan | null => {
+  const f = planFile(sessionId)
+  try {
+    return f ? (JSON.parse(readFileSync(f, 'utf8')) as Plan) : null
+  } catch {
+    return null
+  }
+}
+const bpFile = () => join(app.getPath('userData'), 'breakpoints.json')
+const bpAll = (): Record<string, Breakpoint[]> => {
+  try {
+    return JSON.parse(readFileSync(bpFile(), 'utf8'))
+  } catch {
+    return {}
+  }
+}
+const bpSave = (sid: string, list: Breakpoint[]) => {
+  const all = bpAll()
+  if (list.length) all[sid] = list
+  else delete all[sid]
+  try {
+    writeFileSync(bpFile(), JSON.stringify(all))
+  } catch {
+    // kept in memory for this run
+  }
+}
+function auditPanel(sid: string, r: { tool: string; args: string; decision: AuditDecision; by: AuditBy; rule?: string; kind?: AuditKind; costUsd?: number; files?: AuditRow['files'] }) {
+  auditLog().write({ panel: sid, project: ctlOf.get(sid)?.project ?? '', turn: sessions.get(sid)?.turnIndex ?? 0, kind: 'tool', ...r })
+}
+function auditCap(text: string, decision: AuditDecision) {
+  auditLog().write({ panel: '-', project: '', turn: 0, tool: 'caps', args: text, decision, by: 'app', kind: 'cap' })
+}
+const cappedAll = (): Capped[] => [
+  ...triggers().map((t) => ({ id: `trigger:${t.id}`, enabled: t.enabled, when: t.when, armedAt: t.armedAt })),
+  ...routinesState().routines.map((r) => ({ id: `routine:${r.id}`, enabled: r.enabled, when: r.when, armedAt: r.armedAt })),
+]
+const canFire = (key: string) => firable(cappedAll(), controlCaps()).has(key)
+/** A run ended: a success resets the failure count, the limit-th failure in a row switches the item off (shared/routinecaps.ts). */
+function settleRun(kind: 'trigger' | 'routine', id: string, ok: boolean) {
+  const caps = controlCaps()
+  if (kind === 'trigger') {
+    const list = triggers()
+    const t = list.find((x) => x.id === id)
+    if (!t || (ok && !t.failures)) return
+    const next = afterRun(t, ok, caps)
+    saveTriggers(list.map((x) => (x.id === id ? next : x)))
+    if (t.enabled && !next.enabled) auditCap(`trigger "${t.name}" switched off after ${next.failures} failed runs in a row`, 'pause')
+    return
+  }
+  const st = routinesState()
+  const r = st.routines.find((x) => x.id === id)
+  if (!r || (ok && !r.failures)) return
+  const next = afterRun(r, ok, caps)
+  saveRoutines({ ...st, routines: st.routines.map((x) => (x.id === id ? next : x)) })
+  if (r.enabled && !next.enabled) auditCap(`routine "${r.name}" switched off after ${next.failures} failed runs in a row`, 'pause')
+}
+/** The project folder the rules and checkpoints belong to: a worktree panel uses its main checkout. */
+const mainCheckout = (cwd: string) => [...worktreeOf.values()].find((w) => w.path === cwd)?.repo ?? cwd
+const parseErrors = (text: string) => parseRules(text).errors
+const readText = (f: string) => {
+  try {
+    return readFileSync(f, 'utf8')
+  } catch {
+    return ''
+  }
+}
+ipcMain.handle('policy:read', (_e, cwd?: string) => {
+  const g = policyStore().loadGlobal(0)
+  const root = cwd ? mainCheckout(String(cwd)) : undefined
+  const p = root ? policyStore().loadProject(root, 0) : null
+  return {
+    global: { path: policyStore().globalPath, text: g.text, errors: g.errors, ...(g.unreadable ? { unreadable: g.unreadable } : {}) },
+    project: root && p ? { path: PolicyStore.projectPath(root), text: p.text, errors: p.errors, ...(p.unreadable ? { unreadable: p.unreadable } : {}) } : null,
+  }
+})
+ipcMain.handle('policy:write', (_e, scope: 'global' | 'project', cwd: string, text: string) => {
+  const file = scope === 'global' ? policyStore().globalPath : PolicyStore.projectPath(mainCheckout(String(cwd)))
+  if (scope === 'project' && !existsSync(mainCheckout(String(cwd)))) throw new Error('That project folder does not exist.')
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(`${file}.tmp`, String(text))
+  renameSync(`${file}.tmp`, file)
+  // bad lines are reported with their line numbers; the good ones apply and a bad one never becomes an allow
+  return { errors: parseErrors(String(text)) }
+})
+ipcMain.handle('policy:test', (_e, tool: string, input: Record<string, unknown>, cwd?: string) => {
+  const root = cwd ? mainCheckout(String(cwd)) : undefined
+  const existing = decide('supervised', tool, input)
+  const g = policyGate(tool, input, existing, { store: policyStore(), root, ctx: { project: root ?? '', home: homedir(), cwd: root ?? homedir() } })
+  return { decision: g.action, by: g.by, rule: g.rule ?? null, existing: existing.action, why: g.why ?? g.reason ?? null }
+})
+ipcMain.handle('audit:query', (_e, q: Parameters<AuditLog['query']>[0]) => auditLog().query(q))
+ipcMain.handle('audit:days', () => auditLog().days())
+ipcMain.handle('plan:get', (_e, sid: string) => {
+  const id = String(sid)
+  return plans.get(id) ?? (sessions.get(id)?.sessionId ? loadPlan(sessions.get(id)!.sessionId) : null)
+})
+ipcMain.handle('checkpoint:list', (_e, sid: string) => checkpoints().list(String(sid)).map(({ turn, ref, at, sessionId, messageUuid }) => ({ turn, ref, at, sessionId, messageUuid })))
+ipcMain.handle('checkpoint:preview', (_e, sid: string, turn: number) => {
+  const s = sessions.get(String(sid))
+  if (!s) throw new Error('No such panel.')
+  return checkpoints().preview(s.cwd, String(sid), turn).then(({ files, notes }) => ({ files, notes }))
+})
+ipcMain.handle('checkpoint:restore', async (_e, sid: string, turn: number) => {
+  const s = sessions.get(String(sid))
+  if (!s) throw new Error('No such panel.')
+  if (s.busy) throw new Error('Stop the panel before restoring.')
+  const r = await checkpoints().restore(s.cwd, String(sid), turn)
+  auditPanel(String(sid), { tool: 'checkpoint', args: `restore to turn ${turn}: ${r.files.length} files`, decision: 'approved', by: 'person', kind: 'checkpoint' })
+  // the window starts the panel again with these (session:new resume + resumeAt, which forks the old conversation)
+  return r
+})
+ipcMain.handle('breakpoint:set', (_e, sid: string, list: Breakpoint[]) => {
+  const m = ctlOf.get(String(sid))
+  if (!m) throw new Error('No such panel.')
+  m.control.breakpoints = list.map((b) => ({ kind: b.kind, ...(b.kind === 'before' && b.tool ? { tool: b.tool } : {}) })).filter((b) => b.kind === 'afterPlan' || b.tool)
+  bpSave(String(sid), m.control.breakpoints)
+  return m.control.breakpoints
+})
+ipcMain.handle('triggers:caps', () => ({ caps: controlCaps(), enabled: cappedAll().filter((x) => x.enabled).length }))
+ipcMain.handle('triggers:setCaps', (_e, c: Partial<Caps>) => {
+  saveSettings({ ...settings(), control: { ...settings().control, caps: clampCaps(c) } })
+  return { caps: controlCaps(), enabled: cappedAll().filter((x) => x.enabled).length }
+})
+// each turn end: a checkpoint (private ref), its audit row and the delivery receipt
+const cpChain = new Map<string, Promise<void>>()
+const cpNoted = new Set<string>()
+function turnEndControl(sid: string) {
+  const next = (cpChain.get(sid) ?? Promise.resolve()).then(async () => {
+    const s = sessions.get(sid)
+    const m = ctlOf.get(sid)
+    if (!s || !m) return
+    const cost = s.lastCostUsd
+    try {
+      const turn = Math.max(s.turnIndex, checkpoints().nextTurn(sid))
+      const r = await checkpoints().create(s.cwd, { panel: sid, sessionId: s.sessionId, turn, messageUuid: s.lastMessageUuid })
+      if ('skipped' in r) {
+        if (!cpNoted.has(sid)) (cpNoted.add(sid), send(sid, { kind: 'note', text: r.skipped }))
+        auditPanel(sid, { tool: 'turn', args: 'delivery receipt (no checkpoint)', decision: 'allow', by: 'app', kind: 'receipt', costUsd: cost, files: [] })
+        return
+      }
+      auditPanel(sid, { tool: 'checkpoint', args: r.rec.ref, decision: 'allow', by: 'app', kind: 'checkpoint' })
+      auditPanel(sid, { tool: 'turn', args: `${r.files.length} files changed`, decision: 'allow', by: 'app', kind: 'receipt', costUsd: cost, files: r.files })
+      send(sid, { kind: 'checkpoint', turn: r.rec.turn, ref: r.rec.ref, at: r.rec.at, files: r.files.length })
+    } catch (e) {
+      send(sid, { kind: 'note', text: `Checkpoint not made: ${e instanceof Error ? e.message : String(e)}` })
+    }
+  })
+  cpChain.set(sid, next)
+  void next.then(() => cpChain.get(sid) === next && cpChain.delete(sid))
+}
+app.whenReady().then(() => {
+  // the audit log keeps 90 days unless the setting says 7 to 365; closed panels' checkpoint refs go after 7 days
+  auditLog().purge(retentionDays(settings().control?.auditDays))
+  void checkpoints().pruneClosed()
+}).catch(() => undefined)
+
 const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => {
   perfMark('panel asked')
   await pathReady
@@ -2166,9 +2375,27 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
   ]
   bandOf.set(sid, { project: projectName(home), styles: persona ? (persona.styles ?? []) : (settings().styles ?? []) })
   traceParts.set(sid, contextParts([{ name: persona ? `Persona: ${persona.name}` : 'Persona', text: persona ? personaPrompt(persona) : '' }, ...ruleParts, { name: 'Project memory', text: opts.resume ? '' : memText }]))
+  const ctlState: PanelCtl = { control: new PanelControl(), project: projectName(home), root: home, cwd, remote: Boolean(remote) }
+  ctlState.control.agentCap = Math.max(1, settings().control?.agentCap ?? ctlState.control.agentCap)
+  ctlState.control.fanoutCap = Math.max(1, settings().control?.fanoutCap ?? ctlState.control.fanoutCap)
+  ctlState.control.breakpoints = bpAll()[sid] ?? []
+  ctlOf.set(sid, ctlState)
+  // the app's own answer: held tools, MCP approvals, a trigger's scope, then the autonomy and command risk (the hard denies come first)
+  const baseDecide = (tool: string, input: Record<string, unknown>) => {
+      // MCP servers you installed: reads run, writes ask, by server and persona (the app's own servers keep the usual rules)
+      const sp = splitTool(tool)
+      if (sp && installedNames.has(sp.server) && heldMcp(mcpHealth(), sp.server).includes(sp.tool)) return { action: 'deny' as const, risk: null, reason: `The app holds ${tool}: the ${sp.server} server changed or added this tool since it was approved. Tell the person to look at it in MCP health before it runs.` }
+      const v = sp && installedNames.has(sp.server) ? verdict(mcpPolicy(), tool, persona?.id) : null
+      if (v) return { action: v.action, risk: null, cls: v.cls, why: v.why, ...(v.action === 'deny' ? { reason: `The app's MCP approvals do not allow ${tool}: ${v.why}. Say so to the person instead of retrying.` } : {}) }
+      // a trigger's run stays inside what the trigger lists, before any other rule
+      const sc = scopeOf.get(sid)
+      const out = sc ? outsideScope(sc, cwd, tool, input) : null
+      if (out) return { action: 'deny' as const, risk: null, reason: `This scheduled run may not do that: it ${out}. Change the trigger's limits in Triggers if it should. Say so to the person instead of retrying.` }
+      return decide(persona?.autonomy ?? 'supervised', tool, input)
+  }
   const s = new Session((e: UiEvent) => send(sid, e), {
     cwd,
-    onTurnEnd: (ok) => queueTurnEnded(sid, ok),
+    onTurnEnd: (ok) => (queueTurnEnded(sid, ok), turnEndControl(sid)),
     model: persona?.model || opts.model || undefined,
     effort: (['low', 'medium', 'high', 'xhigh', 'max'] as const).find((e) => e === opts.effort),
     query: boxed ? (args) => query({ ...args, options: { ...args.options, spawnClaudeCodeProcess: spawnInSandbox(boxed, cwd) } }) : query,
@@ -2242,17 +2469,16 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
       if (!iso || tool !== 'Bash' || typeof input.command !== 'string' || ISO.isWrapped(iso.name, input.command)) return input
       return { ...input, command: ISO.wrap(iso.name, iso.cwd, input.command) }
     },
-    decide: (tool: string, input: Record<string, unknown>) => {
-      // MCP servers you installed: reads run, writes ask, by server and persona (the app's own servers keep the usual rules)
-      const sp = splitTool(tool)
-      if (sp && installedNames.has(sp.server) && heldMcp(mcpHealth(), sp.server).includes(sp.tool)) return { action: 'deny' as const, risk: null, reason: `The app holds ${tool}: the ${sp.server} server changed or added this tool since it was approved. Tell the person to look at it in MCP health before it runs.` }
-      const v = sp && installedNames.has(sp.server) ? verdict(mcpPolicy(), tool, persona?.id) : null
-      if (v) return { action: v.action, risk: null, cls: v.cls, why: v.why, ...(v.action === 'deny' ? { reason: `The app's MCP approvals do not allow ${tool}: ${v.why}. Say so to the person instead of retrying.` } : {}) }
-      // a trigger's run stays inside what the trigger lists, before any other rule
-      const sc = scopeOf.get(sid)
-      const out = sc ? outsideScope(sc, cwd, tool, input) : null
-      if (out) return { action: 'deny' as const, risk: null, reason: `This scheduled run may not do that: it ${out}. Change the trigger's limits in Triggers if it should. Say so to the person instead of retrying.` }
-      return decide(persona?.autonomy ?? 'supervised', tool, input)
+    decide: (tool: string, input: Record<string, unknown>) =>
+      policyGate(tool, input, baseDecide(tool, input) as Existing, { store: policyStore(), root: remote ? undefined : home, ctx: { project: home, home: homedir(), cwd }, control: ctlState.control, unattended: scopeOf.has(sid) }),
+    panelId: sid,
+    onRunStart: () => ctlState.control.runStart(),
+    onDecision: (e) => auditPanel(sid, { tool: e.tool, args: summarizeCall(e.tool, e.input), decision: e.bp && e.action === 'ask' ? 'pause' : e.action, by: e.by, ...(e.rule ? { rule: e.rule } : {}) }),
+    onAnswered: (e) => auditPanel(sid, { tool: e.tool, args: summarizeCall(e.tool, e.input), decision: e.allow ? 'approved' : 'refused', by: 'person' }),
+    onPlan: (plan) => {
+      plans.set(sid, plan)
+      ctlState.control.planLines = plan.items.filter((x) => x.status !== 'completed').slice(0, 6).map((x) => x.text.slice(0, 80))
+      savePlan(plan)
     },
     onSessionStart: (source) => snapshotFor(sid, projectName(home), source),
     // decisions Claude marked in a reply go to the project's note
@@ -2302,6 +2528,9 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
   }
   hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked })
   s.start()
+  // a resumed panel gets its saved plan back
+  const savedPlan = opts.resume ? loadPlan(opts.resume) : null
+  if (savedPlan) (plans.set(sid, savedPlan), send(sid, { kind: 'plan', plan: savedPlan }))
   void pollCi(sid, true)
   if (remote) remoteOf.set(sid, remote)
   perfMark('panel ready')
@@ -2369,13 +2598,20 @@ async function runRoutine(r: RT.Routine) {
   }
   const st = routinesState()
   saveRoutines({ ...st, drafts: [{ id: `d${Date.now().toString(36)}`, routine: r.id, name: r.name, at: Date.now(), text, costUsd, read: false, ...(error ? { error } : {}) }, ...st.drafts] })
+  settleRun('routine', r.id, !error)
 }
 ipcMain.handle('rt:state', () => ({ ...routinesState(), busy: [...routineBusy] }))
 ipcMain.handle('rt:save', (_e, r: RT.Routine) => {
-  const bad = RT.checkRoutine(r)
+  const bad = RT.checkRoutine(r, controlCaps().minEvery)
   if (bad) throw new Error(bad)
+  const rid = r.id || `r${Date.now().toString(36)}`
+  const cap = capDecision(cappedAll(), { id: `routine:${rid}`, when: r.when, enabled: Boolean(r.enabled) }, Date.now(), controlCaps())
+  if (!cap.ok) throw new Error(cap.reason)
   const st = routinesState()
-  const item: RT.Routine = { id: r.id || `r${Date.now().toString(36)}`, name: String(r.name).trim(), cwd: String(r.cwd), skill: String(r.skill ?? '').trim(), params: String(r.params ?? ''), when: r.when, enabled: Boolean(r.enabled), lastRun: r.lastRun, armedAt: Date.now() }
+  const was = st.routines.find((x) => x.id === rid)
+  const fresh: RT.Routine = { id: rid, name: String(r.name).trim(), cwd: String(r.cwd), skill: String(r.skill ?? '').trim(), params: String(r.params ?? ''), when: r.when, enabled: Boolean(r.enabled), lastRun: r.lastRun, armedAt: Date.now() }
+  // the failure count carries over; saving it enabled again after the app switched it off clears it
+  const item: RT.Routine = was?.disabledReason && fresh.enabled ? reenable(fresh) : { ...fresh, ...(was?.failures ? { failures: was.failures } : {}), ...(was?.disabledReason && !fresh.enabled ? { disabledReason: was.disabledReason, note: was.note } : {}) }
   return saveRoutines({ ...st, routines: [...st.routines.filter((x) => x.id !== item.id), item] })
 })
 ipcMain.handle('rt:remove', (_e, id: string) => {
@@ -2396,7 +2632,7 @@ ipcMain.handle('rt:dropDraft', (_e, id: string) => {
   return saveRoutines({ ...st, drafts: st.drafts.filter((d) => d.id !== id) })
 })
 setInterval(() => {
-  for (const r of routinesState().routines) if (RT.isDue(r, Date.now())) void runRoutine(r)
+  for (const r of routinesState().routines) if (RT.isDue(r, Date.now()) && canFire(`routine:${r.id}`)) void runRoutine(r)
 }, 60_000)
 
 // Phase 73: isolated panels. Containers are started and stopped only by the person (and with the panel)
@@ -2493,6 +2729,12 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   get(sid)?.close()
   void clearPanelBrowser(sid)
   sessions.delete(sid)
+  const ctlGone = ctlOf.get(sid)
+  if (ctlGone) checkpoints().markClosed(sid, ctlGone.cwd)
+  ctlOf.delete(sid)
+  plans.delete(sid)
+  cpNoted.delete(sid)
+  bpSave(sid, [])
   leadForget(sid)
   // its queue goes with the panel unless another panel of the same folder still uses the key
   pq.delete(sid)
@@ -5733,6 +5975,7 @@ ipcMain.handle('runs:begin', async (_e, sid: string, trig: { id: string; name: s
       await s.step(st.text, steps.length > 1 ? `${trig.name} · step ${i + 1} of ${steps.length}` : trig.name)
     } catch (e) {
       saveRun({ ...run, state: 'paused' })
+      settleRun('trigger', trig.id, false)
       send(sid, { kind: 'note', tone: 'error', text: `${trig.name} paused at step ${i + 1}: ${e instanceof Error ? e.message : String(e)}` })
       return
     }
@@ -5740,6 +5983,7 @@ ipcMain.handle('runs:begin', async (_e, sid: string, trig: { id: string; name: s
     saveRun(run)
   }
   saveRun({ ...run, state: 'done' })
+  settleRun('trigger', trig.id, true)
 })
 
 // Phase 70: playbooks. Steps go to the panel one by one; a step's check runs in the panel's folder and

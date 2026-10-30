@@ -4,7 +4,7 @@
 // Idea from nanobot's scheduled jobs, kept to drafts; our own code.
 import { isDue as triggerDue, nextRun, type When } from './triggers.js'
 
-export type Routine = { id: string; name: string; cwd: string; skill: string; params: string; when: When; enabled: boolean; lastRun?: number; armedAt?: number }
+export type Routine = { id: string; name: string; cwd: string; skill: string; params: string; when: When; enabled: boolean; lastRun?: number; armedAt?: number; failures?: number; disabledReason?: 'failures'; note?: string }
 export type Draft = { id: string; routine: string; name: string; at: number; text: string; costUsd: number; read: boolean; error?: string }
 
 /** The only tools a routine gets. Anything else is refused, whatever the skill says. */
@@ -22,11 +22,12 @@ export function routinePrompt(r: Routine): string {
 }
 
 /** A routine can be saved only with a name, a folder and something to do. */
-export function checkRoutine(r: Partial<Routine>): string | null {
+export function checkRoutine(r: Partial<Routine>, minEvery = 15): string | null {
   if (!r.name?.trim()) return 'Name the routine.'
   if (!r.cwd?.trim()) return 'Pick the project folder.'
   if (!r.skill?.trim() && !r.params?.trim()) return 'Pick a skill or write what it should do.'
   if (r.when?.kind === 'pr-review') return 'Routines run on a schedule, not on pull requests.'
+  if (r.when?.kind === 'every' && r.when.minutes < minEvery) return `Runs can be at most every ${minEvery} minutes. Pick a longer interval.`
   if (r.when?.kind === 'every' && r.when.minutes < 60) return 'A routine runs at most once an hour.'
   return null
 }

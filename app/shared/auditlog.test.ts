@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AUDIT_VERSION, buildRow, dayOf, expired, fileFor, ROTATE_BYTES } from './auditlog'
+import { AUDIT_VERSION, buildRow, dayOf, expired, fileFor, pickFile, ROTATE_BYTES } from './auditlog'
 
 const at = new Date(2026, 9, 30, 14, 5).getTime()
 
@@ -71,5 +71,18 @@ describe('expired', () => {
 
   it('respects a shorter setting', () => {
     expect(expired(['2026-10-20.jsonl', '2026-10-29.jsonl'], now, 7)).toEqual(['2026-10-20.jsonl'])
+  })
+})
+
+describe('pickFile', () => {
+  it('rolls on to .3, .4 and so on as each file fills', () => {
+    const sizes: Record<string, number> = { '2026-10-30.jsonl': ROTATE_BYTES + 1, '2026-10-30.2.jsonl': ROTATE_BYTES + 5, '2026-10-30.3.jsonl': 10 }
+    expect(pickFile('2026-10-30', (n) => sizes[n] ?? 0)).toBe('2026-10-30.3.jsonl')
+    sizes['2026-10-30.3.jsonl'] = ROTATE_BYTES + 1
+    expect(pickFile('2026-10-30', (n) => sizes[n] ?? 0)).toBe('2026-10-30.4.jsonl')
+  })
+  it('uses the plain name while the first file has room', () => {
+    expect(pickFile('2026-10-30', () => 0)).toBe('2026-10-30.jsonl')
+    expect(pickFile('2026-10-30', () => ROTATE_BYTES)).toBe('2026-10-30.jsonl')
   })
 })
