@@ -23,6 +23,8 @@ import type { UiEvent } from '../electron/session'
 import type { ShellEvent } from '../electron/shell'
 
 export type { UiEvent }
+export type PanelStateView = import('../electron/runtime').PanelView
+export type RuntimeSnapshot = { at: number; panels: (import('../electron/runtime').PanelSnapshot)[]; keepRunning: boolean; phase: 'attached' | 'background' | 'quitting'; resumeOffer: number; todayUsd: number }
 export type PanelLinkView = { panel: string; auto: boolean; name: string; spent: { usd: number; tokens: number; turns: number }; capUsd: number | null }
 export type AwayCard = { title: string; lines: string[]; empty: boolean; canSpeak: boolean; on: boolean }
 
@@ -624,7 +626,7 @@ export type Bridge = {
   /** Has the person answered the update question (updateCheck set to true or false)? */
   updateAsked: () => Promise<boolean>
   claudeUsageData: (on?: boolean) => Promise<boolean>
-  updateRun: () => Promise<string>
+  updateRun: (force?: boolean) => Promise<string>
   onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => void) => () => void
   health: () => Promise<import('../electron/health').Part[]>
   sleepPanel: (sid: string) => Promise<boolean>
@@ -1028,6 +1030,16 @@ export type Bridge = {
     get: (sid: string) => Promise<QueueView>
     act: (sid: string, action: import('../shared/panelqueue').QueueAction) => Promise<QueueView>
     onChanged: (fn: (sid: string, v: QueueView) => void) => () => void
+  }
+  runtime: {
+    states: () => Promise<PanelStateView[]>
+    snapshot: () => Promise<RuntimeSnapshot>
+    keepRunning: (on?: boolean) => Promise<{ on: boolean; available: boolean }>
+    stopAll: () => Promise<PanelStateView[]>
+    dismissResume: () => Promise<number>
+    onState: (fn: (v: { sid: string; state: string; reason?: string; since: number }) => void) => () => void
+    onReattach: (fn: () => void) => () => void
+    onResume: (fn: () => void) => () => void
   }
   failover: {
     prefsGet: (sid: string) => Promise<{ prefs: import('../shared/failover').FailoverPrefs; custom: { on: boolean; url: string }; models: string[] }>

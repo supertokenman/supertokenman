@@ -1,0 +1,9 @@
+{
+  "description": "the plan limit is reached and the panel is held",
+  "events": [
+    { "signal": { "kind": "prompt" } },
+    { "signal": { "kind": "quota", "text": "Paused: the Claude plan limit was reached." } }
+  ],
+  "states": ["working", "error"],
+  "reason": "Paused: the Claude plan limit was reached."
+}

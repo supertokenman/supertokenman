@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
-import { AUTO_DELAY_MS, autoDelay, checkAllowed, releaseMode } from './updategate.js'
+import { AUTO_DELAY_MS, autoDelay, checkAllowed, installGate, releaseMode } from './updategate.js'
 
 describe('update gate (v0.1.12 Mac proof regression)', () => {
   it('a fresh profile never checks on its own', () => {
@@ -29,5 +29,20 @@ describe('update gate (v0.1.12 Mac proof regression)', () => {
     expect(main).toMatch(/checkAllowed\(auto === true, settings\(\)\.updateCheck\)/)
     expect(main).not.toMatch(/settings\(\)\.updateCheck !== false/)
     expect(main).toMatch(/setTimeout\(ok, UG\.autoDelay\(process\.env\)\)/)
+  })
+  it('install gate: no live panels installs, live panels ask first', () => {
+    expect(installGate(0, false)).toEqual({ action: 'install' })
+    const a = installGate(3, false)
+    expect(a.action).toBe('ask')
+    expect(a.action === 'ask' && a.live).toBe(3)
+    expect(a.action === 'ask' && a.message).toMatch(/stops 3 panels/)
+    expect(installGate(1, false)).toMatchObject({ action: 'ask', message: expect.stringMatching(/stops 1 panel that is/) })
+  })
+  it('install gate: a yes installs even with live panels', () => {
+    expect(installGate(2, true)).toEqual({ action: 'install' })
+  })
+  it('main.ts asks through the gate before quitAndInstall', () => {
+    const main = readFileSync(join(here, 'main.ts'), 'utf8')
+    expect(main).toMatch(/UG\.installGate\(/)
   })
 })

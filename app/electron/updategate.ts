@@ -22,3 +22,20 @@ export function releaseMode(o: { packaged: boolean; platform: string; hasUpdateY
 export function checkAllowed(auto: boolean, setting: boolean | undefined): boolean {
   return auto ? setting === true : true
 }
+
+export type InstallDecision = { action: 'install' } | { action: 'ask'; live: number; message: string }
+
+/**
+ * May the downloaded update restart the app now? With panels working or waiting, restarting stops them,
+ * so the person is asked first; `confirmed` is their yes. No answer means the update installs on the
+ * next real quit, never silently.
+ */
+export function installGate(live: number, confirmed: boolean): InstallDecision {
+  const n = Math.max(0, Math.floor(live))
+  if (n === 0 || confirmed) return { action: 'install' }
+  return {
+    action: 'ask',
+    live: n,
+    message: `Restarting now stops ${n === 1 ? '1 panel' : `${n} panels`} that ${n === 1 ? 'is' : 'are'} still running. Restart now, or install the update the next time you quit.`,
+  }
+}

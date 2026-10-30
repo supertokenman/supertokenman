@@ -305,3 +305,7 @@ by typecheck and unit tests; not yet run in the real app.
 - UI backlog leftovers (`docs/UI-BACKLOG.md`): empty sheets, copyable commands, left edges, one accent.
 - Vault passwords URL-encoded in database connections; single-step guides without "0 of 1"; the
   Ollama next-step banner.
+
+## Planned: background panels, precise state and wait, SSH machines
+
+Spec: `spec-runtime.md`. Optional "Keep panels running" (off by default): panels survive closing the window, with a menu bar count, today's cost and Stop all; after a reboot the layout comes back with an offer to resume, never auto-run. Panel states working, waiting approval, waiting input, idle and error, plus `stm wait --for blocked|idle|done`. Saved SSH hosts with independent reconnect, one at a time in v1.

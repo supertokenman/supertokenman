@@ -151,6 +151,11 @@ import { startCli } from './cliserver.js'
 import * as PB from './panelbus.js'
 import { registerTranscripts } from './transcripts.js'
 import * as UG from './updategate.js'
+import { PanelRuntime } from './runtime.js'
+import { waitTools, runWait, stateOf } from './waittools.js'
+import { readMarker, writeMarker, launchFacts } from './runmarker.js'
+import { trayItems, trayTitle, type TrayInput } from './tray.js'
+import { initialLife, reduceLife, type Effect, type LifeEvent, type LifeState } from '../shared/lifecycle.js'
 import * as Deploys from './deploys.js'
 import { applyTeam, diffTeam, exportTeam, readTeam, type Current as TeamCurrent, type Team } from '../shared/team.js'
 import { COLLECT, cssOf, tailwindOf, tokensOf, type Sample } from '../shared/styleExtract.js'
@@ -291,6 +296,7 @@ app.on('open-url', (e, url) => (e.preventDefault(), deliverLink(url)))
 app.on('second-instance', (_e, argv) => {
   const l = linkInArgv(argv)
   if (l) deliverLink(l)
+  else if (life.phase === 'background') lifeDispatch({ type: 'open' })
   else if (win && !win.isDestroyed()) (win.isMinimized() && win.restore(), win.show(), win.focus())
 })
 // phase 76: only the app's own page may call in; registered before any handler
@@ -323,7 +329,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -358,6 +364,95 @@ const saveSettings = (s: Settings) => {
   writeAtomic(settingsFile(), SF.dump(s as unknown as Record<string, unknown>))
   settingsCache = s
 }
+
+// Runtime: per-panel state with a replay log, and the keep-running lifecycle (shared/lifecycle.ts decides, this performs).
+// Keep running is off unless the setting is on, and only on macOS (no background host on Windows or Linux in v1).
+const rt = new PanelRuntime({
+  onState: (v) => {
+    toWin('panel:state', { sid: v.panel, state: v.state, reason: v.reason, since: v.since })
+    lifeDispatch({ type: 'live', count: rt.live() })
+    refreshTray()
+  },
+})
+const waitDeps = { rt, hub, names: () => [...sessions.keys()].map((id) => ({ panel: id, name: uiTitles.get(id) ?? panelName(id) })) }
+hub.extraTools = (from) => waitTools(waitDeps, from)
+const keepRunningOn = () => process.platform === 'darwin' && settings().keepRunning === true
+const markerFile = () => join(app.getPath('userData'), 'run-marker.json')
+const launched = launchFacts(readMarker(markerFile()))
+let life: LifeState = initialLife(keepRunningOn())
+const lifeRun = (effects: Effect[]) => {
+  for (const fx of effects) {
+    switch (fx) {
+      case 'hide-windows':
+        for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.hide()
+        break
+      case 'dock-hide':
+        app.dock?.hide()
+        break
+      case 'dock-show':
+        void app.dock?.show()
+        break
+      case 'show-window':
+        if (win && !win.isDestroyed()) (win.isMinimized() && win.restore(), win.show(), win.focus())
+        else if (app.isReady()) void createWindow()
+        break
+      case 'show-tray':
+      case 'hide-tray':
+        refreshTray()
+        break
+      case 'request-snapshot':
+        toWin('runtime:reattach')
+        break
+      case 'reopen-panels':
+        toWin('runtime:resume')
+        break
+      case 'stop-all':
+        stopAllPanels()
+        break
+      case 'write-clean-marker':
+        writeMarker(markerFile(), { status: 'clean', panels: sessions.size, at: Date.now() })
+        break
+      case 'write-interrupted-marker':
+        writeMarker(markerFile(), { status: 'interrupted', panels: sessions.size, at: Date.now() })
+        break
+      case 'clear-marker':
+        writeMarker(markerFile(), { status: 'running', panels: sessions.size, at: Date.now() })
+        break
+      case 'exit':
+        quitting = true
+        app.quit()
+        break
+      case 'quit-and-install':
+        installing = true
+        if (releaseUpdater) releaseUpdater.quitAndInstall()
+        else app.quit()
+        break
+      case 'ask-update-gate':
+        break
+    }
+  }
+}
+function lifeDispatch(ev: LifeEvent, skip: Effect[] = []) {
+  const [next, effects] = reduceLife(life, ev)
+  life = next
+  lifeRun(effects.filter((f) => !skip.includes(f)))
+}
+/** Ends the work of every panel without closing them: the turn stops like Stop does, approvals are denied. */
+function stopAllPanels() {
+  for (const [sid, s] of sessions) {
+    if (s.busy) void s.interrupt().catch(() => undefined)
+    rt.signal(sid, { kind: 'sleep' })
+  }
+}
+const todayUsd = () => {
+  const st = settings()
+  const spend = st.budgetSpend?.day === dayOf(new Date()) ? st.budgetSpend : emptySpend(dayOf(new Date()))
+  return Object.values(spend.project).reduce((a, b) => a + b, 0)
+}
+/** The marker follows the panel count while running, so the next launch after a crash knows what to offer. */
+const markRunning = () => life.phase !== 'quitting' && writeMarker(markerFile(), { status: 'running', panels: sessions.size, at: Date.now() })
+// the previous run's marker decides the resume offer; nothing runs until the person clicks Resume
+lifeDispatch({ type: 'launch', ...launched }, ['show-window'])
 
 /** Every event on its way to the window: credentials masked, and each exposure reported once. */
 const exposed = new Set<string>()
@@ -869,6 +964,7 @@ function loopStep(sid: string, costUsd: number, isError: boolean) {
 const askBind = new Map<string, string>()
 const askWaiting = new Map<string, Waiting[]>()
 function tracePrompt(sid: string, prompt: string, why?: string) {
+  rt.signal(sid, { kind: 'prompt' })
   let askId = askBind.get(sid)
   askBind.delete(sid)
   if (!askId) {
@@ -958,11 +1054,23 @@ function sendNow(sid: string, e: unknown) {
       toWin('chat:event', sid, { kind: 'exposure', name: f.name, secretKind: f.kind, where, at: Date.now() })
     }
   }
+  let out: unknown
   try {
-    toWin('chat:event', sid, JSON.parse(json))
+    out = JSON.parse(json)
   } catch {
     // masking made the JSON unreadable: drop the event rather than leak it
   }
+  // the panel's state and replay log; the log keeps the masked event, the same one the window gets
+  rt.event(sid, e as never, out ?? { kind: 'note', text: 'An event was withheld because masking left it unreadable.' })
+  if (ev.kind === 'permission' && life.phase === 'background') notifyApproval(sid, e as { summary?: string })
+  if (out !== undefined) toWin('chat:event', sid, out)
+}
+/** In the background nothing is allowed on its own: a notification and the Tray say a panel waits. */
+function notifyApproval(sid: string, e: { summary?: string }) {
+  if (!Notification.isSupported()) return
+  const n = new Notification({ title: `${placeOf(sid)} needs your approval`, body: (e.summary ?? 'A panel is waiting.').slice(0, 160), silent: false })
+  n.on('click', () => lifeDispatch({ type: 'open' }))
+  n.show()
 }
 let nextId = 0
 // opened from the Finder the working folder is "/": the first panel starts in the last folder used, or home
@@ -1060,6 +1168,7 @@ async function createWindow() {
         if (hideOnly) {
           w.hide()
           closeAnimated = false
+          closeToBackground()
         } else w.close()
       }
       const onReady = (ev: Electron.IpcMainEvent) => ev.sender === w.webContents && finish()
@@ -1071,6 +1180,7 @@ async function createWindow() {
     if (hideOnly) {
       e.preventDefault()
       win?.hide()
+      closeToBackground()
     }
   })
   // links in the window (an email's links among them) open in the browser; no new app windows
@@ -2070,7 +2180,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     // tools a panel here does not need stay out of every turn, unless the person wants them all
     // a read-only persona has no editing tools at all; one that edits freely is not asked before an edit
     disallowedTools: [...(settings().fullTools ? [] : LEAN_OFF), ...(persona?.access === 'read' ? ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'] : []), ...blockedFor(persona)],
-    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, MANUAL_TOOL, ...UI_TOOLS, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
+    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, TOOLS[2]!, TOOLS[3]!, MANUAL_TOOL, ...UI_TOOLS, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
     resume: opts.resume,
     ...(remote ? { spawn: remoteSpawn(remote.host, remote.dir) } : {}),
     resumeAt: opts.resume ? opts.resumeAt : undefined,
@@ -2170,6 +2280,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     },
   })
   sessions.set(sid, s)
+  rt.open(sid)
+  markRunning()
   try {
     writeFileSync(join(app.getPath('userData'), 'last-dir.json'), JSON.stringify({ dir: cwd }))
   } catch {
@@ -2402,6 +2514,7 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   meters.delete(sid)
   pendingSnap.delete(sid)
   quotaPaused.delete(sid)
+  rt.close(sid)
   hub.remove(sid)
   ci.delete(sid)
   shells.get(sid)?.runner.stopAll()
@@ -3080,7 +3193,7 @@ function keepNote(sid: string, allow: boolean, extra?: { note?: unknown; tool?: 
   if (allow || !text.trim() || !project) return
   saveSettings({ ...settings(), reviewNotes: RN.addLesson(settings().reviewNotes ?? [], { project, text: redact(text, vault?.all() ?? []).text, tool: typeof extra?.tool === 'string' ? extra.tool.slice(0, 60) : '', at: Date.now() }) })
 }
-ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean, extra?: { command?: unknown; note?: unknown; tool?: unknown }) => (keepNote(sid, allow, extra), phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow, { command: typeof extra?.command === 'string' ? extra.command : undefined, note: typeof extra?.note === 'string' ? extra.note : undefined })))
+ipcMain.handle('perm:answer', (_e, sid: string, id: string, allow: boolean, extra?: { command?: unknown; note?: unknown; tool?: unknown }) => (keepNote(sid, allow, extra), rt.approvalDone(String(sid), String(id)), phoneAsks.get(sid)?.delete(id), badge([...phoneAsks.values()].reduce((n, m) => n + m.size, 0)), get(sid)?.answer(id, allow, { command: typeof extra?.command === 'string' ? extra.command : undefined, note: typeof extra?.note === 'string' ? extra.note : undefined })))
 // Phone companion: what the phone sees of each panel (pending asks, the last reply), and the server
 const phoneAsks = new Map<string, Map<string, { id: string; tool: string; summary: string; risk?: string }>>()
 const phoneReply = new Map<string, string>()
@@ -3104,6 +3217,7 @@ const phone = companion({
     if (!phoneAsks.get(sid)?.has(id)) throw new Error('That ask is gone.')
     phoneAsks.get(sid)!.delete(id)
     get(sid)?.answer(id, allow)
+    rt.approvalDone(sid, id)
     toWin('chat:event', sid, { kind: 'answered', id })
     toWin('chat:event', sid, { kind: 'note', text: `${allow ? 'Allowed' : 'Denied'} from the phone.` })
   },
@@ -3385,6 +3499,7 @@ function quotaWatch(sid: string, ev: { kind?: string; isError?: boolean; text?: 
   const src = sourceOf.get(sid)?.src ?? 'setup'
   if (QP.onQuota(src) !== 'pause') return
   quotaPaused.add(sid)
+  rt.signal(sid, { kind: 'quota', text: QUOTA_HELD })
   toWin('chat:event', sid, { kind: 'note', tone: 'error', text: QUOTA_HELD })
   toWin('chat:event', sid, { kind: 'quota', paused: true })
 }
@@ -4773,15 +4888,29 @@ ipcMain.handle('update:check', async (_e, auto?: boolean) => {
   const subjects = behind ? (await git(['log', '--format=%s', '-n', '5', 'HEAD..@{u}'])).split('\n') : []
   return { behind, source: src, subjects }
 })
-ipcMain.handle('update:run', async (e) => {
+// the update is downloaded and waiting for a restart (the person may have declined it while panels ran)
+let updateDownloaded = false
+ipcMain.handle('update:run', async (e, force?: boolean) => {
   if (fromRelease()) {
     const tell = (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => !e.sender.isDestroyed() && e.sender.send('update:progress', m)
     const u = await updaterOf()
     const onProgress = (p: { percent: number }) => tell({ state: 'busy', step: 'Downloading', pct: Math.round(p.percent) })
     u.on('download-progress', onProgress)
     try {
-      tell({ state: 'busy', step: 'Downloading' })
-      await u.downloadUpdate()
+      if (!updateDownloaded) {
+        tell({ state: 'busy', step: 'Downloading' })
+        await u.downloadUpdate()
+        updateDownloaded = true
+      }
+      // panels at work: restarting stops them, so ask first; declined, it installs on the next real quit
+      const gate = UG.installGate(rt.live(), force === true)
+      if (gate.action === 'ask') {
+        u.autoInstallOnAppQuit = true
+        tell({ state: 'down', step: gate.message, tail: 'Press Update again to restart now.' })
+        return ''
+      }
+      // a restart that stops panels is not a clean exit: the next launch offers to resume them
+      writeMarker(markerFile(), { status: rt.live() > 0 ? 'interrupted' : 'clean', panels: sessions.size, at: Date.now() })
       tell({ state: 'busy', step: 'Restarting' })
       // the window's closing animation prevents the close, and a prevented close cancels the quit
       // that installs the update; skip it while installing
@@ -4803,6 +4932,13 @@ ipcMain.handle('update:run', async (e) => {
   }
   const src = sourceDir()
   if (!src) throw new Error('This app was not built from a checkout.')
+  // the script stops this app and every panel in it: ask first when panels are at work
+  const gate = UG.installGate(rt.live(), force === true)
+  if (gate.action === 'ask') {
+    if (!e.sender.isDestroyed()) e.sender.send('update:progress', { state: 'down', step: gate.message, tail: 'Press Update again to restart now.' })
+    return ''
+  }
+  if (rt.live() > 0) writeMarker(markerFile(), { status: 'interrupted', panels: sessions.size, at: Date.now() })
   // the script quits this app, rebuilds, replaces it in /Applications and opens the new one
   const log = join(app.getPath('userData'), 'update.log')
   const child = spawn('/bin/bash', ['-lc', `"${join(src, 'scripts', 'install-mac.sh')}" > "${log}" 2>&1`], { detached: true, stdio: 'ignore', cwd: src })
@@ -5053,8 +5189,28 @@ app.on('will-quit', () => globalShortcut.unregisterAll())
 // all day: on macOS the red button hides the window and everything keeps running; Cmd+Q quits
 let quitting = false
 let installing = false
-app.on('before-quit', () => {
+/** The window was hidden: with Keep panels running on and a panel at work, go to the Tray and the dock hides. */
+function closeToBackground() {
+  if (keepRunningOn() && !quitting && !installing && life.live > 0) lifeDispatch({ type: 'quit-request', source: 'window-close' })
+}
+// logout and shutdown are real quits: background mode never blocks them
+powerMonitor.on('shutdown', () => {
   quitting = true
+})
+app.on('before-quit', (e) => {
+  if (!quitting && !installing && keepRunningOn()) {
+    const [next, effects] = reduceLife(life, { type: 'quit-request', source: 'cmd-q' })
+    if (effects.includes('show-tray') || (life.phase === 'background' && effects.length === 0)) {
+      // Cmd+Q with a panel at work: hide, keep everything running
+      e.preventDefault()
+      life = next
+      lifeRun(effects)
+      return
+    }
+  }
+  quitting = true
+  life = { ...life, phase: 'quitting' }
+  if (!installing) writeMarker(markerFile(), { status: 'clean', panels: sessions.size, at: Date.now() })
   // where each panel stopped, from its digest (no time to ask a model while quitting)
   for (const sid of sessions.keys()) void noteStopped(sid, true)
   closeAllTerminals()
@@ -5072,7 +5228,8 @@ app.on('before-quit', () => {
   globalShortcut.unregisterAll()
 })
 app.on('activate', () => {
-  if (win && !win.isDestroyed()) win.show()
+  if (life.phase === 'background') lifeDispatch({ type: 'open' })
+  else if (win && !win.isDestroyed()) win.show()
   else void createWindow()
 })
 ipcMain.handle('app:login', (_e, on?: boolean) => {
@@ -5080,6 +5237,7 @@ ipcMain.handle('app:login', (_e, on?: boolean) => {
   return app.getLoginItemSettings().openAtLogin
 })
 app.on('window-all-closed', () => {
+  if (life.phase === 'background') return
   for (const s of sessions.values()) s.close()
   for (const sh of shells.values()) sh.runner.stopAll()
   app.quit()
@@ -6248,6 +6406,10 @@ const panelId = (p: unknown) => {
   return id
 }
 const cliHandlers: Record<string, import('./cliserver.js').CliHandler> = {
+  // stm wait --for blocked|idle|done <panel> [--timeout 10m]: sends nothing; `from` is the calling panel (STM_PANEL), for the cycle check
+  wait: (a) => runWait(waitDeps, { from: a.from, panel: a.panel, for: a.for, timeout: a.timeout }),
+  // stm state [<panel>]
+  state: (a) => stateOf(waitDeps, a.panel),
   // the keys of one MCP server installed from the catalog, for `stm mcp-run`; no other vault entry
   mcpenv: (a) => mcat.envFor(String(a.server ?? '')),
   // a provider key for Claude Code's apiKeyHelper; only names a saved provider uses, never any vault entry
@@ -8082,10 +8244,21 @@ function usageFromLogs(): { five: SL.Usage; week: SL.Usage } {
   }
   return { five, week }
 }
+function trayInput(): TrayInput {
+  const names = waitDeps.names()
+  const panels = rt.states().filter((v) => v.state !== 'closed').map((v) => ({ ...v, name: names.find((n) => n.panel === v.panel)?.name ?? v.panel }))
+  return { panels, todayUsd: todayUsd(), background: life.phase === 'background', needsYou: rt.needsYou() }
+}
+async function confirmStopAll() {
+  const n = rt.live()
+  const r = await dialog.showMessageBox({ type: 'warning', buttons: ['Stop all', 'Cancel'], defaultId: 1, cancelId: 1, message: `Stop ${n === 1 ? '1 running panel' : `${n} running panels`}?`, detail: 'Each panel stops its current turn. Work already written to files stays.' })
+  if (r.response === 0) lifeDispatch({ type: 'stop-all' })
+}
 function refreshTray() {
   if (!tray || tray.isDestroyed()) return
   const u = usageFromLogs()
-  const title = SL.trayTitle(liveLimits, u.five)
+  const ti = trayInput()
+  const title = (ti.background ? trayTitle(ti) : '') || SL.trayTitle(liveLimits, u.five)
   const lines = [
     ...(liveLimits ?? []).map((w) => `${w.kind.replace(/_/g, ' ')}: ${Math.round(w.percentUsed)}% used${w.resetsAt ? `, resets ${new Date(w.resetsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}`),
     `Last 5 hours (logs): ${(u.five.input + u.five.output).toLocaleString('en-US')} tokens in ${u.five.messages} replies`,
@@ -8093,7 +8266,14 @@ function refreshTray() {
   ]
   if (process.platform === 'darwin') tray.setTitle(title ? ` ${title}` : '')
   tray.setToolTip(lines.join('\n'))
-  tray.setContextMenu(Menu.buildFromTemplate([...lines.map((l) => ({ label: l, enabled: false })), { type: 'separator' }, { label: 'Show SuperTokenMan', click: () => win?.show() }]))
+  // in the background the menu is the panels' list with Open, Stop all and Quit and stop all
+  const actions: Record<string, () => void> = {
+    open: () => lifeDispatch({ type: 'open' }),
+    'stop-all': () => void confirmStopAll(),
+    'quit-and-stop': () => lifeDispatch({ type: 'quit-and-stop' }),
+  }
+  const bg = ti.background ? [{ type: 'separator' as const }, ...trayItems(ti).map((it) => (it.separator ? { type: 'separator' as const } : { label: it.label, enabled: it.enabled !== false, ...(it.action ? { click: actions[it.action] } : {}) }))] : [{ type: 'separator' as const }, { label: 'Show SuperTokenMan', click: () => win?.show() }]
+  tray.setContextMenu(Menu.buildFromTemplate([...lines.map((l) => ({ label: l, enabled: false })), ...bg]))
   toWin('quota:tray', { title, lines })
 }
 app.whenReady().then(() => {
@@ -8107,6 +8287,18 @@ app.whenReady().then(() => {
     // no tray on this desktop
   }
 })
+// Runtime: panel states, the replay log for a window that opens again, and the keep-running switch
+ipcMain.handle('panel:states', () => rt.states())
+ipcMain.handle('runtime:snapshot', () => ({ ...rt.snapshot(), keepRunning: keepRunningOn(), phase: life.phase, resumeOffer: life.resumeOffer, todayUsd: todayUsd() }))
+ipcMain.handle('runtime:keepRunning', (_e, on?: boolean) => {
+  if (typeof on === 'boolean') {
+    saveSettings({ ...settings(), keepRunning: on })
+    lifeDispatch({ type: 'keep-running', on: keepRunningOn() })
+  }
+  return { on: settings().keepRunning === true, available: process.platform === 'darwin' }
+})
+ipcMain.handle('runtime:stopAll', () => (lifeDispatch({ type: 'stop-all' }), rt.states()))
+ipcMain.handle('runtime:dismissResume', () => (lifeDispatch({ type: 'dismiss-resume' }), life.resumeOffer))
 ipcMain.handle('quota:tray', () => (refreshTray(), { title: tray ? SL.trayTitle(liveLimits, usageFromLogs().five) : '' }))
 
 // diagrams: draw.io files in the project's diagrams folder, written by Claude from a description, a
