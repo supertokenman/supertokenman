@@ -1,6 +1,6 @@
 // Wait conditions for `stm wait` / `panel_wait`. Pure: no I/O.
 
-import { blocked, type PanelState } from './panelstate'
+import { blocked, type PanelState } from './panelstate.js'
 
 export type WaitCond = 'blocked' | 'idle' | 'done'
 

@@ -973,6 +973,28 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('queue:changed', l)
     },
   },
+  runtime: {
+    states: () => ipcRenderer.invoke('panel:states'),
+    snapshot: () => ipcRenderer.invoke('runtime:snapshot'),
+    keepRunning: (on) => ipcRenderer.invoke('runtime:keepRunning', on),
+    stopAll: () => ipcRenderer.invoke('runtime:stopAll'),
+    dismissResume: () => ipcRenderer.invoke('runtime:dismissResume'),
+    onState: (fn) => {
+      const l = (_e, v) => fn(v)
+      ipcRenderer.on('panel:state', l)
+      return () => ipcRenderer.removeListener('panel:state', l)
+    },
+    onReattach: (fn) => {
+      const l = () => fn()
+      ipcRenderer.on('runtime:reattach', l)
+      return () => ipcRenderer.removeListener('runtime:reattach', l)
+    },
+    onResume: (fn) => {
+      const l = () => fn()
+      ipcRenderer.on('runtime:resume', l)
+      return () => ipcRenderer.removeListener('runtime:resume', l)
+    },
+  },
   failover: {
     prefsGet: (sid) => ipcRenderer.invoke('failover:prefs:get', sid),
     prefsSet: (sid, prefs) => ipcRenderer.invoke('failover:prefs:set', sid, prefs),
@@ -1162,7 +1184,7 @@ contextBridge.exposeInMainWorld('stm', {
   updateAuto: (on) => ipcRenderer.invoke('update:auto', on),
   updateAsked: () => ipcRenderer.invoke('update:asked'),
   claudeUsageData: (on) => ipcRenderer.invoke('claude:usage-data', on),
-  updateRun: () => ipcRenderer.invoke('update:run'),
+  updateRun: (force) => ipcRenderer.invoke('update:run', force),
   onUpdateProgress: (cb) => {
     const l = (_e, m) => cb(m)
     ipcRenderer.on('update:progress', l)

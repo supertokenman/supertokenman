@@ -84,3 +84,39 @@ function onMessage(prev: Panel, m: SDKMessage): Panel {
 function blocksOf(content: unknown): { type: string; name?: string }[] {
   return Array.isArray(content) ? (content as { type: string; name?: string }[]) : []
 }
+
+/** The app's own panel events (UiEvent in electron/session.ts), as far as the state needs them. */
+export type UiLike = { kind: string; tools?: { name: string }[]; text?: string; isError?: boolean; message?: string; reason?: string }
+
+const fix = (p: Panel): Panel => (p.state !== 'error' && p.pending > 0 ? { ...p, state: 'waiting_approval' } : p)
+
+/** Classifies one UI event. Structured signals first (an ask tool in the turn); a closing question is the fallback. */
+export function fromUi(prev: Panel, e: UiLike): Panel {
+  if (prev.state === 'closed') return prev
+  switch (e.kind) {
+    case 'delta':
+    case 'edit':
+    case 'peer':
+      return fix({ ...prev, state: 'working' })
+    case 'assistant':
+      return fix({ ...prev, state: 'working', asked: prev.asked || (e.tools ?? []).some((t) => ASK_TOOLS.has(t.name)) })
+    case 'turn': {
+      if (e.isError) return { ...prev, state: 'error', reason: (e.text ?? 'turn failed').slice(0, 200), asked: false }
+      const t = (e.text ?? '').trim()
+      const question = t.endsWith('?') || t.endsWith('？')
+      return fix({ ...prev, state: prev.asked || question ? 'waiting_input' : 'idle', reason: undefined, asked: false })
+    }
+    case 'sleep':
+      return fix({ ...prev, state: 'idle' })
+    case 'error':
+      return { ...prev, state: 'error', reason: (e.message ?? 'error').slice(0, 200) }
+    case 'held':
+      return { ...prev, state: 'error', reason: `held: ${(e.reason ?? 'budget').slice(0, 160)}` }
+    case 'loop':
+      return { ...prev, state: 'error', reason: 'loop guard stopped the turn' }
+    case 'released':
+      return prev.state === 'error' ? { ...prev, state: 'idle', reason: undefined } : prev
+    default:
+      return prev
+  }
+}

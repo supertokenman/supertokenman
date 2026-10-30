@@ -74,6 +74,11 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'channel:post': z.tuple([sid, z.object({ kind: z.enum(['handoff', 'question', 'review', 'result', 'note']), text: text(8000).min(1), replyTo: opt(z.string().max(64)) })]),
   'channel:pin': z.tuple([sid, z.string().max(64), z.boolean()]),
   'channel:sendNow': z.tuple([sid, z.string().max(140)]),
+  'panel:states': z.tuple([]),
+  'runtime:snapshot': z.tuple([]),
+  'runtime:keepRunning': z.tuple([opt(z.boolean())]),
+  'runtime:stopAll': z.tuple([]),
+  'runtime:dismissResume': z.tuple([]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
 }
 

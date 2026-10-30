@@ -8,13 +8,22 @@ import { z } from 'zod'
 export type Peer = { label: string; cwd: string; busy: () => boolean; ask: (text: string, from: string) => Promise<string> }
 
 export const SERVER = 'panels'
-export const TOOLS = [`mcp__${SERVER}__list_panels`, `mcp__${SERVER}__message_panel`]
+export const TOOLS = [`mcp__${SERVER}__list_panels`, `mcp__${SERVER}__message_panel`, `mcp__${SERVER}__panel_state`, `mcp__${SERVER}__panel_wait`]
+type ExtraTools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>
 const TIMEOUT_MS = 15 * 60 * 1000
+
+export class CycleError extends Error {
+  constructor(from: string, to: string) {
+    super(from === to ? 'A panel cannot wait on itself.' : `Panel "${to}" is waiting on this panel; waiting on it would deadlock both.`)
+  }
+}
 
 export class Hub {
   private peers = new Map<string, Peer>()
   /** who is waiting on whom */
   private waits = new Map<string, string>()
+  /** more tools for a panel's server (panel_state, panel_wait), set by the app */
+  extraTools?: (from: string) => ExtraTools
 
   add(sid: string, peer: Peer) {
     this.peers.set(sid, peer)
@@ -30,7 +39,7 @@ export class Hub {
   }
 
   /** True when `to` already waits, directly or not, on `from`. */
-  private wouldCycle(from: string, to: string) {
+  wouldCycle(from: string, to: string) {
     let cur: string | undefined = to
     const seen = new Set<string>()
     while (cur && !seen.has(cur)) {
@@ -39,6 +48,20 @@ export class Hub {
       cur = this.waits.get(cur)
     }
     return false
+  }
+
+  /**
+   * Records that `from` waits on `to` (stm wait / panel_wait) and returns the call that ends it. Throws
+   * when `to` already waits, directly or not, on `from`: A waits B waits A would never end. A caller
+   * that is not a panel (the command line from outside) has no edge and cannot close a cycle.
+   */
+  beginWait(from: string | undefined, to: string): () => void {
+    if (!from) return () => undefined
+    if (from === to || this.wouldCycle(from, to)) throw new CycleError(from, to)
+    this.waits.set(from, to)
+    return () => {
+      if (this.waits.get(from) === to) this.waits.delete(from)
+    }
   }
 
   /** Sends `text` from one panel to another and resolves with the target's reply. */
@@ -81,6 +104,7 @@ export class Hub {
             }
           },
         ),
+        ...(this.extraTools?.(from) ?? []),
       ],
     })
   }
