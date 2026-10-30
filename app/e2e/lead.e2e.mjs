@@ -49,10 +49,20 @@ test('a lead delegates two tasks and the canvas draws the edges', { timeout: 300
     for (const [i, d] of [dirs[1], dirs[2]].entries()) {
       const p = call('delegate', { task: `Task ${i + 1}: say done.`, folder: d, title: i ? 'web worker' : 'api worker' })
       await win.getByRole('button', { name: 'Allow' }).click({ timeout: 20_000 })
+      if (i === 0 && process.env.LEAD_FRAMES) {
+        // three frames while the task pulse travels: the dot sits at a different spot on the path each time
+        await win.waitForSelector('.cv-pulse', { state: 'attached', timeout: 20_000 })
+        const at = []
+        for (const f of [1, 2, 3]) {
+          await win.screenshot({ path: `${process.env.LEAD_FRAMES}/pulse-${f}.png` })
+          at.push(await win.evaluate(() => { const c = document.querySelector('.cv-pulse'); const b = c?.getBoundingClientRect(); return b ? [Math.round(b.x), Math.round(b.y)] : null }))
+          await win.waitForTimeout(150)
+        }
+        console.log('pulse dot positions', JSON.stringify(at))
+      }
       const r = await p
       assert.equal(r.isError, false, r.text)
       ids.push(r.text.match(/to (s\d+)/)[1])
-      if (i === 0 && process.env.LEAD_FRAMES) for (const f of [1, 2, 3]) (await win.waitForTimeout(150), await win.getByRole('button', { name: 'Fit' }).click(), await win.screenshot({ path: `${process.env.LEAD_FRAMES}/pulse-${f}.png` }))
     }
     const got = await call('collect', { ids })
     assert.equal(got.isError, false, got.text)

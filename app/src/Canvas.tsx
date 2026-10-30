@@ -3,7 +3,7 @@ import type { LeadView, PanelLinkView } from './bridge'
 import { InCanvas } from './InCanvas'
 import { edgeStatus, type EdgeStatus } from '../shared/lead'
 import { planArrange, checkArrange } from '../shared/uitools'
-import { clampZoom, fit, linkEnds, place, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
+import { clampZoom, edgePath, fit, linkEnds, place, planFan, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
 
 /** Optional on purpose: older bridges send links without a spend. */
 type LinkInfo = PanelLinkView
@@ -50,11 +50,32 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
         if (document.hidden || document.documentElement.hasAttribute('data-blurred') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
         const id = ++pulseSeq.current
         setPulses((p) => [...p.slice(-9), { id, from, to }])
-        setTimeout(() => setPulses((p) => p.filter((x) => x.id !== id)), 1500)
+        setTimeout(() => setPulses((p) => p.filter((x) => x.id !== id)), 1000)
       }),
     [],
   )
   const rects = useMemo(() => place(props.order, pos), [props.order.join('|'), pos])
+
+  // workers a lead opens fan out in a column to its right, once each, so the edges have room; a card the person moved stays put
+  const fanned = useRef(new Set<string>())
+  const workerKey = Object.entries(props.lead?.workers ?? {}).map(([w, t]) => `${t.lead}>${w}`).join('|')
+  useEffect(() => {
+    const by: Record<string, string[]> = {}
+    for (const [w, t] of Object.entries(props.lead?.workers ?? {})) if (rects[w] && rects[t.lead]) (by[t.lead] ??= []).push(w)
+    const next: Record<string, Point> = {}
+    for (const [l, ws] of Object.entries(by)) {
+      if (ws.every((w) => fanned.current.has(w))) continue
+      ws.forEach((w) => fanned.current.add(w))
+      Object.assign(next, planFan({ x: rects[l]!.x, y: rects[l]!.y }, ws))
+    }
+    if (Object.keys(next).length) {
+      setPos((p) => ({ ...p, ...next }))
+      requestAnimationFrame(() => {
+        const b = surf.current?.getBoundingClientRect()
+        if (b) setView(fit(Object.values(place(props.order, { ...pos, ...next })), b.width, b.height))
+      })
+    }
+  }, [workerKey])
 
   useEffect(() => save(VIEW_KEY, view), [view])
   // only the open panels' spots are kept, so closed ones do not pile up
@@ -174,11 +195,7 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
     .map(([w, t]) => {
       const st = props.states?.[w]
       const status: EdgeStatus = edgeStatus({ busy: Boolean(st?.busy), asking: st?.asking, error: t.error, finished: t.finished, hasTask: true })
-      const [p, q] = linkEnds(rects[t.lead]!, rects[w]!)
-      const bend = Math.min(90, Math.hypot(q.x - p.x, q.y - p.y) * 0.3)
-      const c1 = { x: p.x + (q.x > p.x ? bend : -bend), y: p.y }
-      const c2 = { x: q.x + (q.x > p.x ? -bend : bend), y: q.y }
-      return { w, lead: t.lead, status, p, q, d: `M${p.x},${p.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${q.x},${q.y}`, back: `M${q.x},${q.y} C${c2.x},${c2.y} ${c1.x},${c1.y} ${p.x},${p.y}` }
+      return { w, lead: t.lead, status, ...edgePath(rects[t.lead]!, rects[w]!) }
     })
   const edgeKeys = new Set(edges.map((e) => [e.w, e.lead].sort().join('|')))
   const pairs = uniquePairs(links).filter(([a, b]) => rects[a] && rects[b] && !edgeKeys.has([a, b].sort().join('|')))
@@ -201,6 +218,14 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
             )
           })}
         </svg>
+        {props.order.map((sid) => {
+          const r = rects[sid]!
+          return (
+            <div key={sid} className="cv-card" style={{ left: r.x, top: r.y, width: r.w, height: r.h }} onPointerDown={onCard(sid)}>
+              <InCanvas.Provider value={true}>{props.panel(sid)}</InCanvas.Provider>
+            </div>
+          )
+        })}
         {edges.length > 0 && (
           <svg className="cv-links cv-neuro" aria-hidden="true">
             {edges.map((e) => (
@@ -210,22 +235,14 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
                 {e.status === 'waiting' && <circle className="wait-dot" cx={e.q.x} cy={e.q.y} r="6" />}
                 {e.status === 'done' && <circle className="done-flash" cx={e.q.x} cy={e.q.y} r="10" />}
                 {pulses.filter((x) => (x.from === e.lead && x.to === e.w) || (x.from === e.w && x.to === e.lead)).map((x) => (
-                  <circle key={x.id} className="cv-pulse" r="5">
-                    <animateMotion dur="1.2s" fill="freeze" repeatCount="1" path={x.from === e.lead ? e.d : e.back} />
+                  <circle key={x.id} className="cv-pulse" r="7">
+                    <animateMotion dur="0.9s" fill="freeze" repeatCount="1" path={x.from === e.lead ? e.d : e.back} />
                   </circle>
                 ))}
               </g>
             ))}
           </svg>
         )}
-        {props.order.map((sid) => {
-          const r = rects[sid]!
-          return (
-            <div key={sid} className="cv-card" style={{ left: r.x, top: r.y, width: r.w, height: r.h }} onPointerDown={onCard(sid)}>
-              <InCanvas.Provider value={true}>{props.panel(sid)}</InCanvas.Provider>
-            </div>
-          )
-        })}
       </div>
       <div className="cv-tools">
         <button className="ghost" onClick={() => setView((v) => zoomAt(v, 1 / 1.2, (surf.current?.clientWidth ?? 0) / 2, (surf.current?.clientHeight ?? 0) / 2))} aria-label="Zoom out" data-tip="Zoom out">-</button>
