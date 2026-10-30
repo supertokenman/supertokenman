@@ -162,6 +162,9 @@ leak; which process differs between the two Mac runs is not proven here.
 Held in CI: the `network` job checks the start-up JS (`app/scripts/startup-size.mjs --max-js-kb 215`)
 and fails over it; raise it in `ci.yml` with the reason when a change needs more.
 
+Start-up JS (gzip): 214.5 KB before, 186.4 KB after the Today, Team, Music, Docker, Spec, Fanout, Issues,
+PastSearch, ArchDesk, Learn, SkillDrafts and TryWays sheets moved behind `lazy`. The budget stays at 215 KB.
+
 ## Idle (2026-10-27)
 
 Four panels open, the window focused and visible, 8 s to settle, then 20 s of nothing, measured by
