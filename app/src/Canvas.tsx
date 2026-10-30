@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { PanelLinkView } from './bridge'
+import type { LeadView, PanelLinkView } from './bridge'
+import { InCanvas } from './InCanvas'
+import { edgeStatus, type EdgeStatus } from '../shared/lead'
 import { planArrange, checkArrange } from '../shared/uitools'
 import { clampZoom, fit, linkEnds, place, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
 
@@ -25,7 +27,7 @@ function save(key: string, value: unknown) {
 }
 
 /** Panels as cards on a surface you pan and zoom, with their links drawn underneath. */
-export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNode; cmd?: { n: number; mode: string } | null }) {
+export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNode; cmd?: { n: number; mode: string } | null; lead?: LeadView; states?: Record<string, { busy: boolean; asking: boolean }> }) {
   const [pos, setPos] = useState<Record<string, Point>>(() => load(POS_KEY, {}))
   const [view, setView] = useState<View>(() => {
     const v = load<View | null>(VIEW_KEY, null)
@@ -39,6 +41,19 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
   const [roomMsg, setRoomMsg] = useState('')
   const [roomLeft, setRoomLeft] = useState(0)
   const surf = useRef<HTMLDivElement>(null)
+  // a pulse is mounted only while it travels (an SVG animation, no script loop) and never when the window is out of focus or the person prefers no motion
+  const [pulses, setPulses] = useState<{ id: number; from: string; to: string }[]>([])
+  const pulseSeq = useRef(0)
+  useEffect(
+    () =>
+      window.stm.lead.onPulse(({ from, to }) => {
+        if (document.hidden || document.documentElement.hasAttribute('data-blurred') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+        const id = ++pulseSeq.current
+        setPulses((p) => [...p.slice(-9), { id, from, to }])
+        setTimeout(() => setPulses((p) => p.filter((x) => x.id !== id)), 1500)
+      }),
+    [],
+  )
   const rects = useMemo(() => place(props.order, pos), [props.order.join('|'), pos])
 
   useEffect(() => save(VIEW_KEY, view), [view])
@@ -153,7 +168,20 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
     }
   }
 
-  const pairs = uniquePairs(links).filter(([a, b]) => rects[a] && rects[b])
+  // lead to worker edges: a soft curve from the lead to each of its workers, with the worker's status
+  const edges = Object.entries(props.lead?.workers ?? {})
+    .filter(([w, t]) => rects[w] && rects[t.lead])
+    .map(([w, t]) => {
+      const st = props.states?.[w]
+      const status: EdgeStatus = edgeStatus({ busy: Boolean(st?.busy), asking: st?.asking, error: t.error, finished: t.finished, hasTask: true })
+      const [p, q] = linkEnds(rects[t.lead]!, rects[w]!)
+      const bend = Math.min(90, Math.hypot(q.x - p.x, q.y - p.y) * 0.3)
+      const c1 = { x: p.x + (q.x > p.x ? bend : -bend), y: p.y }
+      const c2 = { x: q.x + (q.x > p.x ? -bend : bend), y: q.y }
+      return { w, lead: t.lead, status, p, q, d: `M${p.x},${p.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${q.x},${q.y}`, back: `M${q.x},${q.y} C${c2.x},${c2.y} ${c1.x},${c1.y} ${p.x},${p.y}` }
+    })
+  const edgeKeys = new Set(edges.map((e) => [e.w, e.lead].sort().join('|')))
+  const pairs = uniquePairs(links).filter(([a, b]) => rects[a] && rects[b] && !edgeKeys.has([a, b].sort().join('|')))
   return (
     <div ref={surf} className={`canvas ${space ? 'panning' : ''} ${moving ? 'moving' : ''}`} onPointerDownCapture={(e) => space && (e.stopPropagation(), pan(e))} onPointerDown={onSurface}>
       <div className="cv-world" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})` }}>
@@ -173,11 +201,28 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
             )
           })}
         </svg>
+        {edges.length > 0 && (
+          <svg className="cv-links cv-neuro" aria-hidden="true">
+            {edges.map((e) => (
+              <g key={e.w} className={`edge ${e.status}`}>
+                <path d={e.d} />
+                <text x={(e.p.x + e.q.x) / 2} y={(e.p.y + e.q.y) / 2 - 8} textAnchor="middle">{e.status === 'idle' ? '' : e.status}</text>
+                {e.status === 'waiting' && <circle className="wait-dot" cx={e.q.x} cy={e.q.y} r="6" />}
+                {e.status === 'done' && <circle className="done-flash" cx={e.q.x} cy={e.q.y} r="10" />}
+                {pulses.filter((x) => (x.from === e.lead && x.to === e.w) || (x.from === e.w && x.to === e.lead)).map((x) => (
+                  <circle key={x.id} className="cv-pulse" r="5">
+                    <animateMotion dur="1.2s" fill="freeze" repeatCount="1" path={x.from === e.lead ? e.d : e.back} />
+                  </circle>
+                ))}
+              </g>
+            ))}
+          </svg>
+        )}
         {props.order.map((sid) => {
           const r = rects[sid]!
           return (
             <div key={sid} className="cv-card" style={{ left: r.x, top: r.y, width: r.w, height: r.h }} onPointerDown={onCard(sid)}>
-              {props.panel(sid)}
+              <InCanvas.Provider value={true}>{props.panel(sid)}</InCanvas.Provider>
             </div>
           )
         })}

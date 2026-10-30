@@ -950,6 +950,20 @@ contextBridge.exposeInMainWorld('stm', {
     say: () => ipcRenderer.invoke('away:say'),
     touch: () => ipcRenderer.send('away:touch'),
   },
+  lead: {
+    state: () => ipcRenderer.invoke('lead:state'),
+    set: (sid, on) => ipcRenderer.invoke('lead:set', sid, on),
+    onState: (fn) => {
+      const l = (_e, v) => fn(v)
+      ipcRenderer.on('lead:state', l)
+      return () => ipcRenderer.removeListener('lead:state', l)
+    },
+    onPulse: (fn) => {
+      const l = (_e, v) => fn(v)
+      ipcRenderer.on('lead:pulse', l)
+      return () => ipcRenderer.removeListener('lead:pulse', l)
+    },
+  },
   uiTools: {
     onCmd: (fn) => {
       const l = (_e, r) => fn(r)
