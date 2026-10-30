@@ -23,7 +23,7 @@ export type UiEvent =
   | { kind: 'ci-done'; run: import('./ci.js').Run; at: number }
   | { kind: 'sleep' }
   | { kind: 'wake' }
-  | { kind: 'turn'; costUsd: number; inputTokens: number; outputTokens: number; cacheRead: number; cacheWrite: number; isError: boolean; text: string; durationMs?: number; cacheTtlMs?: number }
+  | { kind: 'turn'; costUsd: number; inputTokens: number; outputTokens: number; cacheRead: number; cacheWrite: number; isError: boolean; text: string; durationMs?: number; cacheTtlMs?: number; status?: number }
   | { kind: 'context'; tokens: number; window: number; percent: number }
   | { kind: 'snapshot'; text: string; inject: boolean }
   | { kind: 'meter'; label: string; detail: string[] }
@@ -98,7 +98,7 @@ export class Session {
 
   constructor(
     private emit: (e: UiEvent) => void,
-    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null>; loop?: () => LoopConfig },
+    private opts: { cwd: string; model?: string; effort?: Options['effort']; query: QueryFn; read?: (path: string) => string | null; mcpServers?: Options['mcpServers']; allowedTools?: string[]; disallowedTools?: string[]; env?: Options['env']; spawn?: Options['spawnClaudeCodeProcess']; resume?: string; resumeAt?: string; memory?: string; rule?: string; persona?: string; onReply?: (text: string) => void; beforeTool?: (tool: string, input: Record<string, unknown>) => string | null; afterTool?: (tool: string, input: Record<string, unknown>, output: string) => string | null; beforeCompact?: (transcript: string, trigger: string) => void; onSessionStart?: (source: string) => string | null; decide?: (tool: string, input: Record<string, unknown>) => { action: 'allow' | 'deny' | 'ask'; risk: import('../shared/cmdrisk.js').Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }; rewriteInput?: (tool: string, input: Record<string, unknown>) => Record<string, unknown>; beforeEdit?: (tool: string) => Promise<void>; rewriteOutput?: (tool: string, input: Record<string, unknown>, response: unknown, id: string) => unknown; onStop?: (again: boolean) => Promise<string | null>; loop?: () => LoopConfig; onTurnEnd?: (ok: boolean) => void },
   ) {}
 
   private read = (path: string) => {
@@ -376,6 +376,8 @@ export class Session {
       if (m.is_error && this.lost(JSON.stringify(m))) return
       const usage = m.usage as { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number; cache_creation?: { ephemeral_5m_input_tokens?: number; ephemeral_1h_input_tokens?: number } }
       this.ttl = ttlOf(usage.cache_creation, this.ttl)
+      const failed = m.is_error && !this.stoppedByApp
+      const status = (m as { api_error_status?: number | null }).api_error_status
       this.emit({
         kind: 'turn',
         costUsd: m.total_cost_usd,
@@ -383,10 +385,12 @@ export class Session {
         outputTokens: usage.output_tokens ?? 0,
         cacheRead: usage.cache_read_input_tokens ?? 0,
         cacheWrite: usage.cache_creation_input_tokens ?? 0,
-        isError: m.is_error && !this.stoppedByApp,
+        isError: failed,
         text: m.subtype === 'success' ? m.result : this.stoppedByApp ? '' : m.subtype,
         durationMs: m.duration_ms,
         cacheTtlMs: this.ttl,
+        // the HTTP status the API answered with, when the SDK reports it: the failover classifier reads it
+        ...(failed && typeof status === 'number' ? { status } : {}),
       })
       this.stoppedByApp = false
       if (m.subtype === 'success' && !m.is_error) this.opts.onReply?.(m.result)
@@ -394,6 +398,8 @@ export class Session {
       this.lastActivity = Date.now()
       this.busy = this.turns.length > 0
       void this.measure()
+      // after busy is current: the panel's queue sends its next item from here
+      this.opts.onTurnEnd?.(!failed)
     } else if (m.type === 'rate_limit_event') {
       const info = m.rate_limit_info
       // the type does not say the scale: a fraction or a percent
@@ -559,6 +565,17 @@ export class Session {
   }
   async interrupt() {
     await this.q?.interrupt()
+  }
+  /**
+   * A steer that cannot wait: ends the running turn like Stop does, marked as made by the app so the interrupted
+   * result is not an error. The SDK has no call to inject text into a running turn; the steer goes out as the next
+   * turn, from onTurnEnd. False when nothing runs.
+   */
+  async steer(): Promise<boolean> {
+    if (!this.busy || !this.q) return false
+    this.stoppedByApp = true
+    await this.q.interrupt()
+    return true
   }
 
   close() {
