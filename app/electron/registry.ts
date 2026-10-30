@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-export type Installed = { name: string; where: 'user' | 'this project (local)' | 'project .mcp.json'; kind: 'stdio' | 'http' | 'sse'; target: string }
+export type Installed = { name: string; where: 'user' | 'this project (local)' | 'project .mcp.json' | `pack ${string}`; kind: 'stdio' | 'http' | 'sse'; target: string }
 
 type Server = { type?: string; command?: string; args?: string[]; url?: string }
 const readJson = (f: string): Record<string, unknown> | null => {
@@ -23,7 +23,8 @@ const describe = (name: string, s: Server, where: Installed['where']): Installed
   return { name, where, kind, target }
 }
 
-export function installedMcp(cwd: string, home = homedir()): Installed[] {
+/** `packs`: the servers of installed Packs that are switched on for this folder (origin "pack <id>"). */
+export function installedMcp(cwd: string, home = homedir(), packs: Installed[] = []): Installed[] {
   const out: Installed[] = []
   const conf = readJson(join(process.env.CLAUDE_CONFIG_DIR ?? home, '.claude.json')) ?? readJson(join(home, '.claude.json'))
   for (const [n, s] of Object.entries((conf?.mcpServers ?? {}) as Record<string, Server>)) out.push(describe(n, s, 'user'))
@@ -31,5 +32,6 @@ export function installedMcp(cwd: string, home = homedir()): Installed[] {
   for (const [n, s] of Object.entries(proj?.mcpServers ?? {})) out.push(describe(n, s, 'this project (local)'))
   const mcp = cwd && existsSync(join(cwd, '.mcp.json')) ? readJson(join(cwd, '.mcp.json')) : null
   for (const [n, s] of Object.entries((mcp?.mcpServers ?? {}) as Record<string, Server>)) out.push(describe(n, s, 'project .mcp.json'))
+  out.push(...packs)
   return out.filter((x, i) => out.findIndex((y) => y.name === x.name) === i)
 }

@@ -289,6 +289,14 @@ by typecheck and unit tests; not yet run in the real app.
 - [ ] macOS on-device speech recognition once it can be reached without compiling a native module.
 - [ ] True press-and-hold, which needs a key-up event (a native listener).
 
+## Packs
+
+Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or global. Spec: `spec-packs.md`.
+
+- [ ] Wave 1: manifest validation, path safety, install plan, three-way update, uninstall plan, eval comparison (app/shared, tested).
+- [ ] Wave 2: pack store, git fetch on click, IPC, per-project MCP injection, eval in two worktrees.
+- [ ] Wave 3: Packs catalog, review screen (files, servers, hosts, env, rules), eval view; NETWORK.md Packs section.
+
 ## Panel queue, failover with notice, team channel
 
 - [x] Panel message queue: a send while a turn runs waits under the composer (edit, reorder, cancel, pause, resume, steer next turn or interrupt); loads paused after a restart; cost estimate from 3 items. Spec: `spec-qfc.md`.
