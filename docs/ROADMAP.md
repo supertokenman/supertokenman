@@ -289,6 +289,10 @@ by typecheck and unit tests; not yet run in the real app.
 - [ ] macOS on-device speech recognition once it can be reached without compiling a native module.
 - [ ] True press-and-hold, which needs a key-up event (a native listener).
 
+## Panel queue, failover with notice, team channel
+
+- [ ] Panel message queue with steer, failover card with Switch / Wait / Cancel, and a local per-team channel with stm tools. Spec: `spec-qfc.md`.
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
