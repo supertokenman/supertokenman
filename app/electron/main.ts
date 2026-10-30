@@ -32,6 +32,7 @@ import { cleanPersona, fromMarkdown, personaPrompt, STARTERS, toMarkdown, type P
 import { choosePrompt } from '../shared/router.js'
 import { claim as claimAsk, HEAD as ASK_HEAD, type Waiting } from '../shared/askroute.js'
 import * as TB from '../shared/teambus.js'
+import * as LD from '../shared/lead.js'
 import * as TM from '../shared/teambundle.js'
 import * as OV from '../shared/overnight.js'
 import { parseWhen } from '../shared/teamwhen.js'
@@ -892,6 +893,7 @@ function sendNow(sid: string, e: unknown) {
   // spans go into the trace, not to the window
   if (ev.kind === 'span') return
   quotaWatch(sid, ev)
+  leadWatch(sid, e as never)
   if (ev.kind === 'turn') {
     awayLog('turn', panelName(sid), undefined, (e as { costUsd?: number }).costUsd)
     if (ev.isError) awayLog('error', panelName(sid), ev.text)
@@ -2357,6 +2359,7 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   get(sid)?.close()
   void clearPanelBrowser(sid)
   sessions.delete(sid)
+  leadForget(sid)
   scopeOf.delete(sid)
   panelKeys.drop(sid)
   askBind.delete(sid)
@@ -6601,6 +6604,100 @@ function uiAsk<T>(channel: 'ui:cmd' | 'ui:confirm', payload: Record<string, unkn
     win.webContents.send(channel, { req, ...payload })
   })
 }
+
+// The lead panel: one panel plans, the others execute and answer it. Roles live in memory (panel ids last one run).
+type WorkerTask = { lead: string; title: string; at: number; files: Set<string>; cost: number; result?: LD.Result; blocked?: boolean }
+const leadSet = new Set<string>()
+const workerTask = new Map<string, WorkerTask>()
+const leadWaiters = new Map<string, ((r: LD.Result) => void)[]>()
+const leadView = () => ({ leads: [...leadSet], workers: Object.fromEntries([...workerTask].map(([id, t]) => [id, { lead: t.lead, title: t.title, error: Boolean(t.result?.isError), finished: Boolean(t.result), cost: t.cost }])) })
+const pushLead = () => toWin('lead:state', leadView())
+const pulse = (from: string, to: string) => toWin('lead:pulse', { from, to })
+ipcMain.handle('lead:state', () => leadView())
+ipcMain.handle('lead:set', (_e, sid: string, on: boolean) => {
+  const id = String(sid)
+  if (!sessions.has(id)) throw new Error('That panel has not started yet. Send it a message first.')
+  if (on && workerTask.has(id)) throw new Error('A worker cannot be the lead.')
+  if (on) leadSet.add(id)
+  else {
+    leadSet.delete(id)
+    for (const [w, t] of workerTask) if (t.lead === id) workerTask.delete(w)
+  }
+  pushLead()
+  return leadView()
+})
+function leadForget(sid: string) {
+  if (!leadSet.delete(sid) && !workerTask.delete(sid)) return
+  for (const [w, t] of workerTask) if (t.lead === sid) workerTask.delete(w)
+  pushLead()
+}
+/** A worker's events: files it edits count for the lead's summary; a finished turn or a pending approval ends the wait. */
+function leadWatch(sid: string, e: { kind?: string; edit?: { file: string }; text?: string; isError?: boolean; costUsd?: number }) {
+  const t = workerTask.get(sid)
+  if (!t || t.result) return
+  if (e.kind === 'edit' && e.edit) t.files.add(e.edit.file)
+  const blocked = e.kind === 'permission'
+  if (e.kind !== 'turn' && !blocked) return
+  if (e.kind === 'turn') t.cost += e.costUsd ?? 0
+  const r: LD.Result = { id: sid, name: panelName(sid), text: blocked ? `Blocked: waiting for the person to approve a tool in this panel.` : (e.text ?? ''), isError: Boolean(e.isError), files: [...t.files], costUsd: t.cost }
+  t.blocked = blocked
+  if (!blocked) t.result = r
+  for (const w of leadWaiters.get(sid) ?? []) w(r)
+  leadWaiters.delete(sid)
+  if (blocked) return
+  pulse(sid, t.lead)
+  if (sessions.has(t.lead)) send(t.lead, { kind: 'note', text: LD.finishedLine(r) })
+  pushLead()
+}
+const leadDeps = (me: string) => ({
+  leads: () => leadSet,
+  workers: () => [...sessions.keys()].map((id) => ({ id, folder: panelDir(id), busy: Boolean(sessions.get(id)?.busy) && !workerTask.get(id)?.result, lead: workerTask.get(id)?.lead ?? null })),
+  owns: (w: string) => workerTask.get(w)?.lead === me,
+  adopt: (w: string, title: string, task: string) => {
+    workerTask.set(w, { lead: me, title, at: Date.now(), files: new Set(), cost: 0 })
+    void task
+    pushLead()
+  },
+  send: async (w: string, task: string) => {
+    const s = sessions.get(w)
+    if (!s) throw new Error(`Panel ${w} has no session yet.`)
+    const text = `${LD.WORKER_RULE(panelName(me))}\n\n# Task\n${task}`
+    refuseSecrets(text)
+    const v = budgetVerdict(w)
+    if (!v.ok) throw new Error(`Held by the budget: ${v.reason}`)
+    sendLimit.take(me)
+    tracePrompt(w, text, `Lead ${panelName(me)}`)
+    toWin('panel:inbox', w, text, true)
+    pulse(me, w)
+    s.step(withGoal(text, goals.get(w) ?? null), `Lead ${panelName(me)}`).catch(() => undefined)
+  },
+  wait: async (ids: string[], wait: boolean) => {
+    const one = (id: string) => {
+      const t = workerTask.get(id)!
+      const pending = (why: string): LD.Result => ({ id, name: panelName(id), text: why, isError: false, files: [...t.files], costUsd: t.cost })
+      if (t.result) return Promise.resolve(t.result)
+      if (!wait) return Promise.resolve(pending('Still working.'))
+      return new Promise<LD.Result>((ok) => {
+        const timer = setTimeout(() => ok(pending('Still working after 15 minutes of waiting.')), 15 * 60_000)
+        leadWaiters.set(id, [...(leadWaiters.get(id) ?? []), (r) => (clearTimeout(timer), ok(r))])
+      })
+    }
+    return Promise.all(ids.map(one))
+  },
+  openTree: async (p: { folder: string; title?: string; persona?: string; model?: string }) => {
+    spawnLimit.take(me)
+    const persona = p.persona ? personas().find((x) => x.id === p.persona || x.name.toLowerCase() === p.persona!.toLowerCase())?.id : undefined
+    const req = `p${Date.now().toString(36)}${++uiSeq}`
+    const sid = await new Promise<string>((ok, fail) => {
+      cliOpens.set(req, ok)
+      if (!win || win.isDestroyed()) return fail(new Error('The app window is closed.'))
+      win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona, worktree: { label: p.title || 'worker' } })
+      setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
+    })
+    if (p.title) uiTitles.set(sid, p.title)
+    return sid
+  },
+})
 function uiDeps(me: string): UiDeps {
   const folderOf = (raw: string) => {
     const r = raw.startsWith('~') ? join(homedir(), raw.slice(1)) : raw
@@ -6617,7 +6714,7 @@ function uiDeps(me: string): UiDeps {
       const added = PB.addLink(links(), a, b)
       saveLinks(added.map((x) => (PB.linkKey(x.a, x.b) === PB.linkKey(a, b) ? { ...x, auto } : x)))
     },
-    cmd: (op, arg) => uiAsk<{ layout: import('../shared/uitools.js').UiLayout }>('ui:cmd', { op, arg }, 10_000),
+    cmd: (op, arg) => uiAsk<{ layout: import('../shared/uitools.js').UiLayout; panels?: import('../shared/uitools.js').WinPanel[] }>('ui:cmd', { op, arg }, 10_000),
     folder: folderOf,
     known: (p) => {
       if (p.model && !PB.isModel(p.model)) throw new Error(`Unknown model "${p.model}". Known: ${PB.modelIds().join(', ')}`)
@@ -6639,6 +6736,7 @@ function uiDeps(me: string): UiDeps {
       return sid
     },
     log: (m) => logs().info('stm:ui', `${me} ${m}`),
+    lead: leadDeps(me),
   }
 }
 // end-to-end tests only: the ui tools of a panel, called as its Claude would

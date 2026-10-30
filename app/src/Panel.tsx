@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useContext, useRef, useState } from 'react'
 import { Windowed } from './windowed'
 import { pickAttachments } from './FilePicker'
 import { StateMark } from './StateMark'
@@ -23,6 +23,7 @@ import { coach } from './coach'
 import { moodOf, WHY } from './mood'
 import { themeSvg, type Theme } from './themes'
 import { Markdown } from './markdown'
+import { InCanvas } from './InCanvas'
 import { hudMini } from './hudMini'
 import { ShellBlock, forClaude } from './ShellBlock'
 import { findSecrets, mask, type Finding } from '../shared/secrets'
@@ -215,6 +216,10 @@ function CacheChip(props: { at: number; ttl: number; tokens: number; model: stri
 export function Panel(props: {
   sid: string
   s: State
+  /** 'lead' or 'worker' when the panel takes part in a lead's work */
+  role?: string
+  workerTitle?: string
+  onLead?: (on: boolean) => void
   focused: boolean
   theme?: Theme
   dim?: boolean
@@ -270,6 +275,7 @@ export function Panel(props: {
       dispatch({ kind: 'note', tone: 'error', text: `Could not shorten it on this Mac: ${e instanceof Error ? e.message : String(e)}` })
     }
   }
+  const inCanvas = useContext(InCanvas)
   const [tab, setTab] = useState<'chat' | 'changes' | 'git' | 'ci' | 'preview' | 'terminal'>('chat')
   const [previewed, setPreviewed] = useState(false)
   useEffect(() => { if (tab === 'preview') setPreviewed(true) }, [tab])
@@ -572,12 +578,15 @@ export function Panel(props: {
       }}
     >
       {dropping && <div className="drop-veil"><span>Drop to attach</span></div>}
-      <header className="panel-bar">
+      <header className={`panel-bar${inCanvas ? ' compact' : ''}`}>
         <StateMark state={s.busy ? 'busy' : s.asleep ? 'off' : s.model ? 'up' : 'warn'} label={s.busy ? 'Working' : s.asleep ? 'Asleep: the next message resumes it' : s.model ? 'Ready' : 'Starting'} />
         <span className="path" data-tip={`${s.cwd}\nPanel id ${sid}, for messages between panels`}>
           <span className="path-parent">{folder.slice(-2, -1)[0] ?? ''}/</span>
           {folder.at(-1) ?? '...'}
         </span>
+        {props.role && <span className={`role-mark ${props.role}`} data-tip={props.role === 'lead' ? 'Lead: plans the work and hands tasks to its workers' : `Worker${props.workerTitle ? `: ${props.workerTitle}` : ''}. Does one task and answers the lead`}>{props.role === 'lead' ? 'Lead' : 'Worker'}</span>}
+        {inCanvas && props.role === 'worker' && props.workerTitle && <span className="task-title" data-tip={props.workerTitle}>{props.workerTitle}</span>}
+        <span className="cost-chip" data-tip={`Spent in this panel: ${props.money(s.costUsd)}`}>{props.money(s.costUsd)}</span>
         {s.goal && (
           <span className="goal-chip" data-tip={`Goal: ${s.goal}. /goal clear ends it.`}>
             <svg viewBox="0 0 12 12" aria-hidden><circle cx="6" cy="6" r="4.6" /><circle cx="6" cy="6" r="1.6" /></svg>
@@ -623,6 +632,15 @@ export function Panel(props: {
           </button>
         )}
         <PanelMore sid={sid}>
+          <div className="more-tabs" role="tablist" aria-label="Panel views">
+            {(['chat', 'changes', 'git', 'terminal', 'preview'] as const).map((t) => (
+              <button key={t} role="tab" className="ghost small" aria-selected={tab === t} onClick={() => setTab(t)}>{t === 'preview' ? 'Browse' : t[0]!.toUpperCase() + t.slice(1)}</button>
+            ))}
+          </div>
+          {props.onLead && props.role !== 'worker' && (
+            <button className="ghost small" data-tip={props.role === 'lead' ? 'This panel stops being the lead; its workers are unlinked' : 'This panel plans and hands tasks to worker panels; workers only execute and answer it'} onClick={() => props.onLead!(props.role !== 'lead')}>{props.role === 'lead' ? 'Remove lead' : 'Make lead'}</button>
+          )}
+          <span className="more-meter">{s.context ? `Context ${Math.round(s.context.percent)}% used of ${Math.round(s.context.window / 1000)}k. ` : ''}{props.money(s.costUsd)} spent.</span>
           <LinksChip sid={sid} />
           {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
           <Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense>
@@ -654,6 +672,11 @@ export function Panel(props: {
         </button>
       </header>
 
+      {inCanvas && (
+        <div className="ctx-thin" role="img" aria-label={`Context ${Math.round(s.context?.percent ?? 0)}% used`} data-tip={`${s.context ? `Context ${Math.round(s.context.percent)}% used (${s.context.tokens.toLocaleString()} of ${s.context.window.toLocaleString()} tokens)` : 'No context used yet'}\n${props.money(s.costUsd)} spent. ${WHY[mood]}\nFull meter: use the grid layout.`}>
+          <i style={{ width: `${Math.min(100, Math.max(0, s.context?.percent ?? 0))}%` }} />
+        </div>
+      )}
       <div className="hud" data-tip={WHY[mood]} role="img" aria-label={WHY[mood]} dangerouslySetInnerHTML={{ __html: themed(hudMini(hudView(s, money, Date.now()))) }} />
 
       {/* stays mounted once opened, so switching tabs keeps the page and its state */}
