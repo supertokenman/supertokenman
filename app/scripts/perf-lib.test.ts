@@ -65,6 +65,34 @@ describe('Mac performance run', () => {
   })
 })
 
+describe('typing per key', () => {
+  const rounds = [1, 1, 1, 4, 4, 4].map((throttle, i) => ({ throttle, scriptMs: [1.5, 9, 1.6, 8, 8.2, 30][i], taskMs: [2, 2.2, 2.4, 10, 11, 12][i], longestFrameMs: 80, framesOver16: 1, framesOver33: 0, frames: 300, longestInputMs: 20 }))
+  it('takes the median per throttle, not the mean or the worst', () => {
+    expect(L.median([5, 1, 3])).toBe(3)
+    const t = L.summarizeTyping(rounds)
+    expect(t.perKey.x1).toMatchObject({ rounds: 3, scriptMs: 1.6, taskMs: 2.2 })
+    expect(t.perKey.x4).toMatchObject({ scriptMs: 8.2, taskMs: 11 })
+  })
+  it('shows "new in this version" when the previous perf.json lacks the metrics, and never marks it', () => {
+    const cur = full(); cur.typing = L.summarizeTyping(rounds)
+    const cmp = L.compare({ results: full() }, { results: cur })
+    const n = cmp.filter((c) => c.isNew)
+    expect(n.map((c) => c.key)).toContain('typing.perKey.x1.scriptMs')
+    expect(n.every((c) => !c.marked && c.change === null)).toBe(true)
+    const md = L.render({ version: '0.1.23', system: 's', chip: 'c', runner: 'r', date: 'd', results: cur }, cmp, '0.1.22', { results: full() })
+    expect(md).toContain('new in this version')
+    expect(md).toContain('Typing, 4x CPU: script time per key (median of 3 rounds) | 8.20 ms')
+    expect(md).toContain('noisy, for reference')
+    expect(md).not.toMatch(/new in this version\*\*/)
+  })
+  it('compares them with a percentage when both have them', () => {
+    const a = full(); a.typing = L.summarizeTyping(rounds)
+    const b = full(); b.typing = L.summarizeTyping(rounds)
+    const c = L.compare({ results: a }, { results: b }).find((x) => x.key === 'typing.perKey.x1.scriptMs')
+    expect(c).toMatchObject({ change: 0, marked: false })
+  })
+})
+
 function full() {
   const idle = { layoutsPerS: 0, recalcsPerS: 0, cpu: 0.5, rssMb: 400 }
   return { launch: { runs: 5, windowMs: 500, composerMs: 900 }, idle: { one: idle, four: { ...idle, rssMb: 700 }, perPanelMb: 100 }, typing: { longestFrameMs: 20, framesOver16: 2, longestInputMs: 24 }, size: { distKb: 3000, startupGzipKb: 600, appMb: 400, dmgMb: 150 } }

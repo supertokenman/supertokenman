@@ -109,7 +109,7 @@ jobs:
           node scripts/startup-size.mjs --max-js-kb 215
           npm run netwatch:check
           # typing in the composer must not lay out the window more than once per key (a count, not a time)
-          xvfb-run -a node scripts/perf-typing.mjs --max-layouts-per-key 1.5
+          xvfb-run -a node scripts/perf-typing.mjs --throttle 1 --rounds 1 --max-layouts-per-key 1.5
           # scrolling 2000 transcript lines draws a few screens, not all of them, and a new line still
           # scrolls to the bottom (counts first; the frame bound is loose for a slow shared runner)
           xvfb-run -a node scripts/perf-scroll.mjs --max-drawn 300 --max-over-33 1000
