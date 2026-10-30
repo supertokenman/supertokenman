@@ -62,6 +62,7 @@ import { RouterBox } from './Router'
 import type { Persona } from '../shared/personas'
 // sheets that open only on a click load then, not at start
 // the canvas loads when it is first picked, so the first screen stays inside its size budget
+import type { LeadView } from './bridge'
 const Canvas = lazy(() => import('./Canvas').then((x) => ({ default: x.Canvas })))
 const NewFromTemplate = lazy(() => import('./NewFromTemplate').then((x) => ({ default: x.NewFromTemplate })))
 const OfficeFiles = lazy(() => import('./OfficeFiles').then((x) => ({ default: x.OfficeFiles })))
@@ -763,8 +764,8 @@ export function App() {
 
   // a minute at a time: yours and Claude's, by project, saved for the summary
   useEffect(() => void window.stm.timeGet().then(setLog), [])
-  const panelsRef = useRef(p)
-  panelsRef.current = p
+  const winPanelsRef = useRef(p)
+  winPanelsRef.current = p
   useEffect(() => {
     const t = setInterval(() => {
       const cur = panelsRef.current
@@ -850,7 +851,7 @@ export function App() {
   useEffect(
     () =>
       window.stm.stmCli.onOpen(async (r) => {
-        const sid = await open(r.cwd, undefined, r.persona, undefined, r.model ? { model: r.model } : undefined)
+        const sid = await open(r.cwd, undefined, r.persona, undefined, r.model || r.worktree ? { model: r.model, worktree: r.worktree } : undefined)
         window.stm.stmCli.opened(r.req, sid)
       }),
     [open],
@@ -1024,6 +1025,14 @@ export function App() {
   const [canvasCmd, setCanvasCmd] = useState<{ n: number; mode: string } | null>(null)
   const layoutRef = useRef(layout)
   layoutRef.current = layout
+  const panelsRef = useRef(p)
+  panelsRef.current = p
+  // the lead panel and its workers (roles live in the main process), and the pulses on the canvas edges
+  const [lead, setLead] = useState<LeadView>({ leads: [], workers: {} })
+  useEffect(() => {
+    void window.stm.lead.state().then(setLead)
+    return window.stm.lead.onState(setLead)
+  }, [])
   useEffect(() => {
     const offCmd = window.stm.uiTools.onCmd((r) => {
       if (r.op === 'layout' && r.arg) setLayout(r.arg as Layout)
@@ -1031,7 +1040,13 @@ export function App() {
         setLayout('canvas')
         setCanvasCmd((c) => ({ n: (c?.n ?? 0) + 1, mode: r.arg! }))
       }
-      void window.stm.uiTools.reply(r.req, { layout: r.op === 'layout' && r.arg ? r.arg : r.op === 'arrange' ? 'canvas' : layoutRef.current })
+      // every open panel, started or not: the main process only knows panels that have a session
+      const st = winPanelsRef.current
+      const panels = st.order.map((id) => {
+        const x = st.byId[id]
+        return { id, folder: x?.cwd ?? '', title: (x?.cwd ?? '').split('/').filter(Boolean).at(-1) ?? id, state: !x?.model ? 'not started' : x.busy ? 'working' : (x.lines ?? []).some((l) => l.kind === 'user') ? 'ready' : 'not started' }
+      })
+      void window.stm.uiTools.reply(r.req, { layout: r.op === 'layout' && r.arg ? r.arg : r.op === 'arrange' ? 'canvas' : layoutRef.current, panels })
     })
     const offAsk = window.stm.uiTools.onConfirm((r) => setUiAsks((q) => [...q, r]))
     return () => (offCmd(), offAsk())
@@ -1334,6 +1349,9 @@ export function App() {
             key={sid}
             sid={sid}
             s={p.byId[sid]!}
+            role={lead.leads.includes(sid) ? 'lead' : lead.workers[sid] ? 'worker' : ''}
+            workerTitle={lead.workers[sid]?.title}
+            onLead={(on) => void window.stm.lead.set(sid, on).catch((e) => dispatch({ kind: 'event', sid, action: { kind: 'note', tone: 'error', text: e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e) } }))}
             focused={p.focus === sid}
             theme={theme}
             dim={Boolean(focus && focus.kind === 'focus' && focus.sid && focus.sid !== sid)}
@@ -1920,7 +1938,7 @@ export function App() {
       <div className="body">
       {layout === 'canvas' ? (
         <Suspense fallback={null}>
-          <Canvas order={p.order} panel={panelEl} cmd={canvasCmd} />
+          <Canvas order={p.order} panel={panelEl} cmd={canvasCmd} lead={lead} states={Object.fromEntries(p.order.map((id) => [id, { busy: Boolean(p.byId[id]?.busy), asking: Boolean(p.byId[id]?.asks?.length) }]))} />
         </Suspense>
       ) : (
       <div className="grid" ref={gridRef} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>

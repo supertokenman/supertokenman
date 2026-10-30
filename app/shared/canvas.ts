@@ -86,3 +86,22 @@ export function uniquePairs(links: Record<string, { panel: string }[]>): [string
   }
   return out
 }
+
+export const FAN_GAP = 200
+
+/** Lead on the left, its workers in a column to the right, far enough away that the edges have room to curve. */
+export function planFan(lead: Point, workers: string[]): Record<string, Point> {
+  const step = CARD_H + 40
+  const top = lead.y + CARD_H / 2 - (step * (workers.length - 1) + CARD_H) / 2
+  return Object.fromEntries(workers.map((w, i) => [w, { x: lead.x + CARD_W + FAN_GAP, y: top + i * step }]))
+}
+
+/** A cubic from one card's side to another's, with real curvature: right side of the left card to the left side of the right one. */
+export function edgePath(a: Rect, b: Rect): { p: Point; q: Point; d: string; back: string } {
+  const right = b.x + b.w / 2 >= a.x + a.w / 2
+  const p = { x: right ? a.x + a.w : a.x, y: a.y + a.h / 2 }
+  const q = { x: right ? b.x : b.x + b.w, y: b.y + b.h / 2 }
+  const k = Math.max(70, Math.abs(q.x - p.x) * 0.5) * (right ? 1 : -1)
+  const c1 = { x: p.x + k, y: p.y }, c2 = { x: q.x - k, y: q.y }
+  return { p, q, d: `M${p.x},${p.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${q.x},${q.y}`, back: `M${q.x},${q.y} C${c2.x},${c2.y} ${c1.x},${c1.y} ${p.x},${p.y}` }
+}

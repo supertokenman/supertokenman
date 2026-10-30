@@ -78,3 +78,17 @@ describe('planArrange', () => {
   })
   it('handles no panels', () => expect(planArrange('grid', [])).toEqual({}))
 })
+
+import { listPanels } from './uitools.js'
+describe('listPanels', () => {
+  it('lists a panel with no session yet as not started', () => {
+    const r = listPanels([{ id: 's1', folder: '/a', name: 'a', persona: null }], [
+      { id: 's1', folder: '/a', title: 'a', state: 'ready' },
+      { id: 's2', folder: '/b', title: 'b', state: 'not started' },
+    ])
+    expect(r.map((x) => [x.id, x.state, x.folder])).toEqual([['s1', 'ready', '/a'], ['s2', 'not started', '/b']])
+  })
+  it('falls back to the sessions when the window does not answer', () => {
+    expect(listPanels([{ id: 's1', folder: '/a', name: 'a', persona: 'x' }], undefined).map((x) => x.id)).toEqual(['s1'])
+  })
+})
