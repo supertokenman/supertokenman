@@ -51,6 +51,34 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'panel:linkAuto': z.tuple([sid, sid, z.boolean()]),
   // ui tools (stm MCP server): the window's answer to ui:cmd and ui:confirm, which go main -> window and take no arguments from it
   'ui:reply': z.tuple([z.string().max(64), z.union([z.boolean(), z.object({ layout: z.string().max(20) })]).optional()]),
+  // queue, failover and the team channel: the window's calls, checked before the handler runs
+  'queue:get': z.tuple([sid]),
+  'queue:act': z.tuple([
+    sid,
+    z.discriminatedUnion('t', [
+      z.object({ t: z.literal('add'), item: z.object({ id: z.string().regex(/^[\w-]{1,64}$/), text: text(20_000).min(1), at: z.number(), steer: opt(z.enum(['next', 'interrupt'])), askId: opt(z.string().max(80)) }) }),
+      z.object({ t: z.literal('edit'), id: z.string().max(64), text: text(20_000).min(1) }),
+      z.object({ t: z.literal('cancel'), id: z.string().max(64) }),
+      z.object({ t: z.literal('move'), id: z.string().max(64), to: z.number().int().min(0).max(50) }),
+      z.object({ t: z.literal('steer'), id: z.string().max(64), mode: z.enum(['next', 'interrupt']) }),
+      z.object({ t: z.literal('pause'), reason: opt(z.string().max(200)) }),
+      z.object({ t: z.literal('resume') }),
+    ]),
+  ]),
+  'failover:prefs:get': z.tuple([sid]),
+  'failover:prefs:set': z.tuple([sid, z.object({ fallback: opt(z.object({ model: opt(z.string().regex(/^claude-(haiku|sonnet|opus)-[\w-]+$/)), provider: opt(z.literal('custom')) })), always: opt(z.boolean()) })]),
+  'failover:current': z.tuple([sid]),
+  'failover:choose': z.tuple([sid, z.string().max(64), z.enum(['switch', 'wait', 'cancel']), opt(z.boolean()), opt(z.boolean())]),
+  'channel:teams': z.tuple([]),
+  'channel:list': z.tuple([sid, z.object({ before: opt(z.number()), limit: z.number().int().min(1).max(200) })]),
+  'channel:post': z.tuple([sid, z.object({ kind: z.enum(['handoff', 'question', 'review', 'result', 'note']), text: text(8000).min(1), replyTo: opt(z.string().max(64)) })]),
+  'channel:pin': z.tuple([sid, z.string().max(64), z.boolean()]),
+  'channel:sendNow': z.tuple([sid, z.string().max(140)]),
+  'panel:states': z.tuple([]),
+  'runtime:snapshot': z.tuple([]),
+  'runtime:keepRunning': z.tuple([opt(z.boolean())]),
+  'runtime:stopAll': z.tuple([]),
+  'runtime:dismissResume': z.tuple([]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
 }
 

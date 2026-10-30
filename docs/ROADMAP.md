@@ -289,6 +289,13 @@ by typecheck and unit tests; not yet run in the real app.
 - [ ] macOS on-device speech recognition once it can be reached without compiling a native module.
 - [ ] True press-and-hold, which needs a key-up event (a native listener).
 
+## Panel queue, failover with notice, team channel
+
+- [x] Panel message queue: a send while a turn runs waits under the composer (edit, reorder, cancel, pause, resume, steer next turn or interrupt); loads paused after a restart; cost estimate from 3 items. Spec: `spec-qfc.md`.
+- [x] Failover card: on a plan limit, 429, overload or outage the panel offers Switch to the fallback (another model, or the custom endpoint after a confirm), Wait until the reset, or Cancel; never silent; switches are noted in the transcript and written to `failover-log.jsonl`.
+- [x] Team channel: one per lead and its workers, local jsonl, stm tools `mcp__stm__channel_post`, `channel_read`, `channel_mentions`; mentions routed through links, limits and approvals; `stm ask`, delegate and results mirrored; canvas edge pulse and unread badge.
+- [ ] Not done: asks delivered as queued still go to the composer (not the queue); attachments sent while busy bypass the queue; no automatic return to the primary model after a reset; a worker-to-worker mention needs a link between them.
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
@@ -306,3 +313,7 @@ by typecheck and unit tests; not yet run in the real app.
 - [ ] Routine caps: 15-minute minimum, 20 enabled, auto-disable after 10 failures.
 - [ ] Live plan from TodoWrite on panel and canvas, with per-run agent and fan-out caps.
 - [ ] Checkpoints per turn in private git refs, restore to turn N with a forked resume; breakpoints before a tool or after the plan.
+
+## Planned: background panels, precise state and wait, SSH machines
+
+Spec: `spec-runtime.md`. Optional "Keep panels running" (off by default): panels survive closing the window, with a menu bar count, today's cost and Stop all; after a reboot the layout comes back with an offer to resume, never auto-run. Panel states working, waiting approval, waiting input, idle and error, plus `stm wait --for blocked|idle|done`. Saved SSH hosts with independent reconnect, one at a time in v1.

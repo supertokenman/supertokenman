@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconClose } from './icons'
 import { friendly } from './errors'
+import { openChannel } from './channelOpen'
 import { decodeInvite, encodeInvite, newInvite, TeamRoom, type Entry, type Invite, type Member } from './teamRoom'
 
 const KEY = 'stm.team'
@@ -147,6 +148,7 @@ export function TeamSheet(props: {
           <div className="sheet-title">Team</div>
           {inRoom && <span className={`team-state ${team.state.s}`}>{live ? `${others.length + 1} here` : team.state.s === 'connecting' ? 'Connecting' : team.state.why ?? 'Offline'}</span>}
           <span className="spacer-flex" />
+          <button className="ghost small" data-tip="The channel of a lead panel and its workers on this Mac; the room here is for other people" onClick={() => (props.onClose(), openChannel())}>Local channel</button>
           {inRoom && (
             <>
               <button className="ghost small" onClick={() => { void navigator.clipboard.writeText(saved.invite!); setCopied(true); setTimeout(() => setCopied(false), 1500) }}>{copied ? 'Copied' : 'Copy invite'}</button>

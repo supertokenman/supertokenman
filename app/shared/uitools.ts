@@ -75,3 +75,22 @@ export function planArrange(mode: ArrangeMode, ids: string[]): Record<string, Po
 }
 
 export { CARD_GAP, CARD_H, CARD_W }
+
+/** What the window knows of an open panel; a panel the person opened but has not yet written to has no session in the main process. */
+export type WinPanel = { id: string; folder: string; title: string; state: string }
+export type ListedPanel = { id: string; folder: string; name: string; persona: string | null }
+
+/**
+ * Every open panel, once: the window's list is the truth for what is open, the main process adds the
+ * persona and the session name. A panel with no session yet is listed with the state "not started".
+ */
+export function listPanels(main: ListedPanel[], win: WinPanel[] | undefined, role: (id: string) => string = () => ''): { id: string; folder: string; name: string; persona: string | null; state: string; role: string }[] {
+  const byId = new Map(main.map((p) => [p.id, p]))
+  const ids = win ? win.map((w) => w.id) : main.map((p) => p.id)
+  for (const p of main) if (!ids.includes(p.id) && !win) ids.push(p.id)
+  return ids.map((id) => {
+    const m = byId.get(id)
+    const w = win?.find((x) => x.id === id)
+    return { id, folder: m?.folder || w?.folder || '', name: w?.title || m?.name || id, persona: m?.persona ?? null, state: w?.state ?? (m ? 'ready' : 'not started'), role: role(id) }
+  })
+}
