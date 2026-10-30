@@ -11,6 +11,10 @@ const native = readFileSync(new URL('../electron/native.ts', import.meta.url), '
 const listened = new Set([...(main + native).matchAll(/ipcMain\.on\('([^']+)'/g)].map((m) => m[1]!))
 
 describe('IPC contract', () => {
+  it('registers each handled channel once (a second ipcMain.handle throws and stops the rest of main)', () => {
+    const all = [...(main + modules).matchAll(/ipcMain\.handle\('([^']+)'/g)].map((m) => m[1]!)
+    expect(all.filter((c, i) => all.indexOf(c) !== i)).toEqual([])
+  })
   it('every channel the preload invokes has a handler, and every send a listener', () => {
     const invoked = [...preload.matchAll(/ipcRenderer\.invoke\('([^']+)'/g)].map((m) => m[1]!)
     const sent = [...preload.matchAll(/ipcRenderer\.send\('([^']+)'/g)].map((m) => m[1]!)

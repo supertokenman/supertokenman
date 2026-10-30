@@ -7879,14 +7879,14 @@ function teamReview(file: string) {
   toWin('team:review', { team, lines: TM.reviewLines(team) })
   return team
 }
-ipcMain.handle('team:export', async () => {
+ipcMain.handle('teambundle:export', async () => {
   if (!win) return null
   const r = await dialog.showSaveDialog(win, { title: 'Export team', defaultPath: 'team.md', filters: [{ name: 'Markdown', extensions: ['md'] }] })
   if (r.canceled || !r.filePath) return null
   writeFileSync(r.filePath, TM.toMarkdown(buildTeam()))
   return r.filePath
 })
-ipcMain.handle('team:import', async () => {
+ipcMain.handle('teambundle:import', async () => {
   if (!win) return false
   const r = await dialog.showOpenDialog(win, { title: 'Import team', properties: ['openFile'], filters: [{ name: 'Markdown', extensions: ['md'] }] })
   if (r.canceled || !r.filePaths[0]) return false
@@ -7908,7 +7908,7 @@ ipcMain.handle('team:prepare', (_e, team: unknown, base: string) => {
   })
 })
 // the panels are open: links between them, and the triggers, turned off
-ipcMain.handle('team:apply', (_e, team: unknown, opened: Record<string, string>) => {
+ipcMain.handle('teambundle:apply', (_e, team: unknown, opened: Record<string, string>) => {
   const t = teamCheck(team)
   const sid = (n: string) => (sessions.has(String(opened?.[n])) ? String(opened[n]) : undefined)
   let ls = links()

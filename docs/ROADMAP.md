@@ -325,3 +325,5 @@ Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or g
 ## Planned: background panels, precise state and wait, SSH machines
 
 Spec: `spec-runtime.md`. Optional "Keep panels running" (off by default): panels survive closing the window, with a menu bar count, today's cost and Stop all; after a reboot the layout comes back with an offer to resume, never auto-run. Panel states working, waiting approval, waiting input, idle and error, plus `stm wait --for blocked|idle|done`. Saved SSH hosts with independent reconnect, one at a time in v1.
+
+Status: UI done (state dot and Needs you from the new state, reattach replay, resume strip, Keep panels running in Settings, update question with Restart now / Install when I quit). Still open: Machines (saved SSH hosts, reconnect) and the NETWORK.md "Hosts you add" section, which ship with them.
