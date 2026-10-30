@@ -21,6 +21,14 @@ describe('registry', () => {
     expect(JSON.stringify(list)).not.toContain('SECRET')
   })
 
+  it('adds the servers of installed packs with their origin, after the others', () => {
+    const home = mkdtempSync(join(tmpdir(), 'rg-'))
+    const cwd = join(home, 'proj')
+    mkdirSync(cwd)
+    const list = installedMcp(cwd, home, [{ name: 'pack-pg-helper-pg', where: 'pack pg-helper', kind: 'stdio', target: 'npx @x/pg' }])
+    expect(list).toEqual([{ name: 'pack-pg-helper-pg', where: 'pack pg-helper', kind: 'stdio', target: 'npx @x/pg' }])
+  })
+
   it('turns a persona off-lists into permission rules', () => {
     const p = cleanPersona({ name: 'Writer', mcpOff: ['github', 'bad name!'], skillsOff: ['pdf'] })
     expect(p.mcpOff).toEqual(['github'])

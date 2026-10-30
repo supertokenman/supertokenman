@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "id": "commit-notes",
+  "name": "Commit notes",
+  "version": "1.0.0",
+  "description": "A short rule for commit messages: what changed and why, in plain words.",
+  "files": [],
+  "rules": { "text": "Write commit messages as a short summary line, then a line on why the change was needed. Do not list every file." }
+}

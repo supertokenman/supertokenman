@@ -9,6 +9,14 @@ const name = z.string().regex(/^[\w][\w .:-]{0,99}$/, 'a secret name (letters, d
 const text = (max: number) => z.string().max(max)
 const opt = <T extends z.ZodType>(t: T) => t.optional()
 
+// packs (spec-packs.md section 10): every channel that writes files, fetches a repository or starts a run
+const packId = z.string().regex(/^[a-z0-9][a-z0-9-]{1,47}$/, 'a pack id')
+const packVersion = z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/, 'a semver version')
+const packRoot = z.string().min(1).max(4096).refine((p) => p.startsWith('/') || /^[A-Za-z]:[\\/]/.test(p), 'an absolute folder path')
+const packScope = z.enum(['project', 'global'])
+const packPath = z.string().min(1).max(512)
+const packServer = z.string().regex(/^[a-z0-9][a-z0-9-]{0,31}$/, 'a server name')
+
 export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'vault:list': z.tuple([]),
   'social:setNetSlots': z.tuple([z.enum(['instagram', 'facebook', 'threads', 'youtube', 'linkedin', 'x', 'tiktok', 'bluesky', 'mastodon']), z.array(z.object({ day: z.number().int().min(0).max(6), time: z.string().regex(/^\d{2}:\d{2}$/) })).max(50)]),
@@ -79,6 +87,21 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'runtime:keepRunning': z.tuple([opt(z.boolean())]),
   'runtime:stopAll': z.tuple([]),
   'runtime:dismissResume': z.tuple([]),
+  'packs:list': z.tuple([]),
+  'packs:addFolder': z.tuple([packRoot]),
+  'packs:fetchGit': z.tuple([z.string().max(2048).regex(/^https:\/\/[^\s'"`$;&|<>\\@]+$/, 'an https:// URL with no name or password')]),
+  'packs:review': z.tuple([packId, packVersion, packScope, packRoot]),
+  'packs:install': z.tuple([packId, packVersion, packScope, packRoot, z.record(packPath, z.enum(['skip', 'overwrite']))]),
+  'packs:planUpdate': z.tuple([packId, packVersion, packRoot]),
+  'packs:update': z.tuple([packId, packVersion, packRoot, z.record(z.string().max(512), z.enum(['mine', 'theirs', 'beside', 'recreate', 'leave']))]),
+  'packs:rollback': z.tuple([packId, packRoot]),
+  'packs:planRemove': z.tuple([packId, packRoot]),
+  'packs:remove': z.tuple([packId, packRoot, z.boolean()]),
+  'packs:setMcp': z.tuple([packId, packRoot, packServer, z.boolean()]),
+  'packs:installed': z.tuple([packRoot]),
+  'packs:evalStart': z.tuple([packId, packRoot, text(20_000).min(1), z.string().regex(/^claude-(haiku|sonnet|opus)-[\w-]+$/), z.number().int().min(1).max(200)]),
+  'packs:evalResult': z.tuple([z.string().regex(/^[\w-]{1,64}$/, 'an eval id')]),
+  'packs:evalDiscard': z.tuple([z.string().regex(/^[\w-]{1,64}$/, 'an eval id')]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
 }
 

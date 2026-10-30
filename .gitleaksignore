@@ -31,3 +31,4 @@ e9f7b233e068687dd4c4fe5128066e209060db43:app/shared/leaks.test.ts:stripe-access-
 d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:77
 d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:78
 d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:82
+ea1f6d8d8a6abac5fa56e98b44d80a9977940423:app/shared/auditredact.test.ts:curl-auth-header:6

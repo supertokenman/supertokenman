@@ -141,6 +141,10 @@
         "to": "engines/skills"
       },
       {
+        "from": "engines/packs",
+        "to": "engines/packs"
+      },
+      {
         "from": "engines/voice",
         "to": "engines/voice",
         "filter": [
