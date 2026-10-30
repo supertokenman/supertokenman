@@ -2,13 +2,10 @@ import { SandboxButton } from './Sandbox'
 
 import { effortsOf, MODEL_LIST, type Effort } from '../shared/models'
 import { ModelMenu } from './ModelMenu'
-import { BranchMark, TryWaysSheet } from './Worktree'
+import { BranchMark } from './Worktree'
 
-import { FanoutSheet } from './Fanout'
 
-import { PastSearchSheet } from './PastSearch'
 
-import { IssuesSheet } from './Issues'
 
 
 
@@ -28,19 +25,16 @@ import { askText, type Link } from '../shared/deeplink'
 
 import { bootOn, setBootOn } from './boot'
 
-import { ArchDeskSheet } from './ArchDesk'
 
-import { LearnSheet } from './Learn'
 
 import { hiddenBy } from '../shared/modules'
 
 import { issueSlug } from '../shared/issuespec'
 
-import { draftFromPanel, SkillDraftsSheet } from './SkillDrafts'
+import { draftFromPanel } from './SkillDrafts'
 
 import { ownerOf } from '../shared/sametask'
 
-import { SpecSheet } from './Spec'
 
 
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
@@ -63,6 +57,23 @@ import type { Persona } from '../shared/personas'
 // sheets that open only on a click load then, not at start
 // the canvas loads when it is first picked, so the first screen stays inside its size budget
 import type { LeadView } from './bridge'
+// sheets open on a click, so their code loads then
+function sheet<P extends object>(load: () => Promise<React.ComponentType<P>>) {
+  const L = lazy(() => load().then((C) => ({ default: C as React.ComponentType<any> })))
+  return (props: P) => <Suspense fallback={null}><L {...props} /></Suspense>
+}
+const TryWaysSheet = sheet(() => import('./Worktree').then((x) => x.TryWaysSheet))
+const FanoutSheet = sheet(() => import('./Fanout').then((x) => x.FanoutSheet))
+const PastSearchSheet = sheet(() => import('./PastSearch').then((x) => x.PastSearchSheet))
+const IssuesSheet = sheet(() => import('./Issues').then((x) => x.IssuesSheet))
+const ArchDeskSheet = sheet(() => import('./ArchDesk').then((x) => x.ArchDeskSheet))
+const LearnSheet = sheet(() => import('./Learn').then((x) => x.LearnSheet))
+const SkillDraftsSheet = sheet(() => import('./SkillDrafts').then((x) => x.SkillDraftsSheet))
+const SpecSheet = sheet(() => import('./Spec').then((x) => x.SpecSheet))
+const Docker = sheet(() => import('./Docker').then((x) => x.Docker))
+const TeamSheet = sheet(() => import('./Team').then((x) => x.TeamSheet))
+const TodaySheet = sheet(() => import('./Today').then((x) => x.TodaySheet))
+const MusicSheet = sheet(() => import('./Music').then((x) => x.MusicSheet))
 const Canvas = lazy(() => import('./Canvas').then((x) => ({ default: x.Canvas })))
 const NewFromTemplate = lazy(() => import('./NewFromTemplate').then((x) => ({ default: x.NewFromTemplate })))
 const OfficeFiles = lazy(() => import('./OfficeFiles').then((x) => ({ default: x.OfficeFiles })))
@@ -112,11 +123,10 @@ import { Menu } from './Menu'
 
 import { Presence } from './Presence'
 
-import { Docker } from './Docker'
 
 
 
-import { TeamSheet, useTeam } from './Team'
+import { useTeam } from './Team'
 
 
 
@@ -130,7 +140,6 @@ import { InboxButton } from './Inbox'
 
 import { needs, type Need } from './needs'
 
-import { TodaySheet } from './Today'
 
 import { Palette } from './Palette'
 
@@ -151,7 +160,7 @@ import { FilePickerHost } from './FilePicker'
 import { alertDialog, confirmDialog, ContextMenuHost, DialogHost } from './ui'
 import { ChannelHost } from './ChannelHost'
 
-import { MusicChip, MusicSheet, useSpotify } from './Music'
+import { MusicChip, useSpotify } from './Music'
 
 const WebAppsDrawer = lazy(() => import('./WebApps').then((m) => ({ default: m.WebAppsDrawer })))
 
@@ -490,7 +499,7 @@ export function App() {
       const sid = (e as CustomEvent<{ sid: string }>).detail.sid
       const st = pRef.current.byId[sid]
       if (!st) return
-      void draftFromPanel(st.worktree?.repo ?? st.cwd, st.lines).then((r) => setDraftsOpen({ focus: r.id }), (err: Error) => dispatch({ kind: 'event', sid, action: { kind: 'note', text: err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), tone: 'error' } }))
+      void import('./SkillDrafts').then((m) => m.draftFromPanel(st.worktree?.repo ?? st.cwd, st.lines)).then((r) => setDraftsOpen({ focus: r.id }), (err: Error) => dispatch({ kind: 'event', sid, action: { kind: 'note', text: err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), tone: 'error' } }))
     }
     window.addEventListener('stm:skill-draft', f)
     return () => window.removeEventListener('stm:skill-draft', f)
