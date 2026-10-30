@@ -291,7 +291,10 @@ by typecheck and unit tests; not yet run in the real app.
 
 ## Panel queue, failover with notice, team channel
 
-- [ ] Panel message queue with steer, failover card with Switch / Wait / Cancel, and a local per-team channel with stm tools. Spec: `spec-qfc.md`.
+- [x] Panel message queue: a send while a turn runs waits under the composer (edit, reorder, cancel, pause, resume, steer next turn or interrupt); loads paused after a restart; cost estimate from 3 items. Spec: `spec-qfc.md`.
+- [x] Failover card: on a plan limit, 429, overload or outage the panel offers Switch to the fallback (another model, or the custom endpoint after a confirm), Wait until the reset, or Cancel; never silent; switches are noted in the transcript and written to `failover-log.jsonl`.
+- [x] Team channel: one per lead and its workers, local jsonl, stm tools `mcp__stm__channel_post`, `channel_read`, `channel_mentions`; mentions routed through links, limits and approvals; `stm ask`, delegate and results mirrored; canvas edge pulse and unread badge.
+- [ ] Not done: asks delivered as queued still go to the composer (not the queue); attachments sent while busy bypass the queue; no automatic return to the primary model after a reset; a worker-to-worker mention needs a link between them.
 
 ## Later
 
