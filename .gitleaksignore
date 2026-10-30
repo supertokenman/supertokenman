@@ -32,3 +32,4 @@ d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:gener
 d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:78
 d2c004b4cb6556c194110b74c26c8efa80faac3d:app/shared/posteverywhere.test.ts:generic-api-key:82
 ea1f6d8d8a6abac5fa56e98b44d80a9977940423:app/shared/auditredact.test.ts:curl-auth-header:6
+c3dd7a29b6fba3a7cda41fce27e8c102c386d667:app/electron/audit.test.ts:generic-api-key:23
