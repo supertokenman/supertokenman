@@ -48,7 +48,9 @@ export default function ChannelPane(props: { team?: string; onClose: () => void 
       setMembers(r.members)
     }, (e) => setErr(msg(e)))
   }, [teamId])
-  useEffect(() => void load(), [load])
+  useEffect(() => {
+    load()
+  }, [load])
   useEffect(() => {
     if (!teamId) return
     return window.stm.channel.onPosted((t, v) => {
@@ -61,7 +63,9 @@ export default function ChannelPane(props: { team?: string; onClose: () => void 
       channelSeen(true)
     })
   }, [teamId, load])
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [posts.length])
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'end' })
+  }, [posts.length])
 
   const shown = useMemo(() => posts.filter((p) => (kind === 'all' || p.kind === kind) && (!who || p.from === who)), [posts, kind, who])
   const team = teams?.find((t) => t.id === teamId)
