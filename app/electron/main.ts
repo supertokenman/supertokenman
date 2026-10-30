@@ -7214,6 +7214,8 @@ function uiDeps(me: string): UiDeps {
 }
 // end-to-end tests only: the ui tools of a panel, called as its Claude would
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmUiTools = (sid: string) => uiTools(uiDeps(sid))
+// end-to-end tests only: an event as if the panel's session had emitted it (a failed turn, for the failover card)
+if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmEmit = (sid: string, e: unknown) => send(sid, e)
 const room = { members: [] as RM.Member[], ask: '', spoken: [] as string[] }
 // the room, only from the window: the person names who answers, and asks for each further turn
 ipcMain.handle('room:post', (_e, sids: string[], text: string) => {

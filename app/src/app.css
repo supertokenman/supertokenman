@@ -4596,3 +4596,4 @@ html[data-blurred] .panel-bar.compact .sm-mark.busy::after { animation: none; op
 .chan-compose { display: flex; gap: 6px; align-items: flex-end; position: relative; }
 .chan-compose textarea { flex: 1; resize: none; }
 .chan-complete { position: absolute; bottom: 100%; left: 0; display: flex; gap: 4px; background: var(--raised); border: 1px solid var(--border-strong); border-radius: 6px; padding: 4px; }
+.failover-card .ask-actions { flex-wrap: wrap; padding-right: 14px; }

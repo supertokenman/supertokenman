@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Checkbox, Select } from './ui'
 import { StateMark } from './StateMark'
 import { modelLabel } from '../shared/models'
@@ -20,6 +20,11 @@ export default function FailoverCard(props: { sid: string; card: CardView }) {
   const [now, setNow] = useState(Date.now())
   const [busy, setBusy] = useState(false)
   const [setting, setSetting] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  // the card appears at the end of the stream: bring it into view above the composer
+  useEffect(() => {
+    root.current?.scrollIntoView({ block: 'nearest' })
+  }, [card.id])
   // the countdown ticks once a second, and not at all while the window is out of focus
   useEffect(() => {
     if (!card.waiting) return
@@ -42,7 +47,7 @@ export default function FailoverCard(props: { sid: string; card: CardView }) {
   const canSwitch = Boolean(card.fallback) && !card.noSwitch
   const retriesLeft = card.waitUntil || card.attempt < card.maxAttempts
   return (
-    <div className="ask held-card failover-card" role="alert" aria-label="Failover">
+    <div ref={root} className="ask held-card failover-card" role="alert" aria-label="Failover">
       <div className="ask-head">
         <StateMark state="warn" label="Failed" />
         <span className="ask-label">{card.reason}</span>
@@ -96,7 +101,9 @@ export function FallbackChip(props: { sid: string }) {
   const [d, setD] = useState<Awaited<ReturnType<typeof window.stm.failover.prefsGet>> | null>(null)
   const [err, setErr] = useState('')
   const load = () => window.stm.failover.prefsGet(sid).then(setD, (e) => setErr(msg(e)))
-  useEffect(() => void load(), [sid])
+  useEffect(() => {
+    void load()
+  }, [sid])
   const fb = d?.prefs.fallback
   const value = fb?.provider === 'custom' ? 'custom' : fb?.model ?? ''
   const label = !fb ? 'off' : fb.provider === 'custom' ? 'custom endpoint' : modelLabel(fb.model ?? '')
