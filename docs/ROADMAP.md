@@ -298,3 +298,11 @@ by typecheck and unit tests; not yet run in the real app.
 - UI backlog leftovers (`docs/UI-BACKLOG.md`): empty sheets, copyable commands, left edges, one accent.
 - Vault passwords URL-encoded in database connections; single-step guides without "0 of 1"; the
   Ollama next-step banner.
+
+## Control (spec: `spec-control.md`)
+
+- [ ] Policy gate with readable rules (global and per project), deny before allow, never loosening an ask without an explicit allow.
+- [ ] Daily append-only audit log with redacted arguments, decisions, cost and per-turn file receipts; viewer with filters.
+- [ ] Routine caps: 15-minute minimum, 20 enabled, auto-disable after 10 failures.
+- [ ] Live plan from TodoWrite on panel and canvas, with per-run agent and fan-out caps.
+- [ ] Checkpoints per turn in private git refs, restore to turn N with a forked resume; breakpoints before a tool or after the plan.
