@@ -46,4 +46,52 @@ describe('IPC contract', () => {
     expect(checkArgs('term:open', ['s1', 80, 24])).toBeNull()
     expect(checkArgs('not:in:contract', [1, 2, 3])).toBeNull()
   })
+  it('packs: every channel is in the contract, handled in main and bridged in the preload', () => {
+    const channels = ['list', 'addFolder', 'fetchGit', 'review', 'install', 'planUpdate', 'update', 'rollback', 'planRemove', 'remove', 'setMcp', 'installed', 'evalStart', 'evalResult', 'evalDiscard'].map((c) => `packs:${c}`)
+    for (const c of channels) {
+      expect(Object.keys(CONTRACT)).toContain(c)
+      expect(handled.has(c)).toBe(true)
+      expect(preload).toContain(`'${c}'`)
+    }
+  })
+  it('packs: good arguments pass', () => {
+    expect(checkArgs('packs:list', [])).toBeNull()
+    expect(checkArgs('packs:addFolder', ['/Users/x/my-pack'])).toBeNull()
+    expect(checkArgs('packs:fetchGit', ['https://github.com/x/pg-pack'])).toBeNull()
+    expect(checkArgs('packs:review', ['pg-helper', '1.2.0', 'project', '/Users/x/app'])).toBeNull()
+    expect(checkArgs('packs:install', ['pg-helper', '1.2.0-rc.1', 'global', '/Users/x/.claude', { '.claude/skills/pg-helper/a.md': 'overwrite' }])).toBeNull()
+    expect(checkArgs('packs:update', ['pg-helper', '1.3.0', '/Users/x/app', { 'a.md': 'theirs', '@rules': 'leave' }])).toBeNull()
+    expect(checkArgs('packs:remove', ['pg-helper', '/Users/x/app', true])).toBeNull()
+    expect(checkArgs('packs:setMcp', ['pg-helper', '/Users/x/app', 'pg', true])).toBeNull()
+    expect(checkArgs('packs:evalStart', ['pg-helper', '/Users/x/app', 'Fix the bug', 'claude-sonnet-5-5', 30])).toBeNull()
+    expect(checkArgs('packs:evalResult', ['e1abc2'])).toBeNull()
+  })
+  it('packs: bad arguments are refused before the handler runs', () => {
+    expect(checkArgs('packs:addFolder', ['relative/dir'])).toMatch(/absolute/)
+    expect(checkArgs('packs:addFolder', ['~/pack'])).toBeTruthy()
+    for (const url of ['http://github.com/x/y', 'git@github.com:x/y.git', 'file:///etc/passwd', 'https://user:pw@github.com/x/y', 'https://a.com/x;rm -rf']) {
+      expect(checkArgs('packs:fetchGit', [url])).toBeTruthy()
+    }
+    expect(checkArgs('packs:review', ['Bad Id', '1.0.0', 'project', '/x'])).toMatch(/pack id/)
+    expect(checkArgs('packs:review', ['pg-helper', 'latest', 'project', '/x'])).toMatch(/semver/)
+    expect(checkArgs('packs:review', ['pg-helper', '1.0.0', 'everywhere', '/x'])).toBeTruthy()
+    expect(checkArgs('packs:install', ['pg-helper', '1.0.0', 'project', '/x', { 'a.md': 'delete' }])).toBeTruthy()
+    expect(checkArgs('packs:update', ['pg-helper', '1.0.0', '/x', { 'a.md': 'overwrite' }])).toBeTruthy()
+    expect(checkArgs('packs:remove', ['pg-helper', '/x', 'yes'])).toBeTruthy()
+    expect(checkArgs('packs:setMcp', ['pg-helper', '/x', '../evil', true])).toMatch(/server name/)
+    expect(checkArgs('packs:evalStart', ['pg-helper', '/x', '', 'claude-sonnet-5-5', 30])).toBeTruthy()
+    expect(checkArgs('packs:evalStart', ['pg-helper', '/x', 'p', 'gpt-4', 30])).toBeTruthy()
+    expect(checkArgs('packs:evalStart', ['pg-helper', '/x', 'p', 'claude-sonnet-5-5', 0])).toBeTruthy()
+    expect(checkArgs('packs:evalDiscard', ['../x'])).toBeTruthy()
+  })
+  it('packs: the main process checks the folder as well as the contract', () => {
+    expect(main).toContain("function packRoot(root: unknown)")
+    for (const c of ['review', 'install', 'planUpdate', 'update', 'rollback', 'planRemove', 'remove', 'setMcp', 'installed', 'evalStart']) {
+      const line = main.split('\n').find((l) => l.includes(`ipcMain.handle('packs:${c}'`))!
+      const body = c === 'evalStart' ? main.slice(main.indexOf("ipcMain.handle('packs:evalStart'"), main.indexOf("ipcMain.handle('packs:evalResult'")) : line
+      expect(body).toContain('packRoot(root)')
+    }
+    // fetching is the only handler that can reach the network, and it is a plain call with no automatic caller
+    expect(main.match(/packs\(\)\.fetchGit\(/g)?.length).toBe(1)
+  })
 })

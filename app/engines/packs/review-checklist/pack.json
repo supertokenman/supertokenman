@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "id": "review-checklist",
+  "name": "Review checklist",
+  "version": "1.0.0",
+  "description": "A skill that walks through a change before it is called done: tests, edge cases, naming and leftovers.",
+  "files": [
+    { "from": "skills/review-checklist/SKILL.md", "to": ".claude/skills/review-checklist/SKILL.md", "kind": "skill" }
+  ]
+}

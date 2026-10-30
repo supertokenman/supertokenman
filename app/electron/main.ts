@@ -47,6 +47,8 @@ import * as CC from '../shared/claudeconf.js'
 import * as FD from '../shared/feeds.js'
 import * as SL from '../shared/sessionlog.js'
 import { installedMcp } from './registry.js'
+import { createPacks, type Packs } from './packs.js'
+import { createPackEval, type PackEval } from './packseval.js'
 import { blockedFor } from '../shared/personas.js'
 import { erModel } from '../shared/drawio.js'
 import { erLayout } from '../shared/sqlcomplete.js'
@@ -2073,7 +2075,7 @@ ipcMain.handle('content:render', (_e, id: string) => C().render(String(id)))
 ipcMain.handle('content:check', (_e, id: string) => C().check(String(id)))
 ipcMain.handle('content:reveal', (_e, path: string) => C().allowed(String(path)) && desktop.showItemInFolder(String(path)))
 
-ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => {
+const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => {
   perfMark('panel asked')
   await pathReady
   await officeReady
@@ -2171,7 +2173,7 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
     effort: (['low', 'medium', 'high', 'xhigh', 'max'] as const).find((e) => e === opts.effort),
     query: boxed ? (args) => query({ ...args, options: { ...args.options, spawnClaudeCodeProcess: spawnInSandbox(boxed, cwd) } }) : query,
     persona: persona ? personaPrompt(persona) : undefined,
-    mcpServers: inProcess({ ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(uiDeps(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
+    mcpServers: inProcess({ ...packs().mcpFor(cwd), ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(uiDeps(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
     // Claude's Bash sees only the credentials marked for commands
     // through Headroom's compressing proxy when it is on and answering; straight to Anthropic otherwise
     env: { ...claudeTraffic(process.env), ...vault.commandEnv(), STM_PANEL: sid, ...(boxed || remote ? {} : panelEnv(sid)), ...(settings().headroom && headroomLive ? { ANTHROPIC_BASE_URL: HEADROOM_URL } : {}) },
@@ -2304,7 +2306,8 @@ ipcMain.handle('session:new', async (_e, opts: { cwd?: string; remote?: { host: 
   if (remote) remoteOf.set(sid, remote)
   perfMark('panel ready')
   return { sid, cwd, missing, persona: persona ? { id: persona.id, name: persona.name, color: persona.color, model: persona.model, access: persona.access ?? 'ask' } : undefined, sandbox: boxed || undefined, remote: remote ?? undefined, worktree: wt ? { branch: wt.branch, base: wt.base, repo: wt.repo, group: worktreeOf.get(sid)?.group, attempt: worktreeOf.get(sid)?.attempt, of: worktreeOf.get(sid)?.of } : undefined }
-})
+}
+ipcMain.handle('session:new', (_e, opts: Parameters<typeof newSession>[0]) => newSession(opts))
 // a panel in a sandbox: what OpenShell has, getting one ready, and its changes back
 ipcMain.handle('sandbox:status', () => sandboxStatus())
 ipcMain.handle('sandbox:prepare', async (e, cwd: string) => {
@@ -2989,7 +2992,7 @@ ipcMain.handle('worktree:drop', async (_e, sid: string) => {
 })
 // an attempt's tests, run in its own worktree on a click, so the scoreboard can compare them
 const testing = new Set<string>()
-ipcMain.handle('worktree:test', async (_e, sid: string) => {
+async function testWorktree(sid: string) {
   const w = worktreeOf.get(sid)
   if (!w) throw new Error('This panel is not in a worktree.')
   if (testing.has(sid)) throw new Error('Its tests are already running.')
@@ -3031,6 +3034,59 @@ ipcMain.handle('worktree:test', async (_e, sid: string) => {
       }
     }
   }
+}
+ipcMain.handle('worktree:test', (_e, sid: string) => testWorktree(sid))
+// Packs (spec-packs.md): installable bundles of skills, MCP servers and rules. The store, install, update and
+// remove are in packs.ts; a pack's servers are injected into a panel's session above, only when switched on.
+let packsSvc: Packs | null = null
+const packs = () => (packsSvc ??= createPacks({ userData: app.getPath('userData'), enginesDir: app.isPackaged ? join(process.resourcesPath, 'engines') : join(app.getAppPath(), 'engines'), claudeDir: () => claudeDir(), vaultGet: (n) => vault?.get(n) }))
+/** A pack's folder must be one an open panel works in, or ~/.claude; checked here as well as by the contract. */
+function packRoot(root: unknown) {
+  const r = resolve(String(root))
+  if (r === resolve(claudeDir())) return r
+  if (![...shells.values()].some((x) => resolve(x.cwd) === r)) throw new Error('That folder is not open in a panel.')
+  return r
+}
+let packEvalSvc: PackEval | null = null
+const packEval = () =>
+  (packEvalSvc ??= createPackEval({
+    packs: packs(),
+    worktreesHome: () => join(app.getPath('userData'), 'worktrees'),
+    createWorktree,
+    dropWorktree,
+    worktreeStat,
+    remember: (w) => saveSettings({ ...settings(), worktrees: [...(settings().worktrees ?? []), w] }),
+    forget: (w) => saveSettings({ ...settings(), worktrees: (settings().worktrees ?? []).filter((x) => x.path !== w.path) }),
+    open: async (cwd, model) => (await newSession({ cwd, model })).sid,
+    send: async (sid, text) => !(await sendText(sid, text)),
+    usage: (sid) => ({ turns: useOf(sid).turns, usd: panelCost.get(sid)?.total ?? useOf(sid).usd, tokens: useOf(sid).tokens }),
+    busy: (sid) => Boolean(sessions.get(sid)?.busy),
+    interrupt: async (sid) => void (await sessions.get(sid)?.interrupt()),
+    tests: (sid) => testWorktree(sid),
+  }))
+ipcMain.handle('packs:list', () => packs().list())
+ipcMain.handle('packs:addFolder', (_e, path: string) => packs().addFolder(String(path)))
+// the one network call of Packs: a shallow clone of an https repository, only from a click on Fetch
+ipcMain.handle('packs:fetchGit', (_e, url: string) => packs().fetchGit(String(url)))
+ipcMain.handle('packs:review', (_e, id: string, version: string, scope: 'project' | 'global', root: string) => packs().review(id, version, scope, packRoot(root)))
+ipcMain.handle('packs:install', (_e, id: string, version: string, scope: 'project' | 'global', root: string, decisions: Record<string, 'skip' | 'overwrite'>) => packs().install(id, version, scope, packRoot(root), decisions))
+ipcMain.handle('packs:planUpdate', (_e, id: string, version: string, root: string) => packs().planUpdate(id, version, packRoot(root)))
+ipcMain.handle('packs:update', (_e, id: string, version: string, root: string, decisions: Record<string, 'mine' | 'theirs' | 'beside' | 'recreate' | 'leave'>) => packs().update(id, version, packRoot(root), decisions))
+ipcMain.handle('packs:rollback', (_e, id: string, root: string) => packs().rollback(id, packRoot(root)))
+ipcMain.handle('packs:planRemove', (_e, id: string, root: string) => packs().planRemove(id, packRoot(root)))
+ipcMain.handle('packs:remove', (_e, id: string, root: string, keepEdited: boolean) => packs().remove(id, packRoot(root), Boolean(keepEdited)))
+ipcMain.handle('packs:setMcp', (_e, id: string, root: string, server: string, on: boolean) => packs().setMcp(id, packRoot(root), server, Boolean(on)))
+ipcMain.handle('packs:installed', (_e, root: string) => packs().installed(packRoot(root)))
+ipcMain.handle('packs:evalStart', (_e, id: string, root: string, prompt: string, model: string, maxTurns: number) => {
+  const r = packRoot(root)
+  if (r === resolve(claudeDir())) throw new Error('Eval runs in a project folder, not in ~/.claude.')
+  return packEval().start(id, r, String(prompt), String(model), Number(maxTurns))
+})
+ipcMain.handle('packs:evalResult', (_e, evalId: string) => packEval().result(String(evalId)))
+ipcMain.handle('packs:evalDiscard', async (_e, evalId: string) => {
+  const r = await packEval().discard(String(evalId))
+  for (const sid of r.panels) worktreeOf.delete(sid)
+  return r
 })
 // one attempt kept: merged, and the other attempts of the same prompt dropped; their panels close in the window
 ipcMain.handle('worktree:keep', async (_e, sid: string, message: string) => {
@@ -8182,7 +8238,7 @@ ipcMain.handle('providers:delete', (_e, id: string) => saveSettings({ ...setting
 
 // the registry: MCP servers installed in Claude Code and the skills on disk, each one off per persona
 ipcMain.handle('registry:state', (_e, cwd: string) => ({
-  mcp: installedMcp(cwd || startDir),
+  mcp: installedMcp(cwd || startDir, undefined, packs().registryFor(cwd || startDir)),
   skills: skills(cwd || startDir).map((x) => ({ name: x.id.split(':').slice(1).join(':'), title: x.name, description: x.description, where: x.where })),
   personas: personas().map((p) => ({ id: p.id, name: p.name, color: p.color, mcpOff: p.mcpOff ?? [], skillsOff: p.skillsOff ?? [] })),
 }))
