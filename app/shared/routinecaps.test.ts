@@ -6,10 +6,10 @@ const item = (id: string, enabled = true, extra: Partial<Capped> = {}): Capped =
 const many = (n: number, enabled = true) => Array.from({ length: n }, (_, i) => item(`t${i}`, enabled))
 
 describe('capDecision: minimum interval', () => {
-  it('refuses an every below 15 minutes and allows 15', () => {
-    expect(capDecision([], { id: 'a', when: every(14), enabled: false }, 0)).toMatchObject({ ok: false })
-    expect(capDecision([], { id: 'a', when: every(5), enabled: true }, 0)).toMatchObject({ ok: false })
-    expect(capDecision([], { id: 'a', when: every(15), enabled: true }, 0)).toEqual({ ok: true })
+  it('refuses an every below 5 minutes and allows 5', () => {
+    expect(capDecision([], { id: 'a', when: every(4), enabled: false }, 0)).toMatchObject({ ok: false })
+    expect(capDecision([], { id: 'a', when: every(1), enabled: true }, 0)).toMatchObject({ ok: false })
+    expect(capDecision([], { id: 'a', when: every(5), enabled: true }, 0)).toEqual({ ok: true })
   })
 
   it('does not apply to schedules and PR reviews', () => {
@@ -75,7 +75,7 @@ describe('clampCaps', () => {
   it('uses the defaults for missing values and keeps the hard limits', () => {
     expect(clampCaps(undefined)).toEqual(DEFAULT_CAPS)
     expect(clampCaps({ minEvery: 1, maxEnabled: 500, maxFailures: 0 })).toEqual({ minEvery: 5, maxEnabled: 50, maxFailures: 3 })
-    expect(clampCaps({ minEvery: 'x' as unknown as number, maxEnabled: 7 })).toEqual({ minEvery: 15, maxEnabled: 7, maxFailures: 10 })
+    expect(clampCaps({ minEvery: 'x' as unknown as number, maxEnabled: 7 })).toEqual({ minEvery: 5, maxEnabled: 7, maxFailures: 10 })
   })
 })
 
@@ -90,10 +90,10 @@ describe('firable, hookAllowed, reenable', () => {
     expect(ok.has('t21')).toBe(true)
     expect(list.every((x) => x.enabled)).toBe(true)
   })
-  it('drops a webhook fire inside 15 minutes', () => {
+  it('drops a webhook fire inside 5 minutes', () => {
     expect(hookAllowed(undefined, 1000)).toBe(true)
-    expect(hookAllowed(0, 14 * 60_000)).toBe(false)
-    expect(hookAllowed(0, 15 * 60_000)).toBe(true)
+    expect(hookAllowed(0, 4 * 60_000)).toBe(false)
+    expect(hookAllowed(0, 5 * 60_000)).toBe(true)
   })
   it('re-enable clears the failure state', () => {
     const t = afterRun<Capped>({ id: 'a', enabled: true, when: every, failures: 9 }, false)

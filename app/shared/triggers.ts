@@ -76,7 +76,7 @@ export function newReviews(seen: Set<string> | null, keys: string[]): { fresh: s
   return { fresh: keys.filter((k) => !seen.has(k)), seen: now }
 }
 
-export function cleanTrigger(t: Partial<Trigger>, minEvery = 15): Trigger {
+export function cleanTrigger(t: Partial<Trigger>, minEvery = 5): Trigger {
   const w = t.when ?? { kind: 'schedule', days: [1, 2, 3, 4, 5], time: '09:00' }
   const when: When =
     w.kind === 'every'

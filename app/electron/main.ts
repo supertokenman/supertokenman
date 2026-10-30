@@ -1435,7 +1435,7 @@ function syncWebhook() {
       })
       req.on('end', () => {
         if (size > WH.MAX_BODY || res.writableEnded) return
-        // one fire per 15 minutes (the cap); a fire inside is dropped and audited
+        // one fire per minEvery minutes (the cap); a fire inside is dropped and audited
         const now = Date.now()
         if (!canFire(`trigger:${t.id}`) || !hookAllowed(hookLast.get(t.id), now, controlCaps())) {
           auditCap(`webhook trigger "${t.name}" dropped: fires at most every ${controlCaps().minEvery} minutes`, 'deny')

@@ -22,7 +22,7 @@ export function routinePrompt(r: Routine): string {
 }
 
 /** A routine can be saved only with a name, a folder and something to do. */
-export function checkRoutine(r: Partial<Routine>, minEvery = 15): string | null {
+export function checkRoutine(r: Partial<Routine>, minEvery = 5): string | null {
   if (!r.name?.trim()) return 'Name the routine.'
   if (!r.cwd?.trim()) return 'Pick the project folder.'
   if (!r.skill?.trim() && !r.params?.trim()) return 'Pick a skill or write what it should do.'

@@ -5,7 +5,7 @@
 import type { When } from './triggers.js'
 
 export type Caps = { minEvery: number; maxEnabled: number; maxFailures: number }
-export const DEFAULT_CAPS: Caps = { minEvery: 15, maxEnabled: 20, maxFailures: 10 }
+export const DEFAULT_CAPS: Caps = { minEvery: 5, maxEnabled: 20, maxFailures: 10 }
 /** Hard limits: the interval never drops under 5 minutes, at most 50 enabled, at least 3 failures before auto-disable. */
 export const HARD = { minEvery: 5, maxEnabled: 50, minFailures: 3 } as const
 
