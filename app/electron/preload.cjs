@@ -964,6 +964,38 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('lead:pulse', l)
     },
   },
+  queue: {
+    get: (sid) => ipcRenderer.invoke('queue:get', sid),
+    act: (sid, action) => ipcRenderer.invoke('queue:act', sid, action),
+    onChanged: (fn) => {
+      const l = (_e, sid, v) => fn(sid, v)
+      ipcRenderer.on('queue:changed', l)
+      return () => ipcRenderer.removeListener('queue:changed', l)
+    },
+  },
+  failover: {
+    prefsGet: (sid) => ipcRenderer.invoke('failover:prefs:get', sid),
+    prefsSet: (sid, prefs) => ipcRenderer.invoke('failover:prefs:set', sid, prefs),
+    current: (sid) => ipcRenderer.invoke('failover:current', sid),
+    choose: (sid, cardId, choice, always, confirm) => ipcRenderer.invoke('failover:choose', sid, cardId, choice, always, confirm),
+    onCard: (fn) => {
+      const l = (_e, sid, v) => fn(sid, v)
+      ipcRenderer.on('failover:card', l)
+      return () => ipcRenderer.removeListener('failover:card', l)
+    },
+  },
+  channel: {
+    teams: () => ipcRenderer.invoke('channel:teams'),
+    list: (team, o) => ipcRenderer.invoke('channel:list', team, o),
+    post: (team, input) => ipcRenderer.invoke('channel:post', team, input),
+    pin: (team, id, on) => ipcRenderer.invoke('channel:pin', team, id, on),
+    sendNow: (team, wakeId) => ipcRenderer.invoke('channel:sendNow', team, wakeId),
+    onPosted: (fn) => {
+      const l = (_e, team, v) => fn(team, v)
+      ipcRenderer.on('channel:posted', l)
+      return () => ipcRenderer.removeListener('channel:posted', l)
+    },
+  },
   uiTools: {
     onCmd: (fn) => {
       const l = (_e, r) => fn(r)

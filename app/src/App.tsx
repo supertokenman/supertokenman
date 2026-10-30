@@ -149,6 +149,7 @@ import { EmptyStart } from './EmptyStart'
 import { FolderPickerHost, pickProjectFolder } from './FolderPicker'
 import { FilePickerHost } from './FilePicker'
 import { alertDialog, confirmDialog, ContextMenuHost, DialogHost } from './ui'
+import { ChannelHost } from './ChannelHost'
 
 import { MusicChip, MusicSheet, useSpotify } from './Music'
 
@@ -1373,6 +1374,7 @@ export function App() {
       <FolderPickerHost recents={recentDirs} />
       <FilePickerHost />
       <DialogHost />
+      <ChannelHost />
       <ContextMenuHost />
       <header className={`top ${topFit === 'tightest' ? 'tight tighter tightest' : topFit === 'tighter' ? 'tight tighter' : topFit}`} ref={topRef}>
         <div className="brand">

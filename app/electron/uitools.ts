@@ -7,7 +7,7 @@ import { listPanels, type WinPanel } from '../shared/uitools.js'
 import { planDelegation, summarizeResult, taskTitle, type Result, type WorkerInfo } from '../shared/lead.js'
 import { checkArrange, checkLayout, checkLinks, checkOpen, layoutSchema, linkSpecSchema, MAX_LINKS, MAX_OPEN, panelSpecSchema, type LinkSpec, type PanelSpec, type UiLayout } from '../shared/uitools.js'
 
-export const UI_TOOLS = ['ui_set_layout', 'ui_open_panels', 'ui_link_panels', 'ui_arrange', 'ui_list_panels', 'delegate', 'collect'].map((n) => `mcp__stm__${n}`)
+export const UI_TOOLS = ['ui_set_layout', 'ui_open_panels', 'ui_link_panels', 'ui_arrange', 'ui_list_panels', 'delegate', 'collect', 'channel_post', 'channel_read', 'channel_mentions'].map((n) => `mcp__stm__${n}`)
 
 export type UiPanel = { id: string; folder: string; name: string; persona: string | null }
 export type UiLink = { a: string; b: string; auto: boolean }
@@ -31,6 +31,16 @@ export type UiDeps = {
   /** counts the spawn against the limit, opens the panel, returns its id */
   open: (p: PanelSpec & { folder: string }) => Promise<string>
   log: (msg: string) => void
+  /** the team channel of the calling panel's team; every call throws a clear error when the panel is in no team */
+  channel?: {
+    /** @handles of the team, to mention */
+    handles: () => string[]
+    post: (kind: 'handoff' | 'question' | 'review' | 'result' | 'note', text: string, replyTo?: string) => Promise<{ id: string; wakes: string[] }>
+    /** lines of the newest posts after `since` (epoch ms), at most `limit` */
+    read: (since?: number, limit?: number) => string[]
+    /** lines of the posts that mention the caller; unreadOnly marks them read */
+    mentions: (unreadOnly: boolean) => string[]
+  }
   /** the lead panel's side; absent in tests of the other tools */
   lead?: {
     leads: () => Set<string>
@@ -178,6 +188,53 @@ export function uiTools(d: UiDeps) {
           await L.send(id, a.task)
           d.log(`delegated to ${id}`)
           return text(`Delegated to ${id} (${plan.kind === 'reuse' ? 'reused' : 'opened'}). Call collect with this id when you have nothing else to do.`)
+        } catch (e) {
+          return fail((e as Error).message)
+        }
+      },
+    ),
+    tool(
+      'channel_post',
+      'Post to your team channel (the lead panel and its workers share one). kind is handoff (give work), question, review, result (what you finished) or note. Write @name to wake a teammate: a post by a worker wakes only linked panels, waits in their queue for the person unless the link is auto, and never goes past the send and link limits. Keep posts short; put long output in a file and name it.',
+      { kind: z.enum(['handoff', 'question', 'review', 'result', 'note']), text: z.string().min(1).max(8000), replyTo: z.string().max(64).optional() },
+      async ({ kind, text: body, replyTo }) => {
+        const C = d.channel
+        if (!C) return fail('The team channel is not available here.')
+        try {
+          const r = await C.post(kind, body, replyTo)
+          d.log(`channel post ${r.id}`)
+          return text(`Posted ${r.id} to the team channel.${r.wakes.length ? ` Mentions: ${r.wakes.join('; ')}.` : ''}`)
+        } catch (e) {
+          return fail((e as Error).message)
+        }
+      },
+    ),
+    tool(
+      'channel_read',
+      'Read the newest posts of your team channel (up to 50, each cut to 2000 characters). since is an epoch time in milliseconds to read only newer posts.',
+      { since: z.number().int().min(0).optional(), limit: z.number().int().min(1).max(50).optional() },
+      async ({ since, limit }) => {
+        const C = d.channel
+        if (!C) return fail('The team channel is not available here.')
+        try {
+          const lines = C.read(since, limit)
+          return text(lines.length ? lines.join('\n') : 'No posts yet.')
+        } catch (e) {
+          return fail((e as Error).message)
+        }
+      },
+      { annotations: { readOnlyHint: true } },
+    ),
+    tool(
+      'channel_mentions',
+      'Posts in your team channel that mention you. By default only the ones you have not read; they are marked read.',
+      { unreadOnly: z.boolean().optional() },
+      async ({ unreadOnly }) => {
+        const C = d.channel
+        if (!C) return fail('The team channel is not available here.')
+        try {
+          const lines = C.mentions(unreadOnly !== false)
+          return text(lines.length ? lines.join('\n') : 'No mentions.')
         } catch (e) {
           return fail((e as Error).message)
         }

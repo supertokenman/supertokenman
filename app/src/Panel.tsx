@@ -3,6 +3,9 @@ import { Windowed } from './windowed'
 import { pickAttachments } from './FilePicker'
 import { StateMark } from './StateMark'
 import { LoopNotice, LOOP_CONTINUE } from './LoopNotice'
+import { useQueueState } from './queueHook'
+import { useFailoverCard } from './failoverHook'
+import { openChannel } from './channelOpen'
 import { cacheLeft, coldExtraUsd } from '../shared/cache'
 import { Thinking } from './Thinking'
 import { IMAGE_TYPES, imageTypeOf, MAX_ATTACHMENTS, MAX_IMAGE_BYTES, type Attachment } from '../shared/attach'
@@ -58,6 +61,9 @@ export const toolName = (n: string) =>
 // the terminal (xterm, a third of the start-up bundle) and Preview load the first time their tab opens
 const PreviewView = lazy(() => import('./PreviewView').then((m) => ({ default: m.PreviewView })))
 const UsageChip = lazy(() => import('./UsageChip').then((m) => ({ default: m.UsageChip })))
+const QueueList = lazy(() => import('./QueueList'))
+const FailoverCard = lazy(() => import('./FailoverCard'))
+const FallbackChip = lazy(() => import('./FailoverCard').then((m) => ({ default: m.FallbackChip })))
 const TermView = lazy(() => import('./TermView').then((m) => ({ default: m.TermView })))
 
 const COMMANDS = /^(git|npm|npx|pnpm|yarn|bun|node|deno|python3?|pip3?|uv|ls|cd|cat|grep|rg|find|make|cargo|go|docker|kubectl|wrangler|supabase|neonctl|gh|curl|brew|tsc|vitest|jest|pytest|ruby|bundle|rails|php|composer|mvn|gradle|terraform|aws|gcloud|ssh|scp|rm|mv|cp|mkdir|touch|echo|export|source|chmod|tail|head|ps|kill|open|code)(\s|$)/
@@ -362,6 +368,9 @@ export function Panel(props: {
     setTimeout(() => setSaved(''), 4000)
   }
 
+  const queued = useQueueState(sid)
+  const [fbOpen, setFbOpen] = useState(false)
+  const failCard = useFailoverCard(sid)
   const submit = (text: string, checked = false, outsideChecked = false, list = ctx) => {
     let typed = text.trim()
     if (!typed && !atts.length && !list.length) return
@@ -458,6 +467,12 @@ export function Panel(props: {
     setTab('chat')
     const sending = atts
     setAtts([])
+    // a turn is running: the message goes into the queue and leaves when the turn ends (attachments still go straight in)
+    if (s.busy && !sending.length) {
+      setCtx([])
+      void window.stm.queue.act(sid, { t: 'add', item: { id: crypto.randomUUID(), text: t, at: Date.now(), state: 'waiting' } }).catch((e: Error) => dispatch({ kind: 'note', tone: 'error', text: e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') }))
+      return
+    }
     const shown = list.length ? [typed, `+ ${list.map((c) => c.label).join(', ')}`].filter(Boolean).join('\n') : t
     setCtx([])
     dispatch({ kind: 'sent', text: shown, at: Date.now(), images: sending.flatMap((a) => (a.kind === 'image' ? [`data:${a.mediaType};base64,${a.data}`] : [])), files: sending.flatMap((a) => (a.kind === 'file' ? [a.path] : [])) })
@@ -641,6 +656,8 @@ export function Panel(props: {
             <button className="ghost small" data-tip={props.role === 'lead' ? 'This panel stops being the lead; its workers are unlinked' : 'This panel plans and hands tasks to worker panels; workers only execute and answer it'} onClick={() => props.onLead!(props.role !== 'lead')}>{props.role === 'lead' ? 'Remove lead' : 'Make lead'}</button>
           )}
           <span className="more-meter">{s.context ? `Context ${Math.round(s.context.percent)}% used of ${Math.round(s.context.window / 1000)}k. ` : ''}{props.money(s.costUsd)} spent.</span>
+          {props.role && <button className="ghost small" data-tip="The shared channel of the lead and its workers" onClick={() => openChannel()}>Team channel</button>}
+          {fbOpen ? <Suspense fallback={null}><FallbackChip sid={sid} /></Suspense> : <button className="ghost small" data-tip="What to offer when a limit or an outage stops a turn" onClick={() => setFbOpen(true)}>Fallback</button>}
           <LinksChip sid={sid} />
           {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
           <Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense>
@@ -790,6 +807,7 @@ export function Panel(props: {
               </div>
             </div>
           )}
+          {failCard && <Suspense fallback={null}><FailoverCard sid={sid} card={failCard} /></Suspense>}
           {s.loop && !s.busy && (
             <LoopNotice
               loop={s.loop}
@@ -996,6 +1014,7 @@ export function Panel(props: {
           </div>
         )}
         {s.snapshot && !snapHidden && <SnapshotCard sid={sid} text={s.snapshot.text} inject={s.snapshot.inject} onDone={() => setSnapHidden(true)} />}
+        {queued.count > 0 && <Suspense fallback={null}><QueueList sid={sid} money={money} /></Suspense>}
         <div className="composer">
           <button className="attach" data-tip="Attach files, folders or images (or paste and drop them)" aria-label="Attach" onClick={async () => {
             const picked = await pickAttachments(s.cwd)
