@@ -929,15 +929,15 @@ contextBridge.exposeInMainWorld('stm', {
     roomNext: () => ipcRenderer.invoke('room:next'),
   },
   teamBundle: {
-    exportTo: () => ipcRenderer.invoke('team:export'),
-    importFrom: () => ipcRenderer.invoke('team:import'),
+    exportTo: () => ipcRenderer.invoke('teambundle:export'),
+    importFrom: () => ipcRenderer.invoke('teambundle:import'),
     onReview: (fn) => {
       const l = (_e, r) => fn(r)
       ipcRenderer.on('team:review', l)
       return () => ipcRenderer.removeListener('team:review', l)
     },
     prepare: (team, base) => ipcRenderer.invoke('team:prepare', team, base),
-    apply: (team, opened) => ipcRenderer.invoke('team:apply', team, opened),
+    apply: (team, opened) => ipcRenderer.invoke('teambundle:apply', team, opened),
   },
   away: {
     get: () => ipcRenderer.invoke('away:get'),
