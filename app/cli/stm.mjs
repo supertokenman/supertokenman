@@ -22,6 +22,10 @@ const HELP = `stm, SuperTokenMan from the command line (the app must be running)
                                      review loop: each build reply goes to review and back until APPROVED or a limit
   stm loop stop <panel>              end the review loop that panel is in
   stm learn [--min 2] [--pick 1,3]   review notes from denials as proposed CLAUDE.local.md lines; --pick writes them
+  stm wait --for blocked|idle|done <panel> [--timeout 10m]
+                                     wait for another panel; sends nothing. exit 0 met (prints the state),
+                                     2 timeout, 3 panel closed, 4 refused (it already waits on this panel), 1 error
+  stm state [<panel>]                state of one panel or all: working, waiting_approval, waiting_input, idle, error
   stm send <panel|new> "text"        put a message in the panel's composer; the person sends it
                                      --now sends it at once and waits for the reply (--no-wait to return at once)
        [--cwd DIR] [--persona ID]    for "new": the folder and persona of the panel to open
@@ -183,7 +187,15 @@ try {
     }
     process.exit(code)
   } else if (cmd === 'status') print(await call('status', {}), (d) => [`SuperTokenMan ${d.version}`, `${d.panels} panel${d.panels === 1 ? '' : 's'} open, ${d.busy} working`, `Spent today ${money(d.todayUsd)}`, `Headroom ${d.headroom ? 'on' : 'off'} · local model ${d.localModel ?? 'none'}`].join('\n'))
-  else if (cmd === 'key') {
+  else if (cmd === 'state') {
+    const d = await call('state', { panel: rest[0] })
+    print(d, (r) => (Array.isArray(r) ? r.map((p) => `${pad(p.panel, 5)} ${pad(p.state, 17)} ${p.name ?? ''}${p.reason ? ` (${p.reason})` : ''}`).join('\n') || 'No panels open.' : `${r.panel} ${r.state}${r.reason ? ` (${r.reason})` : ''}`))
+  } else if (cmd === 'wait') {
+    if (!flags.for || !rest[0]) die('Usage: stm wait --for blocked|idle|done <panel> [--timeout 10m]')
+    const d = await call('wait', { panel: rest[0], for: flags.for, timeout: flags.timeout, from: process.env.STM_PANEL })
+    print(d, (r) => (r.code === 4 ? `Refused: ${r.error}` : r.code === 3 ? `Panel ${r.panel} closed.` : r.code === 2 ? `Timed out; ${r.panel} is ${r.state}${r.reason ? ` (${r.reason})` : ''}.` : `${r.panel} ${r.state}${r.reason ? ` (${r.reason})` : ''}`))
+    process.exitCode = d.code
+  } else if (cmd === 'key') {
     // only for Claude Code's apiKeyHelper: the bare key on stdout, nothing else
     if (!rest[0]) die('Usage: stm key <NAME>')
     const d = await call('key', { name: rest[0] })

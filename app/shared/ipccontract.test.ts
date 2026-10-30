@@ -21,6 +21,20 @@ describe('IPC contract', () => {
   it('every channel in the contract exists', () => {
     expect(Object.keys(CONTRACT).filter((c) => !handled.has(c))).toEqual([])
   })
+  it('runtime channels: states, snapshot, keepRunning, stopAll, resume dismissal', () => {
+    for (const c of ['panel:states', 'runtime:snapshot', 'runtime:keepRunning', 'runtime:stopAll', 'runtime:dismissResume']) {
+      expect(Object.keys(CONTRACT)).toContain(c)
+      expect(handled.has(c)).toBe(true)
+      expect(preload).toContain(`'${c}'`)
+    }
+    expect(checkArgs('runtime:keepRunning', [])).toBeNull()
+    expect(checkArgs('runtime:keepRunning', [true])).toBeNull()
+    expect(checkArgs('runtime:keepRunning', ['yes'])).toBeTruthy()
+    expect(checkArgs('runtime:snapshot', ['extra'])).toBeTruthy()
+    // the main process pushes state changes to the window
+    expect(preload).toContain("ipcRenderer.on('panel:state'")
+    expect(main).toMatch(/toWin\('panel:state'/)
+  })
   it('refuses arguments outside the contract', () => {
     expect(checkArgs('vault:set', ['GITHUB_TOKEN', 'ghp_x'])).toBeNull()
     expect(checkArgs('vault:set', ['../../etc', 'x'])).toMatch(/secret name/)

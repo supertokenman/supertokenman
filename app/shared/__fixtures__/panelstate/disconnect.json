@@ -1,0 +1,10 @@
+{
+  "description": "ssh drops mid-turn; a new prompt resumes the panel",
+  "events": [
+    { "signal": { "kind": "prompt" } },
+    { "signal": { "kind": "disconnect" } },
+    { "signal": { "kind": "prompt" } },
+    { "signal": { "kind": "message", "msg": { "type": "result", "subtype": "success", "is_error": false, "result": "Resumed.", "num_turns": 1, "duration_ms": 300, "total_cost_usd": 0 } } }
+  ],
+  "states": ["working", "error", "working", "idle"]
+}

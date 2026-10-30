@@ -378,3 +378,65 @@ describe('Session options changed before the first message', () => {
     s.close()
   })
 })
+
+describe('Session turn end, steer and failures', () => {
+  const result = (extra: Record<string, unknown> = {}) => ({ type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0, usage: { input_tokens: 1, output_tokens: 1 }, ...extra }) as unknown as SDKMessage
+
+  it('calls onTurnEnd once per turn after busy is current, true for a good turn', async () => {
+    const ends: { ok: boolean; busy: boolean }[] = []
+    const q = fakeQuery(async function* () { yield result() })
+    const s: Session = new Session(() => {}, { cwd: '/proj', query: q.fn, onTurnEnd: (ok) => ends.push({ ok, busy: s.busy }) })
+    s.start()
+    s.send('one')
+    await settle()
+    s.send('two')
+    await settle()
+    expect(ends).toEqual([{ ok: true, busy: false }, { ok: true, busy: false }])
+    s.close()
+  })
+
+  it('reports a failed turn with the API status, and tells the hook it failed', async () => {
+    const events: UiEvent[] = []
+    const ends: boolean[] = []
+    const q = fakeQuery(async function* () { yield result({ is_error: true, result: 'API Error: 429 {"type":"error","error":{"type":"rate_limit_error"}}', api_error_status: 429 }) })
+    const s = new Session((e) => events.push(e), { cwd: '/proj', query: q.fn, onTurnEnd: (ok) => ends.push(ok) })
+    s.start()
+    s.send('go')
+    await settle()
+    const turn = events.find((e) => e.kind === 'turn')
+    expect(turn).toMatchObject({ isError: true, status: 429, text: expect.stringContaining('429') })
+    expect(ends).toEqual([false])
+    s.close()
+  })
+
+  it('steer ends the running turn as an app stop (not an error) and does nothing when idle', async () => {
+    const events: UiEvent[] = []
+    const ends: boolean[] = []
+    let release: () => void = () => {}
+    const fn = (p: { prompt: AsyncIterable<SDKUserMessage>; options?: Options }) => {
+      async function* run() {
+        yield { type: 'system', subtype: 'init', session_id: 's1', model: 'm', cwd: '/proj' } as unknown as SDKMessage
+        for await (const _m of p.prompt) {
+          await new Promise<void>((r) => (release = r))
+          yield result({ is_error: true, subtype: 'error_during_execution', result: undefined })
+        }
+      }
+      const it = run() as unknown as Query
+      ;(it as unknown as { interrupt: () => Promise<void> }).interrupt = async () => release()
+      ;(it as unknown as { getContextUsage: () => Promise<unknown> }).getContextUsage = async () => null
+      return it
+    }
+    const s = new Session((e) => events.push(e), { cwd: '/proj', query: fn as never, onTurnEnd: (ok) => ends.push(ok) })
+    s.start()
+    expect(await s.steer()).toBe(false)
+    s.send('long job')
+    await settle()
+    expect(s.busy).toBe(true)
+    expect(await s.steer()).toBe(true)
+    await settle()
+    expect(events.find((e) => e.kind === 'turn')).toMatchObject({ isError: false, text: '' })
+    expect(ends).toEqual([true])
+    expect(s.busy).toBe(false)
+    s.close()
+  })
+})

@@ -1,0 +1,12 @@
+{
+  "description": "a tool asks for approval: waiting_approval until answered, then working again",
+  "events": [
+    { "signal": { "kind": "prompt" } },
+    { "signal": { "kind": "message", "msg": { "type": "assistant", "parent_tool_use_id": null, "message": { "id": "m1", "role": "assistant", "model": "claude-sonnet-5", "content": [{ "type": "tool_use", "id": "toolu_1", "name": "Bash", "input": { "command": "npm test" } }] } } } },
+    { "signal": { "kind": "approval", "pending": 1 } },
+    { "signal": { "kind": "approval", "pending": 0 } },
+    { "signal": { "kind": "message", "msg": { "type": "user", "parent_tool_use_id": null, "message": { "role": "user", "content": [{ "type": "tool_result", "tool_use_id": "toolu_1", "content": "ok", "is_error": false }] } } } },
+    { "signal": { "kind": "message", "msg": { "type": "result", "subtype": "success", "is_error": false, "result": "Ran the tests.", "num_turns": 1, "duration_ms": 4000, "total_cost_usd": 0.02 } } }
+  ],
+  "states": ["working", "working", "waiting_approval", "working", "working", "idle"]
+}

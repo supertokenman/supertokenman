@@ -13,6 +13,14 @@ export function fakeAnthropic(port = 0) {
       const b = JSON.parse(body || '{}')
       bodies.push(body)
       if (b.stream !== true) return res.writeHead(200, { 'content-type': 'application/json' }), res.end(JSON.stringify({ id: 'm', type: 'message', role: 'assistant', model: b.model, content: [{ type: 'text', text: 'ok' }], stop_reason: 'end_turn', usage: { input_tokens: 5, output_tokens: 1 } }))
+      // a message that carries E2E_SLOW is answered after a pause, so a test can queue messages while the turn runs
+      const last = JSON.stringify([...(b.messages ?? [])].reverse().find((m) => m.role === 'user') ?? '')
+      const pause = b.tools?.length && last.includes('E2E_SLOW') ? 4000 : 0
+      setTimeout(() => answer(b, res), pause)
+    })
+  })
+  function answer(b, res) {
+    {
       res.writeHead(200, { 'content-type': 'text/event-stream' })
       const ev = (type, data) => res.write(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`)
       const text = b.tools?.length ? 'E2E reply: the panel works.' : 'E2E title'
@@ -23,7 +31,7 @@ export function fakeAnthropic(port = 0) {
       ev('message_delta', { delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 8 } })
       ev('message_stop', {})
       res.end()
-    })
-  })
+    }
+  }
   return new Promise((ok) => server.listen(port, '127.0.0.1', () => ok({ bodies, url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() })))
 }

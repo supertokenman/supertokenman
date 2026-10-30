@@ -297,6 +297,13 @@ Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or g
 - [ ] Wave 2: pack store, git fetch on click, IPC, per-project MCP injection, eval in two worktrees.
 - [ ] Wave 3: Packs catalog, review screen (files, servers, hosts, env, rules), eval view; NETWORK.md Packs section.
 
+## Panel queue, failover with notice, team channel
+
+- [x] Panel message queue: a send while a turn runs waits under the composer (edit, reorder, cancel, pause, resume, steer next turn or interrupt); loads paused after a restart; cost estimate from 3 items. Spec: `spec-qfc.md`.
+- [x] Failover card: on a plan limit, 429, overload or outage the panel offers Switch to the fallback (another model, or the custom endpoint after a confirm), Wait until the reset, or Cancel; never silent; switches are noted in the transcript and written to `failover-log.jsonl`.
+- [x] Team channel: one per lead and its workers, local jsonl, stm tools `mcp__stm__channel_post`, `channel_read`, `channel_mentions`; mentions routed through links, limits and approvals; `stm ask`, delegate and results mirrored; canvas edge pulse and unread badge.
+- [ ] Not done: asks delivered as queued still go to the composer (not the queue); attachments sent while busy bypass the queue; no automatic return to the primary model after a reset; a worker-to-worker mention needs a link between them.
+
 ## Later
 
 - A plugin store in the Catalog: anyone publishes personas, skills and integrations with their own page;
@@ -306,3 +313,7 @@ Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or g
 - UI backlog leftovers (`docs/UI-BACKLOG.md`): empty sheets, copyable commands, left edges, one accent.
 - Vault passwords URL-encoded in database connections; single-step guides without "0 of 1"; the
   Ollama next-step banner.
+
+## Planned: background panels, precise state and wait, SSH machines
+
+Spec: `spec-runtime.md`. Optional "Keep panels running" (off by default): panels survive closing the window, with a menu bar count, today's cost and Stop all; after a reboot the layout comes back with an offer to resume, never auto-run. Panel states working, waiting approval, waiting input, idle and error, plus `stm wait --for blocked|idle|done`. Saved SSH hosts with independent reconnect, one at a time in v1.
