@@ -91,8 +91,11 @@ export type Bridge = {
     runs: () => Promise<import('../shared/runs').Run[]>
     begin: (sid: string, t: { id: string; name: string; prompt: string; gate?: boolean }, resume?: string) => Promise<void>
     gate: (run: string, ok: boolean) => Promise<void>
+    caps: () => Promise<import('./control/types').CapsInfo>
+    setCaps: (caps: import('./control/types').Caps) => Promise<import('./control/types').CapsInfo>
     onFire: (cb: (t: { id: string; name: string; persona: string; cwd: string; prompt: string; gate?: boolean }) => void) => () => void
   }
+  control: import('./control/types').ControlApi
   storage: {
     get: () => Promise<{ config: StorageConfig | null; hasKeys: boolean; providers: Record<string, { name: string; needs: string[]; hint: string; keysAt: string }> }>
     set: (config: Partial<StorageConfig>, keys?: { accessKeyId: string; secretAccessKey: string }) => Promise<{ config: StorageConfig; hasKeys: boolean }>

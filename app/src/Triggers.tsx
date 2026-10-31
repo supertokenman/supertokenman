@@ -1,5 +1,5 @@
 import { pickProjectFolder } from './FolderPicker'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { IconClose } from './icons'
 import type { Persona } from '../shared/personas'
 import { DAYS, describe, EVERY, nextRun, type Trigger, type When } from '../shared/triggers'
@@ -7,6 +7,9 @@ import { clean } from './errors'
 import type { Run } from '../shared/runs'
 import { Checkbox, Select, TimeField } from './ui'
 import { PORT } from '../shared/webhook'
+
+const CapsLine = lazy(() => import('./control/TriggerCaps').then((m) => ({ default: m.CapsLine })))
+const DisabledNote = lazy(() => import('./control/TriggerCaps').then((m) => ({ default: m.DisabledNote })))
 
 const ago = (t?: number) => {
   if (!t) return 'Never ran'
@@ -67,6 +70,7 @@ export function Triggers(props: { cwd: string; onClose: () => void }) {
             </div>
           ) : (
             <div className="trig-list">
+              <Suspense fallback={null}><CapsLine refresh={list} /></Suspense>
               {runs.length > 0 && (
                 <div className="trig-runs">
                   <div className="sp-label">Runs that did not finish</div>
@@ -100,6 +104,7 @@ export function Triggers(props: { cwd: string; onClose: () => void }) {
                         <span className="faint"> · {ago(t.lastRun)}</span>
                       </div>
                       <div className="trig-prompt">{t.prompt}</div>
+                      {t.disabledReason === 'failures' && <Suspense fallback={null}><DisabledNote t={t} onEnable={() => void run(() => window.stm.triggers.save({ ...t, enabled: true }))} /></Suspense>}
                     </div>
                     <div className="trig-actions">
                       <button className="ghost small" onClick={() => void run(() => window.stm.triggers.run(t.id))}>Run now</button>

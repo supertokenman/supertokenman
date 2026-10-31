@@ -63,6 +63,8 @@ export const toolName = (n: string) =>
 const PreviewView = lazy(() => import('./PreviewView').then((m) => ({ default: m.PreviewView })))
 const UsageChip = lazy(() => import('./UsageChip').then((m) => ({ default: m.UsageChip })))
 const QueueList = lazy(() => import('./QueueList'))
+const PlanStrip = lazy(() => import('./control/PlanStrip'))
+const PanelControl = lazy(() => import('./control/PanelControl'))
 const FailoverCard = lazy(() => import('./FailoverCard'))
 const FallbackChip = lazy(() => import('./FailoverCard').then((m) => ({ default: m.FallbackChip })))
 const TermView = lazy(() => import('./TermView').then((m) => ({ default: m.TermView })))
@@ -665,6 +667,7 @@ export function Panel(props: {
           {props.role && <button className="ghost small" data-tip="The shared channel of the lead and its workers" onClick={() => openChannel()}>Team channel</button>}
           {fbOpen ? <Suspense fallback={null}><FallbackChip sid={sid} /></Suspense> : <button className="ghost small" data-tip="What to offer when a limit or an outage stops a turn" onClick={() => setFbOpen(true)}>Fallback</button>}
           <LinksChip sid={sid} />
+          <Suspense fallback={null}><PanelControl sid={sid} cwd={s.cwd} busy={s.busy} /></Suspense>
           {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
           <Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense>
           <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
@@ -700,6 +703,7 @@ export function Panel(props: {
           <i style={{ width: `${Math.min(100, Math.max(0, s.context?.percent ?? 0))}%` }} />
         </div>
       )}
+      <Suspense fallback={null}><PlanStrip sid={sid} compact={inCanvas} /></Suspense>
       <div className="hud" data-tip={WHY[mood]} role="img" aria-label={WHY[mood]} dangerouslySetInnerHTML={{ __html: themed(hudMini(hudView(s, money, Date.now()))) }} />
 
       {/* stays mounted once opened, so switching tabs keeps the page and its state */}
