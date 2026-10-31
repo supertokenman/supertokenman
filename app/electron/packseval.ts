@@ -12,12 +12,14 @@ import type { Worktree } from './worktree.js'
 
 export type EvalWorktree = Worktree & { group?: string; attempt?: number; of?: number }
 
+type Stat = { files: number; added: number; removed: number; list?: { path: string; added: number; removed: number }[] }
+
 export type EvalDeps = {
   packs: Packs
   worktreesHome: () => string
   createWorktree: (cwd: string, home: string, label: string) => Promise<Worktree>
   dropWorktree: (w: Worktree) => Promise<boolean>
-  worktreeStat: (w: Worktree) => Promise<{ files: number; added: number; removed: number }>
+  worktreeStat: (w: Worktree) => Promise<Stat>
   /** Remember the worktree so a panel opened on it is treated as one (main's settings list). */
   remember: (w: EvalWorktree) => void
   forget: (w: Worktree) => void
@@ -35,8 +37,23 @@ export type EvalDeps = {
   pollMs?: number
 }
 
-type SideRec = { sid: string; wt: Worktree; sent: boolean; failed: string | null; endedAt: number | null; capped: boolean }
+type SideRec = { baseline?: Stat['list']; sid: string; wt: Worktree; sent: boolean; failed: string | null; endedAt: number | null; capped: boolean }
 type Rec = { id: string; packId: string; version: string; root: string; prompt: string; model: string; maxTurns: number; startedAt: number; with: SideRec; without: SideRec; timer: ReturnType<typeof setInterval> | null }
+
+/** The diff of a worktree without what the pack's install wrote: a file whose counts did not move since the
+ *  install is dropped, one the task changed further keeps only the difference. */
+export function withoutBaseline(st: Stat, baseline: Stat['list']): Stat {
+  if (!baseline?.length || !st.list) return st
+  const was = new Map(baseline.map((x) => [x.path, x]))
+  const list = st.list.flatMap((x) => {
+    const b = was.get(x.path)
+    if (!b) return [x]
+    const added = Math.max(0, x.added - b.added)
+    const removed = Math.max(0, x.removed - b.removed)
+    return added || removed ? [{ path: x.path, added, removed }] : []
+  })
+  return { files: list.length, added: list.reduce((n, x) => n + x.added, 0), removed: list.reduce((n, x) => n + x.removed, 0), list }
+}
 
 export function createPackEval(d: EvalDeps) {
   const evals = new Map<string, Rec>()
@@ -97,6 +114,8 @@ export function createPackEval(d: EvalDeps) {
       for (const [server, on] of Object.entries(inst?.mcpEnabled ?? {})) if (on && !server.includes('@')) d.packs.setMcp(packId, withWt.path, server, true)
       for (const sub of [`.claude/skills/${packId}`, `.claude/packs/${packId}`]) if (existsSync(join(withoutWt.path, sub))) rmSync(join(withoutWt.path, sub), { recursive: true, force: true })
 
+      // what the install itself changed: taken off the "with" side later, so only the task's own changes count
+      const installed = await d.worktreeStat(withWt).catch(() => null)
       const sidWith = await d.open(withWt.path, model)
       const sidWithout = await d.open(withoutWt.path, model)
       const rec: Rec = {
@@ -108,7 +127,7 @@ export function createPackEval(d: EvalDeps) {
         model,
         maxTurns,
         startedAt: now(),
-        with: { sid: sidWith, wt: withWt, sent: false, failed: null, endedAt: null, capped: false },
+        with: { baseline: installed?.list, sid: sidWith, wt: withWt, sent: false, failed: null, endedAt: null, capped: false },
         without: { sid: sidWithout, wt: withoutWt, sent: false, failed: null, endedAt: null, capped: false },
         timer: null,
       }
@@ -144,7 +163,7 @@ export function createPackEval(d: EvalDeps) {
 
   async function sideOf(r: Rec, s: SideRec, attempt: number): Promise<EvalSide> {
     const u = d.usage(s.sid)
-    const st = await d.worktreeStat(s.wt).catch(() => ({ files: 0, added: 0, removed: 0 }))
+    const st = withoutBaseline(await d.worktreeStat(s.wt).catch((): Stat => ({ files: 0, added: 0, removed: 0 })), s.baseline)
     const busy = d.busy(s.sid) || !s.sent
     const base: Attempt = { sid: s.sid, attempt, model: r.model, busy: busy && !s.failed, costUsd: u.usd ?? 0, ms: (s.endedAt ?? now()) - r.startedAt, files: st.files, added: st.added, removed: st.removed, tests: null }
     return { ...base, turns: u.turns, tokens: u.tokens ?? 0, ok: !s.failed, capped: s.capped }

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createPacks } from './packs'
-import { createPackEval, type EvalWorktree } from './packseval'
+import { createPackEval, withoutBaseline, type EvalWorktree } from './packseval'
 
 let tmp: string
 beforeEach(() => {
@@ -16,7 +16,7 @@ const put = (dir: string, rel: string, text: string) => {
   writeFileSync(join(dir, rel), text)
 }
 
-function rig(opts: { sendOk?: boolean; busyFor?: Record<string, boolean> } = {}) {
+function rig(opts: { sendOk?: boolean; busyFor?: Record<string, boolean>; stat?: (path: string) => { files: number; added: number; removed: number; list: { path: string; added: number; removed: number }[] } | undefined } = {}) {
   const src = join(tmp, 'src')
   put(src, 'pack.json', JSON.stringify({ schema: 1, id: 'evalpack', name: 'E', version: '1.0.0', description: 'd', files: [{ from: 's.md', to: '.claude/skills/evalpack/s.md', kind: 'skill' }], mcp: [{ name: 'docs', type: 'http', url: 'https://docs.example.com/mcp' }], hosts: ['docs.example.com'] }))
   put(src, 's.md', 'skill')
@@ -42,7 +42,7 @@ function rig(opts: { sendOk?: boolean; busyFor?: Record<string, boolean> } = {})
       return { repo: root, path, branch: `stm/${label}`, base: 'main' }
     },
     dropWorktree: async (w) => (dropped.push(w.path), rmSync(w.path, { recursive: true, force: true }), true),
-    worktreeStat: async (w) => ({ files: w.path.includes('-with') ? 2 : 2, added: 5, removed: 1 }),
+    worktreeStat: async (w) => opts.stat?.(w.path) ?? { files: w.path.includes('-with') ? 2 : 2, added: 5, removed: 1 },
     remember: (w) => remembered.push(w),
     forget: (w) => forgot.push(w.path),
     open: async (cwd) => `s-${cwd.includes('without') ? 'without' : 'with'}`,
@@ -93,6 +93,28 @@ describe('pack eval', () => {
     expect(res.withPack).toMatchObject({ turns: 2, costUsd: 0.4, tokens: 900, files: 2 })
     expect(res.comparison.comparable).toBe(true)
     expect(res.comparison.verdict).toMatch(/cheaper/)
+  })
+
+  it('a task that changes nothing on both sides reads as the same result: the install is not counted', async () => {
+    const skill = { path: '.claude/skills/evalpack/s.md', added: 3, removed: 0 }
+    const r = rig({
+      stat: (p) => (p.includes('-with-') ? { files: 1, added: 3, removed: 0, list: [skill] } : { files: 0, added: 0, removed: 0, list: [] }),
+    })
+    const out = await r.ev.start('evalpack', r.root, 'p', 'claude-sonnet-5-5', 30)
+    r.usage['s-with'] = { turns: 2, usd: 0.5, tokens: 1000 }
+    r.usage['s-without'] = { turns: 2, usd: 0.5, tokens: 1000 }
+    await tick(100)
+    const res = await r.ev.result(out.evalId)
+    expect(res.finished).toBe(true)
+    expect(res.withPack).toMatchObject({ files: 0, added: 0, removed: 0 })
+    expect(res.comparison.sameResult).toBe(true)
+    expect(res.comparison.verdict).toMatch(/Too close to call|same result/i)
+  })
+
+  it('keeps what the task changed on top of the install', () => {
+    const base = [{ path: 'CLAUDE.md', added: 2, removed: 0 }]
+    const st = { files: 2, added: 7, removed: 0, list: [{ path: 'CLAUDE.md', added: 5, removed: 0 }, { path: 'a.ts', added: 2, removed: 0 }] }
+    expect(withoutBaseline(st, base)).toMatchObject({ files: 2, added: 5 })
   })
 
   it('stops a side that reaches the turn cap and flags it', async () => {
