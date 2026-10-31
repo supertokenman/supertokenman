@@ -123,11 +123,30 @@ const LineView = memo(function LineView({ l, onStop, onSend }: { l: Line; onStop
 })
 
 type Tool = Extract<Line, { kind: 'tool' }>
+const TEAM_MARK = { working: 'busy', done: 'up', error: 'down', idle: 'off' } as const
+const TEAM_WORD = { working: 'working', done: 'done', error: 'failed', idle: 'waiting' } as const
+/** A lead's workers at a glance: each one's state mark and title, a click focuses it; the counts are read out. */
+function TeamStrip({ team, onFocus }: { team: { id: string; title: string; state: keyof typeof TEAM_MARK }[]; onFocus?: (sid: string) => void }) {
+  const count = (k: keyof typeof TEAM_MARK) => team.filter((w) => w.state === k).length
+  const summary = `${team.length} worker${team.length === 1 ? '' : 's'}${(['working', 'done', 'error'] as const).filter(count).map((k) => `, ${count(k)} ${TEAM_WORD[k]}`).join('')}`
+  return (
+    <span className="team-strip" role="group" aria-label={`Team: ${summary}`}>
+      <span className="team-count" data-tip={summary}>{team.length}</span>
+      {team.map((w) => (
+        <button key={w.id} type="button" className={`team-w ${w.state}`} onClick={() => onFocus?.(w.id)} aria-label={`${w.title}, ${TEAM_WORD[w.state]}. Focus this worker`} data-tip={`${w.title}: ${TEAM_WORD[w.state]}`}>
+          <StateMark state={TEAM_MARK[w.state]} label={TEAM_WORD[w.state]} />
+          <span className="team-w-name">{w.title}</span>
+        </button>
+      ))}
+    </span>
+  )
+}
+
 // what a step did, in the words the transcript reads best with
 const VERBS: Record<string, string> = { mcp__mem__memory_index: 'Looked in memory', mcp__mem__memory_read: 'Read memory', mcp__stm__manual: 'Read the manual', mcp__headroom__headroom_retrieve: 'Read the original', Read: 'Read', Bash: 'Ran', Edit: 'Edited', MultiEdit: 'Edited', Write: 'Wrote', Grep: 'Searched', Glob: 'Listed', WebFetch: 'Fetched', WebSearch: 'Searched the web', TodoWrite: 'Planned', Task: 'Delegated', Agent: 'Delegated', NotebookEdit: 'Edited' }
 const verb = (name: string) => VERBS[name] ?? toolName(name)
 // each kind of step wears one of the brand's pictograms: reading a square, searching a circle,
-// running a triangle, writing the cut-corner square, everything else (MCP, agents) the cross
+// running a triangle, writing the cut-corner square, everything else (MCP, agents) a diamond; never a cross, which reads as failed
 type Shape = 'read' | 'find' | 'run' | 'write' | 'other'
 const SHAPES: Record<string, Shape> = { mcp__mem__memory_index: 'find', mcp__mem__memory_read: 'read', mcp__stm__manual: 'read', mcp__headroom__headroom_retrieve: 'read', Read: 'read', WebFetch: 'read', Grep: 'find', Glob: 'find', WebSearch: 'find', Bash: 'run', Edit: 'write', MultiEdit: 'write', Write: 'write', NotebookEdit: 'write' }
 function StepMark({ name }: { name: string }) {
@@ -138,7 +157,7 @@ function StepMark({ name }: { name: string }) {
       {shape === 'find' && <circle cx="5" cy="5" r="4" />}
       {shape === 'run' && <path d="M5 1 9.2 9H.8Z" />}
       {shape === 'write' && <path d="M1 1h8v5L6 9H1Z" />}
-      {shape === 'other' && <path d="m1.5 1.5 7 7m0-7-7 7" />}
+      {shape === 'other' && <path d="M5 .8 9.2 5 5 9.2.8 5Z" />}
     </svg>
   )
 }
@@ -230,6 +249,11 @@ export function Panel(props: {
   workerTitle?: string
   /** the name it was opened with (ui_open_panels, delegate); the header's main label, the folder after it */
   title?: string
+  /** a lead's workers, for the team strip in its header */
+  team?: { id: string; title: string; state: 'working' | 'done' | 'error' | 'idle' }[]
+  /** a worker's lead, by name */
+  leadName?: string
+  onFocusPanel?: (sid: string) => void
   onLead?: (on: boolean) => void
   focused: boolean
   theme?: Theme
@@ -582,7 +606,7 @@ export function Panel(props: {
     <section
       ref={root}
       data-sid={props.sid}
-      className={`panel ${props.focused ? 'focused' : ''} ${narrow ? 'narrow' : ''} ${props.dim ? 'dim' : ''} ${dropping ? 'dropping' : ''}`}
+      className={`panel ${props.role ? `role-${props.role}` : ''} ${props.focused ? 'focused' : ''} ${narrow ? 'narrow' : ''} ${props.dim ? 'dim' : ''} ${dropping ? 'dropping' : ''}`}
       onMouseDown={props.onFocus}
       onDragOver={(e) => {
         if (![...e.dataTransfer.types].includes('Files')) return
@@ -603,12 +627,14 @@ export function Panel(props: {
           const m = s.asleep || !s.model ? null : markOf(props.run)
           return m ? <StateMark state={m.state} shape={m.shape} label={m.label} /> : <StateMark state={s.busy ? 'busy' : s.asleep ? 'off' : s.model ? 'up' : 'warn'} label={s.busy ? 'Working' : s.asleep ? 'Asleep: the next message resumes it' : s.model ? 'Ready' : 'Starting'} />
         })()}
+        {props.role && <span className={`role-mark ${props.role}`} role="note" aria-label={props.role === 'lead' ? 'Role: lead' : 'Role: worker'} data-tip={props.role === 'lead' ? 'Lead: plans the work and hands tasks to its workers' : `Worker${props.workerTitle ? `: ${props.workerTitle}` : ''}. Does one task and answers the lead`}>{props.role === 'lead' ? 'Lead' : 'Worker'}</span>}
         {props.title && <span className="panel-title" data-tip={`${props.title}\nPanel id ${sid}`}>{props.title}</span>}
         <span className={`path${props.title ? ' sub' : ''}`} data-tip={`${s.cwd}\nPanel id ${sid}, for messages between panels`}>
           <span className="path-parent">{folder.slice(-2, -1)[0] ?? ''}/</span>
           {folder.at(-1) ?? '...'}
         </span>
-        {props.role && <span className={`role-mark ${props.role}`} data-tip={props.role === 'lead' ? 'Lead: plans the work and hands tasks to its workers' : `Worker${props.workerTitle ? `: ${props.workerTitle}` : ''}. Does one task and answers the lead`}>{props.role === 'lead' ? 'Lead' : 'Worker'}</span>}
+        {props.role === 'worker' && props.leadName && <span className="role-of" aria-label={`Worker of ${props.leadName}`}>of {props.leadName}</span>}
+        {props.role === 'lead' && props.team && props.team.length > 0 && <TeamStrip team={props.team} onFocus={props.onFocusPanel} />}
         {inCanvas && props.role === 'worker' && props.workerTitle && props.workerTitle !== props.title && <span className="task-title" data-tip={props.workerTitle}>{props.workerTitle}</span>}
         <span className="cost-chip" data-tip={`Spent in this panel: ${props.money(s.costUsd)}`}>{props.money(s.costUsd)}</span>
         {s.goal && (

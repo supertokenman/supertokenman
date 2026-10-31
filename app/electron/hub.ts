@@ -5,12 +5,14 @@ import { createSdkMcpServer, tool, type McpSdkServerConfigWithInstance } from '@
 import { z } from 'zod'
 
 /** What the hub needs of a panel's session. */
-export type Peer = { label: string; cwd: string; busy: () => boolean; ask: (text: string, from: string) => Promise<string> }
+/** lastSign: when the panel last showed a sign of work (any event but the message itself); a message with none in START_MS fails. */
+export type Peer = { label: string; cwd: string; busy: () => boolean; ask: (text: string, from: string) => Promise<string>; lastSign?: () => number }
 
 export const SERVER = 'panels'
 export const TOOLS = [`mcp__${SERVER}__list_panels`, `mcp__${SERVER}__message_panel`, `mcp__${SERVER}__panel_state`, `mcp__${SERVER}__panel_wait`]
 type ExtraTools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>
 const TIMEOUT_MS = 15 * 60 * 1000
+export const START_MS = 90 * 1000
 
 export class CycleError extends Error {
   constructor(from: string, to: string) {
@@ -24,6 +26,9 @@ export class Hub {
   private waits = new Map<string, string>()
   /** more tools for a panel's server (panel_state, panel_wait), set by the app */
   extraTools?: (from: string) => ExtraTools
+  /** called before a message goes out, e.g. to make the target the sender's worker when the sender is a lead */
+  onMessage?: (from: string, to: string, text: string) => void
+  startMs = START_MS
 
   add(sid: string, peer: Peer) {
     this.peers.set(sid, peer)
@@ -72,14 +77,26 @@ export class Hub {
     if (this.wouldCycle(from, to)) throw new Error(`Panel "${to}" is waiting on this panel; messaging it would deadlock both.`)
     this.waits.set(from, to)
     let timer: ReturnType<typeof setTimeout> | undefined
+    let watch: ReturnType<typeof setInterval> | undefined
     try {
       const sender = this.peers.get(from)?.label ?? from
+      this.onMessage?.(from, to, text)
+      const sent = Date.now()
       return await Promise.race([
         target.ask(text, sender),
         new Promise<string>((_, reject) => (timer = setTimeout(() => reject(new Error(`Panel "${to}" did not answer within 15 minutes.`)), TIMEOUT_MS))),
+        // a panel that never starts the turn (no sign at all) fails fast instead of holding the sender for 15 minutes
+        new Promise<string>((_, reject) => {
+          if (!target.lastSign) return
+          watch = setInterval(() => {
+            if (target.lastSign!() >= sent) return clearInterval(watch)
+            if (Date.now() - sent >= this.startMs) reject(new Error(`Panel "${to}" did not start the task in ${Math.round(this.startMs / 1000)} seconds. Look at that panel: it may be waiting for a sign-in, an approval or a model. Nothing else was sent.`))
+          }, Math.min(5000, this.startMs / 3))
+        }),
       ])
     } finally {
       clearTimeout(timer)
+      clearInterval(watch)
       this.waits.delete(from)
     }
   }
@@ -89,12 +106,12 @@ export class Hub {
     const text = (t: string) => ({ content: [{ type: 'text' as const, text: t }] })
     return createSdkMcpServer({
       name: SERVER,
-      instructions: 'Other Claude Code sessions run in panels of the same app, each in its own folder. Use list_panels to see them and message_panel to hand one a task; its reply comes back as the result.',
+      instructions: 'Other Claude Code sessions run in panels of the same app, each in its own folder. Use list_panels to see them and message_panel to ask one a question; its reply comes back as the result. When this panel is a Lead handing work to workers, use mcp__stm__delegate and mcp__stm__collect instead: they mark the worker, draw the link and track its result.',
       tools: [
         tool('list_panels', 'List the other open panels: id, name, folder and whether each is busy.', {}, async () => text(JSON.stringify(this.list(from), null, 2))),
         tool(
           'message_panel',
-          'Send a task or question to another panel. It runs there as a turn and its final reply is returned. Be specific: the other panel does not see this conversation.',
+          'Send a question or a small task to another panel. It runs there as a turn and its final reply is returned. Be specific: the other panel does not see this conversation. A lead giving work to workers should use mcp__stm__delegate instead; a message from a lead still makes the target its worker.',
           { panel: z.string().describe('Panel id from list_panels, e.g. s2'), message: z.string().describe('What the other panel should do or answer') },
           async ({ panel, message }) => {
             try {

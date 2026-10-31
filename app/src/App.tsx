@@ -1407,6 +1407,9 @@ export function App() {
             role={lead.leads.includes(sid) ? 'lead' : lead.workers[sid] ? 'worker' : ''}
             workerTitle={lead.workers[sid]?.title}
             title={lead.titles?.[sid] ?? lead.workers[sid]?.title}
+            team={lead.leads.includes(sid) ? Object.entries(lead.workers).filter(([w, t]) => t.lead === sid && p.byId[w]).map(([w, t]) => ({ id: w, title: lead.titles?.[w] ?? t.title, state: t.error ? 'error' as const : p.byId[w]?.busy ? 'working' as const : t.finished ? 'done' as const : 'idle' as const })) : undefined}
+            leadName={lead.workers[sid] ? lead.titles?.[lead.workers[sid]!.lead] ?? (p.byId[lead.workers[sid]!.lead]?.cwd ?? '').split('/').filter(Boolean).at(-1) : undefined}
+            onFocusPanel={(w) => dispatch({ kind: 'focus', sid: w })}
             onLead={(on) => void window.stm.lead.set(sid, on).catch((e) => dispatch({ kind: 'event', sid, action: { kind: 'note', tone: 'error', text: e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e) } }))}
             focused={p.focus === sid}
             theme={theme}

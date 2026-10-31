@@ -171,8 +171,8 @@ export function uiTools(d: UiDeps) {
     ),
     tool(
       'delegate',
-      'Lead panel only. Give one task to a worker panel: it opens a worker (the person confirms in a sheet first) or reuses an idle worker you own in that folder, links it to you, sends the task and returns the worker id. Use it when the person asks to split work, coordinate panels or orquestrar; then call collect. The task must be complete on its own: the worker has no memory of this chat. Default folder is yours. worktree true gives the worker its own branch so it never edits the same files as another worker. Subject to the spawn limit and the budget.',
-      { task: z.string().min(1).max(20000), folder: z.string().max(1000).optional(), persona: z.string().max(64).optional(), model: z.string().max(100).optional(), worktree: z.boolean().optional(), title: z.string().max(80).optional() },
+      'Lead panel only. Give one task to a worker panel: it opens a worker (the person confirms in a sheet first) or reuses an idle worker you own in that folder, links it to you, sends the task and returns the worker id. Use it when the person asks to split work, coordinate panels or orquestrar; then call collect. To give a task to a panel that is already open (for example one opened earlier without a lead), pass its id as panel: it becomes your worker (title, Worker mark, link) and the task shows in its transcript. Prefer delegate over message_panel for workers. The task must be complete on its own: the worker has no memory of this chat. Default folder is yours. worktree true gives the worker its own branch so it never edits the same files as another worker. Subject to the spawn limit and the budget.',
+      { task: z.string().min(1).max(20000), folder: z.string().max(1000).optional(), persona: z.string().max(64).optional(), model: z.string().max(100).optional(), worktree: z.boolean().optional(), title: z.string().max(80).optional(), panel: z.string().max(64).optional() },
       async (a) => {
         const L = d.lead
         if (!L) return fail('Delegation is not available here.')
@@ -183,7 +183,7 @@ export function uiTools(d: UiDeps) {
         } catch (e) {
           return fail((e as Error).message)
         }
-        const plan = planDelegation({ lead: d.me, leadFolder: me?.folder ?? '', folder, worktree: a.worktree, panels: L.workers(), leads: L.leads() })
+        const plan = planDelegation({ lead: d.me, leadFolder: me?.folder ?? '', folder, worktree: a.worktree, panels: L.workers(), leads: L.leads(), panel: a.panel?.trim() || undefined })
         if (plan.kind === 'refuse') return fail(plan.reason)
         const title = a.title?.trim() || taskTitle(a.task)
         try {

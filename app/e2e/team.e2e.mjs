@@ -67,6 +67,60 @@ test('ui_open_panels with lead self: titles, roles, links and a fan', { timeout:
     if (process.env.TEAM_SHOT) await win.screenshot({ path: process.env.TEAM_SHOT })
   } finally {
     await app.close()
-    api.close?.()
   }
 })
+
+test('a lead messages two panels opened without links: tasks show, turns run, replies come back, the team appears', { timeout: 300_000 }, async () => {
+  const app = await electron.launch({ args: ['--no-sandbox', appDir, `--cwd=${dirs[0]}`], env })
+  try {
+    let win = null
+    for (let i = 0; i < 120 && !win; i++) {
+      win = app.windows().find((w) => /(\/dist\/|stmui:\/\/app\/)index\.html/.test(w.url())) ?? null
+      if (!win) await new Promise((r) => setTimeout(r, 500))
+    }
+    assert.ok(win, 'app window')
+    await win.waitForSelector('.composer textarea', { timeout: 60_000 })
+    for (let i = 0; i < 3 && (await win.$('.tour-steps')); i++) (await win.keyboard.press('Escape'), await win.waitForTimeout(400))
+    for (let i = 0; i < 60 && !readdirSync(envDir).length; i++) await win.waitForTimeout(500)
+    const me = readdirSync(envDir)[0].replace(/\.json$/, '')
+    const call = (name, args) => app.evaluate(async (_e, [sid, name, args]) => {
+      const t = globalThis.__stmUiTools(sid).find((x) => x.name === name)
+      const r = await t.handler(args, {})
+      return { text: r.content[0].text, isError: Boolean(r.isError) }
+    }, [me, name, args])
+    await win.addStyleTag({ content: '.splash{display:none!important}' })
+    await win.evaluate(() => document.documentElement.removeAttribute('data-blurred'))
+    const p = call('ui_open_panels', { panels: [{ folder: dirs[1], title: 'Worker 1' }, { folder: dirs[2], title: 'Worker 2' }], layout: 'canvas' })
+    await win.getByRole('button', { name: 'Allow' }).click({ timeout: 20_000 })
+    const r = await p
+    assert.equal(r.isError, false, r.text)
+    const ids = [...r.text.matchAll(/(s\d+) "/g)].map((m) => m[1])
+    assert.equal(ids.length, 2)
+    await win.evaluate((sid) => window.stm.lead.set(sid, true), me)
+    await win.waitForSelector('.role-mark.lead')
+    const t0 = Date.now()
+    const replies = await app.evaluate(async (_e, [me, ids]) => Promise.all(ids.map((id, i) => globalThis.__stmHub.message(me, id, `Task ${i + 1}: say done.`).then((x) => ({ ok: true, x }), (e) => ({ ok: false, x: String(e) })))), [me, ids])
+    console.log('replies', JSON.stringify(replies), Date.now() - t0, 'ms')
+    for (const x of replies) assert.equal(x.ok, true, x.x)
+    for (const [i, id] of ids.entries()) assert.match(await win.locator('.cv-card').filter({ has: win.locator('.panel-title', { hasText: `Worker ${i + 1}` }) }).innerText(), new RegExp(`Task ${i + 1}: say done`))
+    await win.waitForSelector('.cv-neuro .edge')
+    assert.equal(await win.locator('.cv-neuro .edge').count(), 2)
+    assert.equal(await win.locator('.role-mark.worker').count(), 2)
+    // the lead's header lists both workers, each a button that focuses it; each worker names its lead
+    assert.equal(await win.locator('.team-strip .team-w').count(), 2)
+    assert.equal(await win.locator('.role-of').count(), 2)
+    await win.locator('.team-strip .team-w').first().click()
+    await win.waitForTimeout(600)
+    if (process.env.TEAM_SHOT2) await win.screenshot({ path: process.env.TEAM_SHOT2 })
+    if (process.env.TEAM_SHOT3) {
+      await call('ui_set_layout', { layout: 'grid' })
+      await win.getByRole('button', { name: 'Not now' }).click({ timeout: 2000 }).catch(() => undefined)
+      await win.waitForTimeout(800)
+      await win.screenshot({ path: process.env.TEAM_SHOT3 })
+    }
+  } finally {
+    await app.close()
+  }
+})
+
+test.after(() => api.close?.())

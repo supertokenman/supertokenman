@@ -4,7 +4,7 @@ import { InCanvas } from './InCanvas'
 import { openChannel, useChannelUnread } from './channelOpen'
 import { edgeStatus, type EdgeStatus } from '../shared/lead'
 import { planArrange, checkArrange } from '../shared/uitools'
-import { clampZoom, edgePath, fit, linkEnds, place, planFan, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
+import { LEAD_GROW, clampZoom, edgePath, fit, linkEnds, place, planFan, uniquePairs, zoomAt, type Point, type View } from '../shared/canvas'
 
 /** Optional on purpose: older bridges send links without a spend. */
 type LinkInfo = PanelLinkView
@@ -56,7 +56,14 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
       }),
     [],
   )
-  const rects = useMemo(() => place(props.order, pos), [props.order.join('|'), pos])
+  // a lead's card is a size up, grown around its centre so its fan stays balanced
+  const leadKey = (props.lead?.leads ?? []).join('|')
+  const base = useMemo(() => place(props.order, pos), [props.order.join('|'), pos])
+  const rects = useMemo(() => {
+    const r = { ...base }
+    for (const l of props.lead?.leads ?? []) if (r[l]) r[l] = { x: r[l]!.x - LEAD_GROW / 2, y: r[l]!.y - LEAD_GROW * 0.375, w: r[l]!.w + LEAD_GROW, h: r[l]!.h + LEAD_GROW * 0.75 }
+    return r
+  }, [base, leadKey])
 
   // workers a lead opens fan out in a column to its right, once each, so the edges have room; a card the person moved stays put
   const fanned = useRef(new Set<string>())
@@ -68,7 +75,7 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
     for (const [l, ws] of Object.entries(by)) {
       if (ws.every((w) => fanned.current.has(w))) continue
       ws.forEach((w) => fanned.current.add(w))
-      Object.assign(next, planFan({ x: rects[l]!.x, y: rects[l]!.y }, ws))
+      Object.assign(next, planFan({ x: base[l]!.x, y: base[l]!.y }, ws))
     }
     if (Object.keys(next).length) {
       setPos((p) => ({ ...p, ...next }))
@@ -81,7 +88,7 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
 
   useEffect(() => save(VIEW_KEY, view), [view])
   // only the open panels' spots are kept, so closed ones do not pile up
-  useEffect(() => save(POS_KEY, Object.fromEntries(props.order.map((s) => [s, { x: rects[s]!.x, y: rects[s]!.y }]))), [rects])
+  useEffect(() => save(POS_KEY, Object.fromEntries(props.order.map((s) => [s, { x: base[s]!.x, y: base[s]!.y }]))), [base])
 
   useEffect(() => {
     let live = true
@@ -146,7 +153,7 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
     const t = e.target as HTMLElement
     // the header moves the card; its buttons and fields keep working
     if (!t.closest('.panel-bar') || t.closest('button, input, textarea, select, a, [role="button"], [contenteditable="true"]')) return
-    const r0 = rects[sid]!, z = view.zoom
+    const r0 = base[sid]!, z = view.zoom
     drag(e, (dx, dy) => setPos((p) => ({ ...p, [sid]: { x: r0.x + dx / z, y: r0.y + dy / z } })))
   }
   // the assistant asked to arrange (ui_arrange): row, column and grid move the cards, then every mode frames them
