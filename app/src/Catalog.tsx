@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { StateMark } from './StateMark'
 import { friendly } from './errors'
 import { Markdown } from './markdown'
 import type { CatalogItem } from './bridge'
 import { IconPluginKind, IconSkillKind, IconServerKind, IconRepoKind } from './icons'
 
+const Packs = lazy(() => import('./packs/Packs').then((m) => ({ default: m.Packs })))
 type Filter = 'all' | CatalogItem['source']
 const LABEL: Record<CatalogItem['source'], string> = { plugin: 'Plugin', skill: 'Skill', mcp: 'MCP server', github: 'Repository' }
 const KIND_ICON: Record<CatalogItem['source'], () => JSX.Element> = { plugin: IconPluginKind, skill: IconSkillKind, mcp: IconServerKind, github: IconRepoKind }
@@ -39,6 +40,7 @@ export function Catalog(props: { cwd: string; onClose: () => void }) {
   const [browse, setBrowse] = useState<{ items: CatalogItem[]; errors: string[] } | null>(null)
   const [open, setOpen] = useState<{ it: CatalogItem; readme?: string; err?: string } | null>(null)
   const input = useRef<HTMLInputElement>(null)
+  const [packs, setPacks] = useState(false)
 
   useEffect(() => {
     input.current?.focus()
@@ -52,10 +54,10 @@ export function Catalog(props: { cwd: string; onClose: () => void }) {
     window.stm.catalogReadme(it.url).then((r) => setOpen((o) => (o?.it === it ? { it, readme: r?.markdown ?? '' } : o)), (e: unknown) => setOpen((o) => (o?.it === it ? { it, err: e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e) } : o)))
   }
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && (open ? setOpen(null) : props.onClose())
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !packs && (open ? setOpen(null) : props.onClose())
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [props, open])
+  }, [props, open, packs])
 
   // the network sources wait for a pause in typing
   useEffect(() => {
@@ -129,6 +131,7 @@ export function Catalog(props: { cwd: string; onClose: () => void }) {
     </>
   )
 
+  if (packs) return <Suspense fallback={null}><Packs cwd={props.cwd} onClose={() => setPacks(false)} /></Suspense>
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
       <div className="sheet catalog" role="dialog" aria-label="Catalog">
@@ -147,6 +150,8 @@ export function Catalog(props: { cwd: string; onClose: () => void }) {
             </button>
           ))}
           {notice && <span className="catalog-notice">{notice}</span>}
+          <span className="spacer-flex" />
+          <button className="small" onClick={() => setPacks(true)}>Packs</button>
         </div>
         {open ? (
           <div className="results detail">

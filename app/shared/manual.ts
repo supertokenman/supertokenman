@@ -472,6 +472,18 @@ TOOL is a tool name (Bash, Edit, Write, mcp__stm__*), a glob, *, or a class: rea
 - Never stops cloud resources by itself.
 - Never reads or sends anything in the Apps drawer.`,
   },
+  {
+    id: 'packs',
+    title: 'Packs: skills, MCP servers and rules in one bundle',
+    keys: 'packs pack bundle skill mcp rules install update rollback remove eval compare catalog git folder hosts vault',
+    body: `Where: Catalog, then Packs. A pack is a folder with a pack.json: skills, MCP servers and a rules text for CLAUDE.md.
+- Tabs: Built-in (ship with the app), Mine (Add folder, or Add from git: a shallow clone of the https address you type, only when you press Fetch) and Shipped skills.
+- Install always starts with a review: the files and where they go, each MCP server with its full command line, the network hosts, the vault names it needs (and whether the vault has them) and the rules text word for word. Nothing is written until you press Allow. No script from a pack runs at install, update or remove.
+- A pack's MCP server is off until you turn it on for a project; turning it on shows the hosts and the command again.
+- Update shows what changes per file. A file you edited is never overwritten without your choice (Keep mine, Take theirs, Save theirs beside); a file you deleted stays deleted unless you put it back, and the next update asks again. Roll back returns to the previous version; Remove deletes only the files the pack wrote and keeps the ones you edited unless you tick them.
+- Eval runs the same task twice in two copies (worktrees) of the project, once with the pack and once without, and compares result, turns, tokens, cost and time. The install's own files are not counted as changes. One run per side is weak evidence: under 10 percent apart reads as too close to call. Keep pack, Remove pack or Discard worktrees ends it and closes both panels.
+- Network: browsing, reviewing, installing, updating and removing make no request. Only Fetch contacts a git host.`,
+  },
 ]
 
 // words that say nothing about which screen is meant

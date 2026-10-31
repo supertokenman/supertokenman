@@ -734,6 +734,7 @@ export type Bridge = {
   panelUsage: (sid: string) => Promise<{ usage: import('../shared/panelusage').Usage; cap: import('../shared/panelusage').Cap }>
   panelCap: (sid: string, cap: import('../shared/panelusage').Cap) => Promise<import('../shared/panelusage').Cap>
   countTokens: (text: string, model?: string) => Promise<{ tokens: number; exact: boolean }>
+  packs: import('./packs/api').PacksApi
   worktree: {
     stat: (sid: string) => Promise<{ files: number; added: number; removed: number; list: { path: string; added: number; removed: number }[] } | null>
     merge: (sid: string, message: string) => Promise<{ merged: boolean; why?: string }>

@@ -124,6 +124,7 @@ import { sceneFor, sceneSvg } from './landscapes'
 import { Menu } from './Menu'
 
 import { Presence } from './Presence'
+import { useAdoptPanels } from './packs/adopt'
 
 
 
@@ -823,6 +824,7 @@ export function App() {
 
   // where each panel actually opened (a worktree's path, not the folder asked for)
   const openedCwd = useRef<Record<string, string>>({})
+  useAdoptPanels(dispatch, openedCwd)
   const open = useCallback(async (cwd?: string, resume?: string, persona?: string, sandbox?: boolean, extra?: { worktree?: { label: string; group?: string; attempt?: number; of?: number }; model?: string; resumeAt?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string } }) => {
     const m = extra?.model ?? model
     const r = await window.stm.newSession({ cwd, model: m, resume, resumeAt: extra?.resumeAt, remote: extra?.remote, persona, effort: effortsOf(m).includes(effort as Effort) ? effort : undefined, sandbox, worktree: extra?.worktree })
