@@ -1,13 +1,13 @@
 // Pure logic behind the ui_* tools of the stm MCP server: argument checks, where the canvas cards go for
 // row, column and grid, and which links may be drawn. No Electron here, so it is tested on its own.
 import { z } from 'zod'
-import { CARD_GAP, CARD_H, CARD_W, defaultRect, type Point } from './canvas.js'
+import { CARD_GAP, CARD_H, CARD_W, defaultRect, planFan, type Point } from './canvas.js'
 
 export const UI_LAYOUTS = ['auto', 'grid', 'columns', 'canvas'] as const
 export type UiLayout = (typeof UI_LAYOUTS)[number]
 /** What a model may say for a layout: the app's own ids, plus "row" for columns. */
 export const LAYOUT_ALIASES: Record<string, UiLayout> = { auto: 'auto', grid: 'grid', columns: 'columns', column: 'columns', row: 'columns', canvas: 'canvas' }
-export const ARRANGE_MODES = ['fit', 'row', 'column', 'grid'] as const
+export const ARRANGE_MODES = ['fit', 'row', 'column', 'grid', 'fan'] as const
 export type ArrangeMode = (typeof ARRANGE_MODES)[number]
 export const MAX_OPEN = 8
 export const MAX_LINKS = 20
@@ -37,7 +37,7 @@ export function checkArrange(raw: unknown): Res<ArrangeMode> {
 }
 
 /** The panels to open: 1 to MAX_OPEN, each with a folder; the layout, when given, must be known. */
-export function checkOpen(raw: { panels?: unknown; layout?: unknown }): Res<{ panels: PanelSpec[]; layout?: UiLayout }> {
+export function checkOpen(raw: { panels?: unknown; layout?: unknown; lead?: unknown }): Res<{ panels: PanelSpec[]; layout?: UiLayout; lead?: string }> {
   const p = z.array(panelSpecSchema).min(1, 'Give at least one panel.').max(MAX_OPEN, `At most ${MAX_OPEN} panels at once.`).safeParse(raw.panels)
   if (!p.success) return { ok: false, error: p.error.issues.map((i) => `panels${i.path.length ? `.${i.path.join('.')}` : ''}: ${i.message}`).join('; ') }
   let layout: UiLayout | undefined
@@ -46,7 +46,12 @@ export function checkOpen(raw: { panels?: unknown; layout?: unknown }): Res<{ pa
     if (!l.ok) return l
     layout = l.value
   }
-  return { ok: true, value: { panels: p.data, layout } }
+  let lead: string | undefined
+  if (raw.lead !== undefined) {
+    if (typeof raw.lead !== 'string' || !/^[\w-]{1,64}$/.test(raw.lead.trim())) return { ok: false, error: 'lead: "self" (this panel) or the id of an open panel.' }
+    lead = raw.lead.trim()
+  }
+  return { ok: true, value: { panels: p.data, layout, lead } }
 }
 
 /** Links between panels that exist: no self links, no repeats, and the cap. Returns each pair once. */
@@ -62,15 +67,39 @@ export function checkLinks(raw: unknown, known: ReadonlySet<string>): Res<LinkSp
   return { ok: true, value: [...seen.values()] }
 }
 
-/** Card positions for row, column or grid; null for fit, which moves nothing. */
-export function planArrange(mode: ArrangeMode, ids: string[]): Record<string, Point> | null {
+/** Card positions for row, column, grid or fan; null for fit, which moves nothing. leadOf maps a worker to its lead, for fan. */
+export function planArrange(mode: ArrangeMode, ids: string[], leadOf: Record<string, string> = {}): Record<string, Point> | null {
   if (mode === 'fit') return null
+  if (mode === 'fan') return planTeams(ids, leadOf)
   const cols = mode === 'row' ? Math.max(1, ids.length) : mode === 'column' ? 1 : Math.max(1, Math.ceil(Math.sqrt(ids.length)))
   const out: Record<string, Point> = {}
   ids.forEach((id, i) => {
     const r = defaultRect(i, cols)
     out[id] = { x: r.x, y: r.y }
   })
+  return out
+}
+
+/** Each lead on the left with its workers fanned in a column to its right, one team under the other; panels in no team in a row below. */
+export function planTeams(ids: string[], leadOf: Record<string, string>): Record<string, Point> {
+  const open = new Set(ids)
+  const out: Record<string, Point> = {}
+  let y = CARD_GAP
+  for (const l of ids) {
+    if (leadOf[l]) continue
+    const ws = ids.filter((w) => leadOf[w] === l)
+    if (!ws.length) continue
+    const rows = ws.length
+    const h = rows * CARD_H + (rows - 1) * 40
+    const lead = { x: CARD_GAP, y: y + (h - CARD_H) / 2 }
+    out[l] = lead
+    Object.assign(out, planFan(lead, ws))
+    y += h + CARD_GAP * 2
+  }
+  const rest = ids.filter((id) => !out[id] && !(leadOf[id] && open.has(leadOf[id]!)))
+  rest.forEach((id, i) => (out[id] = { x: CARD_GAP + i * (CARD_W + CARD_GAP), y }))
+  // a worker whose lead is closed joins the row
+  ids.filter((id) => !out[id]).forEach((id, i) => (out[id] = { x: CARD_GAP + (rest.length + i) * (CARD_W + CARD_GAP), y }))
   return out
 }
 

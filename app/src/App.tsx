@@ -1406,6 +1406,7 @@ export function App() {
             run={runs[sid]}
             role={lead.leads.includes(sid) ? 'lead' : lead.workers[sid] ? 'worker' : ''}
             workerTitle={lead.workers[sid]?.title}
+            title={lead.titles?.[sid] ?? lead.workers[sid]?.title}
             onLead={(on) => void window.stm.lead.set(sid, on).catch((e) => dispatch({ kind: 'event', sid, action: { kind: 'note', tone: 'error', text: e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e) } }))}
             focused={p.focus === sid}
             theme={theme}

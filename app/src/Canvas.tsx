@@ -157,7 +157,7 @@ export function Canvas(props: { order: string[]; panel: (sid: string) => ReactNo
     lastCmd.current = c.n
     const m = checkArrange(c.mode)
     if (!m.ok) return
-    const plan = planArrange(m.value, props.order)
+    const plan = planArrange(m.value, props.order, Object.fromEntries(Object.entries(props.lead?.workers ?? {}).map(([w, t]) => [w, t.lead])))
     if (plan) setPos(plan)
     requestAnimationFrame(() => {
       const b = surf.current?.getBoundingClientRect()

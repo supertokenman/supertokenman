@@ -1125,4 +1125,4 @@ export type QueueView = { queue: import('../shared/panelqueue').PanelQueue; esti
 export type ChannelTeam = { id: string; name: string; lead: string; members: { id: string; handle: string; name: string }[] }
 export type ChannelPost = import('../shared/teamchannel').Post & { name: string }
 export type ChannelWake = { id: string; post: string; to: string; name: string; delivery: 'queued' | 'auto' | 'refused'; why?: string; open: boolean }
-export type LeadView = { leads: string[]; workers: Record<string, { lead: string; title: string; error: boolean; finished: boolean; cost: number }> }
+export type LeadView = { leads: string[]; workers: Record<string, { lead: string; title: string; error: boolean; finished: boolean; cost: number }>; titles?: Record<string, string> }

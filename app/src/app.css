@@ -132,6 +132,8 @@ kbd { font: 10px/1 var(--mono); color: var(--muted); background: rgba(var(--over
 @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.2); } }
 .path { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .path-parent { color: var(--faint); font-weight: 400; }
+.panel-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 40%; flex: 0 1 auto; }
+.path.sub { font-weight: 400; color: var(--muted); }
 .badge { flex: none; font: 11px var(--mono); color: var(--muted); background: rgba(var(--overlay-rgb), 0.04); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; text-transform: capitalize; }
 .segmented { margin-left: auto; display: inline-flex; padding: 2px; gap: 2px; background: rgba(var(--overlay-rgb), 0.04); border: 1px solid var(--border); border-radius: 8px; flex: none; }
 .segmented button { height: 22px; padding: 0 10px; font-size: 12px; --btn-bg: transparent; --btn-line: transparent; border: 0; color: var(--muted); clip-path: none; }
@@ -2057,7 +2059,7 @@ textarea { resize: none; }
   .panel-bar { gap: 6px; padding: 0 6px 0 10px; }
   .panel-bar .segmented button { padding: 0 6px; font-size: 11.5px; }
   /* room only for the state, the folder, the tabs and close: the folder's own name, not its parent */
-  .panel-bar > :not(.sm-mark):not(.status):not(.path):not(.segmented):not(.icon), .panel-bar .path-parent { display: none; }
+  .panel-bar > :not(.sm-mark):not(.status):not(.path):not(.panel-title):not(.segmented):not(.icon), .panel-bar .path-parent { display: none; }
 }
 .hud { min-width: 0; overflow: hidden; }
 /* a button beside a text field in a form takes the field's height and corners, wherever it is */
@@ -4544,7 +4546,7 @@ html[data-blurred] .cv-pulse, html[data-blurred] .wait-dot, html[data-blurred] .
 }
 /* compact card header: status dot, name, role, cost and close; the rest is in the "..." menu */
 .panel-bar.compact { gap: 6px; padding-right: 6px; }
-.panel-bar.compact > :not(.sm-mark, .path, .role-mark, .task-title, .cost-chip, .more-btn, .icon) { display: none !important; }
+.panel-bar.compact > :not(.sm-mark, .panel-title, .path, .role-mark, .task-title, .cost-chip, .more-btn, .icon) { display: none !important; }
 .panel-bar.compact .cost-chip { display: inline; margin-left: auto; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .panel-bar.compact .path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .panel-bar.compact .sm-mark.busy { position: relative; }

@@ -228,6 +228,8 @@ export function Panel(props: {
   /** 'lead' or 'worker' when the panel takes part in a lead's work */
   role?: string
   workerTitle?: string
+  /** the name it was opened with (ui_open_panels, delegate); the header's main label, the folder after it */
+  title?: string
   onLead?: (on: boolean) => void
   focused: boolean
   theme?: Theme
@@ -601,12 +603,13 @@ export function Panel(props: {
           const m = s.asleep || !s.model ? null : markOf(props.run)
           return m ? <StateMark state={m.state} shape={m.shape} label={m.label} /> : <StateMark state={s.busy ? 'busy' : s.asleep ? 'off' : s.model ? 'up' : 'warn'} label={s.busy ? 'Working' : s.asleep ? 'Asleep: the next message resumes it' : s.model ? 'Ready' : 'Starting'} />
         })()}
-        <span className="path" data-tip={`${s.cwd}\nPanel id ${sid}, for messages between panels`}>
+        {props.title && <span className="panel-title" data-tip={`${props.title}\nPanel id ${sid}`}>{props.title}</span>}
+        <span className={`path${props.title ? ' sub' : ''}`} data-tip={`${s.cwd}\nPanel id ${sid}, for messages between panels`}>
           <span className="path-parent">{folder.slice(-2, -1)[0] ?? ''}/</span>
           {folder.at(-1) ?? '...'}
         </span>
         {props.role && <span className={`role-mark ${props.role}`} data-tip={props.role === 'lead' ? 'Lead: plans the work and hands tasks to its workers' : `Worker${props.workerTitle ? `: ${props.workerTitle}` : ''}. Does one task and answers the lead`}>{props.role === 'lead' ? 'Lead' : 'Worker'}</span>}
-        {inCanvas && props.role === 'worker' && props.workerTitle && <span className="task-title" data-tip={props.workerTitle}>{props.workerTitle}</span>}
+        {inCanvas && props.role === 'worker' && props.workerTitle && props.workerTitle !== props.title && <span className="task-title" data-tip={props.workerTitle}>{props.workerTitle}</span>}
         <span className="cost-chip" data-tip={`Spent in this panel: ${props.money(s.costUsd)}`}>{props.money(s.costUsd)}</span>
         {s.goal && (
           <span className="goal-chip" data-tip={`Goal: ${s.goal}. /goal clear ends it.`}>

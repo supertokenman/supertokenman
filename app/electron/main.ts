@@ -7126,7 +7126,8 @@ type WorkerTask = { lead: string; title: string; at: number; files: Set<string>;
 const leadSet = new Set<string>()
 const workerTask = new Map<string, WorkerTask>()
 const leadWaiters = new Map<string, ((r: LD.Result) => void)[]>()
-const leadView = () => ({ leads: [...leadSet], workers: Object.fromEntries([...workerTask].map(([id, t]) => [id, { lead: t.lead, title: t.title, error: Boolean(t.result?.isError), finished: Boolean(t.result), cost: t.cost }])) })
+// titles ride along with the roles: the name a panel was opened with (ui_open_panels, delegate) is its header label
+const leadView = () => ({ leads: [...leadSet], workers: Object.fromEntries([...workerTask].map(([id, t]) => [id, { lead: t.lead, title: t.title, error: Boolean(t.result?.isError), finished: Boolean(t.result), cost: t.cost }])), titles: Object.fromEntries([...uiTitles].filter(([id]) => sessions.has(id))) })
 const pushLead = () => toWin('lead:state', leadView())
 const pulse = (from: string, to: string) => toWin('lead:pulse', { from, to })
 ipcMain.handle('lead:state', () => leadView())
@@ -7170,6 +7171,14 @@ const leadDeps = (me: string) => ({
   leads: () => leadSet,
   workers: () => [...sessions.keys()].map((id) => ({ id, folder: panelDir(id), busy: Boolean(sessions.get(id)?.busy) && !workerTask.get(id)?.result, lead: workerTask.get(id)?.lead ?? null })),
   owns: (w: string) => workerTask.get(w)?.lead === me,
+  team: (lead: string, ws: { id: string; title: string }[]) => {
+    leadSet.add(lead)
+    for (const w of ws) {
+      workerTask.set(w.id, { lead, title: w.title, at: Date.now(), files: new Set(), cost: 0 })
+      if (!uiTitles.has(w.id)) uiTitles.set(w.id, w.title)
+    }
+    pushLead()
+  },
   adopt: (w: string, title: string, task: string) => {
     workerTask.set(w, { lead: me, title, at: Date.now(), files: new Set(), cost: 0 })
     void task
@@ -7212,7 +7221,7 @@ const leadDeps = (me: string) => ({
       win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona, worktree: { label: p.title || 'worker' } })
       setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
     })
-    if (p.title) uiTitles.set(sid, p.title)
+    if (p.title?.trim()) (uiTitles.set(sid, p.title.trim()), pushLead())
     return sid
   },
 })
@@ -7666,7 +7675,7 @@ function uiDeps(me: string): UiDeps {
         win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona })
         setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
       })
-      if (p.title) uiTitles.set(sid, p.title)
+      if (p.title?.trim()) (uiTitles.set(sid, p.title.trim()), pushLead())
       return sid
     },
     log: (m) => logs().info('stm:ui', `${me} ${m}`),
