@@ -316,11 +316,13 @@ Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or g
 
 ## Control (spec: `spec-control.md`)
 
-- [ ] Policy gate with readable rules (global and per project), deny before allow, never loosening an ask without an explicit allow.
-- [ ] Daily append-only audit log with redacted arguments, decisions, cost and per-turn file receipts; viewer with filters.
-- [ ] Routine caps: 15-minute minimum, 20 enabled, auto-disable after 10 failures.
-- [ ] Live plan from TodoWrite on panel and canvas, with per-run agent and fan-out caps.
-- [ ] Checkpoints per turn in private git refs, restore to turn N with a forked resume; breakpoints before a tool or after the plan.
+- [x] Policy gate with readable rules (global and per project), deny before allow, never loosening an ask without an explicit allow.
+- [x] Daily append-only audit log with redacted arguments, decisions, cost and per-turn file receipts; viewer with filters.
+- [x] Routine caps: 15-minute minimum, 20 enabled, auto-disable after 10 failures.
+- [x] Live plan from TodoWrite on panel and canvas, with per-run agent and fan-out caps.
+- [x] Checkpoints per turn in private git refs, restore to turn N with a forked resume; breakpoints before a tool or after the plan.
+
+Status: done. Waves 1 and 2 (PR 114) are the engine; wave 3 adds Settings > Control (rules editor with broad-allow warnings and a test box, routine limits), the audit view, the plan strip and canvas badge, checkpoint and breakpoint cards, and the caps line in Triggers. Open: breakpoints have no getter, so the card remembers its list in the window and an empty window can show a list that differs from the app until the next change.
 
 ## Planned: background panels, precise state and wait, SSH machines
 

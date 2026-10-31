@@ -183,6 +183,7 @@ const ConnectAgentsSheet = lazy(() => import('./ConnectAgents').then((m) => ({ d
 const PhoneCompanionSheet = lazy(() => import('./PhoneCompanion').then((m) => ({ default: m.PhoneCompanionSheet })))
 const ExtractSheet = lazy(() => import('./Extract').then((m) => ({ default: m.ExtractSheet })))
 const MessageFiltersSheet = lazy(() => import('./MessageFilters').then((m) => ({ default: m.MessageFiltersSheet })))
+const ControlHost = lazy(() => import('./control/ControlHost'))
 const PlaybooksSheet = lazy(() => import('./Playbooks').then((m) => ({ default: m.PlaybooksSheet })))
 const WorkTasksSheet = lazy(() => import('./WorkTasks').then((m) => ({ default: m.WorkTasksSheet })))
 const RoutinesSheet = lazy(() => import('./Routines').then((m) => ({ default: m.RoutinesSheet })))
@@ -486,6 +487,7 @@ export function App() {
   const [exOpen, setExOpen] = useState(false)
   const [mfOpen, setMfOpen] = useState(false)
   const [pbOpen, setPbOpen] = useState(false)
+  const [ctl, setCtl] = useState<{ view: 'rules' | 'audit'; cwd?: string; panel?: string } | null>(null)
   const [wtOpen, setWtOpen] = useState(false)
   const [rtOpen, setRtOpen] = useState(false)
   const [dgOpen, setDgOpen] = useState(false)
@@ -831,6 +833,14 @@ export function App() {
       dispatch({ kind: 'event', sid: r.sid, action: { kind: 'error', message: `${x.id} is on but ${x.secret} is not in the vault, so this panel runs without it. Add it in Connections.` } })
     return r.sid
   }, [model, effort])
+  // Control: Settings and the palette open the rules and audit sheets; a checkpoint restore opens the continued panel
+  useEffect(() => {
+    const onCtl = (e: Event) => setCtl((e as CustomEvent<{ view: 'rules' | 'audit' }>).detail)
+    const onResumed = (e: Event) => { const d = (e as CustomEvent<{ cwd: string; resume: string; resumeAt: string }>).detail; void open(d.cwd, d.resume, undefined, false, { resumeAt: d.resumeAt }) }
+    window.addEventListener('stm:control', onCtl)
+    window.addEventListener('stm:open-resumed', onResumed)
+    return () => (window.removeEventListener('stm:control', onCtl), window.removeEventListener('stm:open-resumed', onResumed))
+  }, [open])
 
   // a panel on its own branch in the focused panel's repository; it says why when there is no repository
   const openWorktree = async () => {
@@ -1313,6 +1323,8 @@ export function App() {
       ['diagnostics', 'Diagnostics', 'errors logs crash report debug diagnostics', () => setDgOpen(true)],
       ['routines', 'Routines', 'routine schedule weekly scan draft summary recurring job', () => setRtOpen(true)],
       ['work-tasks', 'Tasks across panels', 'task budget thread timeline decision across panels fan-out', () => setWtOpen(true)],
+      ['control-rules', 'Control rules', 'policy rules allow deny ask approval gate limits routine caps', () => setCtl({ view: 'rules', cwd: p.focus ? p.byId[p.focus]?.cwd : undefined })],
+      ['control-audit', 'Audit log', 'audit log tool calls decisions receipts history', () => setCtl({ view: 'audit', panel: undefined })],
       ['playbooks', 'Playbooks', 'playbook sop procedure steps checkpoint check runbook yaml', () => setPbOpen(true)],
       ['msg-filters', 'Message filters', 'filter inlet outlet pipeline valves code before after message reply', () => setMfOpen(true)],
       ['extract', 'Extract with sources', 'extract structured fields json log spec issue grounding quote source', () => setExOpen(true)],
@@ -1795,6 +1807,7 @@ export function App() {
       <Presence show={dgOpen}><DiagnosticsSheet onClose={() => setDgOpen(false)} /></Presence>
       <Presence show={rtOpen}><RoutinesSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setRtOpen(false)} /></Presence>
       <Presence show={wtOpen}><WorkTasksSheet panels={p.order.map((sid) => ({ sid, label: `${(p.byId[sid]?.cwd ?? '').split('/').pop() || 'panel'} (${sid})` }))} focus={p.focus ?? undefined} onClose={() => setWtOpen(false)} /></Presence>
+      {ctl && <Suspense fallback={null}><ControlHost {...ctl} onClose={() => setCtl(null)} /></Suspense>}
       <Presence show={pbOpen}><PlaybooksSheet sid={p.focus ?? undefined} cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setPbOpen(false)} /></Presence>
       <Presence show={mfOpen}><MessageFiltersSheet project={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMfOpen(false)} /></Presence>
       <Presence show={exOpen}><ExtractSheet project={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setExOpen(false)} /></Presence>
