@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SuperTokenMan</title>
-<meta name="description" content="A Mac app for a team of Claude Code agents: parallel panels that link, review each other, ask before acting and remember the project, with the cost of every turn shown.">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="A Mac app for Claude Code: parallel panels in their own worktrees, approvals and rules for every tool call, project memory, and the cost of every turn.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c0d10">
 <meta property="og:title" content="SuperTokenMan">
 <meta property="og:description" content="Your Claude Code team, in one window.">
 <meta property="og:image" content="https://supertokenman.com/assets/og.png">
@@ -13,17 +14,15 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="assets/supertoken-display.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/site.css">
-<link rel="stylesheet" href="assets/visuals.css">
-<script>document.documentElement.classList.add('js')</script>
-<script src="assets/site.js" defer></script>
-<script src="assets/visuals.js" defer></script>
+<link rel="stylesheet" href="assets/home.css">
+<script src="assets/home.js" defer></script>
 </head>
 <body>
 
-<div class="progress" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="/"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>SuperTokenMan</a>
+    <a class="brand" href="/" translate="no"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>SuperTokenMan</a>
     <nav class="nav" aria-label="Main">
       <a class="opt" href="/docs/">Docs</a>
       <a class="opt" href="/changelog/">Changelog</a>
@@ -33,164 +32,148 @@
   </div>
 </header>
 
-<main>
-  <section class="hero v2 dotgrid">
+<main id="main">
+  <section class="h-hero" aria-labelledby="h-title">
     <div class="wrap">
-      <div class="hero-grid">
-        <div class="hero-text">
-          <div class="dots motif" aria-hidden="true" data-dots="#####.#####.#####/#...#.#...#.*****/#...#.#...#.*****/#####.#####.*****"></div>
-          <div class="nlabel">nº 1 · a Mac app for Claude Code · cost per turn shown</div>
-          <h1 class="display split">your Claude Code team, in one window.</h1>
-        </div>
-        <div class="hero-side">
-          <p class="lead">Run Claude Code in parallel panels that link to each other. One builds while another reviews, each asks before it acts, and what they learn about your project stays for the next session.</p>
-          <div class="cta">
+      <div class="h-hero-text">
+        <h1 id="h-title">your Claude Code team, in one window.</h1>
+        <div class="h-hero-side">
+          <p class="h-lead">Run Claude Code in parallel panels that link to each other. One builds while another reviews, each asks before it acts, and what they learn about your project stays for the next session.</p>
+          <div class="h-cta">
             <a class="btn" href="/download/">Download for Mac</a>
-            <a class="btn ghost" href="/docs/demo/">Try the live demo</a>
-            <a class="link" href="/docs/">How it works</a>
+            <a class="btn-plain" href="/docs/demo/">Try the live demo</a>
           </div>
-          <p class="demo-note"><a class="link" href="/docs/demo/">Live demo</a>: the real interface with sample data, running in your browser. Nothing is sent anywhere.</p>
+          <p class="h-facts">Apple silicon and Intel. Signed with a Developer ID and notarized by Apple. Runs with your own Claude login or API key; there is no server of ours.</p>
         </div>
       </div>
-      <figure class="live" id="live" data-src="/docs/demo/?autoplay=1">
-        <div class="live-frame">
-          <img class="live-poster" src="assets/hero-demo.webp" width="2200" height="1341" fetchpriority="high" alt="SuperTokenMan with two panels. In acme-shop, Claude found why the cart total test failed, edited src/cart.ts, ran npm test once it was allowed, and all 42 tests pass. The session cost, US$0.27, sits above the chat.">
+      <figure class="h-live" id="live" data-src="/docs/demo/?autoplay=1">
+        <div class="h-live-frame">
+          <img class="h-live-poster" src="assets/hero-demo.webp" width="2200" height="1341" fetchpriority="high" alt="SuperTokenMan with two panels. In acme-shop, Claude found why the cart total test failed, edited src/cart.ts, ran npm test once it was allowed, and all 42 tests pass. The session cost, US$0.27, sits above the chat.">
         </div>
-        <figcaption class="nlabel">The live demo, playing by itself: the real interface with sample projects, replies and numbers. <a class="link" href="/docs/demo/">Try it yourself</a></figcaption>
+        <figcaption>The live demo, playing by itself: the real interface with sample projects, replies and numbers. It runs in your browser and sends nothing. <a class="link" href="/docs/demo/">Try it yourself</a></figcaption>
       </figure>
     </div>
   </section>
 
-  <section class="features dotgrid" id="features">
-    <div class="wrap">
-      <div class="nlabel">nº 2 · what it does</div>
-      <h2>six things your agents do together.</h2>
-      <div class="flips">
-        <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="head"><span class="hint">Canvas</span><span class="dots" aria-hidden="true" data-dots="#####.....#####/#...#*****#...#/#####.....#####"></span></span><b>panels in a room.</b><span class="shot"><img src="assets/feature-canvas.webp" width="1280" height="800" loading="lazy" decoding="async" alt="Two panels on the canvas with their link drawn between them, and the Room box sending one message to both, addressed to @acme-api"></span></span>
-          <span class="face back"><span class="hint">Canvas</span><p>Panels sit as cards on a canvas, with their links drawn. Send one message to the linked panels and the one you name with @name answers.</p></span>
-        </span></button>
-        <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="head"><span class="hint">Review loop</span><span class="dots" aria-hidden="true" data-dots="#####.....#####/#...#.***.#...#/#####.....#####"></span></span><b>build, review, repeat.</b><span class="shot"><img src="assets/feature-loop.webp" width="1280" height="800" loading="lazy" decoding="async" alt="A review panel answering APPROVED to the work of acme-shop, and the note that the review loop ended in round 2"></span></span>
-          <span class="face back"><span class="hint">Review loop</span><p><code>stm loop</code> sends each reply from a build panel to a review panel, and back, until the review says APPROVED, the rounds run out or the spend cap is reached.</p></span>
-        </span></button>
-        <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="head"><span class="hint">Approvals</span><span class="dots" aria-hidden="true" data-dots="###############/#.*******.....#/###############"></span></span><b>approve your way.</b><span class="shot"><img src="assets/feature-approvals.webp" width="1280" height="800" loading="lazy" decoding="async" alt="An approval card: Claude asks to run npm test, with Deny with a note, Deny and Allow"></span></span>
-          <span class="face back"><span class="hint">Approvals</span><p>Every tool call can wait for you. Edit the command before it runs, or deny it with a note that tells the agent what to do instead.</p></span>
-        </span></button>
-        <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="head"><span class="hint">Learns</span><span class="dots" aria-hidden="true" data-dots="###.###.###..../*****.#####.***"></span></span><b>learns from you.</b><span class="shot"><img src="assets/feature-learns.webp" width="1280" height="800" loading="lazy" decoding="async" alt="Deny with a note: the note says to use pnpm in this repo, not npm"></span></span>
-          <span class="face back"><span class="hint">Learns</span><p><code>stm learn</code> turns the notes you gave with denials into proposed lines for CLAUDE.local.md. Nothing is written until you pick them.</p></span>
-        </span></button>
-        <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="head"><span class="hint">Triggers</span><span class="dots" aria-hidden="true" data-dots="..#####......../#...#*..#..*.*/..#####........"></span></span><b>runs on its own.</b><span class="shot"><img src="assets/feature-triggers.webp" width="1280" height="800" loading="lazy" decoding="async" alt="The Triggers sheet with a nightly test run, a review of new pull requests and a changelog draft that is off"></span></span>
-          <span class="face back"><span class="hint">Triggers</span><p>Triggers start a panel on a schedule or from a local webhook, held to the folders and commands you allow. Anything outside is refused.</p></span>
-        </span></button>
-        <button class="flip" type="button" aria-pressed="false"><span class="inner">
-          <span class="face front"><span class="head"><span class="hint">Cost</span><span class="dots" aria-hidden="true" data-dots="#############/#+++++++++++#/#############"></span></span><b>every turn, priced.</b><span class="shot"><img src="assets/feature-cost.webp" width="1280" height="800" loading="lazy" decoding="async" alt="The panel meter with the session cost, US$0.27, and the cap for this panel set to US$2.00"></span></span>
-          <span class="face back"><span class="hint">Cost</span><p>The cost of each turn sits above the chat. Budgets and per-panel caps are checked before a turn starts.</p></span>
-        </span></button>
+  <section class="h-pillar" id="agents" aria-labelledby="agents-t">
+    <div class="wrap h-split">
+      <div class="h-copy">
+        <h2 id="agents-t">many panels. one task.</h2>
+        <p>Each panel runs Claude Code in its own git worktree, so two tasks never write over each other. Panels sit on a canvas with their links drawn; send one message to the linked panels and the one you name answers.</p>
+        <p><code>stm loop</code> sends each reply from a build panel to a review panel and back, until the review says APPROVED, the rounds run out or the spend cap is reached.</p>
+        <p>A lead panel hands a task to another panel and collects the answer, and the canvas shows the work moving along the link. Panels post to each other in a team channel, and wait on each other with <code>stm wait</code> and <code>stm state</code>; a wait that would loop back on itself is refused.</p>
+        <p>Group panels under a task with one budget and one timeline, and close it with the decision: merged, dropped, or what was learned.</p>
       </div>
-      <p class="hint-line nlabel">Pictures from the demo, with sample data. Tap a card to turn it.</p>
+      <figure class="h-shot">
+        <picture>
+          <source media="(max-width: 600px)" srcset="assets/screens/agents-dark-sm.webp" width="457" height="307">
+          <img src="assets/screens/agents-dark.webp" width="682" height="352" loading="lazy" decoding="async" alt="The Tasks sheet: a task called Pix at checkout with a US$ 2 budget, two panels on it, and its timeline">
+        </picture>
+        <figcaption>Tasks: one budget and one timeline across the panels that work on it.</figcaption>
+      </figure>
     </div>
   </section>
 
-  <section class="story" id="story">
-    <div class="wrap">
-      <div class="story-steps">
-      <article class="step" id="agents" data-scene="0">
-        <div class="label">Agents</div>
-        <h2 class="display">Many panels. One task.</h2>
-        <p>Run Claude Code in parallel panels, each in its own git worktree, so two tasks never write over each other.</p>
-        <p>Group panels under a task with one budget and one timeline. Close it with the decision: merged, dropped, or what was learned.</p>
-        <ul>
-          <li>Worktrees per panel</li>
-          <li>Playbooks with checkpoints</li>
-          <li>Routines that draft while you work</li>
-        </ul>
-      </article>
-      <article class="step" id="control" data-scene="1">
-        <div class="label">Control</div>
-        <h2 class="display">Ask first. Then run.</h2>
-        <p>Tool calls wait for your approval, unless you let a persona run the safe ones alone. Isolate a panel in a Docker container with only its folder and no network, or trim the tools it can reach.</p>
-        <p>The cost of each turn sits above the chat. Budgets per project, persona and task are checked before each turn starts.</p>
-        <ul>
-          <li>Approvals per tool call</li>
-          <li>Isolation without network</li>
-          <li>Budgets checked before each turn</li>
-        </ul>
-      </article>
-      <article class="step" id="memory" data-scene="2">
-        <div class="label">Memory</div>
-        <h2 class="display">Remembered. Never overwritten.</h2>
-        <p>Facts and decisions about each project, kept in versions, with who wrote them: you, Claude, or a session.</p>
-        <p>Answers built from your documents show their sources, and say which claims the sources support.</p>
-        <ul>
-          <li>Versioned project memory</li>
-          <li>Sources and citations</li>
-          <li>Documents into memory</li>
-        </ul>
-      </article>
+  <section class="h-pillar h-tone" id="control" aria-labelledby="control-t">
+    <div class="wrap h-split h-flip">
+      <div class="h-copy">
+        <h2 id="control-t">ask first. then run.</h2>
+        <p>Every tool call can wait for you. Edit the command before it runs, or deny it with a note that tells the agent what to do instead.</p>
+        <p>A rules file, global or <code>.stm/policy.rules</code> in a project, can deny, ask or allow tools by command, path or network use. There is none by default, and a broken rule asks; it never allows.</p>
+        <p>Every decision lands in an audit log on your Mac, kept 90 days with secrets masked. In a git project, each turn ends with a restore point kept outside your branches.</p>
       </div>
-      <div class="story-stage">
-        <div class="story-rail" aria-hidden="true"><i></i><i></i><i></i></div>
-        <div class="story-shots">
-          <figure class="shot on" data-shot="0"><img src="assets/screens/agents.png" width="1280" height="800" loading="lazy" alt="The Tasks sheet: a task called Pix at checkout with a US$ 2 budget, the acme panel linked to it and its timeline"></figure>
-          <figure class="shot" data-shot="1"><img src="assets/screens/control.png" width="1280" height="800" loading="lazy" alt="The Budgets sheet: limits per panel, per project and per persona each day, a limit above which a turn asks first, and the share at which the panel warns"></figure>
-          <figure class="shot" data-shot="2"><img src="assets/screens/memory.png" width="1280" height="800" loading="lazy" alt="The Memory sheet for acme: three facts about the project, two written by you and one by Claude"></figure>
-        </div>
-      </div>
+      <figure class="h-shot">
+        <img src="assets/feature-approvals.webp" width="1280" height="800" loading="lazy" decoding="async" alt="An approval card: Claude asks to run npm test, with Deny with a note, Deny and Allow">
+        <figcaption>An approval card in the live demo, with sample data.</figcaption>
+      </figure>
     </div>
   </section>
 
-  <section class="more">
-    <div class="wrap">
-      <div class="label">And everything else</div>
-      <h2 class="display">The rest of the day, in the same window.</h2>
-      <div class="grid cascade">
-        <div><b>MCP servers</b><span>Turn integrations on per panel; keys stay in the vault.</span></div>
-        <div><b>Local tools</b><span>Run code on your Mac and send Claude only what it needs.</span></div>
-        <div><b>Terminal and Git</b><span>Shell, changes and history next to the chat.</span></div>
-        <div><b>Pull requests and CI</b><span>Reviews and runs of the repo you are in.</span></div>
-        <div><b>Feeds and briefing</b><span>The sites you follow, summed up on your schedule.</span></div>
-        <div><b>Cloud</b><span>What runs in your accounts, read-only.</span></div>
-        <div><b>Monitors</b><span>Uptime and alerts for what you host.</span></div>
-        <div><b>Documents</b><span>PDFs and Word files, read into the project.</span></div>
+  <section class="h-pillar" id="cost" aria-labelledby="cost-t">
+    <div class="wrap h-split">
+      <div class="h-copy">
+        <h2 id="cost-t">every turn, priced.</h2>
+        <p>The cost of each turn sits above the chat. Budgets per project, persona and task, and a cap per panel, are checked before a turn starts, not after it has spent.</p>
+        <p>Isolate a panel in a Docker container with only its folder and no network, or trim the tools it can reach.</p>
       </div>
+      <figure class="h-shot">
+        <picture>
+          <source media="(max-width: 600px)" srcset="assets/screens/control-dark-sm.webp" width="470" height="335">
+          <img src="assets/screens/control-dark.webp" width="900" height="584" loading="lazy" decoding="async" alt="The Budgets sheet: US$ 50 per panel, US$ 120 per project each day, no persona limit, and a warning at 80 percent">
+        </picture>
+        <figcaption>Budgets: daily limits per panel, project and persona.</figcaption>
+      </figure>
     </div>
   </section>
 
-  <section class="band" id="teams">
-    <div class="wrap">
-      <div>
-        <div class="label">For small teams</div>
-        <h2 class="display">A few people, close enough to see.</h2>
+  <section class="h-pillar h-tone" id="memory" aria-labelledby="memory-t">
+    <div class="wrap h-split h-flip">
+      <div class="h-copy">
+        <h2 id="memory-t">remembered. never overwritten.</h2>
+        <p>Facts and decisions about each project are kept in versions, with who wrote them: you, Claude, or a session.</p>
+        <p><code>stm learn</code> turns the notes you gave with denials into proposed lines for <code>CLAUDE.local.md</code>. Nothing is written until you pick them.</p>
       </div>
-      <div>
-        <p>One budget and one timeline per task, across the panels that work on it. Playbooks with checkpoints that anyone can run again.</p>
-        <p>Each person runs the app on their own Mac, with their own Claude account.</p>
-      </div>
+      <figure class="h-shot">
+        <picture>
+          <source media="(max-width: 600px)" srcset="assets/screens/memory-dark-sm.webp" width="485" height="210">
+          <img src="assets/screens/memory-dark.webp" width="1156" height="400" loading="lazy" decoding="async" alt="The Memory sheet: three facts about the project, two written by you and one by Claude">
+        </picture>
+        <figcaption>Memory: each fact with its author and version.</figcaption>
+      </figure>
     </div>
   </section>
 
-  <section class="band dark" id="privacy">
+  <section class="h-running" id="running" aria-labelledby="running-t">
     <div class="wrap">
-      <div>
-        <div class="label">Security and privacy</div>
-        <h2 class="display">Your keys stay yours.</h2>
+      <h2 id="running-t">close the window. the panels keep going.</h2>
+      <p class="h-sub">From 0.1.22 to 0.1.24. Keep running is a setting, off by default.</p>
+      <dl class="h-facts-grid">
+        <div><dt>Messages wait their turn</dt><dd>What you send to a busy panel waits in a list you can edit or clear, and goes out when the turn ends. Since 0.1.22.</dd></div>
+        <div><dt>A limit is not a dead end</dt><dd>When a panel hits its limit or an error, a card offers to continue on the fallback you set. Nothing is resent until you choose. Since 0.1.22.</dd></div>
+        <div><dt>In the menu bar</dt><dd>With a panel at work, closing the window or Cmd+Q leaves it running, with the count, today’s cost, Stop all, and Quit and stop all.</dd></div>
+        <div><dt>State at a glance</dt><dd>Each panel’s dot shows working, waiting for you, idle, stopped or not started. Panels that ask you something show in Needs you.</dd></div>
+        <div><dt>Back where you were</dt><dd>Reopen the window and running panels return with their recent output. After a crash or restart, a strip offers to resume them.</dd></div>
+        <div><dt>Updates wait</dt><dd>With panels at work, an update asks first: restart now, or install when you quit.</dd></div>
+        <div><dt>Automation with limits</dt><dd>Timed triggers and webhooks run at most every 5 minutes, at most 20 at once, and one that fails 10 times in a row turns itself off with a note.</dd></div>
+      </dl>
+      <p><a class="link" href="/changelog/">Read the changelog</a></p>
+    </div>
+  </section>
+
+  <section class="h-privacy" id="privacy" aria-labelledby="privacy-t">
+    <div class="wrap h-split">
+      <div class="h-copy">
+        <h2 id="privacy-t">no telemetry. no server of ours.</h2>
+        <p>Nothing leaves your Mac except the calls you turn on, and the update check. Keys live in the app’s vault on your Mac and go only to the service they belong to.</p>
+        <p>The list is checked by a test that opens the app with a clean profile and fails on any request outside it.</p>
+        <p><a class="link" href="/security/">What talks to the network, and when</a></p>
       </div>
-      <div>
-        <p>No telemetry. Nothing leaves your Mac except the calls you turn on, and the update check.</p>
-        <p>Keys live in the app's vault on your Mac and go only to the service they belong to.</p>
-        <a class="link" href="/security/">What talks to the network, and when</a>
+      <div class="h-table-wrap">
+        <table class="h-table">
+          <caption>With nobody asking, from the network review of 27 October 2026</caption>
+          <thead><tr><th scope="col">What</th><th scope="col">Where</th></tr></thead>
+          <tbody>
+            <tr><td>Claude Code</td><td>Anthropic, with your own login or key, when a panel runs</td></tr>
+            <tr><td>Claude Code usage data</td><td>Off: the app sets it off for its panels</td></tr>
+            <tr><td>Dictate anywhere</td><td>Nowhere: your own whisper.cpp on this Mac. Off by default, and so is Clean up, which goes through Claude Code</td></tr>
+            <tr><td>Panel queue and team channel</td><td>Nowhere: files and a local socket on your Mac</td></tr>
+            <tr><td>Telemetry, analytics, crash reports to us</td><td>None</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
 
-  <section class="final">
-    <div class="wrap">
-      <h2 class="display split">Close the other tabs.</h2>
-      <a class="btn" href="/download/">Download for Mac</a>
+  <section class="h-download" id="download" aria-labelledby="download-t">
+    <div class="wrap h-split">
+      <div class="h-copy">
+        <h2 id="download-t">check what you install.</h2>
+        <p>Each release on GitHub has a dmg for Apple silicon and one for Intel, a <code>SHA256SUMS</code> file and a build attestation. In the folder you downloaded to:</p>
+        <a class="btn" href="/download/">Download for Mac</a>
+      </div>
+      <pre class="h-code" tabindex="0" aria-label="Commands to check the download"><code>shasum -a 256 -c SHA256SUMS --ignore-missing
+gh attestation verify SuperTokenMan-arm64.dmg \
+  --repo supertokenman/supertokenman</code></pre>
     </div>
   </section>
 </main>

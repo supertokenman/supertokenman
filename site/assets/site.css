@@ -41,7 +41,7 @@ img { max-width: 100%; display: block; }
 .bars i:nth-child(3) { width: 40%; background: var(--accent); }
 
 /* header */
-.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--line); }
+.top { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--line); }
 .top .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--display); font-size: 15px; letter-spacing: .02em; }
 .nav { display: flex; align-items: center; gap: 22px; margin-left: auto; font-size: 14px; }
