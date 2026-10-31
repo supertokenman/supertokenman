@@ -987,6 +987,8 @@ const turnOf = (sid: string) => pendingTurn.get(sid)?.id
 const outletChain = new Map<string, Promise<void>>()
 // panels whose agent the loop guard paused, until the person sends again (shown by `stm top`)
 const loopPaused = new Set<string>()
+/** when each panel last emitted anything but an incoming message: proof its turn started */
+const lastSign = new Map<string, number>()
 function send(sid: string, e: unknown) {
   const pending = outletChain.get(sid)
   const k = (e as { kind?: string }).kind
@@ -1009,6 +1011,7 @@ function send(sid: string, e: unknown) {
 }
 function sendNow(sid: string, e: unknown) {
   const ev = e as { kind?: string; isError?: boolean; text?: string; durationMs?: number }
+  if (ev.kind !== 'peer') lastSign.set(sid, Date.now())
   phoneTrack(sid, e as never)
   traceEvent(sid, e as never)
   // spans go into the trace, not to the window
@@ -2526,7 +2529,7 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     if (v.ok) tracePrompt(sid, text, `Asked by ${from}`)
     return v.ok ? s.ask(text, from) : Promise.reject(new Error(`Held by the budget: ${v.reason}`))
   }
-  hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked })
+  hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked, lastSign: () => lastSign.get(sid) ?? 0 })
   s.start()
   // a resumed panel gets its saved plan back
   const savedPlan = opts.resume ? loadPlan(opts.resume) : null
@@ -7126,7 +7129,8 @@ type WorkerTask = { lead: string; title: string; at: number; files: Set<string>;
 const leadSet = new Set<string>()
 const workerTask = new Map<string, WorkerTask>()
 const leadWaiters = new Map<string, ((r: LD.Result) => void)[]>()
-const leadView = () => ({ leads: [...leadSet], workers: Object.fromEntries([...workerTask].map(([id, t]) => [id, { lead: t.lead, title: t.title, error: Boolean(t.result?.isError), finished: Boolean(t.result), cost: t.cost }])) })
+// titles ride along with the roles: the name a panel was opened with (ui_open_panels, delegate) is its header label
+const leadView = () => ({ leads: [...leadSet], workers: Object.fromEntries([...workerTask].map(([id, t]) => [id, { lead: t.lead, title: t.title, error: Boolean(t.result?.isError), finished: Boolean(t.result), cost: t.cost }])), titles: Object.fromEntries([...uiTitles].filter(([id]) => sessions.has(id))) })
 const pushLead = () => toWin('lead:state', leadView())
 const pulse = (from: string, to: string) => toWin('lead:pulse', { from, to })
 ipcMain.handle('lead:state', () => leadView())
@@ -7142,6 +7146,19 @@ ipcMain.handle('lead:set', (_e, sid: string, on: boolean) => {
   pushLead()
   return leadView()
 })
+// message_panel from a lead: the target becomes its worker (title, mark, link), the same team a delegate makes
+hub.onMessage = (from, to) => {
+  if (!leadSet.has(from) || leadSet.has(to) || !sessions.has(to)) return
+  const t = workerTask.get(to)
+  if (t) {
+    // its own worker again: a new task, so the result waits for this turn
+    if (t.lead === from && t.result) (delete t.result, (t.blocked = false), pushLead())
+    return
+  }
+  saveLinks(PB.addLink(links(), from, to))
+  workerTask.set(to, { lead: from, title: uiTitles.get(to) ?? panelName(to), at: Date.now(), files: new Set(), cost: 0 })
+  pushLead()
+}
 function leadForget(sid: string) {
   if (!leadSet.delete(sid) && !workerTask.delete(sid)) return
   for (const [w, t] of workerTask) if (t.lead === sid) workerTask.delete(w)
@@ -7170,6 +7187,14 @@ const leadDeps = (me: string) => ({
   leads: () => leadSet,
   workers: () => [...sessions.keys()].map((id) => ({ id, folder: panelDir(id), busy: Boolean(sessions.get(id)?.busy) && !workerTask.get(id)?.result, lead: workerTask.get(id)?.lead ?? null })),
   owns: (w: string) => workerTask.get(w)?.lead === me,
+  team: (lead: string, ws: { id: string; title: string }[]) => {
+    leadSet.add(lead)
+    for (const w of ws) {
+      workerTask.set(w.id, { lead, title: w.title, at: Date.now(), files: new Set(), cost: 0 })
+      if (!uiTitles.has(w.id)) uiTitles.set(w.id, w.title)
+    }
+    pushLead()
+  },
   adopt: (w: string, title: string, task: string) => {
     workerTask.set(w, { lead: me, title, at: Date.now(), files: new Set(), cost: 0 })
     void task
@@ -7212,7 +7237,7 @@ const leadDeps = (me: string) => ({
       win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona, worktree: { label: p.title || 'worker' } })
       setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
     })
-    if (p.title) uiTitles.set(sid, p.title)
+    if (p.title?.trim()) (uiTitles.set(sid, p.title.trim()), pushLead())
     return sid
   },
 })
@@ -7666,7 +7691,7 @@ function uiDeps(me: string): UiDeps {
         win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona })
         setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
       })
-      if (p.title) uiTitles.set(sid, p.title)
+      if (p.title?.trim()) (uiTitles.set(sid, p.title.trim()), pushLead())
       return sid
     },
     log: (m) => logs().info('stm:ui', `${me} ${m}`),
@@ -7675,6 +7700,7 @@ function uiDeps(me: string): UiDeps {
   }
 }
 // end-to-end tests only: the ui tools of a panel, called as its Claude would
+if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmHub = hub
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmUiTools = (sid: string) => uiTools(uiDeps(sid))
 // end-to-end tests only: an event as if the panel's session had emitted it (a failed turn, for the failover card)
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmEmit = (sid: string, e: unknown) => send(sid, e)

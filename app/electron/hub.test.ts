@@ -33,3 +33,24 @@ describe('Hub', () => {
     expect(await hub.message('s2', 's1', 'hi')).toBe('from a')
   })
 })
+
+describe('a message that never starts', () => {
+  it('fails fast when the target shows no sign of work, and calls onMessage first', async () => {
+    const hub = new Hub()
+    hub.startMs = 60
+    const seen: string[] = []
+    hub.onMessage = (f, t) => void seen.push(`${f}>${t}`)
+    hub.add('a', { label: 'a', cwd: '/a', busy: () => false, ask: () => new Promise(() => undefined) })
+    hub.add('b', { label: 'b', cwd: '/b', busy: () => false, ask: () => new Promise(() => undefined), lastSign: () => 0 })
+    await expect(hub.message('a', 'b', 'hi')).rejects.toThrow(/did not start the task/)
+    expect(seen).toEqual(['a>b'])
+  })
+  it('keeps waiting once the target shows a sign', async () => {
+    const hub = new Hub()
+    hub.startMs = 60
+    let sign = 0
+    hub.add('a', { label: 'a', cwd: '/a', busy: () => false, ask: () => new Promise(() => undefined) })
+    hub.add('b', { label: 'b', cwd: '/b', busy: () => true, ask: () => ((sign = Date.now() + 1), new Promise((ok) => setTimeout(() => ok('done'), 150))), lastSign: () => sign })
+    await expect(hub.message('a', 'b', 'hi')).resolves.toBe('done')
+  })
+})

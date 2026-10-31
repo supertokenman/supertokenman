@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CARD_GAP, CARD_H, CARD_W, checkArrange, checkLayout, checkLinks, checkOpen, MAX_OPEN, planArrange } from './uitools'
+import { CARD_GAP, CARD_H, CARD_W, checkArrange, checkLayout, checkLinks, checkOpen, MAX_OPEN, planArrange, planTeams } from './uitools'
 
 describe('checkLayout', () => {
   it('accepts the app layouts and row as columns', () => {
@@ -90,5 +90,28 @@ describe('listPanels', () => {
   })
   it('falls back to the sessions when the window does not answer', () => {
     expect(listPanels([{ id: 's1', folder: '/a', name: 'a', persona: 'x' }], undefined).map((x) => x.id)).toEqual(['s1'])
+  })
+})
+
+describe('lead and workers', () => {
+  it('checkOpen takes a lead and refuses a bad one', () => {
+    const r = checkOpen({ panels: [{ folder: '.' }], lead: 'self' })
+    expect(r.ok && r.value.lead).toBe('self')
+    expect(checkOpen({ panels: [{ folder: '.' }], lead: 'a b' }).ok).toBe(false)
+    expect(checkOpen({ panels: [{ folder: '.' }], lead: 3 }).ok).toBe(false)
+  })
+  it('knows fan', () => expect(checkArrange('fan')).toEqual({ ok: true, value: 'fan' }))
+  it('fan puts the lead left and its workers in a column to its right', () => {
+    const p = planArrange('fan', ['w1', 'L', 'w2', 'x'], { w1: 'L', w2: 'L' })!
+    expect(p.L!.x).toBeLessThan(p.w1!.x)
+    expect(p.w1!.x).toBe(p.w2!.x)
+    expect(p.w2!.y).toBeGreaterThan(p.w1!.y)
+    // the lead sits between its workers
+    expect(p.L!.y).toBeGreaterThan(p.w1!.y)
+    expect(p.L!.y).toBeLessThan(p.w2!.y)
+    // a panel in no team goes below the team
+    expect(p.x!.y).toBeGreaterThan(p.w2!.y)
+    const xs = (planTeams(['a', 'b'], {}))
+    expect(xs.a!.y).toBe(xs.b!.y)
   })
 })

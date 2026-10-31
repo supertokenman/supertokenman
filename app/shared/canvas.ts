@@ -88,6 +88,8 @@ export function uniquePairs(links: Record<string, { panel: string }[]>): [string
 }
 
 export const FAN_GAP = 200
+/** how much wider a lead's card is than a worker's (its height grows by three quarters of it) */
+export const LEAD_GROW = 96
 
 /** Lead on the left, its workers in a column to the right, far enough away that the edges have room to curve. */
 export function planFan(lead: Point, workers: string[]): Record<string, Point> {
