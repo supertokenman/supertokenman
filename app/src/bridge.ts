@@ -452,6 +452,8 @@ export type Bridge = {
     act: (id: string, act: 'stop' | 'rm') => Promise<boolean>
     onEvent: (fn: (ev: import('../shared/containers').Ev) => void) => () => void
   }
+  /** Whether slow/costly-turn notes are shown; pass new values to change them. Cost is on and duration off by default. */
+  anomalyNotes: (prefs?: { cost: boolean; duration: boolean }) => Promise<{ cost: boolean; duration: boolean }>
   anomalySeries: (sid: string) => Promise<{ key: string; samples: import('../shared/anomaly').Sample[]; bands: Record<'cost' | 'tokens' | 'seconds', { median: number; low: number; high: number }> }>
   pdfTools: {
     config: (url?: string) => Promise<{ url: string; hasKey: boolean; ops: { id: import('../electron/stirling').Op; name: string; many: boolean }[] }>

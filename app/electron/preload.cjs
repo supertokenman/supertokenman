@@ -657,6 +657,7 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('ctr:event', h)
     },
   },
+  anomalyNotes: (prefs) => ipcRenderer.invoke('anomaly:notes', prefs),
   anomalySeries: (sid) => ipcRenderer.invoke('anomaly:series', sid),
   pdfTools: {
     config: (url) => ipcRenderer.invoke('pdf:config', url),

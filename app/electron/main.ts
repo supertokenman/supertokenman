@@ -338,7 +338,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; control?: { caps?: Partial<Caps>; auditDays?: number; agentCap?: number; fanoutCap?: number }; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; turnNotes?: { cost?: boolean; duration?: boolean }; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; control?: { caps?: Partial<Caps>; auditDays?: number; agentCap?: number; fanoutCap?: number }; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -505,11 +505,25 @@ async function dropAndForget(w: Worktree) {
   saveSettings({ ...settings(), worktrees: (settings().worktrees ?? []).filter((x) => x.path !== w.path) })
   return ok
 }
+const turnClocks = new Map<string, ReturnType<typeof AN.turnClock>>()
+const lastAnomalyNote = new Map<string, number>()
+/** Feeds the active-time clock of the turn in progress. */
+function clockEvent(sid: string, e: { kind?: string; tools?: { name: string }[] }) {
+  if (e.kind !== 'assistant' && e.kind !== 'permission' && e.kind !== 'tool' && e.kind !== 'answered' && e.kind !== 'human') return
+  let c = turnClocks.get(sid)
+  if (!c) turnClocks.set(sid, (c = AN.turnClock()))
+  if (e.kind === 'assistant') c.event(Date.now(), (e.tools ?? []).map((t) => t.name))
+  else if (e.kind === 'permission') c.event(Date.now(), [], true)
+  else c.moved(Date.now())
+}
 function spendTurn(sid: string, cumulativeUsd: number, ev?: { inputTokens?: number; cacheRead?: number; cacheWrite?: number; durationMs?: number }) {
   const p = panelCost.get(sid) ?? { total: 0, recent: [] }
   // Claude Code reports the session's cost so far; a resumed panel starts its count again
   const turn = Math.max(0, cumulativeUsd - p.total)
-  if (ev) turnAnomaly(sid, { at: Date.now(), cost: turn, tokens: (ev.inputTokens ?? 0) + (ev.cacheRead ?? 0) + (ev.cacheWrite ?? 0), seconds: (ev.durationMs ?? 0) / 1000 })
+  const clock = turnClocks.get(sid)
+  turnClocks.delete(sid)
+  const shape = clock ? clock.finish(Date.now(), ev?.durationMs ?? 0) : {}
+  if (ev) turnAnomaly(sid, { at: Date.now(), cost: turn, tokens: (ev.inputTokens ?? 0) + (ev.cacheRead ?? 0) + (ev.cacheWrite ?? 0), seconds: (ev.durationMs ?? 0) / 1000, ...shape })
   panelCost.set(sid, { total: Math.max(p.total, cumulativeUsd), recent: [...p.recent, turn].slice(-10) })
   const cwd = shells.get(sid)?.cwd
   if (!cwd || !(turn > 0)) return
@@ -670,11 +684,20 @@ function turnAnomaly(sid: string, now: AN.Sample) {
   const key = statKey(sid)
   const hist = all[key] ?? []
   const [project, model] = key.split('|')
-  const found = AN.check(hist, now, { where: `${project} on ${String(model).replace(/^claude-/, '')}` })
+  const prefs = settings().turnNotes ?? {}
+  const found = AN.check(hist, now, { duration: prefs.duration === true, where: `${project} on ${String(model).replace(/^claude-/, '')}` })
   all[key] = [...hist, now].slice(-200)
   writeAtomic(turnStatsFile(), JSON.stringify(all))
-  for (const v of found) send(sid, { kind: 'note', tone: 'error', text: `${v.reason} Normal is up to ${AN.WORD[v.metric](v.high)}.` })
+  const shown = found.filter((v) => (v.metric === 'seconds' ? prefs.duration === true : prefs.cost !== false))
+  if (!shown.length || !AN.noteDue(lastAnomalyNote.get(sid), now.at)) return
+  lastAnomalyNote.set(sid, now.at)
+  for (const v of shown) send(sid, { kind: 'note', tone: AN.toneOf(v), text: `${v.reason} Normal is up to ${AN.WORD[v.metric](v.high)}.` })
 }
+ipcMain.handle('anomaly:notes', (_e, prefs?: { cost?: boolean; duration?: boolean }) => {
+  if (prefs) saveSettings({ ...settings(), turnNotes: { cost: Boolean(prefs.cost), duration: Boolean(prefs.duration) } })
+  const t = settings().turnNotes ?? {}
+  return { cost: t.cost !== false, duration: t.duration === true }
+})
 ipcMain.handle('anomaly:series', (_e, sid: string) => {
   let key = statKey(String(sid))
   // a panel that has not answered yet has no model: show its project's busiest model
@@ -1014,6 +1037,7 @@ function sendNow(sid: string, e: unknown) {
   if (ev.kind !== 'peer') lastSign.set(sid, Date.now())
   phoneTrack(sid, e as never)
   traceEvent(sid, e as never)
+  clockEvent(sid, e as never)
   // spans go into the trace, not to the window
   if (ev.kind === 'span') return
   quotaWatch(sid, ev)

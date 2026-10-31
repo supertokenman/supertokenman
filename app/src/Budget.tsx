@@ -113,6 +113,9 @@ function TurnBand(props: { panels: { sid: string; name: string }[] }) {
   const [metric, setMetric] = useState<'cost' | 'tokens' | 'seconds'>('cost')
   const [data, setData] = useState<Awaited<ReturnType<typeof window.stm.anomalySeries>> | null>(null)
   useEffect(() => void window.stm.anomalySeries(sid).then(setData), [sid])
+  const [notes, setNotes] = useState({ cost: true, duration: false })
+  useEffect(() => void window.stm.anomalyNotes().then(setNotes, () => undefined), [])
+  const setNote = (k: 'cost' | 'duration', v: boolean) => void window.stm.anomalyNotes({ ...notes, [k]: v }).then(setNotes, () => undefined)
   const pts = (data?.samples ?? []).slice(-60).map((x, i) => [i + 1, x[metric]] as [number, number])
   const b = data?.bands[metric]
   const over = pts.filter(([, v]) => b && v > b.high).length
@@ -125,7 +128,11 @@ function TurnBand(props: { panels: { sid: string; name: string }[] }) {
           {(['cost', 'tokens', 'seconds'] as const).map((m) => <button key={m} role="tab" aria-selected={metric === m} onClick={() => setMetric(m)}>{m === 'cost' ? 'Cost' : m === 'tokens' ? 'Tokens' : 'Time'}</button>)}
         </div>
       </div>
-      {pts.length < 8 ? <div className="faint">{data?.key.split('|')[0]} has {count(pts.length, 'turn')} on this model so far; the usual band needs 8.</div> : (
+      <div className="ob-row">
+        <label className="ca-toggle"><Checkbox checked={notes.cost} onChange={(e) => setNote('cost', e.target.checked)} />Point out turns that cost or read far more than usual</label>
+        <label className="ca-toggle"><Checkbox checked={notes.duration} onChange={(e) => setNote('duration', e.target.checked)} />Also point out slow turns (active time, like for like)</label>
+      </div>
+      {pts.length < 10 ? <div className="faint">{data?.key.split('|')[0]} has {count(pts.length, 'turn')} on this model so far; the usual band needs 10.</div> : (
         <>
           <Chart kind="line" label={`${metric} per turn`} unit={metric === 'cost' ? 'US$' : metric === 'tokens' ? 'tokens' : 's'} height={150} series={[{ name: 'Turn', points: pts }, { name: 'Usual', points: pts.map(([i]) => [i, b!.median]) }, { name: 'Top of normal', points: pts.map(([i]) => [i, b!.high]) }]} />
           <div className="faint">{over ? `${over} of the last ${pts.length} turns went over the band; each one was pointed out in its panel.` : 'Every recent turn is inside the band.'} Median and spread of this project on this model, last 200 turns.</div>
