@@ -61,10 +61,14 @@
         <h2 id="agents-t">many panels. one task.</h2>
         <p>Each panel runs Claude Code in its own git worktree, so two tasks never write over each other. Panels sit on a canvas with their links drawn; send one message to the linked panels and the one you name answers.</p>
         <p><code>stm loop</code> sends each reply from a build panel to a review panel and back, until the review says APPROVED, the rounds run out or the spend cap is reached.</p>
+        <p>A lead panel hands a task to another panel and collects the answer, and the canvas shows the work moving along the link. Panels post to each other in a team channel, and wait on each other with <code>stm wait</code> and <code>stm state</code>; a wait that would loop back on itself is refused.</p>
         <p>Group panels under a task with one budget and one timeline, and close it with the decision: merged, dropped, or what was learned.</p>
       </div>
       <figure class="h-shot">
-        <img src="assets/screens/agents.png" width="1280" height="800" loading="lazy" decoding="async" alt="The Tasks sheet: a task called Pix at checkout with a US$ 2 budget, the acme panel linked to it and its timeline">
+        <picture>
+          <source media="(max-width: 600px)" srcset="assets/screens/agents-dark-sm.webp" width="457" height="307">
+          <img src="assets/screens/agents-dark.webp" width="682" height="352" loading="lazy" decoding="async" alt="The Tasks sheet: a task called Pix at checkout with a US$ 2 budget, two panels on it, and its timeline">
+        </picture>
         <figcaption>Tasks: one budget and one timeline across the panels that work on it.</figcaption>
       </figure>
     </div>
@@ -93,7 +97,10 @@
         <p>Isolate a panel in a Docker container with only its folder and no network, or trim the tools it can reach.</p>
       </div>
       <figure class="h-shot">
-        <img src="assets/screens/control.png" width="1280" height="800" loading="lazy" decoding="async" alt="The Budgets sheet: limits per panel, per project and per persona each day, a limit above which a turn asks first, and the share at which the panel warns">
+        <picture>
+          <source media="(max-width: 600px)" srcset="assets/screens/control-dark-sm.webp" width="470" height="335">
+          <img src="assets/screens/control-dark.webp" width="900" height="584" loading="lazy" decoding="async" alt="The Budgets sheet: US$ 50 per panel, US$ 120 per project each day, no persona limit, and a warning at 80 percent">
+        </picture>
         <figcaption>Budgets: daily limits per panel, project and persona.</figcaption>
       </figure>
     </div>
@@ -107,7 +114,10 @@
         <p><code>stm learn</code> turns the notes you gave with denials into proposed lines for <code>CLAUDE.local.md</code>. Nothing is written until you pick them.</p>
       </div>
       <figure class="h-shot">
-        <img src="assets/screens/memory.png" width="1280" height="800" loading="lazy" decoding="async" alt="The Memory sheet for acme: three facts about the project, two written by you and one by Claude">
+        <picture>
+          <source media="(max-width: 600px)" srcset="assets/screens/memory-dark-sm.webp" width="485" height="210">
+          <img src="assets/screens/memory-dark.webp" width="1156" height="400" loading="lazy" decoding="async" alt="The Memory sheet: three facts about the project, two written by you and one by Claude">
+        </picture>
         <figcaption>Memory: each fact with its author and version.</figcaption>
       </figure>
     </div>
@@ -116,8 +126,10 @@
   <section class="h-running" id="running" aria-labelledby="running-t">
     <div class="wrap">
       <h2 id="running-t">close the window. the panels keep going.</h2>
-      <p class="h-sub">Added in 0.1.24. Keep running is a setting, off by default.</p>
+      <p class="h-sub">From 0.1.22 to 0.1.24. Keep running is a setting, off by default.</p>
       <dl class="h-facts-grid">
+        <div><dt>Messages wait their turn</dt><dd>What you send to a busy panel waits in a list you can edit or clear, and goes out when the turn ends. Since 0.1.22.</dd></div>
+        <div><dt>A limit is not a dead end</dt><dd>When a panel hits its limit or an error, a card offers to continue on the fallback you set. Nothing is resent until you choose. Since 0.1.22.</dd></div>
         <div><dt>In the menu bar</dt><dd>With a panel at work, closing the window or Cmd+Q leaves it running, with the count, today’s cost, Stop all, and Quit and stop all.</dd></div>
         <div><dt>State at a glance</dt><dd>Each panel’s dot shows working, waiting for you, idle, stopped or not started. Panels that ask you something show in Needs you.</dd></div>
         <div><dt>Back where you were</dt><dd>Reopen the window and running panels return with their recent output. After a crash or restart, a strip offers to resume them.</dd></div>
@@ -143,6 +155,7 @@
           <tbody>
             <tr><td>Claude Code</td><td>Anthropic, with your own login or key, when a panel runs</td></tr>
             <tr><td>Claude Code usage data</td><td>Off: the app sets it off for its panels</td></tr>
+            <tr><td>Dictate anywhere</td><td>Nowhere: your own whisper.cpp on this Mac. Off by default, and so is Clean up, which goes through Claude Code</td></tr>
             <tr><td>Panel queue and team channel</td><td>Nowhere: files and a local socket on your Mac</td></tr>
             <tr><td>Telemetry, analytics, crash reports to us</td><td>None</td></tr>
           </tbody>

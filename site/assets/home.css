@@ -28,8 +28,8 @@ main p { text-wrap: pretty; }
 .btn { min-height: 44px; }
 .h-facts { font-size: 15px; color: var(--faint); margin: 0; max-width: 32em; }
 
-.h-live { margin: var(--s5) 0 0; position: relative; }
-.h-live::before { content: ''; position: absolute; left: 14px; right: -14px; top: 14px; aspect-ratio: 1280 / 780; background: var(--accent);
+.h-live { margin: var(--s5) 0 0; position: relative; padding-right: 14px; }
+.h-live::before { content: ''; position: absolute; left: 14px; right: 0; top: 14px; aspect-ratio: 1280 / 780; background: var(--accent);
   clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%); }
 .h-live-frame { position: relative; aspect-ratio: 1280 / 780; overflow: hidden; background: var(--bg);
   clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%); }
@@ -49,6 +49,7 @@ main p { text-wrap: pretty; }
 .h-copy h2 { margin-bottom: var(--s3); }
 .h-copy p { margin: 0 0 var(--s2); }
 .h-shot { margin: 0; }
+.h-shot picture { display: block; }
 .h-shot img { width: 100%; height: auto; background: var(--surface); clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%); }
 
 /* 0.1.24: a plain grid of facts, the one section without a picture */
@@ -83,7 +84,8 @@ main p { text-wrap: pretty; }
 }
 @media (max-width: 600px) {
   .h-hero { padding-top: var(--s4); }
-  .h-live::before { left: 8px; right: -8px; top: 8px; }
+  .h-live { padding-right: 8px; }
+  .h-live::before { left: 8px; top: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .h-live iframe { transition: none; } }
 @media (max-width: 900px) { .h-cta { margin: var(--s3) 0 var(--s2); } .h-hero-text { gap: var(--s3); } }
