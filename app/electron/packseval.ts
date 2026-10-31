@@ -125,7 +125,9 @@ export function createPackEval(d: EvalDeps) {
           },
         )
       }
-      return { evalId: id, panels: { with: sidWith, without: sidWithout }, hosts: res.scan.manifest.hosts, version }
+      // what the window needs to show the two panels it did not open itself
+      const at = (sid: string, w: Worktree) => ({ sid, cwd: w.path, branch: w.branch, base: w.base, repo: w.repo })
+      return { evalId: id, panels: { with: sidWith, without: sidWithout }, opened: { with: at(sidWith, withWt), without: at(sidWithout, withoutWt) }, hosts: res.scan.manifest.hosts, version }
     } catch (e) {
       for (const w of made) {
         try {
