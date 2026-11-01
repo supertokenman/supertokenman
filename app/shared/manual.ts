@@ -453,12 +453,24 @@ TOOL is a tool name (Bash, Edit, Write, mcp__stm__*), a glob, *, or a class: rea
 - Design studio: design kits, palettes and contrast checks.`,
   },
   {
+    id: 'pilot',
+    title: 'Pilot: the agent that drives the app',
+    keys: 'pilot agent assistant drive control app commands undo actions tiers free ask confirm untrusted shortcut',
+    body: `The Pilot is a sheet on the right with its own Claude session that runs the app for you: change the layout, open a screen, focus or start a panel, read what it cost today, which routines run next, what notifications you missed. Open it with Cmd+Shift+J or Cmd+K, Pilot; Escape or the close button shuts it and keeps the conversation, New chat starts over. It starts on the smallest model of your login, because it clicks and reads, it does not write code (ask a panel for that).
+- The same commands as Cmd+K. The agent lists them (app_commands), describes one (app_describe) and runs it (app_run); it also reads the app (app_state, app_cost, app_routines, app_packs, app_notifications, app_settings, with secrets and vault values never included). Commands that need a picker, a file dialog or typing, such as a worktree folder, are yours to run.
+- Three tiers. Free (view, layout, focus, open a screen) runs at once. Ask (starts a panel, spends money, delegates, creates or edits routines and triggers, installs packs) shows a card with the command, its arguments and the tier, and runs only on Allow; a rule can allow it only while the session is clean. Confirm (deletes, killing a process, network-enabling, the vault, settings that widen permissions) always asks and no rule can change that. A card says "This cannot be undone" when it is true.
+- Read untrusted content: once the session has read files, web pages, shell output or a message from another panel, the sheet shows this label, and ask commands show a card for the rest of that session whatever your rules say. New chat clears it.
+- Actions: the list at the bottom of the sheet shows what the agent ran, newest first. Undo reverts the layout or closes a panel the agent started, without asking; Undo last (Cmd+Shift+Z inside the sheet) takes the newest one. If you changed the same thing since, the row says so and leaves it. Commands that cannot be undone are marked.
+- Limits: 30 actions a minute per panel, a burst of 10, ask and confirm count double. A scheduled run never drives the app, because nobody is there to answer a card. Other panels get the read tools and free commands; the pilotEverywhere setting (off, and with no switch in Settings yet) would let them run ask commands too, always with a card.
+- Every run is in the audit log as "pilot", with the tier, the decision and whether the session was untrusted. Rules can name app_run:<id>.`,
+  },
+  {
     id: 'look',
     title: 'Appearance, privacy, shortcuts',
     keys: 'appearance theme dark light font background private screen sharing shortcuts keyboard',
     body: `- Appearance (Cmd+,): themes (claude-dark, claude-paper and more), font, background landscape.
 - Private: hides the app from screen sharing and recordings.
-- Shortcuts: Cmd+K search, Cmd+T new panel, Cmd+W close, Cmd+E ask the team, Cmd+J memory, Cmd+Shift+K catalog, Cmd+Enter run a command, Option+Space quick search from any app.
+- Shortcuts: Cmd+K search, Cmd+T new panel, Cmd+W close, Cmd+E ask the team, Cmd+J memory, Cmd+Shift+J the Pilot, Cmd+Shift+K catalog, Cmd+Enter run a command, Option+Space quick search from any app.
 - Reduced motion in macOS settings makes the app hold still.
 - macOS: a panel turn of 15 seconds or more, or a terminal command of 20 seconds or more, that ends while you are in another app sends a notification; clicking it brings that panel forward. With no network an Offline badge shows in the top bar (Quick ask still works).
 - Bluetooth batteries: when a device reports its level (AirPods per bud and case, Magic Mouse, Keyboard and Trackpad, most headphones and mice), a battery cell sits in the top bar with the device that needs charging first; a click lists them all, with charging shown. Under 20% a notification comes once, until it charges. Read every 3 minutes; some speakers and headphones do not report a level at all.`,

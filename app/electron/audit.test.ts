@@ -77,3 +77,19 @@ describe('AuditLog', () => {
     expect(retentionDays(9999)).toBe(365)
   })
 })
+
+describe('AuditLog.pilot', () => {
+  it('writes an app_run row by pilot with the tier and the taint flag, and redacts the args', () => {
+    const dir = tmp()
+    const log = new AuditLog(join(dir, 'audit'), { known: () => [{ name: 'TOKEN', value: 'sekret-value-123' }], now: () => at })
+    expect(log.pilot({ panel: 'p1', project: 'proj', turn: 2, id: 'open-/x', args: { cwd: 'sekret-value-123' }, tier: 'ask', decision: 'ask', tainted: true })).toBe(true)
+    expect(log.pilot({ panel: 'p1', project: 'proj', turn: 2, id: 'nope', args: {}, decision: 'deny', tainted: false })).toBe(true)
+    const rows = log.query({ from: at - 1000, to: at + 1000 })
+    const ask = rows.find((r) => r.decision === 'ask')!
+    expect(ask).toMatchObject({ tool: 'mcp__stm__app_run', by: 'pilot', tier: 'ask', tainted: true, kind: 'tool' })
+    expect(ask.args).not.toContain('sekret-value-123')
+    const deny = rows.find((r) => r.decision === 'deny')!
+    expect(deny.tier).toBeUndefined()
+    expect(deny.tainted).toBe(false)
+  })
+})

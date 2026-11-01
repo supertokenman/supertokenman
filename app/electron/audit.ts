@@ -59,6 +59,11 @@ export class AuditLog {
     return false
   }
 
+  /** One Pilot `app_run` decision: by 'pilot', with the tier it ran at and whether the session was tainted. */
+  pilot(e: { panel: string; project: string; turn: number; id: string; args: Record<string, unknown>; tier?: 'free' | 'ask' | 'confirm'; decision: AuditDecision; tainted: boolean; rule?: string }): boolean {
+    return this.write({ panel: e.panel, project: e.project, turn: e.turn, tool: 'mcp__stm__app_run', args: JSON.stringify({ id: e.id, args: e.args }), decision: e.decision, by: 'pilot', ...(e.tier ? { tier: e.tier } : {}), tainted: e.tainted, ...(e.rule ? { rule: e.rule } : {}), kind: 'tool' })
+  }
+
   private fail(e: unknown) {
     // one note per run of failures, not one per row
     if (this.failed) return

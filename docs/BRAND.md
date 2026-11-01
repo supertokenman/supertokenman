@@ -275,6 +275,10 @@ A role changes how the panel looks, not only its tag, and looks the same in the 
 - Step marks: tools without their own shape (MCP, agents) wear a diamond. They used to wear a cross,
   which read as a failed step.
 
+## Pilot sheet (2026-11-01)
+
+A pinned sheet on the right, not a modal: the panels stay visible so a layout change can be seen. Same flat parts as the rest: a 1px edge that follows the 12px cut corner (two clipped layers, the outer one the line), tone steps instead of a shadow, no pill. The conversation is plain text with the person's lines on a `--raised` plate with a 3px accent bar. A confirm card is a `--raised` block with a 3px accent bar on the left, the command in the body weight, its arguments as mono key and value rows, the tier as an outlined mono tag, and "This cannot be undone." in `--red` before Allow. The label "Read untrusted content" is an outlined mono label with a `--gold` line and the warn cut square. The actions list at the bottom uses plain rows with a hairline between them; a tier legend (circle Free, cut square Ask, square Confirm) sits under it. Source: `app/src/pilot/`.
+
 ## Landing visuals (decided 2026-10-29)
 
 - Colour, "Noite" (chosen 2026-10-29 from three options): the site is dark by default, background

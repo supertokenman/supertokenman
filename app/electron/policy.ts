@@ -10,6 +10,8 @@ import { AGENT_CAP, FANOUT_CAP, panelsStarted } from '../shared/planview.js'
 import { evaluate, globRe, RANK, strictest, type Ctx, type Decision, type ScopedRule } from '../shared/policygate.js'
 import { parseRules, type RuleError } from '../shared/policyrules.js'
 import type { Risk } from '../shared/cmdrisk.js'
+import type { Tier } from '../shared/pilotcatalog.js'
+import { toDecision } from '../shared/pilottier.js'
 
 export type Existing = { action: Decision; risk: Risk | null; reason?: string; why?: string; cls?: 'read' | 'write' }
 export type Gated = Existing & { by: AuditBy; rule?: string; bp?: 'before' | 'afterPlan' }
@@ -161,6 +163,52 @@ export function gate(tool: string, input: Record<string, unknown>, existing: Exi
     out = { ...out, action: strictest(out.action, 'ask'), by: out.action === 'allow' ? 'app' : out.by, why: hit.label, bp: hit.bp }
   }
   return out
+}
+
+export const PILOT_RUN = 'mcp__stm__app_run'
+
+export type PilotCall = {
+  /** the command id as the agent named it, and the catalog spec's own id when it differs (a family) */
+  id: string
+  specId: string
+  args: Record<string, unknown>
+  /** from the CommandSpec and the args, never from the agent (shared/pilottier.ts resolveTier) */
+  tier: Tier
+  /** the session has read untrusted content (electron/session.ts) */
+  tainted: boolean
+  /** the Pilot panel's session; any other panel runs only free commands, or ask ones with pilotEverywhere */
+  pilot: boolean
+  everywhere: boolean
+}
+
+/**
+ * The gate for one `app_run`. The tier decides what the app says (shared/pilottier.ts toDecision); policy
+ * rules then run on `mcp__stm__app_run` (with `arg.id`) and on `app_run:<id>`, and may tighten anything.
+ * A rule `allow` loosens only an ask-tier command in a clean Pilot session: confirm never allows, a tainted
+ * session never allows ask, and a panel that is not the Pilot always shows the card.
+ */
+export function pilotGate(c: PilotCall, o: GateOpts): Gated {
+  const input = { id: c.id, args: c.args }
+  if (!c.pilot && c.tier === 'confirm') return { action: 'deny', risk: null, by: 'pilot', reason: `"${c.id}" needs the person's confirmation and runs only in the Pilot panel. Say so instead of retrying.` }
+  if (!c.pilot && c.tier === 'ask' && !c.everywhere) return { action: 'deny', risk: null, by: 'pilot', reason: `"${c.id}" is not free: this panel may run only free commands. The person can use the Pilot panel for it. Say so instead of retrying.` }
+  const existing: Existing = { action: toDecision(c.tier, { tainted: c.tainted, ruleAllows: false }), risk: null }
+  const names = [...new Set([`app_run:${c.id}`, `app_run:${c.specId}`])]
+  const a = gate(PILOT_RUN, input, existing, o)
+  if (a.action === 'deny') return { ...a, by: a.by === 'rule' ? 'rule' : 'pilot' }
+  const others = names.map((n) => gate(n, input, existing, { ...o, control: undefined }))
+  const ruled = [a, ...others].filter((g) => g.by === 'rule')
+  const denied = ruled.find((g) => g.action === 'deny')
+  if (denied) return denied
+  // a breakpoint or a cap stops the call even where a rule allows it
+  if (a.bp) return a
+  const asked = ruled.find((g) => g.action === 'ask')
+  if (asked) return { ...asked, action: strictest(existing.action, 'ask') }
+  const allowed = ruled.find((g) => g.action === 'allow')
+  if (!allowed) return a.action === 'allow' ? { ...a, by: 'pilot' } : { ...a, by: a.by === 'default' ? 'pilot' : a.by }
+  // the only loosening: ask to allow, by a rule, in a clean Pilot session
+  const final = toDecision(c.tier, { tainted: c.tainted, ruleAllows: c.pilot })
+  if (final === 'allow') return { ...allowed, action: 'allow' }
+  return { ...allowed, action: final, by: 'pilot', rule: allowed.rule, why: c.tainted && c.tier === 'ask' ? 'This session read content the app does not trust, so a rule cannot allow this on its own.' : c.tier === 'confirm' ? 'This always asks; no rule can allow it.' : 'Only the Pilot panel can run this without a card.' }
 }
 
 export { RANK }

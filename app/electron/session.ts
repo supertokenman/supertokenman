@@ -6,6 +6,8 @@ import { toOverhead } from './overhead.js'
 import { filesNote, type Attachment } from '../shared/attach.js'
 import { ttlOf } from '../shared/cache.js'
 import { planFrom, type Plan, type ToolUse } from '../shared/planview.js'
+import { COMMANDS, findCommand } from '../shared/pilotcatalog.js'
+import { taintedAfter } from '../shared/pilottier.js'
 import { LoopGuard, messageCost, tripHeadline, type LoopConfig, type LoopTrip } from '../shared/loopguard.js'
 import type { CanUseTool, Options, PermissionResult, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 
@@ -76,6 +78,11 @@ export function summarize(name: string, input: Record<string, unknown>): string 
   const s = (v: unknown) => String(v ?? '')
   if (name.endsWith('__message_panel')) return `to ${s(input.panel)}: ${s(input.message).replace(/\s+/g, ' ').slice(0, 140)}`
   if (name.endsWith('__list_panels')) return 'list the open panels'
+  if (name === 'mcp__stm__app_run') {
+    // a Pilot command: its title, its args, and the note that it cannot be undone (the card shows this)
+    const spec = COMMANDS.find((c) => c.id === s(input.id)) ?? findCommand(s(input.id))?.spec
+    return `app command: ${spec?.title ?? s(input.id)} ${JSON.stringify(input.args ?? {}).slice(0, 100)}${spec?.effect === 'irreversible' ? ' (cannot be undone)' : ''}`
+  }
   if (name === 'Bash') return s(input.command).replace(/\s+/g, ' ').slice(0, 160)
   if ('file_path' in input) return s(input.file_path)
   if ('pattern' in input) return s(input.pattern)
@@ -162,6 +169,24 @@ export class Session {
     void this.interrupt().catch(() => undefined)
   }
 
+  /**
+   * Pilot: true once this session has read untrusted content (shared/pilottier.ts taintedAfter). It stays
+   * true for the rest of the session, not just the turn; while it is, an ask-tier app command always asks.
+   */
+  private taintedFlag = false
+  get tainted(): boolean {
+    return this.taintedFlag
+  }
+  /** Marks the session tainted by a tool; false for a tool whose result is trusted. */
+  taintFrom(tool: string): boolean {
+    if (taintedAfter(tool)) this.taintedFlag = true
+    return this.taintedFlag
+  }
+  /** Marks the session tainted by content that arrived without a tool (a message from another panel). */
+  taint(): void {
+    this.taintedFlag = true
+  }
+
   /** Which login answers this panel: email, plan and where the key comes from. */
   async account() {
     // /status is a reason for a live process: a panel that has not started (or sleeps) starts now
@@ -229,24 +254,33 @@ export class Session {
         // every conversation gets the app's rule; a new one also what earlier ones saved to the project's note
         ...(this.appended() ? { systemPrompt: { type: 'preset' as const, preset: 'claude_code' as const, append: this.appended() } } : {}),
         hooks: {
-          // a tool call the app turns aside, with the reason Claude reads instead
-          ...(this.opts.beforeTool
-            ? {
-                PreToolUse: [
+          // Pilot: a tool whose result is untrusted taints the whole session, before its result is read
+          PreToolUse: [
+            {
+              hooks: [
+                async (input) => {
+                  if (input.hook_event_name === 'PreToolUse') this.taintFrom(input.tool_name)
+                  return {}
+                },
+              ],
+            },
+            // a tool call the app turns aside, with the reason Claude reads instead
+            ...(this.opts.beforeTool
+              ? [
                   {
                     hooks: [
-                      async (input) => {
+                      async (input: { hook_event_name: string; tool_name?: string; tool_input?: unknown }) => {
                         if (input.hook_event_name !== 'PreToolUse') return {}
                         // phase 119: the project's errors are taken before the turn's first edit lands
-                        await this.opts.beforeEdit?.(input.tool_name)
-                        const why = this.opts.beforeTool!(input.tool_name, (input.tool_input ?? {}) as Record<string, unknown>)
+                        await this.opts.beforeEdit?.(input.tool_name!)
+                        const why = this.opts.beforeTool!(input.tool_name!, (input.tool_input ?? {}) as Record<string, unknown>)
                         return why ? { hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: why } } : {}
                       },
                     ],
                   },
-                ],
-              }
-            : {}),
+                ]
+              : []),
+          ],
           // a tool's result that tries to give orders: Claude is told it is data, and the panel says so
           ...(this.opts.afterTool
             ? {
@@ -559,6 +593,8 @@ export class Session {
 
   /** A message from another panel: shown in this panel, run as a turn, its reply returned. */
   ask(text: string, from: string): Promise<string> {
+    // another panel's words are content this session does not trust (Pilot taint)
+    this.taint()
     this.lastActivity = Date.now()
     this.runStart()
     this.wake()

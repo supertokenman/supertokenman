@@ -23,6 +23,8 @@ import type { UiEvent } from '../electron/session'
 import type { ShellEvent } from '../electron/shell'
 
 export type { UiEvent }
+export type PilotInverse = import('../shared/pilotundo').Inverse
+export type PilotAction = { id: string; at: number; panel: string; command: string; title: string; undo: PilotInverse['kind'] | null; irreversible: boolean }
 export type PanelStateView = import('../electron/runtime').PanelView
 export type RuntimeSnapshot = { at: number; panels: (import('../electron/runtime').PanelSnapshot)[]; keepRunning: boolean; phase: 'attached' | 'background' | 'quitting'; resumeOffer: number; todayUsd: number }
 export type PanelLinkView = { panel: string; auto: boolean; name: string; spent: { usd: number; tokens: number; turns: number }; capUsd: number | null }
@@ -271,7 +273,7 @@ export type Bridge = {
     get: () => Promise<{ model: string | null; models: LocalModel[] | null; stats: SmallStats; loaded: Loaded[] | null; jobs: Job[] }>
     set: (model: string | null) => Promise<string | null>
   }
-  newSession: (opts?: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => Promise<{ sid: string; cwd: string; missing: { id: string; secret: string }[]; persona?: { name: string; color: string; model: string }; sandbox?: string; remote?: { host: string; dir: string; branch?: string }; worktree?: import('./Worktree').PanelWorktree }>
+  newSession: (opts?: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; pilot?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => Promise<{ sid: string; cwd: string; missing: { id: string; secret: string }[]; persona?: { name: string; color: string; model: string }; sandbox?: string; remote?: { host: string; dir: string; branch?: string }; worktree?: import('./Worktree').PanelWorktree }>
   sandbox: {
     status: () => Promise<{ installed: boolean; version?: string; gateway: boolean; detail?: string }>
     prepare: (cwd: string) => Promise<string>
@@ -1072,7 +1074,9 @@ export type Bridge = {
     onPosted: (fn: (team: string, v: { post?: ChannelPost; wakes?: ChannelWake[]; pinned?: string }) => void) => () => void
   }
   lead: { state: () => Promise<LeadView>; set: (sid: string, on: boolean) => Promise<LeadView>; onState: (fn: (v: LeadView) => void) => () => void; onPulse: (fn: (v: { from: string; to: string }) => void) => () => void }
-  uiTools: { onCmd: (fn: (r: { req: string; op: 'layout' | 'arrange' | 'state'; arg?: string }) => void) => () => void; onConfirm: (fn: (r: { req: string; from: string; items: { folder: string; title?: string; persona?: string; model?: string }[] }) => void) => () => void; reply: (req: string, value?: boolean | { layout: string; panels?: { id: string; folder: string; title: string; state: string }[] }) => Promise<void> }
+  uiTools: { onCmd: (fn: (r: { req: string; op: 'layout' | 'arrange' | 'state'; arg?: string }) => void) => () => void; onConfirm: (fn: (r: { req: string; from: string; items: { folder: string; title?: string; persona?: string; model?: string }[] }) => void) => () => void; reply: (req: string, value?: boolean | { layout: string; focus?: string | null; screens?: string[]; panels?: { id: string; folder: string; title: string; state: string }[] }) => Promise<void> }
+  // Pilot (spec-pilot.md): the agent's app commands. The runner is src/pilot/run.ts, the sheet src/pilot/Pilot.tsx.
+  pilot: { onRun: (fn: (r: { callId: string; id: string; args: Record<string, unknown>; undo?: PilotInverse }) => void) => () => void; result: (r: { callId: string; ok: boolean; text: string; undo?: PilotInverse | null; after?: string | number | boolean }) => Promise<boolean>; actions: (w?: { window?: string | number }) => Promise<PilotAction[]>; undo: (actionId: string) => Promise<{ ok: boolean; reason?: 'missing' | 'irreversible' | 'none' | 'changed' | 'failed' }>; status: (sid: string) => Promise<{ tainted: boolean }>; onChanged: (fn: () => void) => () => void; onSummon: (fn: () => void) => () => void }
   stmCli: { onOpen: (fn: (r: { req: string; cwd?: string; persona?: string; model?: string; worktree?: { label: string } }) => void) => () => void; opened: (req: string, sid: string) => void; install: () => Promise<{ file: string; onPath: boolean; hint: string }> }
   vec: { status: (cwd: string) => Promise<{ model: string | null; models: string[]; size: number; total: number; project: string }>; model: (m: string | null) => Promise<string | null>; build: (cwd: string) => Promise<{ total: number; done: number }> }
   memtest: (cwd: string, question: string, where: 'local' | 'claude') => Promise<{ without: string; withMem: string; backedWithout: number; backedWith: number; agree: number }>

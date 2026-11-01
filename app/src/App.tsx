@@ -110,6 +110,7 @@ const Studio = lazy(() => import('./Studio').then((m) => ({ default: m.Studio })
 const Triggers = lazy(() => import('./Triggers').then((m) => ({ default: m.Triggers })))
 const Personas = lazy(() => import('./Personas').then((m) => ({ default: m.Personas })))
 const Connections = lazy(() => import('./Connections').then((m) => ({ default: m.Connections })))
+const PilotSheet = lazy(() => import('./pilot/Pilot'))
 const Catalog = lazy(() => import('./Catalog').then((m) => ({ default: m.Catalog })))
 const Memory = lazy(() => import('./Memory').then((m) => ({ default: m.Memory })))
 import { Splash } from './Splash'
@@ -125,6 +126,7 @@ import { sceneFor, sceneSvg } from './landscapes'
 import { Menu } from './Menu'
 
 import { Presence } from './Presence'
+import { runCommand, type Env as PilotEnv } from './pilot/run'
 import { useAdoptPanels } from './packs/adopt'
 
 
@@ -751,6 +753,8 @@ export function App() {
   const [sheet, setSheet] = useState(false)
   const [catalog, setCatalog] = useState(false)
   const [memory, setMemory] = useState(false)
+  // the Pilot sheet starts on its first open and keeps its conversation while shut
+  const [pilot, setPilot] = useState<'never' | 'open' | 'shut'>('never')
   const { code: currency, rate } = useMoney()
   const [focus, setFocusState] = useState<Focus | null>(loadFocus)
   const [focusSheet, setFocusSheet] = useState(false)
@@ -1043,6 +1047,9 @@ export function App() {
       } else if (e.key === ',') {
         e.preventDefault()
         setAppearance((v) => !v)
+      } else if (e.shiftKey && e.key.toLowerCase() === 'j') {
+        e.preventDefault()
+        setPilot((v) => (v === 'open' ? 'shut' : 'open'))
       } else if (e.key === 'j') {
         e.preventDefault()
         setMemory((v) => !v)
@@ -1117,7 +1124,9 @@ export function App() {
         const x = st.byId[id]
         return { id, folder: x?.cwd ?? '', title: (x?.cwd ?? '').split('/').filter(Boolean).at(-1) ?? id, state: !x?.model ? 'not started' : x.busy ? 'working' : (x.lines ?? []).some((l) => l.kind === 'user') ? 'ready' : 'not started' }
       })
-      void window.stm.uiTools.reply(r.req, { layout: r.op === 'layout' && r.arg ? r.arg : r.op === 'arrange' ? 'canvas' : layoutRef.current, panels })
+      // what is open: the sheets and dialogs on screen, by their label (the Pilot's app_state)
+      const screens = Array.from(document.querySelectorAll('[role=dialog][aria-label]:not([hidden])')).map((x) => x.getAttribute('aria-label') ?? '').filter(Boolean)
+      void window.stm.uiTools.reply(r.req, { layout: r.op === 'layout' && r.arg ? r.arg : r.op === 'arrange' ? 'canvas' : layoutRef.current, focus: st.focus, screens, panels })
     })
     const offAsk = window.stm.uiTools.onConfirm((r) => setUiAsks((q) => [...q, r]))
     return () => (offCmd(), offAsk())
@@ -1276,6 +1285,7 @@ export function App() {
     ...p.order.map((sid) => ({ id: `panel-${sid}`, group: 'Panels', label: p.byId[sid]?.cwd.split('/').filter(Boolean).slice(-2).join('/') ?? sid, hint: sid, keywords: 'panel', run: () => dispatch({ kind: 'focus', sid }) })),
     ...[
       ['today', 'Today', 'brief morning day', () => setTodayOpen(true)],
+      ['pilot', 'Pilot: the agent that drives the app', 'pilot agent assistant drive control app commands undo actions', () => setPilot('open')],
       ['agenda', 'Agenda', 'calendar meetings', () => setAgendaOpen(true)],
       ['prs', 'Pull requests', 'prs github review', () => setPrsOpen(true)],
       ['docker', 'Docker', 'containers logs', () => setDockerOpen(true)],
@@ -1396,6 +1406,20 @@ export function App() {
     ...found.secrets.map((n) => ({ id: `secret-${n}`, group: 'Secrets', label: n, hint: 'in the vault', keywords: 'secret key token', run: () => setSheet(true) })),
     ...news.items.slice(0, 40).map((n) => ({ id: `news-${n.id}`, group: 'Stories', label: n.title, hint: n.source, run: () => void window.stm.openUrl(n.link) })),
   ]
+  // the Pilot's commands (spec-pilot.md): main sends a palette id, the window runs the palette's own closure
+  const pilotEnv = useRef<PilotEnv | null>(null)
+  pilotEnv.current = {
+    entries: () => paletteEntries().map((e) => ({ id: e.id, label: e.label, run: e.run })),
+    layout: () => layoutRef.current,
+    setLayout: (id) => setLayout(id as Layout),
+    hasPanel: (sid) => Boolean(p.byId[sid]),
+    focusPanel: (sid) => dispatch({ kind: 'focus', sid }),
+    closePanel: (sid) => (void window.stm.closeSession(sid), dispatch({ kind: 'close', sid })),
+    openFolder: (cwd) => open(cwd),
+    openPersona: (id) => open(p.focus ? p.byId[p.focus]?.cwd : undefined, undefined, id),
+  }
+  useEffect(() => window.stm.pilot.onRun((r) => void runCommand(pilotEnv.current!, r).then((res) => window.stm.pilot.result({ callId: r.callId, ...res }))), [])
+  useEffect(() => window.stm.pilot.onSummon(() => setPilot('open')), [])
   const [todayOpen, setTodayOpen] = useState(() => {
     try {
       // the first launch belongs to the tour; the brief starts the next day
@@ -1712,6 +1736,7 @@ export function App() {
       <Presence show={apiOpen}><ApiClientSheet onClose={() => setApiOpen(false)} onAttach={(note) => p.focus && window.dispatchEvent(new CustomEvent('stm:attach', { detail: { sid: p.focus, ...note } }))} /></Presence>
       <Presence show={localOpen}><LocalModelSheet onClose={() => setLocalOpen(false)} usdToBrl={rate} /></Presence>
       <Presence show={a2mOpen}><ApiToMcpSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setA2mOpen(false)} /></Presence>
+      {pilot !== 'never' && <Suspense fallback={null}><PilotSheet open={pilot === 'open'} onClose={() => setPilot('shut')} /></Suspense>}
       <Presence show={mhOpen}><McpHealthSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMhOpen(false)} onInspect={() => (setMhOpen(false), setInspOpen(true))} onApprovals={() => (setMhOpen(false), setMpolOpen(true))} onCatalog={() => (setMhOpen(false), setMcatOpen(true))} /></Presence>
       <Presence show={mpolOpen}><McpApprovalsSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMpolOpen(false)} /></Presence>
       <Presence show={inspOpen}><McpInspectorSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setInspOpen(false)} /></Presence>
