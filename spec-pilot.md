@@ -105,7 +105,7 @@ Rules:
 
 ## 5. Pilot panel
 
-- A pinned sheet, `src/Pilot.tsx` (lazy), opened by a shortcut (proposal `Mod+J`; verify it is free in `electron/main.ts` menu and `App.tsx` key handling) and by a palette entry `pilot`.
+- A pinned sheet, `src/Pilot.tsx` (lazy), opened by a shortcut (`Mod+Shift+J`, see Open questions) and by a palette entry `pilot`.
 - Its session gets the full set: `app_commands`, `app_describe`, `app_run`, the read tools, `UI_TOOLS`. Other panels get the read tools, `app_commands`, `app_describe`, and `app_run` limited to free-tier ids by default (setting `pilotEverywhere`, default off).
 - Model: a setting `pilotModel`, default the cheapest model the person has configured (verify how models are listed in settings); the Pilot session switches to the person's normal model if they ask for code work (the guide says to `delegate` instead).
 - The actions list lives at the bottom of the Pilot sheet, with an undo button per row and "undo last" bound to `Mod+Shift+Z` inside the sheet only.
@@ -177,9 +177,9 @@ Wave 3: UI and docs.
 
 ## Open questions
 
-- Shortcut: `Mod+J` free on all platforms? Verify against the menu and existing key handlers.
-- Default model for Pilot: which cheap model id, and is it available for every login type (API key, subscription)?
-- Should `pilotEverywhere` let ordinary panels run ask-tier commands, or always route them to the Pilot?
-- Where notifications and today's cost live in main today (exact modules to read from).
-- Should undo of an ask-tier action itself ask, or is undoing the agent's own action always free?
-- Taint scope: per turn (proposed) or per session after the first untrusted read?
+- Decided: shortcut `Mod+Shift+J`. `Mod+J` is taken by Memory (`src/App.tsx:1046`, also `shared/manual.ts:449`). `Mod+Shift+J` is not bound in `app/src`, `app/electron` or `app/shared` (grep, and the `native.ts` accelerators); the key handler matches `e.key === 'j'`, which Shift changes to `J`, so no clash.
+- Decided: Pilot model is the smallest model available for the person's login (resolved at runtime from the configured login; `pilotModel` setting defaults to it).
+- Decided: ordinary panels may run ask-tier commands, always with a confirmation card; only the Pilot session has the full catalog. `pilotEverywhere` therefore covers ask-tier, not only free-tier.
+- Open: where notifications and today's cost live in main today (exact modules to read from).
+- Decided: undo does not ask. Undoing an action the agent took is free; the "changed since" check still applies.
+- Decided: untrusted content marks the whole session, not just the turn. Once tainted, ask-tier never resolves to allow for the rest of that session.
