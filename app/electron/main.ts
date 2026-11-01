@@ -20,7 +20,7 @@ import { basename, extname, relative, resolve, sep as pathSep } from 'node:path'
 import { Session, summarize as summarizeCall, type UiEvent } from './session.js'
 import { AuditLog, retentionDays } from './audit.js'
 import { Checkpoints } from './checkpoints.js'
-import { gate as policyGate, PanelControl, PolicyStore, type Breakpoint, type Existing } from './policy.js'
+import { gate as policyGate, PanelControl, PILOT_RUN, PolicyStore, type Breakpoint, type Existing } from './policy.js'
 import { afterRun, capDecision, clampCaps, firable, hookAllowed, reenable, type Caps, type Capped } from '../shared/routinecaps.js'
 import { parseRules } from '../shared/policyrules.js'
 import type { Plan } from '../shared/planview.js'
@@ -70,6 +70,8 @@ import { HEADROOM_PORT, HEADROOM_URL, headroomBin, headroomDir, headroomHealthy,
 import { setEndpointResolver, askLocal, chatLocal, emptyStats, OLLAMA, loadedModels, localModels, OLLAMA_PATHS, ollamaVersion, pullModel, smallTasks, SUGGESTED, type ChatMsg, type SmallStats } from './small.js'
 import { rereads } from './reread.js'
 import { UI_TOOLS, uiTools, type UiDeps } from './uitools.js'
+import { PILOT_READ_TOOLS, PilotHub, PilotLink, pilotTools, type PilotDeps } from './pilottools.js'
+import { createPilotRate } from '../shared/pilotrate.js'
 import { APP_GUIDE, MANUAL_TOOL, manualServer, MEMORY_TOOLS, memoryServer } from './guide.js'
 import { briefFor, decisionsOf, saveStopped, STOPPED_PROMPT, transcriptOf } from './brief.js'
 import { draftConstitution, parseTasks } from '../shared/spec.js'
@@ -123,7 +125,7 @@ import { cleanConfig, PROVIDERS, typeOf, upload, type StorageConfig, type Storag
 import type { NetworkId } from './social/core.js'
 import * as WH from '../shared/webhook.js'
 import { createServer as createHttpServer, type Server } from 'node:http'
-import { cleanTrigger, describe as describeWhen, isDue, newReviews, type Trigger } from '../shared/triggers.js'
+import { cleanTrigger, describe as describeWhen, isDue, newReviews, nextRun, type Trigger } from '../shared/triggers.js'
 import { cleanPrefs, Gate, passwordPrompt, type LockPrefs } from './lock.js'
 import { CATALOG, OPEN_SHIM, routeLogins, serversFor } from './integrations.js'
 import { decisions, DECISION_RULE, digest, graphCached, projectMemory, projectName, readDoc, readNote, writeDoc, remember, rememberDecisions, search, sessionNotes, vaultDir } from './memory.js'
@@ -365,7 +367,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; turnNotes?: { cost?: boolean; duration?: boolean }; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; control?: { caps?: Partial<Caps>; auditDays?: number; agentCap?: number; fanoutCap?: number }; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; turnNotes?: { cost?: boolean; duration?: boolean }; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; control?: { caps?: Partial<Caps>; auditDays?: number; agentCap?: number; fanoutCap?: number }; pilotEverywhere?: boolean; pilotModel?: string; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -851,9 +853,13 @@ function toWin(channel: string, ...args: unknown[]) {
   if (process.env.STM_IPC_COUNT) ipcCount.set(`out ${channel}`, (ipcCount.get(`out ${channel}`) ?? 0) + 1)
   if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send(channel, ...args)
 }
+// the notifications the app showed, newest last, for the Pilot's app_notifications (kept in memory, 50)
+const notices: { at: number; title: string; body: string }[] = []
+const notice = (title: string, body: string) => void (notices.push({ at: Date.now(), title: title.slice(0, 120), body: body.slice(0, 180) }), notices.length > 50 && notices.shift())
 // a turn or a long command that ended while you were in another app: a macOS notification brings you back
 const away = () => !win || win.isDestroyed() || !win.isFocused()
 function tellDone(sid: string, title: string, body: string) {
+  notice(title, body)
   if (away()) void rc.alert('turns', `${title}: ${body.slice(0, 200)}`).catch(() => undefined)
   if (!Notification.isSupported() || !away()) return
   const n = new Notification({ title, body: body.slice(0, 180), silent: false })
@@ -1130,6 +1136,7 @@ function sendNow(sid: string, e: unknown) {
 }
 /** In the background nothing is allowed on its own: a notification and the Tray say a panel waits. */
 function notifyApproval(sid: string, e: { summary?: string }) {
+  notice(`${placeOf(sid)} needs your approval`, e.summary ?? 'A panel is waiting.')
   if (!Notification.isSupported()) return
   const n = new Notification({ title: `${placeOf(sid)} needs your approval`, body: (e.summary ?? 'A panel is waiting.').slice(0, 160), silent: false })
   n.on('click', () => lifeDispatch({ type: 'open' }))
@@ -1211,7 +1218,7 @@ async function createWindow() {
   win.on('focus', awayFocus)
   win.on('blur', () => (lastActive = Date.now()))
   win.webContents.on('before-input-event', () => (lastActive = Date.now()))
-  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate((id) => win && !win.isDestroyed() && win.webContents.send('menu:go', id), { mac: process.platform === 'darwin', dev: !app.isPackaged, name: 'SuperTokenMan' })))
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate((id) => (id === 'menu:pilot' ? toWin('pilot:summon') : win && !win.isDestroyed() && win.webContents.send('menu:go', id)), { mac: process.platform === 'darwin', dev: !app.isPackaged, name: 'SuperTokenMan' })))
   // a webview shows one of the drawer's web apps on its own sites, or a dev server on this machine in a
   // panel's Preview; never with a preload or Node
   // the closing animation plays in the window first; a window that does not answer is closed anyway
@@ -2338,7 +2345,7 @@ app.whenReady().then(() => {
   void checkpoints().pruneClosed()
 }).catch(() => undefined)
 
-const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => {
+const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string }; model?: string; resume?: string; resumeAt?: string; persona?: string; effort?: string; sandbox?: boolean; pilot?: boolean; worktree?: { label: string; group?: string; attempt?: number; of?: number } }) => {
   perfMark('panel asked')
   await pathReady
   await officeReady
@@ -2346,6 +2353,7 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
   if (app.isPackaged) await claudeCli.ensure()
   perfMark('panel path and office checked')
   const sid = `s${++nextId}`
+  if (opts.pilot) pilotSids.add(sid)
   // a panel on another machine: its folder (or a fresh worktree) there, and an empty stand-in folder here
   let remote: Remote | null = null
   if (opts.remote) {
@@ -2456,7 +2464,7 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     effort: (['low', 'medium', 'high', 'xhigh', 'max'] as const).find((e) => e === opts.effort),
     query: boxed ? (args) => query({ ...args, options: { ...args.options, spawnClaudeCodeProcess: spawnInSandbox(boxed, cwd) } }) : query,
     persona: persona ? personaPrompt(persona) : undefined,
-    mcpServers: inProcess({ ...packs().mcpFor(cwd), ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(uiDeps(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
+    mcpServers: inProcess({ ...packs().mcpFor(cwd), ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(uiDeps(sid), pilotDeps(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
     // Claude's Bash sees only the credentials marked for commands
     // through Headroom's compressing proxy when it is on and answering; straight to Anthropic otherwise
     env: { ...claudeTraffic(process.env), ...vault.commandEnv(), STM_PANEL: sid, ...(boxed || remote ? {} : panelEnv(sid)), ...(settings().headroom && headroomLive ? { ANTHROPIC_BASE_URL: HEADROOM_URL } : {}) },
@@ -2465,7 +2473,7 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     // tools a panel here does not need stay out of every turn, unless the person wants them all
     // a read-only persona has no editing tools at all; one that edits freely is not asked before an edit
     disallowedTools: [...(settings().fullTools ? [] : LEAN_OFF), ...(persona?.access === 'read' ? ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'] : []), ...blockedFor(persona)],
-    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, TOOLS[2]!, TOOLS[3]!, MANUAL_TOOL, ...UI_TOOLS, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
+    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, TOOLS[2]!, TOOLS[3]!, MANUAL_TOOL, ...UI_TOOLS, ...PILOT_READ_TOOLS, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
     resume: opts.resume,
     ...(remote ? { spawn: remoteSpawn(remote.host, remote.dir) } : {}),
     resumeAt: opts.resume ? opts.resumeAt : undefined,
@@ -2526,11 +2534,11 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
       return { ...input, command: ISO.wrap(iso.name, iso.cwd, input.command) }
     },
     decide: (tool: string, input: Record<string, unknown>) =>
-      policyGate(tool, input, baseDecide(tool, input) as Existing, { store: policyStore(), root: remote ? undefined : home, ctx: { project: home, home: homedir(), cwd }, control: ctlState.control, unattended: scopeOf.has(sid) }),
+      tool === PILOT_RUN ? pilotDecide(sid, input, scopeOf.has(sid)) : policyGate(tool, input, baseDecide(tool, input) as Existing, { store: policyStore(), root: remote ? undefined : home, ctx: { project: home, home: homedir(), cwd }, control: ctlState.control, unattended: scopeOf.has(sid) }),
     panelId: sid,
     onRunStart: () => ctlState.control.runStart(),
-    onDecision: (e) => auditPanel(sid, { tool: e.tool, args: summarizeCall(e.tool, e.input), decision: e.bp && e.action === 'ask' ? 'pause' : e.action, by: e.by, ...(e.rule ? { rule: e.rule } : {}) }),
-    onAnswered: (e) => auditPanel(sid, { tool: e.tool, args: summarizeCall(e.tool, e.input), decision: e.allow ? 'approved' : 'refused', by: 'person' }),
+    onDecision: (e) => e.tool === PILOT_RUN ? undefined : auditPanel(sid, { tool: e.tool, args: summarizeCall(e.tool, e.input), decision: e.bp && e.action === 'ask' ? 'pause' : e.action, by: e.by, ...(e.rule ? { rule: e.rule } : {}) }),
+    onAnswered: (e) => (e.tool === PILOT_RUN && e.allow && pilotHub.grantInput(sid, e.input), auditPanel(sid, { tool: e.tool, args: summarizeCall(e.tool, e.input), decision: e.allow ? 'approved' : 'refused', by: 'person' })),
     onPlan: (plan) => {
       plans.set(sid, plan)
       ctlState.control.planLines = plan.items.filter((x) => x.status !== 'completed').slice(0, 6).map((x) => x.text.slice(0, 80))
@@ -2777,6 +2785,8 @@ ipcMain.handle('session:close', (_e, sid: string) => {
   // its container goes with the panel (the project folder was only mounted, nothing to bring back)
   const iso = isolated.get(sid)
   if (iso) (isolated.delete(sid), execFile('docker', ['rm', '-f', iso.name], () => undefined))
+  pilotHub.drop(sid)
+  pilotSids.delete(sid)
   panelCost.delete(sid)
   panelUse.delete(sid)
   panelCap.delete(sid)
@@ -7120,6 +7130,8 @@ const asPanel = (a: Record<string, unknown>, what: string, detail = '') => {
 }
 /** A message from one panel to another: the link's cap checked, the turn charged to it, sent or left waiting per the link. */
 function deliverLinked(from: string, to: string, text: string, body: string) {
+  // a message from another panel is content the receiving session does not trust (Pilot taint)
+  sessions.get(to)?.taint()
   const link = PB.linkOf(links(), from, to)
   const capped = PB.overCap(link, dayOf(new Date()))
   if (capped) throw new Error(capped)
@@ -7590,6 +7602,7 @@ const wakeBody = (t: ChanTeam, p: TC.Post) =>
     : PB.labelled(panelName(p.from), `(team channel, ${p.kind}) ${p.text}\n\nAnswer with the mcp__stm__channel_post tool if the team needs your answer.`)
 /** A wake the person sends: it waits in the target's queue, which pauses so nothing leaves on its own. */
 function queueWake(rec: WakeRec) {
+  sessions.get(rec.to)?.taint()
   const id = `w${randomBytes(4).toString('hex')}`
   rec.queueId = id
   const q = pqFor(rec.to)
@@ -7728,7 +7741,14 @@ function uiDeps(me: string): UiDeps {
       const added = PB.addLink(links(), a, b)
       saveLinks(added.map((x) => (PB.linkKey(x.a, x.b) === PB.linkKey(a, b) ? { ...x, auto } : x)))
     },
-    cmd: (op, arg) => uiAsk<{ layout: import('../shared/uitools.js').UiLayout; panels?: import('../shared/uitools.js').WinPanel[] }>('ui:cmd', { op, arg }, 10_000),
+    cmd: async (op, arg) => {
+      type R = { layout: import('../shared/uitools.js').UiLayout; panels?: import('../shared/uitools.js').WinPanel[] }
+      // a layout change the agent made is an action with an undo, like any free Pilot command
+      const prev = op === 'layout' ? (await uiAsk<R>('ui:cmd', { op: 'state' }, 10_000)).layout : undefined
+      const r = await uiAsk<R>('ui:cmd', { op, arg }, 10_000)
+      if (prev !== undefined && r.layout !== prev) pilotHub.recordLayout(me, prev, r.layout)
+      return r
+    },
     folder: folderOf,
     known: (p) => {
       if (p.model && !PB.isModel(p.model)) throw new Error(`Unknown model "${p.model}". Known: ${PB.modelIds().join(', ')}`)
@@ -7754,6 +7774,83 @@ function uiDeps(me: string): UiDeps {
     channel: channelDeps(me),
   }
 }
+// ---- Pilot (spec-pilot.md): the panel agent runs app commands. Logic is in shared/pilot*.ts, the tools and
+// the hub (rate limit, undo, approvals) in electron/pilottools.ts, the gate in electron/policy.ts (pilotGate).
+const pilotSids = new Set<string>()
+const pilotLink = new PilotLink((p) => (win && !win.isDestroyed() && !win.webContents.isDestroyed() ? (win.webContents.send('pilot:run', p), true) : false))
+const pilotHub = new PilotHub(
+  createPilotRate(Date.now),
+  { pilot: (e) => auditLog().pilot(e) },
+  (sid) => {
+    const c = ctlOf.get(sid)
+    return { store: policyStore(), root: c?.remote ? undefined : c?.root, ctx: { project: c?.root ?? '', home: homedir(), cwd: c?.cwd ?? homedir() }, control: c?.control, unattended: scopeOf.has(sid) }
+  },
+  Date.now,
+  () => toWin('pilot:changed'),
+)
+const pilotWho = (sid: string) => ({ sid, pilot: pilotSids.has(sid), everywhere: settings().pilotEverywhere === true, tainted: sessions.get(sid)?.tainted ?? true, project: ctlOf.get(sid)?.project ?? '', turn: sessions.get(sid)?.turnIndex ?? 0 })
+/** The permission step for app_run. A scheduled run has nobody to answer a card, so it never drives the app. */
+function pilotDecide(sid: string, input: Record<string, unknown>, unattended: boolean) {
+  if (unattended) {
+    auditLog().pilot({ panel: sid, project: ctlOf.get(sid)?.project ?? '', turn: sessions.get(sid)?.turnIndex ?? 0, id: String(input.id ?? '').slice(0, 200), args: {}, decision: 'deny', tainted: sessions.get(sid)?.tainted ?? true })
+    return { action: 'deny' as const, risk: null, by: 'pilot' as const, reason: 'A scheduled run cannot drive the app: nobody is there to confirm. Say so instead of retrying.' }
+  }
+  return pilotHub.decide(input, pilotWho(sid)).gated
+}
+const pilotLines = (rows: string[], none: string) => (rows.length ? rows.join('\n') : none)
+const when = (ms?: number | null) => (ms ? new Date(ms).toISOString() : 'never')
+function pilotDeps(me: string): PilotDeps {
+  return {
+    me,
+    hub: pilotHub,
+    link: pilotLink,
+    who: () => pilotWho(me),
+    ask: (summary, why) => sessions.get(me)?.request(PILOT_RUN, summary, why) ?? Promise.resolve(false),
+    log: (m) => logs().info('stm:pilot', `${me} ${m}`),
+    reads: {
+      state: async () => {
+        const list = uiTools(uiDeps(me)).find((t) => t.name === 'ui_list_panels')!.handler as unknown as (a: object, x: object) => Promise<{ content: { text: string }[] }>
+        return (await list({}, {})).content[0]!.text
+      },
+      settings: () => ({ all: settings() as unknown as Record<string, unknown>, vaultBacked: (vault?.all() ?? []).map((v) => v.name) }),
+      cost: () => {
+        const st = settings()
+        const spend = st.budgetSpend?.day === dayOf(new Date()) ? st.budgetSpend : emptySpend(dayOf(new Date()))
+        const total = Object.values(spend.project).reduce((a, b) => a + b, 0)
+        const panels = [...panelCost].map(([sid, p]) => `${sid}: $${p.total.toFixed(2)}`)
+        return `Today: $${total.toFixed(2)}.\n${pilotLines(panels, 'No panel has spent anything yet.')}`
+      },
+      routines: () => {
+        const now = Date.now()
+        const rs = routinesState().routines.map((r) => `routine ${r.id} "${r.name}": ${r.enabled ? 'on' : 'off'}, next ${when(RT.nextOf(r, now))}, last ${when(r.lastRun)}`)
+        const ts = triggers().map((t) => `trigger ${t.id} "${t.name}": ${t.enabled ? 'on' : 'off'}, ${describeWhen(t.when)}, next ${t.enabled ? when(nextRun(t.when, Math.max(t.lastRun ?? 0, t.armedAt ?? 0, now - 1))) : 'never'}, last ${when(t.lastRun)}`)
+        return pilotLines([...rs, ...ts], 'No routines or triggers.')
+      },
+      packs: () => {
+        const l = packs().list()
+        const root = ctlOf.get(me)?.root
+        let installed: string[] = []
+        try {
+          installed = root ? (packs().installed(packRoot(root)).installs as unknown as { packId: string; version?: string }[]).map((i) => `${i.packId}${i.version ? `@${i.version}` : ''}`) : []
+        } catch {
+          // not readable for this folder: the catalog still shows
+        }
+        return pilotLines([...l.entries.map((e) => `${e.id} ${e.version} (${e.origin}): ${e.name}`), installed.length ? `Installed here: ${installed.join(', ')}` : ''].filter(Boolean), 'No packs.')
+      },
+      notifications: (limit) => pilotLines(notices.slice(-limit).reverse().map((n) => `${when(n.at)} ${n.title}: ${n.body}`), 'No notifications yet.'),
+    },
+  }
+}
+ipcMain.handle('pilot:result', (_e, r: { callId: string; ok: boolean; text: string; undo?: import('../shared/pilotundo.js').Inverse | null; after?: unknown }) => pilotLink.settle(String(r.callId), { ok: r.ok === true, text: String(r.text ?? ''), undo: r.undo, after: r.after }))
+ipcMain.handle('pilot:actions', () => pilotHub.actions())
+ipcMain.handle('pilot:undo', (_e, r: { actionId: string }) =>
+  pilotHub.runUndo(String(r.actionId), {
+    link: pilotLink,
+    current: async (inv) => (inv.kind === 'layout' ? (await uiAsk<{ layout: string }>('ui:cmd', { op: 'state' }, 10_000)).layout : inv.kind === 'setting' ? (settings() as unknown as Record<string, unknown>)[inv.key] : inv.kind === 'routine' ? routinesState().routines.find((x) => x.id === inv.id)?.enabled : undefined),
+  }),
+)
+// end-to-end tests only: the Pilot tools of a panel, called as its Claude would; `pilot` marks the panel as the Pilot's
+if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmPilotTools = (sid: string, pilot = false) => (pilot ? pilotSids.add(sid) : pilotSids.delete(sid), pilotTools(pilotDeps(sid)))
 // end-to-end tests only: the ui tools of a panel, called as its Claude would
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmHub = hub
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmUiTools = (sid: string) => uiTools(uiDeps(sid))

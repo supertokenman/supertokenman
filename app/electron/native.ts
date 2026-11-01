@@ -19,6 +19,7 @@ export function menuTemplate(go: (id: string) => void, opts: { mac: boolean; dev
       label: 'View',
       submenu: [
         item('Command palette', 'menu:palette', 'CmdOrCtrl+K'),
+        item('Pilot', 'menu:pilot', 'CmdOrCtrl+Shift+J'),
         { type: 'separator' },
         { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
         { type: 'separator' },

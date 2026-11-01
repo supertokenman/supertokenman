@@ -17,6 +17,16 @@ const packScope = z.enum(['project', 'global'])
 const packPath = z.string().min(1).max(512)
 const packServer = z.string().regex(/^[a-z0-9][a-z0-9-]{0,31}$/, 'a server name')
 
+// pilot (spec-pilot.md): the window's answers to the commands main sends it, the actions list and undo.
+// `pilot:run`, `pilot:changed` and `pilot:summon` go main -> window and take nothing from it.
+const pilotPrim = z.union([z.string().max(2000), z.number(), z.boolean()])
+const pilotInverse = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('layout'), prev: z.string().max(40) }),
+  z.object({ kind: z.literal('panels'), closed: z.array(sid).max(20).optional(), opened: z.array(sid).max(20).optional() }),
+  z.object({ kind: z.literal('setting'), key: z.string().max(80), prev: pilotPrim.nullable() }),
+  z.object({ kind: z.literal('routine'), id: z.string().max(64), prevEnabled: z.boolean() }),
+])
+
 export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'vault:list': z.tuple([]),
   'social:setNetSlots': z.tuple([z.enum(['instagram', 'facebook', 'threads', 'youtube', 'linkedin', 'x', 'tiktok', 'bluesky', 'mastodon']), z.array(z.object({ day: z.number().int().min(0).max(6), time: z.string().regex(/^\d{2}:\d{2}$/) })).max(50)]),
@@ -45,7 +55,8 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'quota:custom': z.tuple([z.boolean(), z.string().max(300)]),
   'bw:unlock': z.tuple([z.string().min(1).max(1000)]),
   'bw:link': z.tuple([z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/), z.string().min(1).max(100), z.string().max(80), z.string().max(80)]),
-  'perm:answer': z.tuple([sid, z.string().max(100), z.boolean()]),
+  // the window passes a fourth argument (an edited command, a note for the agent, the tool), undefined for a plain Allow or Deny
+  'perm:answer': z.tuple([sid, z.string().max(100), z.boolean(), opt(z.object({ command: opt(text(100_000)), note: opt(text(4000)), tool: opt(z.string().max(200)) }))]),
   'iso:start': z.tuple([sid, z.string().regex(/^[\w./:@-]{1,200}$/)]),
   'iso:stop': z.tuple([sid]),
   'iso:network': z.tuple([sid, z.boolean()]),
@@ -125,6 +136,9 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'breakpoint:set': z.tuple([sid, z.array(z.object({ kind: z.enum(['before', 'afterPlan']), tool: opt(z.string().max(200)) })).max(20)]),
   'triggers:caps': z.tuple([]),
   'triggers:setCaps': z.tuple([z.object({ minEvery: z.number().int().min(1), maxEnabled: z.number().int().min(1), maxFailures: z.number().int().min(1) })]),
+  'pilot:result': z.tuple([z.object({ callId: z.string().regex(/^[\w-]{1,64}$/, 'a call id'), ok: z.boolean(), text: text(20_000), undo: pilotInverse.nullable().optional(), after: pilotPrim.optional() })]),
+  'pilot:actions': z.tuple([z.object({ window: z.union([z.string().max(64), z.number()]).optional() }).optional()]),
+  'pilot:undo': z.tuple([z.object({ actionId: z.string().regex(/^a\d{1,9}$/, 'an action id') })]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
 }
 

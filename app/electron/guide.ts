@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { lookup, MANUAL, render } from '../shared/manual.js'
 import { indexText, memoryNodes, readText } from './memtree.js'
 import { uiTools, type UiDeps } from './uitools.js'
+import { pilotTools, type PilotDeps } from './pilottools.js'
 
 export const MANUAL_TOOL = 'mcp__stm__manual'
 
@@ -68,7 +69,7 @@ export function memoryServer(vault: string, project: string, near?: (query: stri
 }
 
 /** The manual as a tool: a section by id, or the sections that best match a question. */
-export function manualServer(ui?: UiDeps) {
+export function manualServer(ui?: UiDeps, pilot?: PilotDeps) {
   return createSdkMcpServer({
     name: 'stm',
     version: '1.0.0',
@@ -81,6 +82,7 @@ export function manualServer(ui?: UiDeps) {
         { annotations: { readOnlyHint: true } },
       ),
       ...(ui ? uiTools(ui) : []),
+      ...(pilot ? pilotTools(pilot) : []),
     ],
   })
 }

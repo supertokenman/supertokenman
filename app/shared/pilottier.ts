@@ -14,7 +14,7 @@ export const WIDENING_KEYS: readonly string[] = [
   'keepRunning', 'fullTools', 'dockerWrite', 'mcpSend', 'phone', 'customEndpoint', 'control', 'panelLinks',
   'netSlots', 'socialAccounts', 'spotify', 'providers', 'integrations', 'dbConns', 'personas', 'triggers',
   'budget', 'updateCheck', 'coolifyUrl', 'dokployUrl', 'immichUrl', 'stirlingUrl', 'rocketchat',
-  'agentCap', 'fanoutCap', 'spawnPerHour', 'stmLimits',
+  'agentCap', 'fanoutCap', 'spawnPerHour', 'stmLimits', 'pilotEverywhere',
 ]
 
 /**

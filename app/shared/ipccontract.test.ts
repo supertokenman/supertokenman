@@ -131,3 +131,45 @@ describe('IPC contract', () => {
     expect(checkArgs('triggers:setCaps', [{ minEvery: 15 }])).toBeTruthy()
   })
 })
+
+describe('pilot channels (spec-pilot.md)', () => {
+  it('window-to-main channels are in the contract, handled in main and bridged in the preload; main-to-window ones are sent and listened for', () => {
+    for (const c of ['pilot:result', 'pilot:actions', 'pilot:undo']) {
+      expect(Object.keys(CONTRACT)).toContain(c)
+      expect(handled.has(c)).toBe(true)
+      expect(preload).toContain(`'${c}'`)
+    }
+    for (const c of ['pilot:run', 'pilot:changed', 'pilot:summon']) {
+      expect(preload).toContain(`ipcRenderer.on('${c}'`)
+      expect(main).toContain(`'${c}'`)
+    }
+  })
+  it('pilot:result takes a call id, ok, text and an optional inverse; anything else is refused', () => {
+    expect(checkArgs('pilot:result', [{ callId: 'c1', ok: true, text: 'done' }])).toBeNull()
+    expect(checkArgs('pilot:result', [{ callId: 'c1', ok: true, text: 'done', undo: { kind: 'layout', prev: 'auto' }, after: 'grid' }])).toBeNull()
+    expect(checkArgs('pilot:result', [{ callId: 'c1', ok: true, text: 'done', undo: null }])).toBeNull()
+    expect(checkArgs('pilot:result', [{ callId: 'c 1', ok: true, text: 'x' }])).toBeTruthy()
+    expect(checkArgs('pilot:result', [{ callId: 'c1', ok: 'yes', text: 'x' }])).toBeTruthy()
+    expect(checkArgs('pilot:result', [{ callId: 'c1', ok: true, text: 'x', undo: { kind: 'tier', to: 'free' } }])).toBeTruthy()
+    expect(checkArgs('pilot:result', [])).toBeTruthy()
+  })
+  it('pilot:actions takes an optional window; pilot:undo takes an action id', () => {
+    expect(checkArgs('pilot:actions', [])).toBeNull()
+    expect(checkArgs('pilot:actions', [{ window: 1 }])).toBeNull()
+    expect(checkArgs('pilot:actions', [{ window: { x: 1 } }])).toBeTruthy()
+    expect(checkArgs('pilot:undo', [{ actionId: 'a12' }])).toBeNull()
+    expect(checkArgs('pilot:undo', [{ actionId: '../x' }])).toBeTruthy()
+    expect(checkArgs('pilot:undo', ['a12'])).toBeTruthy()
+  })
+})
+
+describe('perm:answer', () => {
+  it('takes the window call with and without the fourth argument (undefined for a plain Allow or Deny)', () => {
+    expect(checkArgs('perm:answer', ['s1', 'p1', true])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, undefined])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', false, { note: 'use the other folder', tool: 'Bash' }])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, { command: 'ls' }])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, 'rm -rf /'])).toBeTruthy()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, undefined, 'extra'])).toBeTruthy()
+  })
+})

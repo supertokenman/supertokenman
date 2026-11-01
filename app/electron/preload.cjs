@@ -1034,6 +1034,27 @@ contextBridge.exposeInMainWorld('stm', {
     },
     reply: (req, value) => ipcRenderer.invoke('ui:reply', req, value),
   },
+  // Pilot (spec-pilot.md): the agent's app commands. main -> window: run, changed, summon; window -> main: result, actions, undo
+  pilot: {
+    onRun: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('pilot:run', l)
+      return () => ipcRenderer.removeListener('pilot:run', l)
+    },
+    result: (r) => ipcRenderer.invoke('pilot:result', r),
+    actions: (w) => ipcRenderer.invoke('pilot:actions', w),
+    undo: (actionId) => ipcRenderer.invoke('pilot:undo', { actionId }),
+    onChanged: (fn) => {
+      const l = () => fn()
+      ipcRenderer.on('pilot:changed', l)
+      return () => ipcRenderer.removeListener('pilot:changed', l)
+    },
+    onSummon: (fn) => {
+      const l = () => fn()
+      ipcRenderer.on('pilot:summon', l)
+      return () => ipcRenderer.removeListener('pilot:summon', l)
+    },
+  },
   stmCli: {
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)

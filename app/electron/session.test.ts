@@ -489,6 +489,44 @@ describe('Session with the policy gate and control hooks', () => {
   })
 })
 
+describe('Session taint (Pilot)', () => {
+  it('a tool whose result is untrusted taints the whole session, before its result is read; trusted tools do not', async () => {
+    const q = fakeQuery(async function* (_p, options) {
+      const pre = (options.hooks as { PreToolUse: { hooks: ((i: unknown) => Promise<unknown>)[] }[] }).PreToolUse
+      const fire = async (tool: string) => {
+        for (const m of pre) for (const h of m.hooks) await h({ hook_event_name: 'PreToolUse', tool_name: tool, tool_input: {} })
+      }
+      seen.push(s.tainted)
+      await fire('mcp__stm__app_commands')
+      await fire('Edit')
+      seen.push(s.tainted)
+      await fire('WebFetch')
+      seen.push(s.tainted)
+      yield { type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0, usage: { input_tokens: 1, output_tokens: 1 } } as unknown as SDKMessage
+    })
+    const seen: boolean[] = []
+    const s = new Session(() => undefined, { cwd: '/proj', query: q.fn })
+    s.start()
+    s.send('go')
+    await settle()
+    expect(seen).toEqual([false, false, true])
+    // it stays tainted for the next turn
+    s.send('again')
+    await settle()
+    expect(s.tainted).toBe(true)
+  })
+  it('taintFrom follows shared/pilottier.ts; a message from another panel taints; a fresh session is clean', async () => {
+    const s = new Session(() => undefined, { cwd: '/proj', query: fakeQuery(async function* () {}).fn })
+    expect(s.tainted).toBe(false)
+    expect(s.taintFrom('mcp__stm__app_run')).toBe(false)
+    expect(s.taintFrom('mcp__github__get_issue')).toBe(true)
+    const t = new Session(() => undefined, { cwd: '/proj', query: fakeQuery(async function* () {}).fn })
+    t.taint()
+    expect(t.tainted).toBe(true)
+    expect(new Session(() => undefined, { cwd: '/proj', query: fakeQuery(async function* () {}).fn }).tainted).toBe(false)
+  })
+})
+
 describe('Session lazy start', () => {
   const reply = async function* () {
     yield { type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0, usage: { input_tokens: 1, output_tokens: 1 } } as unknown as SDKMessage

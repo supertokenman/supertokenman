@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { decide } from '../shared/autonomy'
-import { gate, PanelControl, PolicyStore, type Existing } from './policy'
+import { gate, PanelControl, pilotGate, PolicyStore, type Existing, type PilotCall } from './policy'
 
 let root = ''
 const mk = () => (root = mkdtempSync(join(tmpdir(), 'stm-pol-')))
@@ -99,5 +99,52 @@ describe('gate', () => {
     expect(gate('Read', { file_path: '/y' }, allow, o).action).toBe('allow')
     expect(gate('Bash', { command: 'ls' }, allow, { ...o, unattended: true }).action).toBe('deny')
     expect(gate('Bash', { command: 'ls' }, { action: 'deny', risk: null }, o).bp).toBeUndefined()
+  })
+})
+
+describe('pilotGate (app_run)', () => {
+  const call = (o: Partial<PilotCall> = {}): PilotCall => ({ id: 'go-today', specId: 'go-today', args: {}, tier: 'free', tainted: false, pilot: true, everywhere: false, ...o })
+  it('a free command is allowed with no rules', () => {
+    const { store, proj, ctx } = setup()
+    expect(pilotGate(call(), { store, root: proj, ctx }).action).toBe('allow')
+  })
+  it('an ask command asks with no rules, and a clean allow rule on app_run:<id> lets it run', () => {
+    const { store, proj, ctx } = setup('allow app_run:go-x\n')
+    expect(pilotGate(call({ id: 'go-y', specId: 'go-y', tier: 'ask' }), { store, root: proj, ctx }).action).toBe('ask')
+    expect(pilotGate(call({ id: 'go-x', specId: 'go-x', tier: 'ask' }), { store, root: proj, ctx })).toMatchObject({ action: 'allow', by: 'rule' })
+  })
+  it('a rule on the tool with arg.id works too', () => {
+    const { store, proj, ctx } = setup('allow mcp__stm__app_run when arg.id is go-x\n')
+    expect(pilotGate(call({ id: 'go-x', specId: 'go-x', tier: 'ask' }), { store, root: proj, ctx }).action).toBe('allow')
+    expect(pilotGate(call({ id: 'go-z', specId: 'go-z', tier: 'ask' }), { store, root: proj, ctx }).action).toBe('ask')
+  })
+  it('a tainted session never allows an ask command, even with a matching allow rule', () => {
+    const { store, proj, ctx } = setup('allow app_run:go-x\nallow mcp__stm__app_run\nallow *\n')
+    const r = pilotGate(call({ id: 'go-x', specId: 'go-x', tier: 'ask', tainted: true }), { store, root: proj, ctx })
+    expect(r.action).toBe('ask')
+  })
+  it('confirm always asks: no rule allows it', () => {
+    const { store, proj, ctx } = setup('allow *\nallow app_run:go-x\n')
+    expect(pilotGate(call({ id: 'go-x', specId: 'go-x', tier: 'confirm' }), { store, root: proj, ctx }).action).toBe('ask')
+  })
+  it('a deny rule or an ask rule tightens, even for a free command', () => {
+    const { store, proj, ctx } = setup('deny app_run:go-a\nask app_run:go-b\nallow app_run:go-b\n')
+    expect(pilotGate(call({ id: 'go-a', specId: 'go-a' }), { store, root: proj, ctx })).toMatchObject({ action: 'deny', by: 'rule' })
+    expect(pilotGate(call({ id: 'go-b', specId: 'go-b' }), { store, root: proj, ctx }).action).toBe('ask')
+    expect(pilotGate(call({ id: 'go-b', specId: 'go-b', tier: 'ask' }), { store, root: proj, ctx }).action).toBe('ask')
+  })
+  it('a panel that is not the Pilot: confirm is refused, ask is refused unless pilotEverywhere and then always a card', () => {
+    const { store, proj, ctx } = setup('allow *\n')
+    const o = { store, root: proj, ctx }
+    expect(pilotGate(call({ pilot: false, tier: 'confirm' }), o).action).toBe('deny')
+    expect(pilotGate(call({ pilot: false, tier: 'ask' }), o).action).toBe('deny')
+    expect(pilotGate(call({ pilot: false, tier: 'ask', everywhere: true }), o).action).toBe('ask')
+    expect(pilotGate(call({ pilot: false, tier: 'free' }), o).action).toBe('allow')
+  })
+  it('a breakpoint before the tool still pauses a free command', () => {
+    const { store, proj, ctx } = setup()
+    const control = new PanelControl()
+    control.breakpoints = [{ kind: 'before', tool: 'mcp__stm__app_run' }]
+    expect(pilotGate(call(), { store, root: proj, ctx, control })).toMatchObject({ action: 'ask', bp: 'before' })
   })
 })

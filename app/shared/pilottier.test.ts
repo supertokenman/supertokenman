@@ -47,7 +47,7 @@ describe('resolveTier', () => {
   it('lists the widening keys, as checked against main.ts', () => {
     expect([...WIDENING_KEYS].sort()).toEqual([
       'agentCap', 'budget', 'control', 'coolifyUrl', 'customEndpoint', 'dbConns', 'dockerWrite', 'dokployUrl', 'fanoutCap',
-      'fullTools', 'immichUrl', 'integrations', 'keepRunning', 'mcpSend', 'netSlots', 'panelLinks', 'personas', 'phone',
+      'fullTools', 'immichUrl', 'integrations', 'keepRunning', 'mcpSend', 'netSlots', 'panelLinks', 'personas', 'phone', 'pilotEverywhere',
       'providers', 'rocketchat', 'socialAccounts', 'spawnPerHour', 'spotify', 'stirlingUrl', 'stmLimits', 'triggers', 'updateCheck',
     ].sort())
   })

@@ -8,7 +8,7 @@ export const ROTATE_BYTES = 50 * 1024 * 1024
 const DAY_MS = 86_400_000
 
 export type AuditDecision = 'allow' | 'ask' | 'deny' | 'approved' | 'refused' | 'pause'
-export type AuditBy = 'rule' | 'app' | 'person' | 'default'
+export type AuditBy = 'rule' | 'app' | 'person' | 'default' | 'pilot'
 export type AuditKind = 'tool' | 'receipt' | 'checkpoint' | 'cap'
 
 export type AuditRow = {
@@ -22,6 +22,9 @@ export type AuditRow = {
   decision: AuditDecision
   by: AuditBy
   rule?: string
+  /** Pilot rows (by 'pilot'): the tier the command ran at and whether the session had read untrusted content */
+  tier?: 'free' | 'ask' | 'confirm'
+  tainted?: boolean
   costUsd?: number
   kind: AuditKind
   files?: { path: string; change: 'A' | 'M' | 'D' }[]
@@ -34,6 +37,8 @@ export function buildRow(input: AuditInput): AuditRow {
   const { known, args, ...rest } = input
   const row: AuditRow = { ...rest, v: AUDIT_VERSION, args: redactArgs(args, known) }
   if (row.rule === undefined) delete row.rule
+  if (row.tier === undefined) delete row.tier
+  if (row.tainted === undefined) delete row.tainted
   if (row.costUsd === undefined) delete row.costUsd
   if (row.files === undefined) delete row.files
   return row
