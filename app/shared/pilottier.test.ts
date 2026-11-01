@@ -44,9 +44,16 @@ describe('resolveTier', () => {
     const ask = cmd('go-stm')
     expect(resolveTier(ask, { args: {} })).toBe('ask')
   })
-  it('lists the widening keys', () => {
-    expect(WIDENING_KEYS).toContain('phone')
-    expect(WIDENING_KEYS).toContain('mcpSend')
+  it('lists the widening keys, as checked against main.ts', () => {
+    expect([...WIDENING_KEYS].sort()).toEqual([
+      'agentCap', 'budget', 'control', 'coolifyUrl', 'customEndpoint', 'dbConns', 'dockerWrite', 'dokployUrl', 'fanoutCap',
+      'fullTools', 'immichUrl', 'integrations', 'keepRunning', 'mcpSend', 'netSlots', 'panelLinks', 'personas', 'phone',
+      'providers', 'rocketchat', 'socialAccounts', 'spawnPerHour', 'spotify', 'stirlingUrl', 'stmLimits', 'triggers', 'updateCheck',
+    ].sort())
+  })
+  it('raises a change to each widening key to confirm', () => {
+    const setting = { ...cmd('go-private'), undo: 'setting' as const }
+    for (const key of WIDENING_KEYS) expect(resolveTier(setting, { args: { key } })).toBe('confirm')
   })
 })
 
@@ -56,8 +63,13 @@ describe('taintedAfter', () => {
       expect(taintedAfter(t)).toBe(true)
     }
   })
+  it('taints after a shell command, which can fetch or print untrusted content', () => {
+    expect(taintedAfter('Bash')).toBe(true)
+  })
   it('taints after a non-stm MCP server result', () => {
     expect(taintedAfter('mcp__github__get_file_contents')).toBe(true)
+    expect(taintedAfter('mcp__panels__panel_state')).toBe(true)
+    expect(taintedAfter('mcp__claude_docs__read')).toBe(true)
   })
   it('does not taint after the app tools or a plain write', () => {
     expect(taintedAfter('mcp__stm__app_run')).toBe(false)

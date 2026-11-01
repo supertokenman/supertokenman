@@ -4,8 +4,18 @@
 import type { Decision } from './policygate.js'
 import type { CommandSpec, Tier } from './pilotcatalog.js'
 
-/** Setting keys whose change widens what the app or agent may do. A change to one always asks. */
-export const WIDENING_KEYS: readonly string[] = ['mcpSend', 'phone', 'integrations', 'providers', 'dbConns', 'triggers', 'personas', 'budget']
+/**
+ * Setting keys whose change widens what the app or agent may do: tool and permission switches, the policy
+ * caps, outbound network targets, remote phone access, connected services and personas (autonomy lives
+ * there). Checked against the Settings type in electron/main.ts. A change to one always asks. Vault values
+ * are not settings keys; vault commands are catalog specs at the confirm tier instead.
+ */
+export const WIDENING_KEYS: readonly string[] = [
+  'keepRunning', 'fullTools', 'dockerWrite', 'mcpSend', 'phone', 'customEndpoint', 'control', 'panelLinks',
+  'netSlots', 'socialAccounts', 'spotify', 'providers', 'integrations', 'dbConns', 'personas', 'triggers',
+  'budget', 'updateCheck', 'coolifyUrl', 'dokployUrl', 'immichUrl', 'stirlingUrl', 'rocketchat',
+  'agentCap', 'fanoutCap', 'spawnPerHour', 'stmLimits',
+]
 
 /**
  * The tier of one call: the spec's tier, raised to `confirm` for an irreversible command or a change to a
@@ -29,10 +39,10 @@ export function toDecision(tier: Tier, ctx: { tainted: boolean; ruleAllows: bool
   return ctx.ruleAllows && !ctx.tainted ? 'allow' : 'ask'
 }
 
-/** Tools whose results are untrusted content: files, the web, other panels' channel messages, non-stm MCP servers. */
-const UNTRUSTED_TOOLS = new Set(['Read', 'Grep', 'WebFetch', 'WebSearch', 'mcp__stm__channel_read', 'mcp__stm__channel_mentions'])
+/** Tools whose results are untrusted content: files, shell output (curl, cat of a download), the web, other panels' channel messages. Any MCP server except stm is handled below. */
+const UNTRUSTED_TOOLS = new Set(['Read', 'Grep', 'Bash', 'WebFetch', 'WebSearch', 'mcp__stm__channel_read', 'mcp__stm__channel_mentions'])
 
-/** True when a tool's result is untrusted content, so the whole session is tainted after it. */
+/** True when a tool's result is untrusted content; the whole session is then tainted (not just the turn). */
 export function taintedAfter(toolName: string): boolean {
   if (UNTRUSTED_TOOLS.has(toolName)) return true
   const m = /^mcp__(.+?)__/.exec(toolName)

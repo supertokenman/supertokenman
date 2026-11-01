@@ -88,9 +88,9 @@ Existing `UI_TOOLS` stay; `ui_set_layout` etc. become tier free with undo record
 
 Rules:
 
-- Tier is computed in main from the `CommandSpec` and args, never from anything the agent sends. Setting changes are classified per key: `shared/pilottier.ts` holds `WIDENING_KEYS` (verify the full list against settings in `electron/main.ts`).
+- Tier is computed in main from the `CommandSpec` and args, never from anything the agent sends. Setting changes are classified per key: `shared/pilottier.ts` holds `WIDENING_KEYS` (list checked against the Settings type in `electron/main.ts`).
 - The gate call is `gate('mcp__stm__app_run', { id, args }, existing, o)` in `electron/policy.ts`, with `existing.action` from `toDecision`. Policy rules can name `app_run:<id>`; `strictest()` semantics from `spec-control.md` apply, so a rule can tighten anything and loosen only ask-tier.
-- Taint: the session marks a turn tainted once it has read untrusted content (Read/Grep/WebFetch results from the repo or the web, MCP tool results not from `stm`, channel messages from other panels). In a tainted turn, ask-tier never resolves to allow, even with a matching `allow` rule. Tracked in `electron/session.ts` per turn; pure rule `taintedAfter(toolName)` in `shared/pilottier.ts`.
+- Taint: the whole session is tainted (decided: not per turn) once it has read untrusted content: Read, Grep, Bash (a command can fetch or print downloaded content), WebFetch, WebSearch, channel messages from other panels, and any MCP tool result that is not from `stm`. Once tainted, ask-tier never resolves to allow for the rest of that session, even with a matching rule. Tracked in `electron/session.ts`; pure rule `taintedAfter(toolName)` in `shared/pilottier.ts`.
 - Policy files and tier tables are not reachable through `app_run` (no spec for them; `validateArgs` rejects ids not in the catalog).
 - Every call writes an audit row (`electron/audit.ts`) with `by: 'pilot'`, id, redacted args (`shared/auditredact.ts`), tier, decision, tainted flag.
 
@@ -99,7 +99,7 @@ Rules:
 `shared/pilotundo.ts`: an `UndoStack` per window, capped at 100 entries.
 
 - Each successful `app_run` pushes `{ at, panel, id, args, title, undo: Inverse | null }`. `Inverse` is data, not a closure: `{ kind: 'layout', prev }`, `{ kind: 'panels', closed?, opened? }`, `{ kind: 'setting', key, prev }`, `{ kind: 'routine', id, prevEnabled }`.
-- Undo runs the inverse through the same `app_run` path as tier free when the inverse only restores a previous value, and as the original tier otherwise (re-enabling a routine is ask).
+- Undo runs the inverse without asking (decided). Restoring a prior value (layout, setting, panels, routine enabled flag) is undo-able with no tier check; re-enabling a routine is undone the same way. Undo is refused only as "irreversible" or "changed since". `shared/pilotundo.ts` plans the inverse as data; no tier is attached to undo.
 - Irreversible commands (`effect: 'irreversible'`) are listed with "cannot be undone"; the confirm card says so before running, and the tool result tells the agent.
 - Undo is offered only if state was not changed since by the person (compare current value with the recorded new value; on mismatch the entry shows "changed since").
 
@@ -163,7 +163,7 @@ Wave 2: main and IPC (depends on wave 1).
 |---|---|---|---|---|
 | W2.1 | Pilot tools server | `electron/pilottools.ts` (new), `.test.ts` | `electron/uitools.ts` tool bodies | `app_commands`, `app_describe`, `app_run`, read tools; run goes through gate, rate limit, audit; no vault reads (tested) |
 | W2.2 | Gate and audit integration | `electron/policy.ts`, `electron/audit.ts` | `shared/policyrules.ts` grammar | `app_run:<id>` rules match; `by: 'pilot'` rows with tier and taint |
-| W2.3 | Taint tracking and tool sets | `electron/session.ts` | `canUseTool` order | turn taint flag set after untrusted reads; Pilot session gets full set, others the default set |
+| W2.3 | Taint tracking and tool sets | `electron/session.ts` | `canUseTool` order | session taint flag set after untrusted reads; Pilot session gets full set, others the default set |
 | W2.4 | IPC | `shared/ipccontract.ts`, `.test.ts`, `electron/preload.cjs`, `electron/main.ts` (handlers, menu accelerator) | other channels | contract test covers `pilot:*`; timeout path tested |
 
 Wave 3: UI and docs.
