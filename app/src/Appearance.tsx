@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { TranscriptToggle } from './Transcript'
 const ControlSettings = lazy(() => import('./control/ControlSettings'))
+import { cliLabel, useCliState } from './CliSetup'
 const RuntimeSettings = lazy(() => import('./settings/Runtime').then((x) => ({ default: x.RuntimeSettings })))
 const DictationSettings = lazy(() => import('./DictationSettings').then((x) => ({ default: x.DictationSettings })))
 import { IconClose } from './icons'
@@ -161,6 +162,12 @@ function ClaudeUsageToggle() {
   )
 }
 
+/** Which Claude Code the panels run: downloaded by the app, installed here (same version), or bundled. */
+function ClaudeCliInfo() {
+  const s = useCliState()
+  return <div className="rt-note faint" data-tip={s?.phase === 'ready' ? s.path : undefined}>{cliLabel(s)}</div>
+}
+
 /** Loop detection: on by default (it only pauses a turn, nothing is sent anywhere); thresholds editable. */
 function LoopGuardSettings() {
   const [c, setC] = useState<LoopConfig | null>(null)
@@ -217,6 +224,7 @@ export function Appearance(props: { current: string; onPick: (id: string) => voi
             <LoginToggle />
             <UpdateToggle />
             <ClaudeUsageToggle />
+            <ClaudeCliInfo />
             <LoopGuardSettings />
             <Suspense fallback={null}>
               <RuntimeSettings />

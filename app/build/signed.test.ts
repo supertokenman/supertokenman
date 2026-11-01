@@ -25,3 +25,17 @@ describe('Developer ID build config', () => {
     expect(signed.dmg.artifactName).toBe('SuperTokenMan-${arch}.${ext}')
   })
 })
+
+describe('Claude Code binary in the package (build/cli.cjs)', () => {
+  const cli = require('./cli.cjs')
+  const { withCli } = require('./cli-files.cjs')
+  it('is left out by default: the app downloads the pinned build', () => {
+    expect(cli.files).toContain('!node_modules/@anthropic-ai/claude-agent-sdk-*/**')
+    expect(signed.files).toContain('!node_modules/@anthropic-ai/claude-agent-sdk-*/**')
+  })
+  it('STM_BUNDLE_CLI=1 puts the host platform binary back', () => {
+    const on = withCli(cli, true)
+    expect(on.files).not.toContain('!node_modules/@anthropic-ai/claude-agent-sdk-*/**')
+    expect(on.files).toContain(`node_modules/@anthropic-ai/claude-agent-sdk-${process.platform}-\${arch}/**`)
+  })
+})

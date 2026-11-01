@@ -9,7 +9,8 @@ import { badge, contextMenu, keepBounds, menuTemplate, savedBounds, windowStateF
 import { crashReporter, app, BrowserWindow, Menu, nativeImage, Tray, globalShortcut, net, Notification, protocol, dialog, ipcMain, nativeTheme, powerMonitor, safeStorage, systemPreferences, session as electronSession, shell as desktop, webContents as allWebContents } from 'electron'
 import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, symlinkSync, unlinkSync, watch, writeFileSync } from 'node:fs'
 import { listSessions, query as sdkQuery } from '@anthropic-ai/claude-agent-sdk'
-import { claudeBinary, mergePath, shellPathAsync } from './packaged.js'
+import { claudeBinary, installedClaude, mergePath, shellPathAsync } from './packaged.js'
+import { ClaudeCli, parseVersion, platformKey, type CliManifest } from './claudecli.js'
 import { homedir } from 'node:os'
 import { findRepos, repoRoots } from './repos.js'
 import { createServer as netServer } from 'node:net'
@@ -325,8 +326,34 @@ crashReporter.start({ uploadToServer: false })
 const pathReady: Promise<void> = app.isPackaged && process.platform !== 'win32'
   ? ((process.env.PATH = mergePath('', process.env.PATH ?? '')), shellPathAsync().then((p) => void (process.env.PATH = p)))
   : Promise.resolve()
-const CLAUDE_BIN = app.isPackaged ? claudeBinary(process.resourcesPath) : undefined
-const query: typeof sdkQuery = (args) => sdkQuery(CLAUDE_BIN ? { ...args, options: { ...args.options, pathToClaudeCodeExecutable: CLAUDE_BIN } } : args)
+// Packaged, the Claude Code CLI is not in the app: the pinned build is downloaded on first need
+// (claudecli.ts, docs/NETWORK.md). From the source folder the SDK finds its own in node_modules.
+const cliManifest = ((): CliManifest | null => {
+  try {
+    return JSON.parse(readFileSync(new URL('../cli-manifest.json', import.meta.url), 'utf8')) as CliManifest
+  } catch {
+    return null
+  }
+})()
+const claudeCli = new ClaudeCli({
+  manifest: cliManifest,
+  root: join(app.getPath('userData'), 'claude-cli'),
+  key: platformKey(),
+  bundled: () => claudeBinary(process.resourcesPath),
+  installed: () => installedClaude(),
+  versionOf: (p) => new Promise((done) => execFile(p, ['--version'], { timeout: 10_000, encoding: 'utf8' }, (_e, out) => done(parseVersion(String(out ?? ''))))),
+  fetch: (url, init) => net.fetch(url, init),
+  onState: (s) => toWin('cli:state', s),
+})
+const query: typeof sdkQuery = (args) => {
+  if (!app.isPackaged) return sdkQuery(args)
+  const exe = claudeCli.path
+  if (!exe) throw new Error('Setting up Claude Code. The panel starts when it is ready.')
+  return sdkQuery({ ...args, options: { ...args.options, pathToClaudeCodeExecutable: exe } })
+}
+ipcMain.handle('cli:state', async () => (app.isPackaged ? await pathReady.then(() => claudeCli.peek()) : { phase: 'ready', path: '', source: 'dev', version: '' }))
+ipcMain.handle('cli:retry', () => claudeCli.retry().then(() => claudeCli.state, () => claudeCli.state))
+ipcMain.handle('cli:cancel', () => claudeCli.cancel())
 // a content piece's media, streamed to the window (registered before the app is ready)
 protocol.registerSchemesAsPrivileged([{ scheme: UI_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true, codeCache: true } }, { scheme: 'stmmedia', privileges: { stream: true, supportFetchAPI: true, secure: true, bypassCSP: false } }, { scheme: 'stmapp', privileges: { standard: true, secure: true } }])
 let win: BrowserWindow | null = null
@@ -2315,6 +2342,8 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
   perfMark('panel asked')
   await pathReady
   await officeReady
+  // first launch, or a release that pins a new Claude Code: the panel waits for the download
+  if (app.isPackaged) await claudeCli.ensure()
   perfMark('panel path and office checked')
   const sid = `s${++nextId}`
   // a panel on another machine: its folder (or a fresh worktree) there, and an empty stand-in folder here

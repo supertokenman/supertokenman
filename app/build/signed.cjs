@@ -2,7 +2,8 @@
 // the keychain (in CI, a keychain the release-mac workflow builds from the secrets) and notarized with an App Store Connect API key.
 // No credential lives in the repo: notarization reads APPLE_API_KEY (path to the .p8), APPLE_API_KEY_ID
 // and APPLE_API_ISSUER from the environment.
-const base = require('../package.json').build
+// the package.json build block, with the Claude Code binary put back when STM_BUNDLE_CLI=1 (build/cli.cjs)
+const base = require('./cli.cjs')
 // the everyday build signs ad hoc (identity "-"); that key is dropped here so the Developer ID is used
 const { identity: _adHoc, ...baseMac } = base.mac
 
