@@ -139,6 +139,7 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'abrowser:nav': z.tuple([z.object({ panel: sid, op: z.enum(['go', 'back', 'forward', 'reload', 'stop']), url: opt(z.string().max(2048)) }).strict()]),
   'abrowser:tab': z.tuple([z.object({ panel: sid, op: z.enum(['switch', 'close', 'new']), id: opt(z.number().int().min(1).max(1_000_000)) }).strict()]),
   'abrowser:get': z.tuple([z.object({ panel: sid }).strict()]),
+  'abrowser:snap': z.tuple([z.object({ panel: sid }).strict()]),
   'abrowser:clear': z.tuple([z.object({ panel: sid }).strict()]),
 }
 

@@ -138,7 +138,7 @@ describe('IPC contract', () => {
   })
 
   it('agent browser channels: validated, handled, in the preload; off means nothing is built', () => {
-    const chans = ['abrowser:enabled', 'abrowser:bounds', 'abrowser:take', 'abrowser:release', 'abrowser:answer', 'abrowser:profile', 'abrowser:profiles', 'abrowser:profile-edit', 'abrowser:settings', 'abrowser:nav', 'abrowser:tab', 'abrowser:get', 'abrowser:clear']
+    const chans = ['abrowser:enabled', 'abrowser:bounds', 'abrowser:take', 'abrowser:release', 'abrowser:answer', 'abrowser:profile', 'abrowser:profiles', 'abrowser:profile-edit', 'abrowser:settings', 'abrowser:nav', 'abrowser:tab', 'abrowser:get', 'abrowser:snap', 'abrowser:clear']
     for (const c of chans) {
       expect(Object.keys(CONTRACT)).toContain(c)
       expect(handled.has(c)).toBe(true)

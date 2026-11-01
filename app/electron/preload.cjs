@@ -1048,6 +1048,7 @@ contextBridge.exposeInMainWorld('stm', {
     nav: (panel, op, url) => ipcRenderer.invoke('abrowser:nav', { panel, op, url }),
     tab: (panel, op, id) => ipcRenderer.invoke('abrowser:tab', { panel, op, id }),
     state: (panel) => ipcRenderer.invoke('abrowser:get', { panel }),
+    snap: (panel) => ipcRenderer.invoke('abrowser:snap', { panel }),
     clear: (panel) => ipcRenderer.invoke('abrowser:clear', { panel }),
     onState: (fn) => {
       const l = (_e, r) => fn(r)

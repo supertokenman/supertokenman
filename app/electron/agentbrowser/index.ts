@@ -251,6 +251,19 @@ export function createAgentBrowser(d: AgentBrowserDeps) {
       }
       return ''
     },
+    /** A still picture of the active page, shown in place of the view while something covers it. */
+    async snap(panel: string): Promise<string | null> {
+      if (!cfg.enabled) return null
+      const wc = views.get(panel)?.view?.webContents
+      if (!wc || wc.isDestroyed()) return null
+      try {
+        const img = await wc.capturePage()
+        const w = img.getSize().width
+        return (w > 1100 ? img.resize({ width: 1100 }) : img).toDataURL()
+      } catch {
+        return null
+      }
+    },
     clear: (panel: string) => views.clear(panel).then(() => changed(panel)),
     state,
     closePanel(panel: string) {

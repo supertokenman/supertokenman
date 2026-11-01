@@ -312,6 +312,20 @@ test('the browser pane: turn on, host card, take over, challenge hand-over, uplo
     assert.equal(await win.locator('.ab-ask').count(), 0, 'Always: no second card')
     await shot('3-pane')
 
+    // a sheet opened over the pane: the native view steps aside for a still picture, then comes back
+    const visibleViews = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.filter((c) => c.webContents && c.getVisible()).length)
+    await win.keyboard.press('Meta+,')
+    await win.waitForSelector('.appearance', { timeout: 10_000 })
+    await win.waitForSelector('.ab-still', { timeout: 10_000 })
+    assert.equal(await visibleViews(), 0, 'the page view is hidden while the sheet is open')
+    assert.match((await win.locator('.ab-still').getAttribute('src')) ?? '', /^data:image\/png;base64,/)
+    await shot('3b-sheet-over-pane')
+    await win.keyboard.press('Escape')
+    await win.waitForSelector('.appearance', { state: 'detached', timeout: 10_000 })
+    await win.waitForSelector('.ab-still', { state: 'detached', timeout: 10_000 })
+    for (let i = 0; i < 20 && (await visibleViews()) !== 1; i++) await win.waitForTimeout(150)
+    assert.equal(await visibleViews(), 1, 'the page view is back when it closes')
+
     // the agent acts: the element is marked in the page
     const r1 = rev(again.text)
     const clicking = call('browser_click', { tab: 1, revision: r1, index: idx(again.text, 'button "Add to cart"') })

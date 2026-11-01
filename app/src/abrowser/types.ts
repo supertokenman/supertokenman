@@ -33,6 +33,7 @@ export type AgentBrowserApi = {
   nav: (panel: string, op: 'go' | 'back' | 'forward' | 'reload' | 'stop', url?: string) => Promise<string>
   tab: (panel: string, op: 'switch' | 'close' | 'new', id?: number) => Promise<string>
   state: (panel: string) => Promise<PaneState | null>
+  snap: (panel: string) => Promise<string | null>
   clear: (panel: string) => Promise<boolean>
   onState: (fn: (s: PaneState) => void) => () => void
   onAsk: (fn: (a: Ask) => void) => () => void

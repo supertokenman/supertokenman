@@ -33,6 +33,9 @@ export function Dock(props: { focus: string | null; panels: string[]; names: Rec
   const [editing, setEditing] = useState(false)
   const [note, setNote] = useState('')
   const [wipe, setWipe] = useState(false)
+  // something of ours (a menu, a sheet, a dialog) is over the page: the native view steps aside for a still picture
+  const [covered, setCovered] = useState(false)
+  const [still, setStill] = useState<string | null>(null)
   const view = useRef<HTMLDivElement>(null)
   const side = useRef<HTMLElement>(null)
 
@@ -73,6 +76,7 @@ export function Dock(props: { focus: string | null; panels: string[]; names: Rec
   const tab = s?.tabs.find((t) => t.id === s.active) ?? s?.tabs[0]
   const held = Boolean(s?.held)
   const open = Boolean(s) && !hidden
+  const shown = open && !covered
 
   // the address bar follows the page unless the person is typing in it
   useEffect(() => {
@@ -93,16 +97,16 @@ export function Dock(props: { focus: string | null; panels: string[]; names: Rec
   const report = useCallback(() => {
     if (!panel) return
     const el = view.current
-    if (!el || !open) return void api().bounds(panel, null)
+    if (!el || !shown) return void api().bounds(panel, null)
     const r = el.getBoundingClientRect()
     void api().bounds(panel, { x: r.x, y: r.y, width: r.width, height: r.height })
-  }, [panel, open])
+  }, [panel, shown])
   const last = useRef('')
   useLayoutEffect(() => {
     last.current = ''
     const send = () => {
       const el = view.current
-      const key = !el || !open ? 'none' : (() => { const r = el.getBoundingClientRect(); return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}` })()
+      const key = !el || !shown ? 'none' : (() => { const r = el.getBoundingClientRect(); return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}` })()
       if (key !== last.current) {
         last.current = key
         report()
@@ -121,7 +125,46 @@ export function Dock(props: { focus: string | null; panels: string[]; names: Rec
       clearInterval(tick)
       if (panel) void api().bounds(panel, null)
     }
-  }, [report, open, panel, asks.length, more, note])
+  }, [report, shown, panel, asks.length, more, note])
+
+  // is anything outside the pane drawn over the page box? The native view would hide it.
+  const busy = useRef(false)
+  const coveredNow = useRef(false)
+  coveredNow.current = covered
+  useEffect(() => {
+    if (!open || !panel) return
+    const over = () => {
+      const el = view.current
+      if (!el) return false
+      const r = el.getBoundingClientRect()
+      if (r.width < 20 || r.height < 20) return false
+      const pts: [number, number][] = [[r.x + 10, r.y + 10], [r.right - 10, r.y + 10], [r.x + 10, r.bottom - 10], [r.right - 10, r.bottom - 10], [r.x + r.width / 2, r.y + r.height / 2]]
+      return pts.some(([x, y]) => {
+        const top = document.elementsFromPoint(x, y)[0]
+        return Boolean(top) && !el.contains(top!)
+      })
+    }
+    const check = async () => {
+      if (busy.current) return
+      const now = over()
+      if (now === coveredNow.current) return
+      busy.current = true
+      try {
+        if (now) setStill(await api().snap(panel).catch(() => null))
+        else setStill(null)
+        setCovered(now)
+      } finally {
+        busy.current = false
+      }
+    }
+    const mo = new MutationObserver(() => void check())
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'open'] })
+    const t = setInterval(() => void check(), 200)
+    return () => {
+      mo.disconnect()
+      clearInterval(t)
+    }
+  }, [open, panel])
 
   const answer = (id: string, a: 'once' | 'always' | 'deny') => {
     setAsks((o) => o.filter((x) => x.id !== id))
@@ -224,6 +267,7 @@ export function Dock(props: { focus: string | null; panels: string[]; names: Rec
       {note && <p className="ab-error" role="alert">{note}</p>}
 
       <div className="ab-view" ref={view} aria-label="Page" role="region">
+        {still && covered && <img className="ab-still" src={still} alt="" />}
         {!tab && <p className="faint">No page is open. {name} opens one when it needs it.</p>}
       </div>
 

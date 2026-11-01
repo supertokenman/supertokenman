@@ -7812,6 +7812,7 @@ ipcMain.handle('abrowser:settings', (_e, a: { screenshots?: boolean; limits?: { 
 ipcMain.handle('abrowser:nav', (_e, a: { panel: string; op: 'go' | 'back' | 'forward' | 'reload' | 'stop'; url?: string }) => abrowser().nav(a.panel, a.op, a.url))
 ipcMain.handle('abrowser:tab', (_e, a: { panel: string; op: 'switch' | 'close' | 'new'; id?: number }) => abrowser().tab(a.panel, a.op, a.id))
 ipcMain.handle('abrowser:get', (_e, a: { panel: string }) => (abrowserSvc?.enabled() ? abrowserSvc.state(a.panel) : null))
+ipcMain.handle('abrowser:snap', (_e, a: { panel: string }) => abrowserSvc?.snap(a.panel) ?? null)
 ipcMain.handle('abrowser:clear', (_e, a: { panel: string }) => abrowserSvc?.clear(a.panel).then(() => true))
 // end-to-end tests only: the browser tools of a panel as its Claude would call them, and the person's answers
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmBrowser = { svc: abrowser, preview: (sid: string) => abPreview.add(sid) }
