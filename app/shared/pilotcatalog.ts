@@ -31,6 +31,7 @@ const STRING_MAX = 1000
 /** `[id, title, tier, agent, undo]` for the static palette entries (`go-<id>` in the palette). */
 const STATIC: readonly (readonly [string, string, Tier, boolean, UndoKind])[] = [
   ['today', 'Today', 'free', true, 'none'],
+  ['pilot', 'Pilot', 'free', true, 'none'],
   ['agenda', 'Agenda', 'free', true, 'none'],
   ['prs', 'Pull requests', 'free', true, 'none'],
   ['docker', 'Docker', 'free', true, 'none'],

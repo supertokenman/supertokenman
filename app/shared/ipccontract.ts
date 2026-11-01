@@ -138,6 +138,7 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'triggers:setCaps': z.tuple([z.object({ minEvery: z.number().int().min(1), maxEnabled: z.number().int().min(1), maxFailures: z.number().int().min(1) })]),
   'pilot:result': z.tuple([z.object({ callId: z.string().regex(/^[\w-]{1,64}$/, 'a call id'), ok: z.boolean(), text: text(20_000), undo: pilotInverse.nullable().optional(), after: pilotPrim.optional() })]),
   'pilot:actions': z.tuple([z.object({ window: z.union([z.string().max(64), z.number()]).optional() }).optional()]),
+  'pilot:status': z.tuple([sid]),
   'pilot:undo': z.tuple([z.object({ actionId: z.string().regex(/^a\d{1,9}$/, 'an action id') })]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
   // agent browser (spec-agent-browser.md): the pane's calls; abrowser:state and abrowser:ask go main -> window

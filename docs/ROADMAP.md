@@ -324,6 +324,14 @@ Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or g
 
 Status: done. Waves 1 and 2 (PR 114) are the engine; wave 3 adds Settings > Control (rules editor with broad-allow warnings and a test box, routine limits), the audit view, the plan strip and canvas badge, checkpoint and breakpoint cards, and the caps line in Triggers. Open: breakpoints have no getter, so the card remembers its list in the window and an empty window can show a list that differs from the app until the next change.
 
+## Pilot: the panel agent drives the app (spec: `spec-pilot.md`)
+
+- [x] A command catalog with a tier per Cmd+K command (free, ask, confirm), a test that fails when a palette entry has no spec, and three generic tools (`app_commands`, `app_describe`, `app_run`) so the prompt does not grow with the catalog.
+- [x] Read tools from typed projections: `app_state` (layout, focus, open screens, panels), `app_settings` (allowlist, no vault values), `app_cost`, `app_routines`, `app_packs`, `app_notifications`.
+- [x] Tiers through the policy gate (`app_run:<id>` rules, confirm never allowed by a rule), taint after untrusted reads, a rate limit, and an audit row per call.
+- [x] The Pilot sheet (Cmd+Shift+J, lazy) with its own session on the smallest model of the login, confirm cards with the arguments and "cannot be undone", the untrusted label, and the actions list with Undo per row and Undo last.
+- Still open: a switch for `pilotEverywhere` in Settings, undo for settings and routine changes from the window, the "agent did this" marker on screens it opened.
+
 ## Planned: background panels, precise state and wait, SSH machines
 
 Spec: `spec-runtime.md`. Optional "Keep panels running" (off by default): panels survive closing the window, with a menu bar count, today's cost and Stop all; after a reboot the layout comes back with an offer to resume, never auto-run. Panel states working, waiting approval, waiting input, idle and error, plus `stm wait --for blocked|idle|done`. Saved SSH hosts with independent reconnect, one at a time in v1.

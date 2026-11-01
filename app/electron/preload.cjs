@@ -1044,6 +1044,7 @@ contextBridge.exposeInMainWorld('stm', {
     result: (r) => ipcRenderer.invoke('pilot:result', r),
     actions: (w) => ipcRenderer.invoke('pilot:actions', w),
     undo: (actionId) => ipcRenderer.invoke('pilot:undo', { actionId }),
+    status: (sid) => ipcRenderer.invoke('pilot:status', sid),
     onChanged: (fn) => {
       const l = () => fn()
       ipcRenderer.on('pilot:changed', l)

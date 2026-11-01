@@ -2,7 +2,7 @@
 // streamed the way the real API streams. No network, no key.
 import { createServer } from 'node:http'
 
-export function fakeAnthropic(port = 0) {
+export function fakeAnthropic(port = 0, opts = {}) {
   const bodies = []
   const server = createServer((req, res) => {
     let body = ''
@@ -23,7 +23,7 @@ export function fakeAnthropic(port = 0) {
     {
       res.writeHead(200, { 'content-type': 'text/event-stream' })
       const ev = (type, data) => res.write(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`)
-      const text = b.tools?.length ? 'E2E reply: the panel works.' : 'E2E title'
+      const text = b.tools?.length ? (opts.reply ?? 'E2E reply: the panel works.') : 'E2E title'
       ev('message_start', { message: { id: 'msg_e2e', type: 'message', role: 'assistant', model: b.model, content: [], stop_reason: null, usage: { input_tokens: 10, output_tokens: 1 } } })
       ev('content_block_start', { index: 0, content_block: { type: 'text', text: '' } })
       ev('content_block_delta', { index: 0, delta: { type: 'text_delta', text } })

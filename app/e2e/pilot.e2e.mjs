@@ -1,21 +1,25 @@
 // Pilot (spec-pilot.md) end to end: the real app under a throwaway profile. A panel's Claude lists the
 // commands (app_commands), describes one and runs a free command (app_run) through the window; an ask-tier
-// command shows a permission card and runs only on Allow; an unknown id and a confirm-tier command in an
-// ordinary panel are refused. The window's runner is wave 3, so the test stands in for it: it answers
-// pilot:run over the real preload bridge. Run under xvfb-run.
+// command shows a card in the Pilot sheet and runs only on Allow; Undo reverts the layout; an unknown id and
+// commands for the person are refused. The window runs the commands itself (src/pilot/run.ts). The
+// shortcut opens the sheet; the model is the mock API. Run under xvfb-run.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _electron as electron } from 'playwright'
 import { fakeAnthropic } from './fake-anthropic.mjs'
 
 const appDir = new URL('..', import.meta.url).pathname
-const api = await fakeAnthropic()
-const root = mkdtempSync(join(tmpdir(), 'stm-pilot-e2e-'))
+const shotsDir = process.env.PILOT_SHOTS
+// for the screenshots the mock says something a person would read, in a folder with a readable name
+const REPLY = shotsDir ? 'Done. The layout is a grid now and Today is open. You can undo either from the list below.' : 'E2E reply: the panel works.'
+const api = await fakeAnthropic(0, { reply: REPLY })
+const root = shotsDir ? join(tmpdir(), 'projects') : mkdtempSync(join(tmpdir(), 'stm-pilot-e2e-'))
+if (shotsDir) rmSync(root, { recursive: true, force: true })
 const home = join(root, 'home'), ud = join(root, 'ud'), envDir = join(root, 'panel-env')
-const dirs = ['acme', 'api'].map((d) => join(root, d))
+const dirs = ['acme-web', 'billing-api'].map((d) => join(root, d))
 for (const d of [home, ud, envDir, ...dirs]) mkdirSync(d, { recursive: true })
 const env = { ...process.env, HOME: home, STM_USER_DATA: ud, STM_TEST_SECRETS: '1', STM_TEST_PANEL_ENV: envDir, ANTHROPIC_BASE_URL: api.url, ANTHROPIC_API_KEY: 'sk-e2e', CLAUDE_CONFIG_DIR: join(home, '.claude') }
 for (const k of Object.keys(env)) if (k.startsWith('CLAUDE_CODE_') || k.startsWith('CCR_') || k === 'CLAUDE_SESSION_INGRESS_TOKEN_FILE' || k.startsWith('STM_PANEL')) delete env[k]
@@ -34,77 +38,106 @@ test('a panel lists, describes and runs app commands; an ask command shows a car
     for (let i = 0; i < 60 && !readdirSync(envDir).length; i++) await win.waitForTimeout(500)
     const me = readdirSync(envDir)[0].replace(/\.json$/, '')
 
-    // stand-in for the wave 3 runner: answer each pilot:run through the real bridge
-    await win.evaluate(() => {
-      window.__pilotRuns = []
-      window.stm.pilot.onRun((r) => {
-        window.__pilotRuns.push({ id: r.id, args: r.args })
-        const layout = r.id.startsWith('layout-')
-        void window.stm.pilot.result({ callId: r.callId, ok: true, text: `window ran ${r.id}`, ...(layout ? { undo: { kind: 'layout', prev: 'auto' }, after: String(r.args.id) } : {}) })
-      })
-    })
-    const call = (name, args, pilot = false) => app.evaluate(async (_e, [sid, name, args, pilot]) => {
+    // the first panel answers once, so the splash is gone and the window shows a real panel
+    await win.getByRole('button', { name: 'Not now' }).click({ timeout: 3000 }).catch(() => undefined)
+    await win.locator('.composer textarea').first().fill('hello')
+    await win.locator('.composer textarea').first().press('Enter')
+    await win.getByText(REPLY).first().waitFor({ timeout: 60_000 })
+    await win.locator('.splash').waitFor({ state: 'detached', timeout: 20_000 }).catch(() => undefined)
+    const base = await win.locator('.panel').count()
+    const notNow = () => win.getByRole('button', { name: 'Not now' }).click({ timeout: 1500 }).catch(() => undefined)
+    const shots = process.env.PILOT_SHOTS
+    // the sheet only: no panel text of the test in the picture
+    const shot = async (name) => shots && (mkdirSync(shots, { recursive: true }), await notNow(), await win.waitForTimeout(500), await win.getByRole('dialog', { name: 'Pilot' }).screenshot({ path: join(shots, `${name}.png`) }))
+    const call = (sid, name, args, pilot = false) => app.evaluate(async (_e, [sid, name, args, pilot]) => {
       const t = globalThis.__stmPilotTools(sid, pilot).find((x) => x.name === name)
       const r = await t.handler(args, {})
       return { text: r.content[0].text, isError: Boolean(r.isError) }
-    }, [me, name, args, pilot])
-    const runs = () => win.evaluate(() => window.__pilotRuns)
+    }, [sid, name, args, pilot])
 
-    // an ordinary panel sees only free commands; the Pilot sees the ask ones too
-    const ordinary = await call('app_commands', {})
-    assert.match(ordinary.text, /go-today.*\[free\]/)
+    // the shortcut opens the sheet, which starts its own session
+    assert.equal(await win.locator('.pilot:not([hidden])').count(), 0)
+    await win.keyboard.press('Meta+Shift+J')
+    await win.locator('.pilot:not([hidden])').waitFor({ timeout: 20_000 })
+    for (let i = 0; i < 60 && readdirSync(envDir).length < 2; i++) await win.waitForTimeout(500)
+    const pilotSid = readdirSync(envDir).map((f) => f.replace(/\.json$/, '')).find((x) => x !== me)
+    assert.ok(pilotSid, 'the Pilot session started')
+    const sheet = win.getByRole('dialog', { name: 'Pilot' })
+    await sheet.getByRole('button', { name: 'Switch to the 2x2 layout' }).waitFor()
+    await shot('1-sheet-empty')
+
+    // asking it works through the session (mock API answers)
+    await notNow()
+    await sheet.getByRole('button', { name: 'Switch to the 2x2 layout' }).click()
+    await sheet.getByText(REPLY).waitFor({ timeout: 30_000 })
+
+    // the Pilot runs a layout change and opens a sheet, both free: no card, and the window really changed
+    const ordinary = await call(me, 'app_commands', {})
     assert.doesNotMatch(ordinary.text, /\[ask\]/)
-    const pilot = await call('app_commands', {}, true)
-    assert.match(pilot.text, /open-<cwd>.*\[ask\]/)
-    assert.match((await call('app_describe', { id: 'layout-<id>' })).text, /Tier: free/)
+    assert.match((await call(pilotSid, 'app_commands', {}, true)).text, /open-<cwd>.*\[ask\]/)
+    assert.match((await call(pilotSid, 'app_state', {}, true)).text, /Layout: auto/)
+    const lay = await call(pilotSid, 'app_run', { id: 'layout-grid' }, true)
+    assert.equal(lay.isError, false, lay.text)
+    assert.match((await call(pilotSid, 'app_state', {}, true)).text, /Layout: grid[\s\S]*Open screens: Pilot/)
+    const today = await call(pilotSid, 'app_run', { id: 'go-today' }, true)
+    assert.equal(today.isError, false, today.text)
+    await win.getByRole('dialog', { name: 'Today' }).waitFor()
+    assert.match((await call(pilotSid, 'app_state', {}, true)).text, /Open screens: [^\n]*Today/)
+    await win.getByRole('dialog', { name: 'Today' }).press('Escape')
+    await win.getByRole('dialog', { name: 'Today' }).waitFor({ state: 'detached' })
+    const rows = sheet.locator('.pilot-row')
+    await rows.first().waitFor()
+    assert.equal(await rows.count(), 2)
 
-    // a free command runs at once, through the window, and lands in the actions list with an undo
-    const r = await call('app_run', { id: 'layout-grid' })
-    assert.equal(r.isError, false, r.text)
-    assert.match(r.text, /window ran layout-grid/)
-    assert.deepEqual(await runs(), [{ id: 'layout-grid', args: { id: 'grid' } }])
-    const actions = await win.evaluate(() => window.stm.pilot.actions())
-    assert.equal(actions[0].command, 'layout-grid')
-    assert.equal(actions[0].undo, 'layout')
+    // refused: not in the catalog, a command for the person, an ask command in an ordinary panel
+    assert.equal((await call(pilotSid, 'app_run', { id: 'policy.rules' }, true)).isError, true)
+    assert.equal((await call(pilotSid, 'app_run', { id: 'go-worktree' }, true)).isError, true)
+    assert.equal((await call(me, 'app_run', { id: 'open-<cwd>', args: { cwd: dirs[1] } })).isError, true)
 
-    // refused: not in the catalog, and a command for the person
-    assert.equal((await call('app_run', { id: 'policy.rules' })).isError, true)
-    assert.equal((await call('app_run', { id: 'go-worktree' })).isError, true)
-    // an ordinary panel cannot run an ask command at all
-    assert.equal((await call('app_run', { id: 'open-<cwd>', args: { cwd: dirs[1] } })).isError, true)
-    assert.equal((await runs()).length, 1)
-
-    // an ask command in the Pilot shows a permission card; Deny runs nothing
-    const denied = call('app_run', { id: 'open-<cwd>', args: { cwd: dirs[1] } }, true)
-    await win.getByRole('button', { name: 'Deny', exact: true }).first().click({ timeout: 20_000 })
+    // an ask command shows a card in the sheet; Deny runs nothing
+    const denied = call(pilotSid, 'app_run', { id: 'open-<cwd>', args: { cwd: dirs[1] } }, true)
+    const card = sheet.getByRole('group', { name: /Confirm: Open a panel/ })
+    await card.waitFor({ timeout: 20_000 })
+    await card.getByText(dirs[1]).waitFor()
+    await shot('3-confirm-card')
+    await card.getByRole('button', { name: 'Deny' }).click()
     assert.equal((await denied).isError, true)
-    assert.equal((await runs()).length, 1)
+    assert.equal(await win.locator('.panel').count(), base)
 
-    // Allow runs it
-    const allowed = call('app_run', { id: 'open-<cwd>', args: { cwd: dirs[1] } }, true)
-    await win.locator('.ask-cmd', { hasText: 'Open a panel in a recent folder' }).first().waitFor({ timeout: 20_000 })
-    await win.getByRole('button', { name: 'Allow', exact: true }).first().click()
+    // Allow runs it: a second panel opens, and the action can be undone (the panel closes)
+    const allowed = call(pilotSid, 'app_run', { id: 'open-<cwd>', args: { cwd: dirs[1] } }, true)
+    await card.waitFor({ timeout: 20_000 })
+    await card.getByRole('button', { name: 'Allow' }).click()
     const ok = await allowed
     assert.equal(ok.isError, false, ok.text)
-    assert.equal((await runs()).length, 2)
-    assert.equal((await runs())[1].id, `open-${dirs[1]}`)
+    await win.waitForFunction((n) => document.querySelectorAll('.panel').length === n + 1, base)
+    assert.equal(await rows.count(), 3)
+    await shot('2-actions')
+    if (shots && process.env.PILOT_FULL) await win.screenshot({ path: join(shots, '_window.png') })
 
-    // undo is refused while the layout is not what the action left (the stand-in did not really change it) ...
-    const id = actions[0].id
-    assert.deepEqual(await win.evaluate((id) => window.stm.pilot.undo(id), id), { ok: false, reason: 'changed' })
-    // ... and a ui_set_layout lands in the actions list too; once the layout is grid, the undo runs without a card
-    const uiLayout = await app.evaluate(async (_e, sid) => (await globalThis.__stmUiTools(sid).find((x) => x.name === 'ui_set_layout').handler({ layout: 'grid' }, {})).content[0].text, me)
-    assert.match(uiLayout, /grid/)
-    assert.equal((await win.evaluate(() => window.stm.pilot.actions()))[0].command, 'layout-grid')
-    assert.deepEqual(await win.evaluate((id) => window.stm.pilot.undo(id), id), { ok: true })
-    assert.equal((await runs()).at(-1).id, 'undo')
+    // Undo reverts the layout from the list; the row goes, the window changes back
+    const layRow = rows.filter({ hasText: 'Change the layout' })
+    await layRow.getByRole('button', { name: /Undo/ }).click()
+    await layRow.waitFor({ state: 'detached' })
+    assert.match((await call(pilotSid, 'app_state', {}, true)).text, /Layout: auto/)
+    // Undo last (the keyboard shortcut in the sheet) closes the panel the agent opened
+    await sheet.getByLabel('Ask the Pilot').press('Meta+Shift+Z')
+    await win.waitForFunction((n) => document.querySelectorAll('.panel').length === n, base)
+
+    // the untrusted badge: once the session has read content the app does not trust, the sheet says so
+    assert.equal(await sheet.locator('.pilot-untrusted').count(), 0)
+    await app.evaluate((_e, sid) => globalThis.__stmPilotTaint(sid), pilotSid)
+    await sheet.getByLabel('Ask the Pilot').fill('Now show me the cost of today')
+    await sheet.getByLabel('Ask the Pilot').press('Enter')
+    await sheet.locator('.pilot-untrusted').waitFor({ timeout: 30_000 })
+    await shot('4-untrusted')
 
     // the audit log has a pilot row for each decision, with the tier and the taint flag
     const days = readdirSync(join(ud, 'audit'))
-    const rows = readFileSync(join(ud, 'audit', days[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l)).filter((r) => r.by === 'pilot')
-    assert.ok(rows.some((r) => r.tier === 'free' && r.decision === 'allow'))
-    assert.ok(rows.some((r) => r.tier === 'ask' && r.decision === 'ask'))
-    assert.ok(rows.every((r) => r.tool === 'mcp__stm__app_run' && typeof r.tainted === 'boolean'))
+    const arows = readFileSync(join(ud, 'audit', days[0]), 'utf8').trim().split('\n').map((l) => JSON.parse(l)).filter((r) => r.by === 'pilot')
+    assert.ok(arows.some((r) => r.tier === 'free' && r.decision === 'allow'))
+    assert.ok(arows.some((r) => r.tier === 'ask' && r.decision === 'ask'))
+    assert.ok(arows.every((r) => r.tool === 'mcp__stm__app_run' && typeof r.tainted === 'boolean'))
   } finally {
     await app.close()
     api.close?.()

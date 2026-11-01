@@ -7816,7 +7816,9 @@ function pilotDeps(me: string): PilotDeps {
     reads: {
       state: async () => {
         const list = uiTools(uiDeps(me)).find((t) => t.name === 'ui_list_panels')!.handler as unknown as (a: object, x: object) => Promise<{ content: { text: string }[] }>
-        return (await list({}, {})).content[0]!.text
+        const w = await uiAsk<{ layout: string; focus?: string | null; screens?: string[] }>('ui:cmd', { op: 'state' }, 10_000)
+        const head = [`Layout: ${w.layout}`, `Focused panel: ${w.focus ?? 'none'}`, `Open screens: ${w.screens?.length ? w.screens.join(', ') : 'none'}`]
+        return `${head.join('\n')}\n${(await list({}, {})).content[0]!.text}`
       },
       settings: () => ({ all: settings() as unknown as Record<string, unknown>, vaultBacked: (vault?.all() ?? []).map((v) => v.name) }),
       cost: () => {
@@ -7848,6 +7850,7 @@ function pilotDeps(me: string): PilotDeps {
   }
 }
 ipcMain.handle('pilot:result', (_e, r: { callId: string; ok: boolean; text: string; undo?: import('../shared/pilotundo.js').Inverse | null; after?: unknown }) => pilotLink.settle(String(r.callId), { ok: r.ok === true, text: String(r.text ?? ''), undo: r.undo, after: r.after }))
+ipcMain.handle('pilot:status', (_e, sid: string) => ({ tainted: sessions.get(sid)?.tainted ?? false }))
 ipcMain.handle('pilot:actions', () => pilotHub.actions())
 ipcMain.handle('pilot:undo', (_e, r: { actionId: string }) =>
   pilotHub.runUndo(String(r.actionId), {
@@ -7857,6 +7860,7 @@ ipcMain.handle('pilot:undo', (_e, r: { actionId: string }) =>
 )
 // end-to-end tests only: the Pilot tools of a panel, called as its Claude would; `pilot` marks the panel as the Pilot's
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmPilotTools = (sid: string, pilot = false) => (pilot ? pilotSids.add(sid) : pilotSids.delete(sid), pilotTools(pilotDeps(sid)))
+if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmPilotTaint = (sid: string) => sessions.get(sid)?.taint()
 // end-to-end tests only: the ui tools of a panel, called as its Claude would
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmHub = hub
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmUiTools = (sid: string) => uiTools(uiDeps(sid))
