@@ -1,6 +1,28 @@
 // The pure part of the Mac performance run (perf-mac.mjs): medians, the process tree from `ps`, the
 // start-up chunks named in index.html, the comparison with the previous release, and PERF.md.
 // Tested in perf-lib.test.ts.
+import { mkdirSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+/**
+ * Puts an already-downloaded Claude Code into a fresh profile, the way the app leaves it after its
+ * first-run download (userData/claude-cli/<cli>/claude and pinned.json), so a launch measures the
+ * steady state a person sees every day, not the one-time download. `from` is a profile that finished
+ * the download (copied with its mark) or a bare binary with the manifest entry it stands for.
+ */
+export function provisionCli(userData, from) {
+  const root = join(userData, 'claude-cli')
+  mkdirSync(root, { recursive: true })
+  if (from.dir) {
+    for (const d of readdirSync(from.dir)) if (!d.startsWith('.')) symlinkSync(join(from.dir, d), join(root, d))
+    return
+  }
+  const dir = join(root, from.manifest.cli)
+  mkdirSync(dir, { recursive: true })
+  symlinkSync(from.binary, join(dir, 'claude'))
+  const e = from.manifest.platforms[from.key]
+  writeFileSync(join(dir, 'pinned.json'), JSON.stringify({ name: e.name, version: e.version, cli: from.manifest.cli, integrity: e.integrity, size: statSync(from.binary).size }))
+}
 
 export const median = (xs) => {
   const v = xs.filter((x) => Number.isFinite(x)).sort((a, b) => a - b)
@@ -111,6 +133,7 @@ export function render(p, cmp, prevVersion, prev) {
           [`Launch to window shown (median of ${r.launch.runs} after ${r.launch.coldRuns} cold)`, `${f(r.launch.windowMs, 0)} ms (${f(r.launch.windowMin, 0)} to ${f(r.launch.windowMax, 0)})`],
           ['Launch to composer usable (median)', `${f(r.launch.composerMs, 0)} ms (${f(r.launch.composerMin, 0)} to ${f(r.launch.composerMax, 0)})`],
           ['Cold launch (slowest of the first ' + r.launch.coldRuns + '): window / composer', `${f(r.launch.coldWindowMs, 0)} / ${f(r.launch.coldComposerMs, 0)} ms`],
+          ...(r.firstRun?.windowMs !== undefined ? [['First run, fresh profile (downloads Claude Code): window / composer / Claude Code ready', `${f(r.firstRun.windowMs, 0)} / ${f(r.firstRun.composerMs, 0)} / ${r.firstRun.cliReadyMs === undefined ? 'not ready' : f(r.firstRun.cliReadyMs, 0)} ms`]] : []),
         ]
       : [
           ['Launch to window shown (median of ' + r.launch.runs + ')', `${f(r.launch.windowMs, 0)} ms`],
@@ -167,6 +190,8 @@ ${cmp.map((c) => `| ${c.marked ? '**' + c.key + '**' : c.key} | ${c.isNew ? '-' 
   textarea being enabled and taking focus, polled every 50 ms over Chromium's debugging port. The first
   launches of a newly installed app are slow (system checks of the signed bundle, cold disk cache): they
   are shown as the cold launch, and the median, minimum and maximum are of the launches after them.
+  Since method 3 these launches find Claude Code already downloaded (the steady state); the one-time
+  download is measured once, as the first run on a fresh profile, with the time until Claude Code is ready.
 - Idle: 30 s after a 10 s settle. Layouts and style recalcs are deltas of CDP \`Performance.getMetrics\`;
   CPU and memory are \`ps\` samples of the app and every process under it, once a second, averaged.
 - Typing: 200 characters typed into the composer, 30 ms apart, in rounds at 1x and at a 4x CPU throttle

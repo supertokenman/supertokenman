@@ -275,3 +275,33 @@ export class ClaudeCli {
     return this.ensure()
   }
 }
+
+/**
+ * A query whose Claude Code is still being set up: iterating it waits for the real one and then reads
+ * it; any other call (interrupt, setModel, accountInfo...) waits for it too. A failed setup ends the
+ * iteration with the setup's message, which the panel shows.
+ */
+export function deferredQuery<Q extends AsyncIterable<unknown>>(real: Promise<Q>): Q {
+  let it: AsyncIterator<unknown> | undefined
+  const inner = async () => (it ??= (await real)[Symbol.asyncIterator]())
+  const gen = {
+    next: async (...a: [] | [unknown]) => (await inner()).next(...a),
+    return: async (v?: unknown) => {
+      const i = await inner().catch(() => undefined)
+      return i?.return ? i.return(v) : { done: true as const, value: v }
+    },
+    throw: async (e?: unknown) => {
+      const i = await inner()
+      if (i.throw) return i.throw(e)
+      throw e
+    },
+    [Symbol.asyncIterator]() { return this },
+  }
+  return new Proxy(gen, {
+    get(t, k) {
+      if (k in t) return t[k as keyof typeof t]
+      if (k === 'then') return undefined
+      return (...args: unknown[]) => real.then((q) => (q as unknown as Record<PropertyKey, (...x: unknown[]) => unknown>)[k as string](...args))
+    },
+  }) as unknown as Q
+}

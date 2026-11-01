@@ -241,6 +241,18 @@ function CacheChip(props: { at: number; ttl: number; tokens: number; model: stri
   )
 }
 
+/** The first-run download of Claude Code, while it runs or after it failed; null once it is there (or never needed). */
+function useCliSetup() {
+  const [s, setS] = useState<import('./bridge').CliState | null>(null)
+  useEffect(() => {
+    const cli = window.stm.claudeCli
+    if (!cli) return
+    void cli.state().then((x) => setS((cur) => cur ?? x), () => undefined)
+    return cli.onState(setS)
+  }, [])
+  return s && (s.phase === 'downloading' || s.phase === 'failed') ? s : null
+}
+
 export function Panel(props: {
   sid: string
   /** the runtime state kept in main (working, waiting, idle, error) */
@@ -269,6 +281,7 @@ export function Panel(props: {
   const { sid, s, money, dispatch } = props
   const [draft, setDraft] = useState('')
   const warmed = useRef(false)
+  const setup = useCliSetup()
   const [atts, setAtts] = useState<Attachment[]>([])
   // context the browser picked (an element, the console, failed requests): a chip here, the full text on send
   // the Workbench library and the Documents tags, for /name and @tag
@@ -1055,6 +1068,15 @@ export function Panel(props: {
         )}
         {s.snapshot && !snapHidden && <SnapshotCard sid={sid} text={s.snapshot.text} inject={s.snapshot.inject} onDone={() => setSnapHidden(true)} />}
         {queued.count > 0 && <Suspense fallback={null}><QueueList sid={sid} money={money} /></Suspense>}
+        {setup && (
+          <div className={`composer-setup${setup.phase === 'failed' ? ' failed' : ''}`} role="status">
+            {setup.phase === 'failed' ? (
+              <>Claude Code could not be set up: {setup.message} {s.busy ? 'Your message waits for it.' : 'You can keep typing.'} <button className="ghost small" onClick={() => void window.stm.claudeCli.retry()}>Retry</button></>
+            ) : (
+              <>Setting up Claude Code{setup.total ? ` (${Math.round((setup.got / setup.total) * 100)}%)` : ''}… {s.busy ? 'Your message is sent when it is ready.' : 'Type away; a message sent now goes when it is ready.'}</>
+            )}
+          </div>
+        )}
         <div className="composer">
           <button className="attach" data-tip="Attach files, folders or images (or paste and drop them)" aria-label="Attach" onClick={async () => {
             const picked = await pickAttachments(s.cwd)

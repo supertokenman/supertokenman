@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { ClaudeCli, checkEntry, downloadedCli, extractEntry, installCli, integrityMatches, parseVersion, prune, resolveCli, type CliManifest, type CliState } from './claudecli'
+import { ClaudeCli, checkEntry, deferredQuery, downloadedCli, extractEntry, installCli, integrityMatches, parseVersion, prune, resolveCli, type CliManifest, type CliState } from './claudecli'
 
 // a minimal ustar archive, as npm packs it
 function tar(files: Record<string, Buffer>): Buffer {
@@ -160,5 +160,28 @@ describe('prune', () => {
     expect(prune(root, '2.1.4').sort()).toEqual(['.2.1.5-1-2', '2.1.1', '2.1.2'])
     expect(readdirSync(root).sort()).toEqual(['2.1.3', '2.1.4'])
     expect(existsSync(join(root, '2.1.4'))).toBe(true)
+  })
+})
+
+describe('deferredQuery', () => {
+  const fake = (msgs: number[]) => {
+    const g = (async function* () { yield* msgs })()
+    return Object.assign(g, { interrupt: async () => 'stopped' })
+  }
+  it('reads the real query once it is ready, and forwards its methods', async () => {
+    let ready!: (q: ReturnType<typeof fake>) => void
+    const q = deferredQuery(new Promise<ReturnType<typeof fake>>((r) => (ready = r)))
+    const got: number[] = []
+    const reading = (async () => { for await (const m of q) got.push(m as number) })()
+    const stopped = q.interrupt()
+    expect(got).toEqual([])
+    ready(fake([1, 2]))
+    await reading
+    expect(got).toEqual([1, 2])
+    expect(await stopped).toBe('stopped')
+  })
+  it('ends the iteration with the setup error', async () => {
+    const q = deferredQuery<ReturnType<typeof fake>>(Promise.reject(new Error('Claude Code is not set up yet: offline')))
+    await expect((async () => { for await (const _ of q) void _ })()).rejects.toThrow('offline')
   })
 })
