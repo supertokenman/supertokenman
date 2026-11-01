@@ -45,7 +45,7 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'quota:custom': z.tuple([z.boolean(), z.string().max(300)]),
   'bw:unlock': z.tuple([z.string().min(1).max(1000)]),
   'bw:link': z.tuple([z.string().regex(/^[A-Z][A-Z0-9_]{1,63}$/), z.string().min(1).max(100), z.string().max(80), z.string().max(80)]),
-  'perm:answer': z.tuple([sid, z.string().max(100), z.boolean()]),
+  'perm:answer': z.tuple([sid, z.string().max(100), z.boolean(), opt(z.object({ command: opt(text(100_000)), note: opt(text(4000)), tool: opt(z.string().max(200)) }))]),
   'iso:start': z.tuple([sid, z.string().regex(/^[\w./:@-]{1,200}$/)]),
   'iso:stop': z.tuple([sid]),
   'iso:network': z.tuple([sid, z.boolean()]),

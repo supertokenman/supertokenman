@@ -11,6 +11,12 @@ const native = readFileSync(new URL('../electron/native.ts', import.meta.url), '
 const listened = new Set([...(main + native).matchAll(/ipcMain\.on\('([^']+)'/g)].map((m) => m[1]!))
 
 describe('IPC contract', () => {
+  it('accepts a permission answer as the window sends it, with or without the edited command or note', () => {
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, undefined])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', false, { note: 'use the other folder' }])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, { command: 'ls -la' }])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, { note: 5 }])).toBeTruthy()
+  })
   it('registers each handled channel once (a second ipcMain.handle throws and stops the rest of main)', () => {
     const all = [...(main + modules).matchAll(/ipcMain\.handle\('([^']+)'/g)].map((m) => m[1]!)
     expect(all.filter((c, i) => all.indexOf(c) !== i)).toEqual([])
