@@ -1,0 +1,17 @@
+{
+  "url": "https://login.example.com/",
+  "nodes": [
+    { "id": 1, "parent": null, "tag": "body", "box": { "x": 0, "y": 0, "w": 1280, "h": 800 } },
+    { "id": 2, "parent": 1, "tag": "h1", "name": "Sign in", "box": { "x": 40, "y": 30, "w": 300, "h": 40 } },
+    { "id": 3, "parent": 1, "tag": "input", "inputType": "email", "role": "textbox", "name": "Email", "value": "ana@example.com", "box": { "x": 40, "y": 100, "w": 300, "h": 36 }, "topAt": 3 },
+    { "id": 4, "parent": 1, "tag": "input", "inputType": "password", "role": "textbox", "name": "Password", "value": "fake-pass-value-123", "secret": true, "box": { "x": 40, "y": 150, "w": 300, "h": 36 }, "topAt": 4 },
+    { "id": 5, "parent": 1, "tag": "button", "name": "  Sign   in ", "box": { "x": 40, "y": 200, "w": 120, "h": 40 }, "topAt": 5 },
+    { "id": 6, "parent": 1, "tag": "a", "name": "Forgot password?", "box": { "x": 40, "y": 250, "w": 150, "h": 20 }, "topAt": 6 },
+    { "id": 7, "parent": 1, "tag": "button", "name": "Hidden helper", "box": { "x": 40, "y": 280, "w": 80, "h": 30 }, "hidden": true },
+    { "id": 8, "parent": 1, "tag": "button", "name": "Zero size", "box": { "x": 40, "y": 320, "w": 0, "h": 0 } },
+    { "id": 9, "parent": 1, "tag": "div", "name": "Cookie overlay", "box": { "x": 0, "y": 0, "w": 1280, "h": 800 }, "topAt": 9 },
+    { "id": 10, "parent": 1, "tag": "button", "name": "Accept cookies", "box": { "x": 900, "y": 600, "w": 140, "h": 40 }, "topAt": 9 },
+    { "id": 11, "parent": 1, "tag": "a", "name": "Help", "box": { "x": 1100, "y": 20, "w": 40, "h": 20 }, "topAt": 11 },
+    { "id": 12, "parent": 1, "tag": "div", "role": "button", "name": "Remember me", "box": { "x": 40, "y": 360, "w": 140, "h": 24 }, "clickable": true, "topAt": 12 }
+  ]
+}

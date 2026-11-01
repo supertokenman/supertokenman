@@ -1034,6 +1034,30 @@ contextBridge.exposeInMainWorld('stm', {
     },
     reply: (req, value) => ipcRenderer.invoke('ui:reply', req, value),
   },
+  // agent browser: the pane's calls, and what main pushes (state of the tabs, cards that need an answer)
+  agentBrowser: {
+    enabled: (on) => ipcRenderer.invoke('abrowser:enabled', on),
+    bounds: (panel, rect) => ipcRenderer.invoke('abrowser:bounds', { panel, rect }),
+    take: (panel) => ipcRenderer.invoke('abrowser:take', { panel }),
+    release: (panel) => ipcRenderer.invoke('abrowser:release', { panel }),
+    answer: (id, answer) => ipcRenderer.invoke('abrowser:answer', { id, answer }),
+    profile: (panel, scope) => ipcRenderer.invoke('abrowser:profile', { panel, scope }),
+    onState: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('abrowser:state', l)
+      return () => ipcRenderer.removeListener('abrowser:state', l)
+    },
+    onAsk: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('abrowser:ask', l)
+      return () => ipcRenderer.removeListener('abrowser:ask', l)
+    },
+    onEnabled: (fn) => {
+      const l = (_e, r) => fn(r)
+      ipcRenderer.on('abrowser:enabled', l)
+      return () => ipcRenderer.removeListener('abrowser:enabled', l)
+    },
+  },
   stmCli: {
     onOpen: (fn) => {
       const l = (_e, r) => fn(r)
