@@ -2,6 +2,7 @@
 // input valid for the latest element list? budget left? Then the action, then (for actions that change the
 // page) a fresh element list. Everything that comes from a page is fenced as untrusted and marks the
 // session tainted. A bot challenge or block stops the task; nothing here retries or changes headers.
+import { basename } from 'node:path'
 import { nativeImage } from 'electron'
 import { validateAction, type BrowserAction, type StepAction } from '../../shared/browseraction.js'
 import { summarize } from '../../shared/browserbudget.js'
@@ -12,6 +13,7 @@ import { cacheFor, type CacheRule } from '../../shared/leanfetch.js'
 import { cleanPage, type CleanResult } from '../../shared/pagemd.js'
 import type { Collected } from './cdp.js'
 import type { Guard } from './guard.js'
+import { checkUpload } from './uploads.js'
 import type { Tab, Views } from './views.js'
 
 export type Out = { text: string; image?: { data: string; mimeType: string }; isError?: boolean }
@@ -24,6 +26,10 @@ export type RunDeps = {
   cacheRules: () => CacheRule[]
   now: () => number
   changed: (panel: string) => void
+  /** the project folder of a panel: uploads must come from inside it */
+  root: (panel: string) => string
+  /** the person picks a file in the system dialog; null when they cancel */
+  pickFile: (panel: string) => Promise<string | null>
 }
 
 const ok = (text: string): Out => ({ text })
@@ -94,13 +100,15 @@ export class Runner {
   private finish(panel: string, a: Extract<BrowserAction, { tool: 'done' | 'takeover' }>): Out {
     const g = this.d.guard
     if (a.tool === 'takeover') {
-      g.update(panel, (s) => hold(s, true))
+      g.update(panel, (s) => hold(s, true, a.reason))
       g.audit(panel, TOOL('takeover'), a, 'pause', 'app')
+      this.d.changed(panel)
       return ok(`The person has the browser now (${a.reason}). Say what they need to do, then wait; do not act on the page until they give it back.`)
     }
     const line = summarize(g.session(panel).budget)
     g.audit(panel, TOOL('done'), { summary: a.summary.slice(0, 200) }, 'allow', 'app')
     g.update(panel, (s) => resetTask(s, this.d.now()))
+    this.d.changed(panel)
     return ok(`Task ended. ${line}`)
   }
 
@@ -124,6 +132,8 @@ export class Runner {
         this.d.views.close(panel, a.tab)
         this.lists.delete(panel)
         return ok(`Closed tab ${a.tab}.`)
+      case 'upload':
+        return this.upload(panel, a)
       case 'elements': {
         const tab = this.tab(panel, a.tab)
         if (typeof tab === 'string') return bad(tab)
@@ -216,9 +226,14 @@ export class Runner {
     } catch (e) {
       return bad(`${lead} The page is not ready (${(e as Error).message}). Call browser_wait, then browser_elements.`.trim())
     }
-    const verdict = classifyChallenge({ status: tab.status, headers: tab.headers, text: c.text })
+    const verdict = classifyChallenge({ status: tab.status, headers: tab.headers, text: c.text, frames: c.frames, widgets: c.widgets })
     if (verdict.kind === 'blocked') {
-      g.update(panel, (s) => stop(taint(s), `blocked by the site (${verdict.reason}); this looks like a bot check or a refusal.`))
+      // a bot check is the person's to do: the browser is handed over so the pane shows Give back; a plain 403 or 429 only stops
+      const check = verdict.reason !== 'http-403' && verdict.reason !== 'http-429'
+      g.update(panel, (s) => {
+        const stopped = stop(taint(s), `blocked by the site (${verdict.reason}); this looks like a bot check or a refusal.`)
+        return check ? hold(stopped, true, 'captcha') : stopped
+      })
       g.audit(panel, TOOL('challenge'), { host: safeHost(c.snapshot.url), reason: verdict.reason }, 'deny', 'app')
       return bad(`Blocked (${verdict.reason}). The site is checking or refusing this browser. Stop: do not retry or look for a way around it. Tell the person, who can open the page themselves (browser_takeover with reason "captcha").`)
     }
@@ -261,6 +276,7 @@ export class Runner {
           if (typeof r === 'string') return r
           const p = await cdp.center(r.id)
           if (!p) return 'The element is covered or not visible. Scroll, then call browser_elements.'
+          await this.mark(tab, r.id)
           await cdp.click(p)
           await this.settle(tab)
           return null
@@ -270,6 +286,7 @@ export class Runner {
           if (typeof r === 'string') return r
           if (r.secret) return SECRET_MSG
           if (!(await cdp.focus(r.id))) return 'The field cannot be focused.'
+          await this.mark(tab, r.id)
           await cdp.insertText(a.text)
           if (a.submit) await cdp.key('Enter', 13)
           await this.settle(tab, a.submit ? 250 : 60)
@@ -278,6 +295,7 @@ export class Runner {
         case 'select': {
           const r = await this.resolve(panel, tab, a.index)
           if (typeof r === 'string') return r
+          await this.mark(tab, r.id)
           return (await cdp.select(r.id, a.value)) ? null : 'No such option in that list.'
         }
         case 'scroll': {
@@ -314,6 +332,50 @@ export class Runner {
     return null
   }
 
+  private async upload(panel: string, a: Extract<BrowserAction, { tool: 'upload' }>): Promise<Out> {
+    const tab = this.tab(panel, a.tab)
+    if (typeof tab === 'string') return bad(tab)
+    const r = await this.resolve(panel, tab, a.index)
+    if (typeof r === 'string') return this.listOut(panel, tab, r, true)
+    let file: { path: string; size: number } | null = null
+    if (a.path) {
+      const c = checkUpload(this.d.root(panel), a.path)
+      if (!c.ok) return this.listOut(panel, tab, `Not uploaded: ${c.error}`, true)
+      file = c
+    }
+    let host = ''
+    try {
+      host = new URL(tab.view!.webContents.getURL()).host
+    } catch {
+      // keep empty
+    }
+    const yes = await this.d.guard.upload(panel, { name: file ? basename(file.path) : '', size: file?.size ?? 0, host, pick: !file })
+    if (!yes) return this.listOut(panel, tab, 'The person did not allow the upload. Do not try again; say so.', true)
+    let path = file?.path
+    if (!path) {
+      const picked = await this.d.pickFile(panel)
+      if (!picked) return this.listOut(panel, tab, 'The person did not choose a file.', true)
+      path = picked
+    }
+    await this.mark(tab, r.id)
+    try {
+      if (!(await tab.cdp!.upload(r.id, [path]))) return this.listOut(panel, tab, 'That element is not a file input.', true)
+    } catch (e) {
+      return this.listOut(panel, tab, `Not uploaded: ${(e as Error).message}`, true)
+    }
+    await this.settle(tab, 100)
+    return this.listOut(panel, tab, 'File attached (the page has it; submit with a click if the form needs it).')
+  }
+
+  /** Shows the person which element the agent is acting on, with the browser's overlay, for a moment. */
+  private async mark(tab: Tab, id: number): Promise<void> {
+    const cdp = tab.cdp
+    if (!cdp) return
+    await cdp.highlight(id)
+    await wait(260)
+    setTimeout(() => void cdp.unhighlight(), 700).unref()
+  }
+
   private async read(panel: string, tabId: number | undefined, page: number): Promise<Out> {
     const tab = this.tab(panel, tabId)
     if (typeof tab === 'string') return bad(tab)
@@ -323,7 +385,7 @@ export class Runner {
     } catch (e) {
       return bad(`The page is not ready (${(e as Error).message}). Call browser_wait first.`)
     }
-    const verdict = classifyChallenge({ status: tab.status, headers: tab.headers, text: c.text })
+    const verdict = classifyChallenge({ status: tab.status, headers: tab.headers, text: c.text, frames: c.frames, widgets: c.widgets })
     if (verdict.kind === 'blocked') return this.listOut(panel, tab, '')
     const url = c.snapshot.url ?? tab.url
     // the web reader's cache rules decide: bypass reads fresh, otherwise a page read twice in ten minutes is cleaned once

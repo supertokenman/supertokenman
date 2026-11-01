@@ -138,7 +138,7 @@ describe('IPC contract', () => {
   })
 
   it('agent browser channels: validated, handled, in the preload; off means nothing is built', () => {
-    const chans = ['abrowser:enabled', 'abrowser:bounds', 'abrowser:take', 'abrowser:release', 'abrowser:answer', 'abrowser:profile']
+    const chans = ['abrowser:enabled', 'abrowser:bounds', 'abrowser:take', 'abrowser:release', 'abrowser:answer', 'abrowser:profile', 'abrowser:profiles', 'abrowser:profile-edit', 'abrowser:settings', 'abrowser:nav', 'abrowser:tab', 'abrowser:get', 'abrowser:snap', 'abrowser:clear']
     for (const c of chans) {
       expect(Object.keys(CONTRACT)).toContain(c)
       expect(handled.has(c)).toBe(true)
@@ -152,6 +152,15 @@ describe('IPC contract', () => {
     expect(checkArgs('abrowser:answer', [{ id: 'x', answer: 'always' }])).toBeNull()
     expect(checkArgs('abrowser:answer', [{ id: 'x', answer: 'yes' }])).toBeTruthy()
     expect(checkArgs('abrowser:profile', [{ panel: 's1', scope: 'shared' }])).toBeTruthy()
+    expect(checkArgs('abrowser:profile', [{ panel: 's1', scope: 'profile:abc-123' }])).toBeNull()
+    expect(checkArgs('abrowser:profile', [{ panel: 's1', scope: 'profile:../x' }])).toBeTruthy()
+    expect(checkArgs('abrowser:profile-edit', [{ op: 'create', name: 'Shop' }])).toBeNull()
+    expect(checkArgs('abrowser:profile-edit', [{ op: 'wipe' }])).toBeTruthy()
+    expect(checkArgs('abrowser:nav', [{ panel: 's1', op: 'go', url: 'example.com' }])).toBeNull()
+    expect(checkArgs('abrowser:nav', [{ panel: 's1', op: 'eval' }])).toBeTruthy()
+    expect(checkArgs('abrowser:tab', [{ panel: 's1', op: 'close', id: 2 }])).toBeNull()
+    expect(checkArgs('abrowser:settings', [{ limits: { steps: 20 } }])).toBeNull()
+    expect(checkArgs('abrowser:settings', [{ limits: { script: 1 } }])).toBeTruthy()
     expect(checkArgs('abrowser:take', [{ panel: '../x' }])).toBeTruthy()
     // the tools are only handed to a session while the feature is on; no tool evaluates page code
     expect(main).toMatch(/abrowser\(\)\.tools\(sid\)/)

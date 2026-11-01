@@ -15,6 +15,9 @@ export type Collected = {
   text: string
   /** a secret field with a value is on the page: screenshots are refused */
   secretFilled: boolean
+  /** `src` of the iframes, and markers of challenge widgets, for the challenge classifier */
+  frames: string[]
+  widgets: string[]
   viewport: { w: number; h: number }
 }
 
@@ -83,7 +86,11 @@ const COLLECT = `(() => {
   globalThis.__stmEls = els;
   const secretFilled = nodes.some((n) => n.secret && n.value && n.value.length > 0);
   for (const n of nodes) if (n.secret) delete n.value;
-  return JSON.stringify({ snapshot: { url: location.href, nodes }, runs, title: document.title, text: sq(document.body ? document.body.innerText : '').slice(0, 4000), secretFilled, viewport: { w: vw, h: vh } });
+  const frames = Array.from(document.querySelectorAll('iframe')).map((f) => f.src || f.getAttribute('src') || '').filter(Boolean).slice(0, 30);
+  const widgets = [];
+  for (const c of ['g-recaptcha', 'h-captcha', 'cf-turnstile', 'cf-challenge', 'px-captcha']) if (document.getElementsByClassName(c).length) widgets.push(c);
+  for (const i of ['challenge-form', 'challenge-stage']) if (document.getElementById(i)) widgets.push(i);
+  return JSON.stringify({ snapshot: { url: location.href, nodes }, runs, title: document.title, text: sq(document.body ? document.body.innerText : '').slice(0, 4000), secretFilled, frames, widgets, viewport: { w: vw, h: vh } });
 })()`
 
 const el = (id: number) => `(globalThis.__stmEls && globalThis.__stmEls[${Number(id)}])`
@@ -195,6 +202,44 @@ export class Cdp {
   /** True when the selector matches. The selector is a JSON string literal for querySelector, never code. */
   async has(selector: string): Promise<boolean> {
     return this.run<boolean>(`(() => { try { return document.querySelector(${JSON.stringify(selector)}) !== null } catch { return false } })()`)
+  }
+
+  /** The remote object of an element of the last list (isolated world). */
+  private async object(id: number): Promise<string | null> {
+    const r = await this.send<{ result: { objectId?: string; subtype?: string } }>('Runtime.evaluate', { expression: el(id), contextId: await this.world(), returnByValue: false })
+    return r.result.subtype === 'node' ? (r.result.objectId ?? null) : null
+  }
+
+  /** Marks the element the agent acts on with the browser's own overlay (tint over the box). Never throws. */
+  async highlight(id: number): Promise<void> {
+    try {
+      const objectId = await this.object(id)
+      if (!objectId) return
+      await this.send('DOM.enable')
+      await this.send('Overlay.enable')
+      const c = { r: 217, g: 119, b: 87 }
+      await this.send('Overlay.highlightNode', { objectId, highlightConfig: { showInfo: false, contentColor: { ...c, a: 0.22 }, paddingColor: { ...c, a: 0.12 }, borderColor: { ...c, a: 0.9 } } })
+    } catch {
+      // cosmetic only
+    }
+  }
+
+  async unhighlight(): Promise<void> {
+    try {
+      await this.send('Overlay.hideHighlight')
+    } catch {
+      // gone with the page
+    }
+  }
+
+  /** Puts files into an `<input type=file>`. The paths were approved by the person and checked to be inside the project. */
+  async upload(id: number, files: string[]): Promise<boolean> {
+    const ok = await this.run<boolean>(`(() => { const e = ${el(id)}; return Boolean(e && e.tagName === 'INPUT' && e.type === 'file' && e.isConnected) })()`)
+    if (!ok) return false
+    const objectId = await this.object(id)
+    if (!objectId) return false
+    await this.send('DOM.setFileInputFiles', { files, objectId })
+    return true
   }
 
   async screenshot(): Promise<Buffer> {

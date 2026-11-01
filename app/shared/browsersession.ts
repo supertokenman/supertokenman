@@ -17,6 +17,8 @@ export type Session = {
   readonly tainted: boolean
   /** the person has the browser: agent actions return "the person has the browser" */
   readonly held: boolean
+  /** why the agent handed the browser over (sign-in, captcha, ...); empty when the person took it */
+  readonly holdReason?: string
   readonly revision: number
   /** node ids of the last element list, to mark new elements in the next one */
   readonly elementIds?: number[]
@@ -54,7 +56,11 @@ export function projectPartition(root: string): string {
 }
 
 export const taint = (s: Session): Session => (s.tainted ? s : { ...s, tainted: true })
-export const hold = (s: Session, held: boolean): Session => ({ ...s, held })
+export const hold = (s: Session, held: boolean, reason?: string): Session => {
+  const { holdReason: _r, ...rest } = s
+  void _r
+  return { ...rest, held, ...(held && reason ? { holdReason: reason } : {}) }
+}
 export const withTabs = (s: Session, tabs: number[]): Session => ({ ...s, tabs })
 
 export const actionContext = (s: Session): ActionContext => ({

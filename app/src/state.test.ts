@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hudView, initial, reduce, savedUsd } from './state'
+import { hudView, initial, reduce, reducePanels, savedUsd } from './state'
 
 describe('state', () => {
   it('builds the transcript and the HUD from events', () => {
@@ -70,5 +70,14 @@ describe('evidence after a turn', () => {
     ])
     expect(lines.at(-1)).toMatchObject({ kind: 'evidence', level: 'inferred', claim: 'The bug is fixed' })
     expect(withEvidence([{ kind: 'user', text: 'hi' }, { kind: 'assistant', text: 'Hello.' }])).toHaveLength(2)
+  })
+})
+
+describe('panels', () => {
+  it('opens a sid once: a second open of the same panel changes nothing', () => {
+    const a = reducePanels({ order: [], byId: {}, focus: null }, { kind: 'open', sid: 's1', cwd: '/p', model: 'm' })
+    const b = reducePanels(a, { kind: 'open', sid: 's1', cwd: '/p', model: 'm' })
+    expect(b).toBe(a)
+    expect(b.order).toEqual(['s1'])
   })
 })

@@ -537,3 +537,14 @@ export const IconRepoKind = () => (
     <path d="M4.5 5v6M11.5 7c0 2.5-3 2.5-7 4" />
   </Icon>
 )
+
+export const IconBack = () => (
+  <Icon>
+    <path d="M13 8H3.5M7.5 4L3.5 8l4 4" />
+  </Icon>
+)
+export const IconForward = () => (
+  <Icon>
+    <path d="M3 8h9.5M8.5 4l4 4-4 4" />
+  </Icon>
+)

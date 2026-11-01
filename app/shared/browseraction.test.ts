@@ -15,7 +15,7 @@ const err = (tool: string, input: unknown, c: ActionContext = ctx) => {
 
 describe('browser action validation: every tool', () => {
   it('has the seventeen tools of the spec, with mcp names', () => {
-    expect(BROWSER_TOOLS).toHaveLength(17)
+    expect(BROWSER_TOOLS).toHaveLength(18)
     expect(mcpName('tab_new')).toBe('mcp__stm__browser_tab_new')
     expect(toolFromMcp('mcp__stm__browser_click')).toBe('click')
     expect(toolFromMcp('mcp__stm__browser_evaluate')).toBeUndefined()

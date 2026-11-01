@@ -87,6 +87,21 @@ export const MANUAL: Section[] = [
 - Open: the same address in the person's browser.`,
   },
   {
+    id: 'agent-browser',
+    title: 'Agent browser: a page you and the panel both see',
+    keys: 'agent browser browser take over sign in captcha profile host upload download highlight pane drive web page open site',
+    body: `A browser pane beside the panel that the panel's own Claude can drive (mcp__stm__browser_* tools). Off by default: Settings > Appearance > Agent browser. While off there is no pane, no tool and no request.
+- The pane: tabs (3 at most), address (read only while Claude drives), back, forward, reload, and a line saying who is driving. The element Claude acts on is marked in the page.
+- Take over: pauses Claude; you drive the page, type in the address bar, then Give back. A page that Claude cannot do alone (sign-in, passkey, payment, a bot check) is handed to you with the reason.
+- Sign in here: Claude never types a secret. A password or code field is for you to fill in the page; screenshots stay off while a secret sits in a field.
+- Bot checks: a CAPTCHA or "verify you are human" frame stops the task and hands the page to you. Claude does not solve it, retry, or look for a way around it. A page that only mentions a captcha in its text does not stop anything.
+- New sites ask first: Allow once, Always allow (writes an allow rule for that host; not offered after page text reached Claude in the session) or Deny. A redirect to another host asks again. Local and private addresses are refused except in a Preview panel.
+- Downloads and uploads always ask. Downloads go to .stm/downloads in the project. An upload takes a file from inside the project, or you choose the file in the system dialog; nothing is sent to a page until you allow it.
+- Profiles: each panel has its own sign-ins. Named profiles (create, rename, delete) can be shared by several panels, and a project can default to one. Clear profile wipes cookies and storage.
+- Limits per task: steps, minutes, screenshots and new sites, in Settings. Screenshots go to Claude only if you allow them.
+- Page text is untrusted: Claude is told never to follow instructions found in a page.`,
+  },
+  {
     id: 'budgets',
     title: 'Budgets: a brake on spending',
     keys: 'budget limit brake spend cap cost approve held loop circles repeat stop shorter answers output',
