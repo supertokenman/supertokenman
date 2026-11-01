@@ -29,7 +29,7 @@ async function launch(extra = []) {
   // the app may open helper windows first; the main one loads dist/index.html
   let win = null
   for (let i = 0; i < 120 && !win; i++) {
-    win = app.windows().find((w) => w.url().includes('/dist/index.html')) ?? null
+    win = app.windows().find((w) => /(\/dist\/|stmui:\/\/app\/)index\.html/.test(w.url())) ?? null
     if (!win) await new Promise((r) => setTimeout(r, 500))
   }
   if (!win) throw new Error(`no app window; windows: ${app.windows().map((w) => w.url()).join(', ')}`)

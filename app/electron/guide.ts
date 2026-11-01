@@ -69,7 +69,7 @@ export function memoryServer(vault: string, project: string, near?: (query: stri
 }
 
 /** The manual as a tool: a section by id, or the sections that best match a question. */
-export function manualServer(ui?: UiDeps, pilot?: PilotDeps) {
+export function manualServer(ui?: UiDeps, pilot?: PilotDeps, extra: import('./agentbrowser/tools.js').BrowserToolDef[] = []) {
   return createSdkMcpServer({
     name: 'stm',
     version: '1.0.0',
@@ -83,6 +83,7 @@ export function manualServer(ui?: UiDeps, pilot?: PilotDeps) {
       ),
       ...(ui ? uiTools(ui) : []),
       ...(pilot ? pilotTools(pilot) : []),
+      ...extra,
     ],
   })
 }

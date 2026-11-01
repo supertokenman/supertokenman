@@ -140,6 +140,13 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'pilot:actions': z.tuple([z.object({ window: z.union([z.string().max(64), z.number()]).optional() }).optional()]),
   'pilot:undo': z.tuple([z.object({ actionId: z.string().regex(/^a\d{1,9}$/, 'an action id') })]),
   'pb:run': z.tuple([sid, z.string().regex(/^[\w.-]+\.ya?ml$/), opt(z.string().max(100))]),
+  // agent browser (spec-agent-browser.md): the pane's calls; abrowser:state and abrowser:ask go main -> window
+  'abrowser:enabled': z.tuple([opt(z.boolean())]),
+  'abrowser:bounds': z.tuple([z.object({ panel: sid, rect: z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().finite().min(0).max(20_000), height: z.number().finite().min(0).max(20_000) }).strict().nullable() }).strict()]),
+  'abrowser:take': z.tuple([z.object({ panel: sid }).strict()]),
+  'abrowser:release': z.tuple([z.object({ panel: sid }).strict()]),
+  'abrowser:answer': z.tuple([z.object({ id: z.string().min(1).max(64), answer: z.enum(['once', 'always', 'deny']) }).strict()]),
+  'abrowser:profile': z.tuple([z.object({ panel: sid, scope: z.enum(['panel', 'project']) }).strict()]),
 }
 
 /** Null when the arguments fit, else what is wrong, for the error the window sees. */
