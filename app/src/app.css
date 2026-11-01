@@ -4628,3 +4628,6 @@ html[data-blurred] .panel-bar.compact .sm-mark.busy::after { animation: none; op
 .rt-banner-text { flex: 1; min-width: 200px; }
 .rt-confirm { box-shadow: none; border-left: 3px solid var(--accent); }
 .rt-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.sheet.cli-setup { width: min(480px, calc(100vw - 48px)); }
+.cli-bar { height: 6px; border-radius: 3px; background: rgba(var(--overlay-rgb), 0.12); overflow: hidden; margin: 12px 0 6px; }
+.cli-bar > span { display: block; height: 100%; background: var(--accent); transition: width 200ms var(--ease); }

@@ -1,7 +1,8 @@
 // What changes when the app runs as a packaged .app instead of from the source folder.
 import { execFile, execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { accessSync, constants, existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { delimiter, join } from 'node:path'
 
 /**
  * Apps opened from the Finder get launchd's bare PATH, without Homebrew, nvm or anything a shell profile
@@ -44,4 +45,22 @@ export function claudeBinary(resources: string, platform = process.platform, arc
   const name = platform === 'win32' ? 'claude.exe' : 'claude'
   const p = join(resources, 'app.asar.unpacked', 'node_modules', '@anthropic-ai', `claude-agent-sdk-${platform}-${arch}`, name)
   return existsSync(p) ? p : undefined
+}
+
+/**
+ * A Claude Code CLI already installed on this machine (PATH first, then the usual install places).
+ * Used only when its `--version` is exactly the pinned one (claudecli.ts); undefined when none is found.
+ */
+export function installedClaude(path = process.env.PATH ?? '', platform = process.platform, home = homedir()): string | undefined {
+  const name = platform === 'win32' ? 'claude.exe' : 'claude'
+  const dirs = [...path.split(delimiter), join(home, '.local', 'bin'), '/usr/local/bin', '/opt/homebrew/bin', join(home, '.claude', 'local')]
+  for (const dir of new Set(dirs.filter(Boolean))) {
+    const p = join(dir, name)
+    try {
+      if (existsSync(p) && (platform === 'win32' || (accessSync(p, constants.X_OK), true))) return p
+    } catch {
+      // not executable: keep looking
+    }
+  }
+  return undefined
 }

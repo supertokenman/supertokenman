@@ -248,6 +248,10 @@ Most of what is left is the Claude Code binary (`claude-agent-sdk-linux-x64`, 29
 which the app runs, and Electron itself. The packaged directory still launches under xvfb to a
 usable composer. The Mac dmg size is measured per release by `perf-mac`.
 
+Since the Claude Code CLI download on first launch (`app/electron/claudecli.ts`), the binary is no
+longer in the package: Linux `linux-unpacked` went from 588 MB to 310 MB (-47%). A `STM_BUNDLE_CLI=1`
+build (`app/build/cli.cjs`) still carries it (588 MB).
+
 ### Memory
 
 `app/scripts/perf-memory.mjs` opens the built app with 1 panel, settles 10 s, forces a GC and

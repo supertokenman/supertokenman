@@ -92,6 +92,7 @@ const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
 const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
 const ComposeStacks = lazy(() => import('./ComposeStacks').then((x) => ({ default: x.ComposeStacks })))
 const ResumeBanner = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.ResumeBanner })))
+const CliSetup = lazy(() => import('./CliSetup').then((x) => ({ default: x.CliSetup })))
 const UpdateConfirm = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.UpdateConfirm })))
 const DiagCheck = lazy(() => import('./DiagCheck').then((x) => ({ default: x.DiagCheck })))
 const Reflect = lazy(() => import('./Reflect').then((x) => ({ default: x.Reflect })))
@@ -830,6 +831,8 @@ export function App() {
     const r = await window.stm.newSession({ cwd, model: m, resume, resumeAt: extra?.resumeAt, remote: extra?.remote, persona, effort: effortsOf(m).includes(effort as Effort) ? effort : undefined, sandbox, worktree: extra?.worktree })
     openedCwd.current[r.sid] = r.cwd
     dispatch({ kind: 'open', sid: r.sid, cwd: r.cwd, model: r.persona?.model || m, persona: r.persona, sandbox: r.sandbox, remote: r.remote, worktree: r.worktree })
+    // no process yet, so no ready event: a resumed panel keeps its saved session id (the workspace restores from it)
+    if (resume && !extra?.resumeAt) dispatch({ kind: 'event', sid: r.sid, action: { kind: 'ready', sessionId: resume, model: r.persona?.model || m, cwd: r.cwd } })
     // an integration turned on without its credential: say so in the new panel
     for (const x of r.missing ?? [])
       dispatch({ kind: 'event', sid: r.sid, action: { kind: 'error', message: `${x.id} is on but ${x.secret} is not in the vault, so this panel runs without it. Add it in Connections.` } })
@@ -898,6 +901,9 @@ export function App() {
   // a team file to review (File menu or stm team import); panels are made only when the person confirms in the sheet
   useEffect(() => window.stm.teamBundle.onReview(setTeamIn), [])
   useEffect(() => window.stm.away.onShow(setAwayCard), [])
+  // the Claude Code download on first launch: a sheet only while it runs or after it failed
+  const [cliSetup, setCliSetup] = useState<import('./bridge').CliState | null>(null)
+  useEffect(() => window.stm.claudeCli?.onState((s) => setCliSetup(s.phase === 'downloading' || s.phase === 'failed' ? s : null)), [])
   // pointer, wheel and key input tell the main process the person is here (at most every 10 s)
   useEffect(() => {
     let last = 0
@@ -1486,6 +1492,7 @@ export function App() {
           <span className="sep" />
           {money(total)}
         </span>
+        {cliSetup && <Suspense fallback={null}><CliSetup s={cliSetup} /></Suspense>}
         {gate > 0 && (
           <Suspense fallback={null}>
             <UpdateConfirm
