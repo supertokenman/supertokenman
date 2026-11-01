@@ -778,7 +778,7 @@ export function Panel(props: {
             </div>
           )}
           {tab === 'chat' && s.busy && !s.streaming && !s.asks.length && (
-            <Thinking lines={s.lines} />
+            <Thinking lines={s.lines} waiting={s.waiting} />
           )}
           {s.asks.map((a) => (
             <div key={a.id} className="ask">

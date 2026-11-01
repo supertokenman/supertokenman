@@ -65,7 +65,7 @@ export function LoaderMark(props: { style: Exclude<LoaderStyle, 'auto'> }) {
 }
 
 /** While Claude works: a motion that fits what it is doing, what that is, and for how long. */
-export function Thinking(props: { lines: Line[] }) {
+export function Thinking(props: { lines: Line[]; waiting?: { panel: string; name: string; state: string }[] }) {
   const [pick, setPick] = useState(loaderStyle)
   const [t0] = useState(Date.now())
   const [now, setNow] = useState(Date.now())
@@ -88,6 +88,16 @@ export function Thinking(props: { lines: Line[] }) {
       <span className="th-verb" key={verb}>{verb}</span>
       {phase?.what && <span className="th-what">{phase.what}</span>}
       {secs >= 3 && <span className="th-time">{secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`}</span>}
+      {props.waiting?.length ? (
+        <span className="lead-wait">
+          {props.waiting.map((w, i) => (
+            <span key={w.panel} className={`lw-${w.state.replace(/\s+/g, '-')}`} data-tip={w.name}>
+              {i ? ' · ' : ''}
+              {w.panel}: {w.state}
+            </span>
+          ))}
+        </span>
+      ) : null}
     </div>
   )
 }

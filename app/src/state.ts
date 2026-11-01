@@ -65,6 +65,8 @@ export type State = {
   gate?: { run: string; name: string; step: number; of: number; text: string } | null
   /** the panel's /goal, until a reply says it is met */
   goal?: string | null
+  /** messages this panel sent to other panels and still waits on, each target with how far it got */
+  waiting?: { panel: string; name: string; state: string }[]
 }
 
 export const initial: State = { lines: [], streaming: '', busy: false, asks: [], model: '', cwd: '', costUsd: 0, turns: 0, lastTurnAt: null, context: null, limits: {}, changes: [], exposures: [], asleep: false, turnTimes: [], cuts: [], ci: null, ciDone: [], servers: [] }
@@ -135,6 +137,8 @@ export function reduce(s: State, a: Action, now = Date.now()): State {
       return { ...s, asleep: false }
     case 'exposure':
       return { ...s, exposures: [...s.exposures, a] }
+    case 'waiting':
+      return { ...s, waiting: a.items.length ? a.items : undefined }
     case 'peer':
       return { ...s, busy: true, lines: [...s.lines, { kind: 'peer', from: a.from, text: a.text }] }
     case 'edit':
@@ -145,6 +149,7 @@ export function reduce(s: State, a: Action, now = Date.now()): State {
       return {
         ...s,
         busy: false,
+        waiting: undefined,
         streaming: '',
         costUsd: a.costUsd,
         turns: s.turns + 1,

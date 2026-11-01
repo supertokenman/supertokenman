@@ -18,6 +18,8 @@ export type UiEvent =
   | { kind: 'permission'; id: string; tool: string; summary: string; command?: string; edit?: FileEdit; risk?: import('../shared/cmdrisk.js').Risk; why?: string; cls?: 'read' | 'write' }
   | { kind: 'edit'; edit: FileEdit }
   | { kind: 'peer'; from: string; text: string }
+  /** a lead's messages in flight: each target and how far it got (not started, needs approval, working, done, failed); empty when none */
+  | { kind: 'waiting'; items: { panel: string; name: string; state: string }[] }
   | { kind: 'cut'; tokens: number; at: number; cmd: string }
   | { kind: 'unchanged'; path: string }
   | { kind: 'ci'; repo: string; branch: string; runs: import('./ci.js').Run[]; error?: string }
@@ -180,6 +182,10 @@ export class Session {
   /** Starts a held panel's process before its first message (the person is typing); a no-op for one that runs or sleeps with a conversation. */
   warm() {
     if (this.unstarted) this.wake()
+  }
+  /** A tool approval is waiting for the person in this panel. */
+  get asking() {
+    return this.pending.size > 0
   }
   /** Held and never run: no process, no conversation, nothing to lose by changing how it starts. */
   get unstarted() {
