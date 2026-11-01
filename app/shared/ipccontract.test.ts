@@ -11,6 +11,12 @@ const native = readFileSync(new URL('../electron/native.ts', import.meta.url), '
 const listened = new Set([...(main + native).matchAll(/ipcMain\.on\('([^']+)'/g)].map((m) => m[1]!))
 
 describe('IPC contract', () => {
+  it('accepts a permission answer as the window sends it, with or without the edited command or note', () => {
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, undefined])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', false, { note: 'use the other folder' }])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, { command: 'ls -la' }])).toBeNull()
+    expect(checkArgs('perm:answer', ['s1', 'p1', true, { note: 5 }])).toBeTruthy()
+  })
   it('registers each handled channel once (a second ipcMain.handle throws and stops the rest of main)', () => {
     const all = [...(main + modules).matchAll(/ipcMain\.handle\('([^']+)'/g)].map((m) => m[1]!)
     expect(all.filter((c, i) => all.indexOf(c) !== i)).toEqual([])
@@ -129,5 +135,27 @@ describe('IPC contract', () => {
     expect(checkArgs('breakpoint:set', ['p1', Array.from({ length: 21 }, () => ({ kind: 'afterPlan' }))])).toBeTruthy()
     expect(checkArgs('breakpoint:set', ['p1', [{ kind: 'sometimes' }]])).toBeTruthy()
     expect(checkArgs('triggers:setCaps', [{ minEvery: 15 }])).toBeTruthy()
+  })
+
+  it('agent browser channels: validated, handled, in the preload; off means nothing is built', () => {
+    const chans = ['abrowser:enabled', 'abrowser:bounds', 'abrowser:take', 'abrowser:release', 'abrowser:answer', 'abrowser:profile']
+    for (const c of chans) {
+      expect(Object.keys(CONTRACT)).toContain(c)
+      expect(handled.has(c)).toBe(true)
+      expect(preload).toContain(`'${c}'`)
+    }
+    expect(checkArgs('abrowser:enabled', [])).toBeNull()
+    expect(checkArgs('abrowser:enabled', ['on'])).toBeTruthy()
+    expect(checkArgs('abrowser:bounds', [{ panel: 's1', rect: null }])).toBeNull()
+    expect(checkArgs('abrowser:bounds', [{ panel: 's1', rect: { x: 0, y: 0, width: 300, height: 200 } }])).toBeNull()
+    expect(checkArgs('abrowser:bounds', [{ panel: 's1', rect: { x: 0, y: 0, width: -1, height: 2 } }])).toBeTruthy()
+    expect(checkArgs('abrowser:answer', [{ id: 'x', answer: 'always' }])).toBeNull()
+    expect(checkArgs('abrowser:answer', [{ id: 'x', answer: 'yes' }])).toBeTruthy()
+    expect(checkArgs('abrowser:profile', [{ panel: 's1', scope: 'shared' }])).toBeTruthy()
+    expect(checkArgs('abrowser:take', [{ panel: '../x' }])).toBeTruthy()
+    // the tools are only handed to a session while the feature is on; no tool evaluates page code
+    expect(main).toMatch(/abrowser\(\)\.tools\(sid\)/)
+    const tools = readFileSync(new URL('../electron/agentbrowser/tools.ts', import.meta.url), 'utf8')
+    expect(tools).not.toMatch(/browser_(evaluate|run_script)|Runtime\.evaluate/)
   })
 })
