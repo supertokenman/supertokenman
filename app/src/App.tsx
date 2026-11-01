@@ -830,6 +830,8 @@ export function App() {
     const r = await window.stm.newSession({ cwd, model: m, resume, resumeAt: extra?.resumeAt, remote: extra?.remote, persona, effort: effortsOf(m).includes(effort as Effort) ? effort : undefined, sandbox, worktree: extra?.worktree })
     openedCwd.current[r.sid] = r.cwd
     dispatch({ kind: 'open', sid: r.sid, cwd: r.cwd, model: r.persona?.model || m, persona: r.persona, sandbox: r.sandbox, remote: r.remote, worktree: r.worktree })
+    // no process yet, so no ready event: a resumed panel keeps its saved session id (the workspace restores from it)
+    if (resume && !extra?.resumeAt) dispatch({ kind: 'event', sid: r.sid, action: { kind: 'ready', sessionId: resume, model: r.persona?.model || m, cwd: r.cwd } })
     // an integration turned on without its credential: say so in the new panel
     for (const x of r.missing ?? [])
       dispatch({ kind: 'event', sid: r.sid, action: { kind: 'error', message: `${x.id} is on but ${x.secret} is not in the vault, so this panel runs without it. Add it in Connections.` } })

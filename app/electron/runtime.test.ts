@@ -51,6 +51,12 @@ describe('PanelRuntime state', () => {
     rt.event('s2', { kind: 'turn', text: 'ok' })
     expect(rt.live()).toBe(1)
   })
+  it('a panel opened but not started yet is idle, and counts as neither working nor needing you', () => {
+    const { rt } = mk()
+    expect(rt.view('s1')).toMatchObject({ state: 'idle', pending: 0 })
+    expect(rt.live()).toBe(0)
+    expect(rt.needsYou()).toBe(0)
+  })
   it('keeps events for replay in order, within the caps', () => {
     const rt = new PanelRuntime({ maxEvents: 3 })
     rt.open('s1')

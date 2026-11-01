@@ -164,8 +164,26 @@ export class Session {
 
   /** Which login answers this panel: email, plan and where the key comes from. */
   async account() {
+    // /status is a reason for a live process: a panel that has not started (or sleeps) starts now
+    this.wake()
     if (!this.q) throw new Error('This panel has not started yet.')
     return this.q.accountInfo()
+  }
+
+  /**
+   * A new panel: no Claude process yet. The first message (or a call that needs a live session: ask, step,
+   * account) starts it, resuming the conversation if there is one.
+   */
+  hold() {
+    this.asleep = true
+  }
+  /** Starts a held panel's process before its first message (the person is typing); a no-op for one that runs or sleeps with a conversation. */
+  warm() {
+    if (this.unstarted) this.wake()
+  }
+  /** Held and never run: no process, no conversation, nothing to lose by changing how it starts. */
+  get unstarted() {
+    return this.asleep && !this.q
   }
 
   /** Starts the query and pumps its messages until it ends. */
@@ -509,10 +527,11 @@ export class Session {
   private wake() {
     if (!this.asleep) return
     this.inbox = new Inbox<SDKUserMessage>()
-    this.woke = true
+    // a panel that never ran has no conversation to resume: its first process starts as a new one (or the saved one it was opened with)
+    this.woke = !!this.sessionId
     this.start()
     this.asleep = false
-    this.emit({ kind: 'wake' })
+    if (this.woke) this.emit({ kind: 'wake' })
   }
 
   send(text: string, attachments: Attachment[] = []) {
