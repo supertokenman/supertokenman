@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { RateNote } from './RateNote'
 import { bootOn } from './boot'
 import { displayCurrency, formatMoney } from './currency'
 import { readRates } from './rates'
@@ -106,6 +107,7 @@ export function Splash({ done, onGone }: { done: boolean; onGone?: () => void })
             <i className="film-dot" />
             <span className="film-num cost">
               <span ref={costRef}>{formatMoney(0, displayCurrency(), 1)}</span>
+              <RateNote />
             </span>
           </div>
         )}

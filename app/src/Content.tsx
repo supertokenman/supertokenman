@@ -1,4 +1,5 @@
 import { pickPaths } from './FilePicker'
+import { RateNote } from './RateNote'
 import { pickProjectFolder } from './FolderPicker'
 import { displayCurrency, formatMoney } from './currency'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -117,6 +118,7 @@ export function Content(props: { seed?: { title: string; idea: string } | null; 
             <div><strong>{formatMoney(p.usage.costUsd, displayCurrency(), props.usdToBrl)}</strong><span>at API prices</span></div>
             {p.voiceChars != null && <div><strong>{k(p.voiceChars)}</strong><span>ElevenLabs chars</span></div>}
           </div>
+          <RateNote />
 
           <div className="ct-actions">
             {(p.stage === 'idea' || p.stage === 'script') && (

@@ -710,20 +710,6 @@ export function Panel(props: {
               <LinksChip sid={sid} onCount={setLinks} />
             </TraySection>
           )}
-          <TraySection title="Model and cost">
-            <p className="more-meter">{s.context ? `Context ${Math.round(s.context.percent)}% used of ${Math.round(s.context.window / 1000)}k tokens. ` : ''}{props.money(s.costUsd)} spent.{rateText ? ` ${rateText}` : ''}</p>
-            <TrayRow note="What to offer when a limit or an outage stops a turn.">
-              {fbOpen ? <Suspense fallback={null}><FallbackChip sid={sid} /></Suspense> : <button className="ghost small" data-tip="What to offer when a limit or an outage stops a turn" onClick={() => setFbOpen(true)}>Set fallback model</button>}
-            </TrayRow>
-            <Suspense fallback={null}><PanelControl sid={sid} cwd={s.cwd} busy={s.busy} /></Suspense>
-            {s.meter?.label && (
-              <p className="more-field" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>
-                <span>Estimated tokens</span><b className="num">{s.meter.label}</b>
-              </p>
-            )}
-            <TrayRow note="Set a cap in tokens or dollars for this panel."><Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense></TrayRow>
-            <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
-          </TraySection>
           <TraySection title="Session">
             <TrayRow note="Hide tools this task does not need.">
               <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
@@ -738,6 +724,20 @@ export function Panel(props: {
                 <button className="ghost small" data-tip="Export this conversation as Markdown or HTML, credentials masked" onClick={() => setExporting(true)}>Export conversation</button>
               </TrayRow>
             )}
+          </TraySection>
+          <TraySection title="Model and cost">
+            <p className="more-meter">{s.context ? `Context ${Math.round(s.context.percent)}% used of ${Math.round(s.context.window / 1000)}k tokens. ` : ''}{props.money(s.costUsd)} spent.{rateText ? ` ${rateText}` : ''}</p>
+            <TrayRow note="Offered when a limit or outage stops a turn.">
+              {fbOpen ? <Suspense fallback={null}><FallbackChip sid={sid} /></Suspense> : <button className="ghost small" data-tip="What to offer when a limit or an outage stops a turn" onClick={() => setFbOpen(true)}>Set fallback model</button>}
+            </TrayRow>
+            <Suspense fallback={null}><PanelControl sid={sid} cwd={s.cwd} busy={s.busy} /></Suspense>
+            {s.meter?.label && (
+              <p className="more-field" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>
+                <span>Estimated tokens used</span><b className="num">{s.meter.label}</b>
+              </p>
+            )}
+            <TrayRow note="Set a cap in tokens or dollars for this panel."><Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense></TrayRow>
+            <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
           </TraySection>
         </PanelMore>
         <div className="segmented" role="tablist">

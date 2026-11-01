@@ -4482,27 +4482,28 @@ table.tbl tbody tr:last-child > td { border-bottom: 0; }
 .panel-bar > .more-btn[aria-expanded="true"] { color: var(--text); --btn-bg: var(--hover); }
 .panel-bar:not(:has(.remember)) > .more-btn { margin-left: auto; }
 .panel-bar:not(:has(.remember)) > .more-btn + .segmented { margin-left: 0; }
-.more-tray { position: fixed; z-index: 55; width: 300px; max-width: calc(100vw - 16px); max-height: calc(100vh - 64px); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 4px 12px 12px; font-family: var(--sans, inherit); background: var(--surface); border: 1px solid var(--border-strong); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); }
+.more-tray { position: fixed; z-index: 55; width: 300px; max-width: calc(100vw - 16px); max-height: calc(100vh - 64px); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 0 0 4px; font-family: var(--sans, inherit); background: var(--surface); border: 1px solid var(--border-strong); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); }
 .more-tray[hidden] { display: none; }
 .more-tray > *, .more-tray > * > button, .more-tray button.small { width: 100%; justify-content: flex-start; text-align: left; white-space: nowrap; }
 .more-tray > :is(span, div) { display: flex; }
-.more-tray .more-sec { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding-top: 12px; }
-.more-tray .more-sec + .more-sec { margin-top: 12px; border-top: 1px solid var(--border); }
-.more-tray .more-h { margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.more-tray .more-sec { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 8px 0; }
+.more-tray .more-sec + .more-sec { border-top: 1px solid var(--border); }
+.more-tray .more-h { margin: 0; padding: 0 11px 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .more-tray .more-row { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
-.more-tray .more-note, .more-tray .more-meter { margin: 0; padding: 0 11px 4px; font-size: 12px; line-height: 1.4; color: var(--muted); white-space: normal; }
-.more-tray .more-meter { padding: 0 11px; }
-.more-tray .meter-chip { font-family: inherit; font-size: 13px; color: var(--text); padding: 0 11px 0 9px; border: 0; border-left: 0; font-variant-numeric: tabular-nums; }
-.more-tray .more-field { margin: 0; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 11px; font-size: 13px; color: var(--text); }
+.more-tray .more-note, .more-tray .more-meter { margin: 0; padding: 0 11px 6px; font-size: 12px; line-height: 1.35; color: var(--muted); white-space: normal; }
+.more-tray .more-meter { padding: 0 11px 6px; }
+.more-tray .more-field { margin: 0; min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 11px; font-size: 13px; color: var(--text); }
 .more-tray .more-field span { color: var(--muted); }
-.more-tray .more-field .num { font-family: inherit; font-weight: 600; font-variant-numeric: tabular-nums; }
-.more-tray button.small, .more-tray .iso-wrap > button, .more-tray .more-tabs button { min-height: 44px; height: auto; font-size: 13px; }
+.more-tray .more-field .num, .more-tray .meter-chip .num { font-family: inherit; font-weight: 600; font-variant-numeric: tabular-nums; }
+.more-tray .meter-chip { justify-content: space-between; font-family: inherit; font-size: 13px; color: var(--text); padding: 0 11px; border: 0; border-left: 0; }
+.more-tray button.small, .more-tray .iso-wrap > button { min-height: 44px; height: auto; font-size: 13px; }
+.more-tray .more-row button.small, .more-tray .more-row .iso-wrap > button { align-items: flex-end; padding-bottom: 4px; min-height: 40px; }
 .more-tray .iso-wrap, .more-tray .more-row > span:not(.more-note) { display: flex; width: 100%; }
-.more-tray .links-chip { white-space: normal; text-align: left; }
-.more-tray .more-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .more-tray .usage-chip { display: flex; width: 100%; }
-.more-tray .more-tabs button { justify-content: center; text-align: center; width: auto; padding: 0 4px; }
-.more-tray .more-tabs button[aria-selected="true"] { color: var(--text); --btn-bg: var(--hover); box-shadow: inset 0 -2px 0 var(--accent); }
+.more-tray .links-chip { white-space: normal; text-align: left; }
+.more-tray .more-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 11px; }
+.more-tray .more-tabs button { box-sizing: border-box; flex: 1 1 calc(33% - 4px); min-width: 72px; height: 44px; min-height: 44px; width: auto; justify-content: center; text-align: center; padding: 0 6px; font-size: 13px; color: var(--text); --btn-line: var(--border-strong); }
+.more-tray .more-tabs button[aria-selected="true"] { --btn-bg: var(--accent); --btn-line: var(--accent); color: var(--on-accent); font-weight: 600; }
 /* the empty window: a dot drawing of panels, a heading, the person's folders */
 .empty-start { padding: 24px 16px; overflow: auto; }
 .es-inner { display: grid; gap: 20px; justify-items: center; width: min(560px, 100%); }
@@ -4553,7 +4554,6 @@ html.dpill-root, html.dpill-root body, html.dpill-root #root { background: trans
 .task-title { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted); }
 .cost-chip, .ctx-thin { display: none; }
 .more-tabs, .more-meter { display: none; }
-.more-tray .more-tabs { display: grid; }
 .more-tray .more-meter { display: block; }
 .cv-card .more-tabs { display: flex; gap: 2px; flex-wrap: wrap; }
 .cv-card .more-meter { font-size: 11px; color: var(--muted); }
@@ -4649,3 +4649,5 @@ html[data-blurred] .panel-bar.compact .sm-mark.busy::after { animation: none; op
 .sheet.cli-setup { width: min(480px, calc(100vw - 48px)); }
 .cli-bar { height: 6px; border-radius: 3px; background: rgba(var(--overlay-rgb), 0.12); overflow: hidden; margin: 12px 0 6px; }
 .cli-bar > span { display: block; height: 100%; background: var(--accent); transition: width 200ms var(--ease); }
+
+.rate-note { margin: 4px 0 8px; font-size: 12px; }

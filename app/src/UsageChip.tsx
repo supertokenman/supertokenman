@@ -27,7 +27,7 @@ export function UsageChip(props: { sid: string; refresh: unknown }) {
           const r = e.currentTarget.getBoundingClientRect()
           setEdit(edit ? null : { usd: u.cap.usd ? String(u.cap.usd) : '', tokens: u.cap.tokens ? String(u.cap.tokens) : '', at: { top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 300) } })
         }}>
-        {chip(u.usage, u.cap)}
+        <span>Usage cap</span><b className="num">{chip(u.usage, u.cap)}</b>
       </button>
       {edit && (
         <span className="usage-cap" style={edit.at} role="dialog" aria-label="Cap for this panel">
