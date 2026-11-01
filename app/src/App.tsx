@@ -751,7 +751,7 @@ export function App() {
   const [sheet, setSheet] = useState(false)
   const [catalog, setCatalog] = useState(false)
   const [memory, setMemory] = useState(false)
-  const { code: currency, rate } = useMoney()
+  const { code: currency, rate, note: rateText } = useMoney()
   const [focus, setFocusState] = useState<Focus | null>(loadFocus)
   const [focusSheet, setFocusSheet] = useState(false)
   const [doneRound, setDoneRound] = useState<{ f: Focus; turns: number; cost: string } | null>(null)
@@ -1487,10 +1487,11 @@ export function App() {
         <span className="spacer" />
         <RouterBox onSend={sendToTeam} />
         <span className="spacer" />
-        <span className="total" data-tip="All panels, at API prices">
+        <span className="total" data-tip={`All panels, at API prices.${rateText ? ` ${rateText}` : ''}`}>
           <span className="total-n">{p.order.length}</span> {p.order.length === 1 ? 'panel' : 'panels'}
           <span className="sep" />
           {money(total)}
+          {rateText && <span className="faint"> (est.)</span>}
         </span>
         {cliSetup && <Suspense fallback={null}><CliSetup s={cliSetup} /></Suspense>}
         {gate > 0 && (

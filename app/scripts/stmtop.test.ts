@@ -42,8 +42,10 @@ describe('stm top', () => {
     expect(render({ ...snap, panels: [] }, { width: 80, height: 10, money: usd })).toContain('No panels open')
     expect(render(snap, { width: 80, height: 24, money: usd, help: true })).toContain('q        quit')
   })
-  it('picks the currency like the window', () => {
-    expect(currencyOf({ LANG: 'pt_BR.UTF-8' })).toBe('BRL')
+  it('shows dollars unless reais are asked for', () => {
+    expect(currencyOf({ LANG: 'pt_BR.UTF-8' })).toBe('USD')
+    expect(currencyOf({ LANG: 'pt_BR.UTF-8' }, 'brl')).toBe('BRL')
+    expect(currencyOf({ STM_CURRENCY: 'BRL' })).toBe('BRL')
     expect(currencyOf({ LANG: 'en_US.UTF-8' })).toBe('USD')
     expect(currencyOf({ LANG: 'pt_BR.UTF-8' }, 'usd')).toBe('USD')
     expect(moneyFn('BRL', 5)(1)).toBe('R$ 5,00')

@@ -19,7 +19,8 @@ import { SandboxChip } from './Sandbox'
 import { RemoteChip } from './RemoteChip'
 import { WorktreeChip } from './Worktree'
 import { LinksChip } from './PanelLinks'
-import { PanelMore } from './PanelMore'
+import { useMoney } from './currency'
+import { PanelMore, TraySection, TrayRow } from './PanelMore'
 import { heldText } from '../shared/budget'
 import { ACCESS } from '../shared/personas'
 import { askOnce, SHRINK } from './localStream'
@@ -402,6 +403,8 @@ export function Panel(props: {
 
   const queued = useQueueState(sid)
   const [fbOpen, setFbOpen] = useState(false)
+  const [links, setLinks] = useState(false)
+  const { note: rateText } = useMoney()
   const failCard = useFailoverCard(sid)
   const submit = (text: string, checked = false, outsideChecked = false, list = ctx) => {
     let typed = text.trim()
@@ -685,27 +688,57 @@ export function Panel(props: {
           </button>
         )}
         <PanelMore sid={sid}>
-          <div className="more-tabs" role="tablist" aria-label="Panel views">
-            {(['chat', 'changes', 'git', 'terminal', 'preview'] as const).map((t) => (
-              <button key={t} role="tab" className="ghost small" aria-selected={tab === t} onClick={() => setTab(t)}>{t === 'preview' ? 'Browse' : t[0]!.toUpperCase() + t.slice(1)}</button>
-            ))}
-          </div>
-          {props.onLead && props.role !== 'worker' && (
-            <button className="ghost small" data-tip={props.role === 'lead' ? 'This panel stops being the lead; its workers are unlinked' : 'This panel plans and hands tasks to worker panels; workers only execute and answer it'} onClick={() => props.onLead!(props.role !== 'lead')}>{props.role === 'lead' ? 'Remove lead' : 'Make lead'}</button>
+          <TraySection title="View">
+            <div className="more-tabs" role="tablist" aria-label="Panel views">
+              {(['chat', 'changes', 'git', 'terminal', 'preview'] as const).map((t) => (
+                <button key={t} role="tab" className="ghost small" aria-selected={tab === t} onClick={() => setTab(t)}>{t === 'preview' ? 'Browse' : t[0]!.toUpperCase() + t.slice(1)}</button>
+              ))}
+            </div>
+          </TraySection>
+          {((props.onLead && props.role !== 'worker') || props.role || links) && (
+            <TraySection title="Team">
+              {props.onLead && props.role !== 'worker' && (
+                <TrayRow note={props.role === 'lead' ? 'Unlinks its workers.' : 'Plans and hands tasks to worker panels.'}>
+                  <button className="ghost small" data-tip={props.role === 'lead' ? 'This panel stops being the lead; its workers are unlinked' : 'This panel plans and hands tasks to worker panels; workers only execute and answer it'} onClick={() => props.onLead!(props.role !== 'lead')}>{props.role === 'lead' ? 'Remove lead' : 'Make this panel the lead'}</button>
+                </TrayRow>
+              )}
+              {props.role && (
+                <TrayRow note="Shared with the lead and its workers.">
+                  <button className="ghost small" data-tip="The shared channel of the lead and its workers" onClick={() => openChannel()}>Open team channel</button>
+                </TrayRow>
+              )}
+              <LinksChip sid={sid} onCount={setLinks} />
+            </TraySection>
           )}
-          <span className="more-meter">{s.context ? `Context ${Math.round(s.context.percent)}% used of ${Math.round(s.context.window / 1000)}k. ` : ''}{props.money(s.costUsd)} spent.</span>
-          {props.role && <button className="ghost small" data-tip="The shared channel of the lead and its workers" onClick={() => openChannel()}>Team channel</button>}
-          {fbOpen ? <Suspense fallback={null}><FallbackChip sid={sid} /></Suspense> : <button className="ghost small" data-tip="What to offer when a limit or an outage stops a turn" onClick={() => setFbOpen(true)}>Fallback</button>}
-          <LinksChip sid={sid} />
-          <Suspense fallback={null}><PanelControl sid={sid} cwd={s.cwd} busy={s.busy} /></Suspense>
-          {s.meter?.label && <span className="meter-chip" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>{s.meter.label}</span>}
-          <Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense>
-          <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
-          <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
-          {!s.sandbox && <IsolateChip sid={sid} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />}
-          {lastReply && (
-            <button className="ghost small" data-tip="Export this conversation as Markdown or HTML, credentials masked" onClick={() => setExporting(true)}>Export</button>
-          )}
+          <TraySection title="Model and cost">
+            <p className="more-meter">{s.context ? `Context ${Math.round(s.context.percent)}% used of ${Math.round(s.context.window / 1000)}k tokens. ` : ''}{props.money(s.costUsd)} spent.{rateText ? ` ${rateText}` : ''}</p>
+            <TrayRow note="What to offer when a limit or an outage stops a turn.">
+              {fbOpen ? <Suspense fallback={null}><FallbackChip sid={sid} /></Suspense> : <button className="ghost small" data-tip="What to offer when a limit or an outage stops a turn" onClick={() => setFbOpen(true)}>Set fallback model</button>}
+            </TrayRow>
+            <Suspense fallback={null}><PanelControl sid={sid} cwd={s.cwd} busy={s.busy} /></Suspense>
+            {s.meter?.label && (
+              <p className="more-field" data-tip={[...s.meter.detail, 'Estimates from characters; Headroom counts for all panels in Savings.'].join('\n')}>
+                <span>Estimated tokens</span><b className="num">{s.meter.label}</b>
+              </p>
+            )}
+            <TrayRow note="Set a cap in tokens or dollars for this panel."><Suspense fallback={null}><UsageChip sid={sid} refresh={`${s.turns}:${JSON.stringify(s.limits)}`} /></Suspense></TrayRow>
+            <SourceChip sid={sid} limits={s.limits} refresh={s.lines.length} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
+          </TraySection>
+          <TraySection title="Session">
+            <TrayRow note="Hide tools this task does not need.">
+              <TrimTools sid={sid} task={String(([...s.lines].reverse().find((l) => l.kind === 'user') as { text?: string } | undefined)?.text ?? '').slice(0, 300)} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
+            </TrayRow>
+            {!s.sandbox && (
+              <TrayRow note="Run commands in a container.">
+                <IsolateChip sid={sid} onNote={(text) => dispatch({ kind: 'note', tone: 'error', text })} />
+              </TrayRow>
+            )}
+            {lastReply && (
+              <TrayRow note="Markdown or HTML, credentials masked.">
+                <button className="ghost small" data-tip="Export this conversation as Markdown or HTML, credentials masked" onClick={() => setExporting(true)}>Export conversation</button>
+              </TrayRow>
+            )}
+          </TraySection>
         </PanelMore>
         <div className="segmented" role="tablist">
           <button role="tab" aria-selected={tab === 'chat'} onClick={() => setTab('chat')}>Chat</button>

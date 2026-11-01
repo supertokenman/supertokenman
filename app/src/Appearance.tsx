@@ -13,12 +13,13 @@ import { hudMini } from './hudMini'
 import { AUTO, NONE, SCENES, sceneSvg } from './landscapes'
 import { DEFAULT_TYPO, FONTS, type Typo } from './typography'
 import { resolve, SYSTEM, themeSvg, THEMES, type Theme } from './themes'
+import { useMoney, setCostPref, useCostPref } from './currency'
 import { ColorField, NumberField, Select, Slider, Switch } from './ui'
 import type { LoopConfig } from '../shared/loopguard'
 
 const SAMPLE: HudView = {
   ctxUsed: 34, ctxTokens: '68k', ctxWindow: '200k', five: { used: 23, resets: '23:00' }, seven: { used: 41, resets: '' },
-  cacheLeft: 52, round: 7, score: 'R$4.20', saved: 'R$0.86', kos: 3, ko: null, enemies: [],
+  cacheLeft: 52, round: 7, score: '$0.84', saved: '$0.17', kos: 3, ko: null, enemies: [],
 }
 
 const Swatches = ({ t }: { t: Theme }) => (
@@ -220,6 +221,7 @@ export function Appearance(props: { current: string; onPick: (id: string) => voi
         <div className="sheet-body">
           <div className="section-title">Text</div>
           <TextSettings typo={props.typo} onChange={props.onTypo} />
+          <CostSetting />
           <div className="touchid">
             <LoginToggle />
             <UpdateToggle />
@@ -317,5 +319,22 @@ function HotkeySetting() {
       {!hk.active && !err && <div className="notice">This shortcut is taken by another app; click it to pick another.</div>}
       {err && <div className="notice error">{err}</div>}
     </>
+  )
+}
+
+/** Settings > Show costs in: US dollars by default; local currency converts and says at what rate and date. */
+function CostSetting() {
+  const pref = useCostPref()
+  const { note } = useMoney()
+  return (
+    <div className="typo-controls">
+      <label className="typo-row">Show costs in
+        <Select value={pref} onChange={(e) => setCostPref(e.target.value === 'local' ? 'local' : 'usd')}>
+          <option value="usd">US dollars (default)</option>
+          <option value="local">Local currency</option>
+        </Select>
+      </label>
+      <div className="faint" role="status">{note || 'The API bills in US dollars, so these are the exact amounts. Local currency converts them with a rate shown next to the totals.'}</div>
+    </div>
   )
 }

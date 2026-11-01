@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom'
  */
 export function PanelMore(props: { children: ReactNode; sid: string }) {
   const [open, setOpen] = useState(false)
-  const [at, setAt] = useState({ top: 0, right: 0 })
+  const [at, setAt] = useState({ top: 0, left: 8 })
   const btn = useRef<HTMLButtonElement>(null)
   const tray = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -32,7 +32,7 @@ export function PanelMore(props: { children: ReactNode; sid: string }) {
   }, [open])
   const toggle = () => {
     const r = btn.current!.getBoundingClientRect()
-    setAt({ top: r.bottom + 4, right: Math.max(8, window.innerWidth - r.right) })
+    setAt({ top: r.bottom + 4, left: Math.max(8, Math.min(r.right - 300, window.innerWidth - 308)) })
     setOpen(!open)
   }
   return (
@@ -41,11 +41,32 @@ export function PanelMore(props: { children: ReactNode; sid: string }) {
         <svg viewBox="0 0 16 16" aria-hidden><circle cx="3.5" cy="8" r="1.3" /><circle cx="8" cy="8" r="1.3" /><circle cx="12.5" cy="8" r="1.3" /></svg>
       </button>
       {createPortal(
-        <div ref={tray} className="more-tray" role="group" aria-label={`More controls for panel ${props.sid}`} hidden={!open} style={{ top: at.top, right: at.right }}>
+        <div ref={tray} className="more-tray" role="group" aria-label={`More controls for panel ${props.sid}`} hidden={!open} style={{ top: at.top, left: at.left }}>
           {props.children}
         </div>,
         document.body,
       )}
     </>
+  )
+}
+
+/** A titled group in the tray: a short heading, then its rows. */
+export function TraySection(props: { title: string; children: ReactNode }) {
+  const id = useId()
+  return (
+    <section className="more-sec" aria-labelledby={id}>
+      <h3 id={id} className="more-h">{props.title}</h3>
+      {props.children}
+    </section>
+  )
+}
+
+/** One action with a muted one-line note under it saying what it does. */
+export function TrayRow(props: { note: string; children: ReactNode }) {
+  return (
+    <div className="more-row">
+      {props.children}
+      <span className="more-note">{props.note}</span>
+    </div>
   )
 }
