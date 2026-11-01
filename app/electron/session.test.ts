@@ -488,3 +488,115 @@ describe('Session with the policy gate and control hooks', () => {
     expect(s.lastMessageUuid).toBe('u1')
   })
 })
+
+describe('Session lazy start', () => {
+  const reply = async function* () {
+    yield { type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0, usage: { input_tokens: 1, output_tokens: 1 } } as unknown as SDKMessage
+  }
+  const counted = () => {
+    const q = fakeQuery(reply)
+    let starts = 0
+    return { fn: ((p: Parameters<typeof q.fn>[0]) => (starts++, q.fn(p))) as typeof q.fn, starts: () => starts }
+  }
+
+  it('starts no process while held, and says nothing about sleeping', async () => {
+    const events: UiEvent[] = []
+    const c = counted()
+    const s = new Session((e) => events.push(e), { cwd: '/proj', query: c.fn })
+    s.hold()
+    await settle()
+    expect(c.starts()).toBe(0)
+    expect(s.unstarted).toBe(true)
+    expect(events).toEqual([])
+    s.close()
+  })
+
+  it('starts once on the first prompt, as a new conversation', async () => {
+    const events: UiEvent[] = []
+    let opts: Options = {}
+    const c = counted()
+    const s = new Session((e) => events.push(e), { cwd: '/proj', query: (p) => ((opts = p.options ?? {}), c.fn(p)) })
+    s.hold()
+    s.send('hello')
+    await settle()
+    expect(c.starts()).toBe(1)
+    expect(opts.resume).toBeUndefined()
+    expect(s.unstarted).toBe(false)
+    expect(events.some((e) => e.kind === 'wake')).toBe(false)
+    expect(events.some((e) => e.kind === 'ready')).toBe(true)
+    s.close()
+  })
+
+  it('two quick prompts start one process', async () => {
+    const c = counted()
+    const s = new Session(() => undefined, { cwd: '/proj', query: c.fn })
+    s.hold()
+    s.send('one')
+    s.send('two')
+    await settle()
+    expect(c.starts()).toBe(1)
+    s.close()
+  })
+
+  it('a message from another panel starts it, and so do a step and /status', async () => {
+    const c = counted()
+    const s = new Session(() => undefined, { cwd: '/proj', query: c.fn })
+    s.hold()
+    const r = s.ask('what is up?', 'Other')
+    await settle()
+    expect(c.starts()).toBe(1)
+    await expect(r).resolves.toBe('ok')
+    s.close()
+
+    const c2 = counted()
+    const s2 = new Session(() => undefined, { cwd: '/proj', query: c2.fn })
+    s2.hold()
+    void s2.step('go', 'Loop')
+    await settle()
+    expect(c2.starts()).toBe(1)
+    s2.close()
+
+    const c3 = counted()
+    const s3 = new Session(() => undefined, { cwd: '/proj', query: c3.fn })
+    s3.hold()
+    await s3.account().catch(() => undefined)
+    expect(c3.starts()).toBe(1)
+    s3.close()
+  })
+
+  it('a held panel with a saved conversation resumes it on the first prompt', async () => {
+    let opts: Options = {}
+    const q = fakeQuery(reply)
+    const s = new Session(() => undefined, { cwd: '/proj', resume: 'saved-1', query: (p) => ((opts = p.options ?? {}), q.fn(p)) })
+    s.hold()
+    s.send('hi')
+    await settle()
+    expect(opts.resume).toBe('saved-1')
+    s.close()
+  })
+
+  it('warm starts a held panel once, and the first prompt then reuses that process', async () => {
+    const c = counted()
+    const s = new Session(() => undefined, { cwd: '/proj', query: c.fn })
+    s.hold()
+    s.warm()
+    s.warm()
+    expect(c.starts()).toBe(1)
+    s.send('hi')
+    await settle()
+    expect(c.starts()).toBe(1)
+    s.close()
+  })
+
+  it('keeps a model chosen before the first prompt', async () => {
+    let opts: Options = {}
+    const q = fakeQuery(reply)
+    const s = new Session(() => undefined, { cwd: '/proj', model: 'a', query: (p) => ((opts = p.options ?? {}), q.fn(p)) })
+    s.hold()
+    await s.setModel('b')
+    s.send('hi')
+    await settle()
+    expect(opts.model).toBe('b')
+    s.close()
+  })
+})

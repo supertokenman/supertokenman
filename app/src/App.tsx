@@ -92,6 +92,7 @@ const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
 const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
 const ComposeStacks = lazy(() => import('./ComposeStacks').then((x) => ({ default: x.ComposeStacks })))
 const ResumeBanner = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.ResumeBanner })))
+const CliSetup = lazy(() => import('./CliSetup').then((x) => ({ default: x.CliSetup })))
 const UpdateConfirm = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.UpdateConfirm })))
 const DiagCheck = lazy(() => import('./DiagCheck').then((x) => ({ default: x.DiagCheck })))
 const Reflect = lazy(() => import('./Reflect').then((x) => ({ default: x.Reflect })))
@@ -124,6 +125,7 @@ import { sceneFor, sceneSvg } from './landscapes'
 import { Menu } from './Menu'
 
 import { Presence } from './Presence'
+import { useAdoptPanels } from './packs/adopt'
 
 
 
@@ -183,6 +185,7 @@ const ConnectAgentsSheet = lazy(() => import('./ConnectAgents').then((m) => ({ d
 const PhoneCompanionSheet = lazy(() => import('./PhoneCompanion').then((m) => ({ default: m.PhoneCompanionSheet })))
 const ExtractSheet = lazy(() => import('./Extract').then((m) => ({ default: m.ExtractSheet })))
 const MessageFiltersSheet = lazy(() => import('./MessageFilters').then((m) => ({ default: m.MessageFiltersSheet })))
+const ControlHost = lazy(() => import('./control/ControlHost'))
 const PlaybooksSheet = lazy(() => import('./Playbooks').then((m) => ({ default: m.PlaybooksSheet })))
 const WorkTasksSheet = lazy(() => import('./WorkTasks').then((m) => ({ default: m.WorkTasksSheet })))
 const RoutinesSheet = lazy(() => import('./Routines').then((m) => ({ default: m.RoutinesSheet })))
@@ -486,6 +489,7 @@ export function App() {
   const [exOpen, setExOpen] = useState(false)
   const [mfOpen, setMfOpen] = useState(false)
   const [pbOpen, setPbOpen] = useState(false)
+  const [ctl, setCtl] = useState<{ view: 'rules' | 'audit'; cwd?: string; panel?: string } | null>(null)
   const [wtOpen, setWtOpen] = useState(false)
   const [rtOpen, setRtOpen] = useState(false)
   const [dgOpen, setDgOpen] = useState(false)
@@ -821,16 +825,27 @@ export function App() {
 
   // where each panel actually opened (a worktree's path, not the folder asked for)
   const openedCwd = useRef<Record<string, string>>({})
+  useAdoptPanels(dispatch, openedCwd)
   const open = useCallback(async (cwd?: string, resume?: string, persona?: string, sandbox?: boolean, extra?: { worktree?: { label: string; group?: string; attempt?: number; of?: number }; model?: string; resumeAt?: string; remote?: { host: string; dir: string; worktree?: boolean; branch?: string; repo?: string } }) => {
     const m = extra?.model ?? model
     const r = await window.stm.newSession({ cwd, model: m, resume, resumeAt: extra?.resumeAt, remote: extra?.remote, persona, effort: effortsOf(m).includes(effort as Effort) ? effort : undefined, sandbox, worktree: extra?.worktree })
     openedCwd.current[r.sid] = r.cwd
     dispatch({ kind: 'open', sid: r.sid, cwd: r.cwd, model: r.persona?.model || m, persona: r.persona, sandbox: r.sandbox, remote: r.remote, worktree: r.worktree })
+    // no process yet, so no ready event: a resumed panel keeps its saved session id (the workspace restores from it)
+    if (resume && !extra?.resumeAt) dispatch({ kind: 'event', sid: r.sid, action: { kind: 'ready', sessionId: resume, model: r.persona?.model || m, cwd: r.cwd } })
     // an integration turned on without its credential: say so in the new panel
     for (const x of r.missing ?? [])
       dispatch({ kind: 'event', sid: r.sid, action: { kind: 'error', message: `${x.id} is on but ${x.secret} is not in the vault, so this panel runs without it. Add it in Connections.` } })
     return r.sid
   }, [model, effort])
+  // Control: Settings and the palette open the rules and audit sheets; a checkpoint restore opens the continued panel
+  useEffect(() => {
+    const onCtl = (e: Event) => setCtl((e as CustomEvent<{ view: 'rules' | 'audit' }>).detail)
+    const onResumed = (e: Event) => { const d = (e as CustomEvent<{ cwd: string; resume: string; resumeAt: string }>).detail; void open(d.cwd, d.resume, undefined, false, { resumeAt: d.resumeAt }) }
+    window.addEventListener('stm:control', onCtl)
+    window.addEventListener('stm:open-resumed', onResumed)
+    return () => (window.removeEventListener('stm:control', onCtl), window.removeEventListener('stm:open-resumed', onResumed))
+  }, [open])
 
   // a panel on its own branch in the focused panel's repository; it says why when there is no repository
   const openWorktree = async () => {
@@ -886,6 +901,9 @@ export function App() {
   // a team file to review (File menu or stm team import); panels are made only when the person confirms in the sheet
   useEffect(() => window.stm.teamBundle.onReview(setTeamIn), [])
   useEffect(() => window.stm.away.onShow(setAwayCard), [])
+  // the Claude Code download on first launch: a sheet only while it runs or after it failed
+  const [cliSetup, setCliSetup] = useState<import('./bridge').CliState | null>(null)
+  useEffect(() => window.stm.claudeCli?.onState((s) => setCliSetup(s.phase === 'downloading' || s.phase === 'failed' ? s : null)), [])
   // pointer, wheel and key input tell the main process the person is here (at most every 10 s)
   useEffect(() => {
     let last = 0
@@ -1313,6 +1331,8 @@ export function App() {
       ['diagnostics', 'Diagnostics', 'errors logs crash report debug diagnostics', () => setDgOpen(true)],
       ['routines', 'Routines', 'routine schedule weekly scan draft summary recurring job', () => setRtOpen(true)],
       ['work-tasks', 'Tasks across panels', 'task budget thread timeline decision across panels fan-out', () => setWtOpen(true)],
+      ['control-rules', 'Control rules', 'policy rules allow deny ask approval gate limits routine caps', () => setCtl({ view: 'rules', cwd: p.focus ? p.byId[p.focus]?.cwd : undefined })],
+      ['control-audit', 'Audit log', 'audit log tool calls decisions receipts history', () => setCtl({ view: 'audit', panel: undefined })],
       ['playbooks', 'Playbooks', 'playbook sop procedure steps checkpoint check runbook yaml', () => setPbOpen(true)],
       ['msg-filters', 'Message filters', 'filter inlet outlet pipeline valves code before after message reply', () => setMfOpen(true)],
       ['extract', 'Extract with sources', 'extract structured fields json log spec issue grounding quote source', () => setExOpen(true)],
@@ -1406,6 +1426,10 @@ export function App() {
             run={runs[sid]}
             role={lead.leads.includes(sid) ? 'lead' : lead.workers[sid] ? 'worker' : ''}
             workerTitle={lead.workers[sid]?.title}
+            title={lead.titles?.[sid] ?? lead.workers[sid]?.title}
+            team={lead.leads.includes(sid) ? Object.entries(lead.workers).filter(([w, t]) => t.lead === sid && p.byId[w]).map(([w, t]) => ({ id: w, title: lead.titles?.[w] ?? t.title, state: t.error ? 'error' as const : p.byId[w]?.busy ? 'working' as const : t.finished ? 'done' as const : 'idle' as const })) : undefined}
+            leadName={lead.workers[sid] ? lead.titles?.[lead.workers[sid]!.lead] ?? (p.byId[lead.workers[sid]!.lead]?.cwd ?? '').split('/').filter(Boolean).at(-1) : undefined}
+            onFocusPanel={(w) => dispatch({ kind: 'focus', sid: w })}
             onLead={(on) => void window.stm.lead.set(sid, on).catch((e) => dispatch({ kind: 'event', sid, action: { kind: 'note', tone: 'error', text: e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e) } }))}
             focused={p.focus === sid}
             theme={theme}
@@ -1468,6 +1492,7 @@ export function App() {
           <span className="sep" />
           {money(total)}
         </span>
+        {cliSetup && <Suspense fallback={null}><CliSetup s={cliSetup} /></Suspense>}
         {gate > 0 && (
           <Suspense fallback={null}>
             <UpdateConfirm
@@ -1791,6 +1816,7 @@ export function App() {
       <Presence show={dgOpen}><DiagnosticsSheet onClose={() => setDgOpen(false)} /></Presence>
       <Presence show={rtOpen}><RoutinesSheet cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setRtOpen(false)} /></Presence>
       <Presence show={wtOpen}><WorkTasksSheet panels={p.order.map((sid) => ({ sid, label: `${(p.byId[sid]?.cwd ?? '').split('/').pop() || 'panel'} (${sid})` }))} focus={p.focus ?? undefined} onClose={() => setWtOpen(false)} /></Presence>
+      {ctl && <Suspense fallback={null}><ControlHost {...ctl} onClose={() => setCtl(null)} /></Suspense>}
       <Presence show={pbOpen}><PlaybooksSheet sid={p.focus ?? undefined} cwd={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setPbOpen(false)} /></Presence>
       <Presence show={mfOpen}><MessageFiltersSheet project={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setMfOpen(false)} /></Presence>
       <Presence show={exOpen}><ExtractSheet project={p.focus ? p.byId[p.focus]?.cwd : undefined} onClose={() => setExOpen(false)} /></Presence>

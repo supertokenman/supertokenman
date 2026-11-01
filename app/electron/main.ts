@@ -9,7 +9,8 @@ import { badge, contextMenu, keepBounds, menuTemplate, savedBounds, windowStateF
 import { crashReporter, app, BrowserWindow, Menu, nativeImage, Tray, globalShortcut, net, Notification, protocol, dialog, ipcMain, nativeTheme, powerMonitor, safeStorage, systemPreferences, session as electronSession, shell as desktop, webContents as allWebContents } from 'electron'
 import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, symlinkSync, unlinkSync, watch, writeFileSync } from 'node:fs'
 import { listSessions, query as sdkQuery } from '@anthropic-ai/claude-agent-sdk'
-import { claudeBinary, mergePath, shellPathAsync } from './packaged.js'
+import { claudeBinary, installedClaude, mergePath, shellPathAsync } from './packaged.js'
+import { ClaudeCli, parseVersion, platformKey, type CliManifest } from './claudecli.js'
 import { homedir } from 'node:os'
 import { findRepos, repoRoots } from './repos.js'
 import { createServer as netServer } from 'node:net'
@@ -325,8 +326,34 @@ crashReporter.start({ uploadToServer: false })
 const pathReady: Promise<void> = app.isPackaged && process.platform !== 'win32'
   ? ((process.env.PATH = mergePath('', process.env.PATH ?? '')), shellPathAsync().then((p) => void (process.env.PATH = p)))
   : Promise.resolve()
-const CLAUDE_BIN = app.isPackaged ? claudeBinary(process.resourcesPath) : undefined
-const query: typeof sdkQuery = (args) => sdkQuery(CLAUDE_BIN ? { ...args, options: { ...args.options, pathToClaudeCodeExecutable: CLAUDE_BIN } } : args)
+// Packaged, the Claude Code CLI is not in the app: the pinned build is downloaded on first need
+// (claudecli.ts, docs/NETWORK.md). From the source folder the SDK finds its own in node_modules.
+const cliManifest = ((): CliManifest | null => {
+  try {
+    return JSON.parse(readFileSync(new URL('../cli-manifest.json', import.meta.url), 'utf8')) as CliManifest
+  } catch {
+    return null
+  }
+})()
+const claudeCli = new ClaudeCli({
+  manifest: cliManifest,
+  root: join(app.getPath('userData'), 'claude-cli'),
+  key: platformKey(),
+  bundled: () => claudeBinary(process.resourcesPath),
+  installed: () => installedClaude(),
+  versionOf: (p) => new Promise((done) => execFile(p, ['--version'], { timeout: 10_000, encoding: 'utf8' }, (_e, out) => done(parseVersion(String(out ?? ''))))),
+  fetch: (url, init) => net.fetch(url, init),
+  onState: (s) => toWin('cli:state', s),
+})
+const query: typeof sdkQuery = (args) => {
+  if (!app.isPackaged) return sdkQuery(args)
+  const exe = claudeCli.path
+  if (!exe) throw new Error('Setting up Claude Code. The panel starts when it is ready.')
+  return sdkQuery({ ...args, options: { ...args.options, pathToClaudeCodeExecutable: exe } })
+}
+ipcMain.handle('cli:state', async () => (app.isPackaged ? await pathReady.then(() => claudeCli.peek()) : { phase: 'ready', path: '', source: 'dev', version: '' }))
+ipcMain.handle('cli:retry', () => claudeCli.retry().then(() => claudeCli.state, () => claudeCli.state))
+ipcMain.handle('cli:cancel', () => claudeCli.cancel())
 // a content piece's media, streamed to the window (registered before the app is ready)
 protocol.registerSchemesAsPrivileged([{ scheme: UI_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true, codeCache: true } }, { scheme: 'stmmedia', privileges: { stream: true, supportFetchAPI: true, secure: true, bypassCSP: false } }, { scheme: 'stmapp', privileges: { standard: true, secure: true } }])
 let win: BrowserWindow | null = null
@@ -338,7 +365,7 @@ const shells = new Map<string, { runner: ShellRunner; cwd: string }>()
 let vault: Vault
 const settingsFile = () => join(app.getPath('userData'), 'settings.json')
 type Custom = { id: string; name: string; remote?: string; npm?: string }
-type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; control?: { caps?: Partial<Caps>; auditDays?: number; agentCap?: number; fanoutCap?: number }; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
+type Settings = { keepRunning?: boolean; panelQueues?: Record<string, PQ.PanelQueue>; failoverPrefs?: Record<string, FO.FailoverPrefs>; integrations: string[]; custom?: Custom[]; spotify?: Saved[]; fixed?: import('./billing.js').Fixed[]; feeds?: import('./news.js').Feed[]; lock?: LockPrefs; personas?: Persona[]; triggers?: Trigger[]; storage?: StorageConfig; hotkey?: string; turnNotes?: { cost?: boolean; duration?: boolean }; dictation?: import('./dictation.js').DictationPrefs; awayCard?: boolean; smallModel?: string; smallStats?: SmallStats; headroom?: boolean; symbols?: boolean; fullTools?: boolean; startersSeen?: string[]; stars?: { at: number; counts: Record<string, number> }; apiRequests?: ApiRequest[]; apiHistory?: { at: number; method: string; url: string; status: number; ms: number }[]; dbConns?: DbConn[]; worktrees?: (Worktree & { group?: string; attempt?: number; of?: number })[]; budget?: Limits; budgetSpend?: Spend; outputShaper?: boolean; personaHistory?: Record<string, Version[]>; arena?: Tally; choices?: Choice[]; evals?: Record<string, string>; styles?: StyleId[]; runs?: TriggerRun[]; embedModel?: string; headroomInspect?: boolean; dbHistory?: Record<string, { sql: string; at: number; ok: boolean; ms: number }[]>; coolifyUrl?: string; healthPaths?: Record<string, string>; docsInbox?: string; providers?: CC.Provider[]; feedRules?: FD.FeedRule[]; newsletterSenders?: string[]; briefing?: FD.Schedule; pubSlots?: import('../shared/pubcal.js').Slot[]; dokployUrl?: string; mcpSend?: boolean; panelLinks?: PB.Link[]; stmLimits?: { sendPerMin?: number; spawnPerHour?: number }; voiceId?: string; compactor?: { stages: CompactStage[] }; phone?: { send?: boolean; port?: number }; photosDir?: string; immichUrl?: string; booking?: { account: string; name: string; title: string; who: string; rules: import('../shared/slots.js').SlotRules; url?: string; publishedAt?: number }; dataBoard?: import('../shared/askdata.js').BoardItem[]; rocketchat?: import('./rocketchat.js').RcConfig; customEndpoint?: { on: boolean; url: string }; stirlingUrl?: string; bwLinks?: Record<string, import('./bitwarden.js').Link>; radar?: { groups: string; weights: Record<string, number>; lastAt: number; ntfy: string }; forge?: { kind: 'github' | 'gitea'; url: string }; dockerWrite?: Record<string, boolean>; apiLive?: LIVE.Saved[]; diagProjects?: Record<string, boolean>; reflectPending?: { id: string; project: string; at: number; digest: string; turns: number }[]; updateCheck?: boolean; claudeUsageData?: boolean; loopGuard?: Partial<import('../shared/loopguard.js').LoopConfig>; reviewNotes?: import('../shared/reviewnotes.js').Lesson[]; rsshub?: string; sites?: import('../shared/webapps.js').Site[]; netSlots?: import('../shared/postslots.js').NetSlots; socialTriage?: boolean; socialAccounts?: boolean; socialProjects?: import('../shared/socaccounts.js').Project[]; control?: { caps?: Partial<Caps>; auditDays?: number; agentCap?: number; fanoutCap?: number }; mentions?: { cfg: import('../shared/mentions.js').Config; seen: string[]; sent: number[]; queue: import('../shared/mentions.js').Item[] } }
 // phase 80: the settings file has a schema, a version and migrations; read once, written atomically
 let settingsCache: Settings | null = null
 function settings(): Settings {
@@ -505,11 +532,25 @@ async function dropAndForget(w: Worktree) {
   saveSettings({ ...settings(), worktrees: (settings().worktrees ?? []).filter((x) => x.path !== w.path) })
   return ok
 }
+const turnClocks = new Map<string, ReturnType<typeof AN.turnClock>>()
+const lastAnomalyNote = new Map<string, number>()
+/** Feeds the active-time clock of the turn in progress. */
+function clockEvent(sid: string, e: { kind?: string; tools?: { name: string }[] }) {
+  if (e.kind !== 'assistant' && e.kind !== 'permission' && e.kind !== 'tool' && e.kind !== 'answered' && e.kind !== 'human') return
+  let c = turnClocks.get(sid)
+  if (!c) turnClocks.set(sid, (c = AN.turnClock()))
+  if (e.kind === 'assistant') c.event(Date.now(), (e.tools ?? []).map((t) => t.name))
+  else if (e.kind === 'permission') c.event(Date.now(), [], true)
+  else c.moved(Date.now())
+}
 function spendTurn(sid: string, cumulativeUsd: number, ev?: { inputTokens?: number; cacheRead?: number; cacheWrite?: number; durationMs?: number }) {
   const p = panelCost.get(sid) ?? { total: 0, recent: [] }
   // Claude Code reports the session's cost so far; a resumed panel starts its count again
   const turn = Math.max(0, cumulativeUsd - p.total)
-  if (ev) turnAnomaly(sid, { at: Date.now(), cost: turn, tokens: (ev.inputTokens ?? 0) + (ev.cacheRead ?? 0) + (ev.cacheWrite ?? 0), seconds: (ev.durationMs ?? 0) / 1000 })
+  const clock = turnClocks.get(sid)
+  turnClocks.delete(sid)
+  const shape = clock ? clock.finish(Date.now(), ev?.durationMs ?? 0) : {}
+  if (ev) turnAnomaly(sid, { at: Date.now(), cost: turn, tokens: (ev.inputTokens ?? 0) + (ev.cacheRead ?? 0) + (ev.cacheWrite ?? 0), seconds: (ev.durationMs ?? 0) / 1000, ...shape })
   panelCost.set(sid, { total: Math.max(p.total, cumulativeUsd), recent: [...p.recent, turn].slice(-10) })
   const cwd = shells.get(sid)?.cwd
   if (!cwd || !(turn > 0)) return
@@ -670,11 +711,20 @@ function turnAnomaly(sid: string, now: AN.Sample) {
   const key = statKey(sid)
   const hist = all[key] ?? []
   const [project, model] = key.split('|')
-  const found = AN.check(hist, now, { where: `${project} on ${String(model).replace(/^claude-/, '')}` })
+  const prefs = settings().turnNotes ?? {}
+  const found = AN.check(hist, now, { duration: prefs.duration === true, where: `${project} on ${String(model).replace(/^claude-/, '')}` })
   all[key] = [...hist, now].slice(-200)
   writeAtomic(turnStatsFile(), JSON.stringify(all))
-  for (const v of found) send(sid, { kind: 'note', tone: 'error', text: `${v.reason} Normal is up to ${AN.WORD[v.metric](v.high)}.` })
+  const shown = found.filter((v) => (v.metric === 'seconds' ? prefs.duration === true : prefs.cost !== false))
+  if (!shown.length || !AN.noteDue(lastAnomalyNote.get(sid), now.at)) return
+  lastAnomalyNote.set(sid, now.at)
+  for (const v of shown) send(sid, { kind: 'note', tone: AN.toneOf(v), text: `${v.reason} Normal is up to ${AN.WORD[v.metric](v.high)}.` })
 }
+ipcMain.handle('anomaly:notes', (_e, prefs?: { cost?: boolean; duration?: boolean }) => {
+  if (prefs) saveSettings({ ...settings(), turnNotes: { cost: Boolean(prefs.cost), duration: Boolean(prefs.duration) } })
+  const t = settings().turnNotes ?? {}
+  return { cost: t.cost !== false, duration: t.duration === true }
+})
 ipcMain.handle('anomaly:series', (_e, sid: string) => {
   let key = statKey(String(sid))
   // a panel that has not answered yet has no model: show its project's busiest model
@@ -987,6 +1037,8 @@ const turnOf = (sid: string) => pendingTurn.get(sid)?.id
 const outletChain = new Map<string, Promise<void>>()
 // panels whose agent the loop guard paused, until the person sends again (shown by `stm top`)
 const loopPaused = new Set<string>()
+/** when each panel last emitted anything but an incoming message: proof its turn started */
+const lastSign = new Map<string, number>()
 function send(sid: string, e: unknown) {
   const pending = outletChain.get(sid)
   const k = (e as { kind?: string }).kind
@@ -1009,8 +1061,10 @@ function send(sid: string, e: unknown) {
 }
 function sendNow(sid: string, e: unknown) {
   const ev = e as { kind?: string; isError?: boolean; text?: string; durationMs?: number }
+  if (ev.kind !== 'peer') lastSign.set(sid, Date.now())
   phoneTrack(sid, e as never)
   traceEvent(sid, e as never)
+  clockEvent(sid, e as never)
   // spans go into the trace, not to the window
   if (ev.kind === 'span') return
   quotaWatch(sid, ev)
@@ -2288,6 +2342,8 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
   perfMark('panel asked')
   await pathReady
   await officeReady
+  // first launch, or a release that pins a new Claude Code: the panel waits for the download
+  if (app.isPackaged) await claudeCli.ensure()
   perfMark('panel path and office checked')
   const sid = `s${++nextId}`
   // a panel on another machine: its folder (or a fresh worktree) there, and an empty stand-in folder here
@@ -2526,8 +2582,9 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     if (v.ok) tracePrompt(sid, text, `Asked by ${from}`)
     return v.ok ? s.ask(text, from) : Promise.reject(new Error(`Held by the budget: ${v.reason}`))
   }
-  hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked })
-  s.start()
+  hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked, lastSign: () => lastSign.get(sid) ?? 0 })
+  // no process until the first message (or a call that needs one): an open panel costs no Claude Code process
+  s.hold()
   // a resumed panel gets its saved plan back
   const savedPlan = opts.resume ? loadPlan(opts.resume) : null
   if (savedPlan) (plans.set(sid, savedPlan), send(sid, { kind: 'plan', plan: savedPlan }))
@@ -5114,6 +5171,7 @@ ipcMain.handle('health:get', async () => {
   const claude = Health.claudeByFolder([...sessions.entries()].map(([sid, s]) => ({ sid, cwd: s.cwd })), kids, cwds)
   return Health.group(metrics, owners, claude)
 })
+ipcMain.handle('session:warm', (_e, sid: string) => void sessions.get(String(sid))?.warm())
 ipcMain.handle('health:sleep-panel', (_e, sid: string) => sessions.get(sid)?.sleep() ?? false)
 
 // updates: the installed app remembers the checkout it was built from; new commits there are an update
@@ -7126,7 +7184,8 @@ type WorkerTask = { lead: string; title: string; at: number; files: Set<string>;
 const leadSet = new Set<string>()
 const workerTask = new Map<string, WorkerTask>()
 const leadWaiters = new Map<string, ((r: LD.Result) => void)[]>()
-const leadView = () => ({ leads: [...leadSet], workers: Object.fromEntries([...workerTask].map(([id, t]) => [id, { lead: t.lead, title: t.title, error: Boolean(t.result?.isError), finished: Boolean(t.result), cost: t.cost }])) })
+// titles ride along with the roles: the name a panel was opened with (ui_open_panels, delegate) is its header label
+const leadView = () => ({ leads: [...leadSet], workers: Object.fromEntries([...workerTask].map(([id, t]) => [id, { lead: t.lead, title: t.title, error: Boolean(t.result?.isError), finished: Boolean(t.result), cost: t.cost }])), titles: Object.fromEntries([...uiTitles].filter(([id]) => sessions.has(id))) })
 const pushLead = () => toWin('lead:state', leadView())
 const pulse = (from: string, to: string) => toWin('lead:pulse', { from, to })
 ipcMain.handle('lead:state', () => leadView())
@@ -7142,6 +7201,19 @@ ipcMain.handle('lead:set', (_e, sid: string, on: boolean) => {
   pushLead()
   return leadView()
 })
+// message_panel from a lead: the target becomes its worker (title, mark, link), the same team a delegate makes
+hub.onMessage = (from, to) => {
+  if (!leadSet.has(from) || leadSet.has(to) || !sessions.has(to)) return
+  const t = workerTask.get(to)
+  if (t) {
+    // its own worker again: a new task, so the result waits for this turn
+    if (t.lead === from && t.result) (delete t.result, (t.blocked = false), pushLead())
+    return
+  }
+  saveLinks(PB.addLink(links(), from, to))
+  workerTask.set(to, { lead: from, title: uiTitles.get(to) ?? panelName(to), at: Date.now(), files: new Set(), cost: 0 })
+  pushLead()
+}
 function leadForget(sid: string) {
   if (!leadSet.delete(sid) && !workerTask.delete(sid)) return
   for (const [w, t] of workerTask) if (t.lead === sid) workerTask.delete(w)
@@ -7170,6 +7242,14 @@ const leadDeps = (me: string) => ({
   leads: () => leadSet,
   workers: () => [...sessions.keys()].map((id) => ({ id, folder: panelDir(id), busy: Boolean(sessions.get(id)?.busy) && !workerTask.get(id)?.result, lead: workerTask.get(id)?.lead ?? null })),
   owns: (w: string) => workerTask.get(w)?.lead === me,
+  team: (lead: string, ws: { id: string; title: string }[]) => {
+    leadSet.add(lead)
+    for (const w of ws) {
+      workerTask.set(w.id, { lead, title: w.title, at: Date.now(), files: new Set(), cost: 0 })
+      if (!uiTitles.has(w.id)) uiTitles.set(w.id, w.title)
+    }
+    pushLead()
+  },
   adopt: (w: string, title: string, task: string) => {
     workerTask.set(w, { lead: me, title, at: Date.now(), files: new Set(), cost: 0 })
     void task
@@ -7212,7 +7292,7 @@ const leadDeps = (me: string) => ({
       win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona, worktree: { label: p.title || 'worker' } })
       setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
     })
-    if (p.title) uiTitles.set(sid, p.title)
+    if (p.title?.trim()) (uiTitles.set(sid, p.title.trim()), pushLead())
     return sid
   },
 })
@@ -7344,7 +7424,7 @@ async function applySwitch(sid: string, fb: FO.Fallback, f: FK.Failure, auto: bo
     const c = settings().customEndpoint
     if (!c?.on || !QP.validCustom(c.url)) return 'The custom endpoint is off. Turn it on in the model menu settings.'
     // another endpoint restarts the process with a resume of the same session; without a session id nothing could be kept
-    if (!s.sessionId) return 'This panel has no session to resume on the custom endpoint, so the conversation would be lost. Not switched.'
+    if (!s.sessionId && !s.unstarted) return 'This panel has no session to resume on the custom endpoint, so the conversation would be lost. Not switched.'
     const cur = sourceOf.get(sid) ?? { src: 'setup' as QP.Source, base: s.env ?? process.env }
     if (cur.src !== 'custom') {
       if (!confirm) return 'Confirm the switch to the custom endpoint first.'
@@ -7666,7 +7746,7 @@ function uiDeps(me: string): UiDeps {
         win.webContents.send('cli:open', { req, cwd: p.folder, model: p.model, persona })
         setTimeout(() => (cliOpens.delete(req), fail(new Error('The window did not open a panel in 30 seconds.'))), 30_000)
       })
-      if (p.title) uiTitles.set(sid, p.title)
+      if (p.title?.trim()) (uiTitles.set(sid, p.title.trim()), pushLead())
       return sid
     },
     log: (m) => logs().info('stm:ui', `${me} ${m}`),
@@ -7675,6 +7755,7 @@ function uiDeps(me: string): UiDeps {
   }
 }
 // end-to-end tests only: the ui tools of a panel, called as its Claude would
+if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmHub = hub
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmUiTools = (sid: string) => uiTools(uiDeps(sid))
 // end-to-end tests only: an event as if the panel's session had emitted it (a failed turn, for the failover card)
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmEmit = (sid: string, e: unknown) => send(sid, e)

@@ -302,8 +302,12 @@ describe('update and rollback', () => {
     expect(() => s.packs.update('pg-helper', '1.1.0', s.proj, {})).toThrow(/Decide first/)
     s.packs.update('pg-helper', '1.1.0', s.proj, { '.claude/skills/pg-helper/plan/SKILL.md': 'leave' })
     expect(existsSync(skill(s))).toBe(false)
-    const rec = s.packs.installed(s.proj).installs[0]!
-    expect(rec.files.map((f) => f.to)).not.toContain('.claude/skills/pg-helper/plan/SKILL.md')
+    // left deleted is remembered: the next version asks again and does not put the file back on its own
+    v2(s, { skill: 'plan v3', bin: 'console.log(3)' }, { version: '1.2.0' })
+    const again = s.packs.planUpdate('pg-helper', '1.2.0', s.proj)
+    expect(again.ok && again.asks).toEqual(['.claude/skills/pg-helper/plan/SKILL.md'])
+    s.packs.update('pg-helper', '1.2.0', s.proj, { '.claude/skills/pg-helper/plan/SKILL.md': 'recreate' })
+    expect(readFileSync(skill(s), 'utf8')).toBe('plan v3')
   })
 
   it('adds new files, removes dropped ones the person did not edit, and updates the rules block', () => {

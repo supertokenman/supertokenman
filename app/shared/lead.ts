@@ -16,10 +16,21 @@ export type Plan = { kind: 'reuse'; id: string } | { kind: 'open'; folder: strin
  * always gets a new panel, since it must not share a folder. Depth is 1: a worker never delegates, and
  * a lead is never a worker.
  */
-export function planDelegation(a: { lead: string; leadFolder: string; folder?: string; worktree?: boolean; panels: WorkerInfo[]; leads: ReadonlySet<string> }): Plan {
+export function planDelegation(a: { lead: string; leadFolder: string; folder?: string; worktree?: boolean; panels: WorkerInfo[]; leads: ReadonlySet<string>; panel?: string }): Plan {
   const me = a.panels.find((p) => p.id === a.lead)
   if (!a.leads.has(a.lead)) return { kind: 'refuse', reason: 'This panel is not the lead. The person makes a panel Lead from its "..." menu.' }
   if (me?.lead) return { kind: 'refuse', reason: 'Workers do not delegate further. Answer the lead.' }
+  // a panel already open, named by id: it becomes (or stays) this lead's worker
+  if (a.panel) {
+    const p = a.panels.find((x) => x.id === a.panel)
+    if (!p) return { kind: 'refuse', reason: `No started panel "${a.panel}". Panels with no message yet cannot take a task; delegate with a folder instead.` }
+    if (p.id === a.lead) return { kind: 'refuse', reason: 'The lead cannot delegate to itself.' }
+    if (a.leads.has(p.id)) return { kind: 'refuse', reason: `${p.id} is a lead, not a worker.` }
+    if (p.lead && p.lead !== a.lead) return { kind: 'refuse', reason: `${p.id} works for another lead.` }
+    if (p.busy) return { kind: 'refuse', reason: `${p.id} is busy. Wait with collect, or pick another worker.` }
+    if (!p.lead && a.panels.filter((x) => x.lead === a.lead).length >= MAX_WORKERS) return { kind: 'refuse', reason: `The lead already has the most workers (${MAX_WORKERS}).` }
+    return { kind: 'reuse', id: p.id }
+  }
   const folder = (a.folder?.trim() || a.leadFolder).replace(/\/+$/, '')
   const mine = a.panels.filter((p) => p.lead === a.lead)
   if (!a.worktree) {

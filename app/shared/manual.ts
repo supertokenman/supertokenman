@@ -173,6 +173,27 @@ export const MANUAL: Section[] = [
 - Outside text that tries to give orders gets a score from 0 to 100, from the rules and the local model: No, Maybe or Yes.`,
   },
   {
+    id: 'control',
+    title: 'Control: rules, audit log, plan, checkpoints, breakpoints',
+    keys: 'control policy rules allow deny ask gate audit log receipt plan todo agents fan-out checkpoint restore breakpoint caps routine limit re-enable',
+    body: `Rules (Settings, Control, Edit rules; or Cmd+K, Control rules): a plain text file, one rule per line, # for comments. Global rules live in the app's data folder (policy/global.rules); project rules in .stm/policy.rules inside the project. Format:
+  deny|ask|allow TOOL [when COND and COND] [unless COND and COND] [-- note]
+TOOL is a tool name (Bash, Edit, Write, mcp__stm__*), a glob, *, or a class: read, write, network. A condition is field op value. Fields: cmd, path, branch, host, arg.NAME. Ops: is, matches, has, inside, outside. A value is a quoted text, a glob, $project or $home.
+- Deny beats ask beats allow, across both files. A rule never loosens a stricter answer except an explicit allow turning a normal ask into allow. A project allow does not override a global ask or deny.
+- A line that does not parse is shown with its line number and ignored; it never becomes an allow. The editor warns about broad allows: allow *, allow Bash without a condition, allow write outside $project, allow network without a condition.
+- Examples:
+  deny Bash when cmd matches "rm -rf *" and path outside $project -- recursive delete outside project
+  deny Bash when cmd matches "git push*" unless branch matches "claude/*"
+  ask network
+  allow read when path inside $project
+- Test a call (next to the editor): type a tool and a command or path and see which rule decides, without running anything.
+- Audit log (Settings, Control, Audit log): one file per day on this computer, never sent anywhere. Each tool call with its redacted summary, the decision (allow, ask, deny, approved, refused) and who made it (rule, app, person, default). At each turn end a receipt row lists the files the turn changed. Filter by day, panel, tool, decision or text; open a receipt to see its files.
+- Plan: under the panel header, the items of the latest TodoWrite with their status, agents 3/8 (subagents started in this run) and fan-out 1/5 (panels started in this run). At a limit the next one asks. In a canvas node the strip shows done of total and the item in progress.
+- Checkpoints: at each turn end the app saves the files of the worktree in a private git ref, never on your branches. More, Checkpoints, Restore to turn N shows the files that will change, then puts them back and continues the conversation from that turn in a new panel; the old conversation is kept. Ignored files are not restored and HEAD is not moved. Needs a git project.
+- Breakpoints (More, Breakpoints): hold the next call of a tool (a name or pattern), or the first step after the plan, for an approval card. Approve lets it run; Deny ends it with a message the model sees. An unattended run denies instead of waiting.
+- Routine limits: triggers and routines run at most every 15 minutes, at most 20 enabled at once, and switch themselves off after 10 failed runs in a row. Triggers shows "12 of 20 enabled" and a Re-enable button on one that was switched off. Lower the limits in Settings, Control, Routine limits; the ceiling is every 5 minutes, 50 enabled, 3 failures.`,
+  },
+  {
     id: 'goals',
     title: 'Goals, big tables and long results',
     keys: 'goal done condition until met /goal clear csv tsv jsonl table synopsis rows columns scratch offload long output context turn id trace copy json fresh panel spec task',
@@ -450,6 +471,18 @@ export const MANUAL: Section[] = [
 - Never posts to a social network without the person's approval of that post.
 - Never stops cloud resources by itself.
 - Never reads or sends anything in the Apps drawer.`,
+  },
+  {
+    id: 'packs',
+    title: 'Packs: skills, MCP servers and rules in one bundle',
+    keys: 'packs pack bundle skill mcp rules install update rollback remove eval compare catalog git folder hosts vault',
+    body: `Where: Catalog, then Packs. A pack is a folder with a pack.json: skills, MCP servers and a rules text for CLAUDE.md.
+- Tabs: Built-in (ship with the app), Mine (Add folder, or Add from git: a shallow clone of the https address you type, only when you press Fetch) and Shipped skills.
+- Install always starts with a review: the files and where they go, each MCP server with its full command line, the network hosts, the vault names it needs (and whether the vault has them) and the rules text word for word. Nothing is written until you press Allow. No script from a pack runs at install, update or remove.
+- A pack's MCP server is off until you turn it on for a project; turning it on shows the hosts and the command again.
+- Update shows what changes per file. A file you edited is never overwritten without your choice (Keep mine, Take theirs, Save theirs beside); a file you deleted stays deleted unless you put it back, and the next update asks again. Roll back returns to the previous version; Remove deletes only the files the pack wrote and keeps the ones you edited unless you tick them.
+- Eval runs the same task twice in two copies (worktrees) of the project, once with the pack and once without, and compares result, turns, tokens, cost and time. The install's own files are not counted as changes. One run per side is weak evidence: under 10 percent apart reads as too close to call. Keep pack, Remove pack or Discard worktrees ends it and closes both panels.
+- Network: browsing, reviewing, installing, updating and removing make no request. Only Fetch contacts a git host.`,
   },
 ]
 

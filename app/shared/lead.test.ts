@@ -62,3 +62,12 @@ describe('results', () => {
     expect(taskTitle('Fix the login bug\ndetails')).toBe('Fix the login bug')
   })
 })
+
+describe('planDelegation to a named open panel', () => {
+  const base = { lead: 'L', leadFolder: '/r', leads: new Set(['L']) }
+  const ps = [{ id: 'L', folder: '/r', busy: false, lead: null }, { id: 'w', folder: '/x', busy: false, lead: null }, { id: 'o', folder: '/x', busy: false, lead: 'K' }, { id: 'b', folder: '/x', busy: true, lead: null }]
+  it('adopts a free open panel', () => expect(planDelegation({ ...base, panels: ps, panel: 'w' })).toEqual({ kind: 'reuse', id: 'w' }))
+  it('refuses missing, self, busy and another lead\'s worker', () => {
+    for (const p of ['zz', 'L', 'b', 'o']) expect(planDelegation({ ...base, panels: ps, panel: p }).kind).toBe('refuse')
+  })
+})

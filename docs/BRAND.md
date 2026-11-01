@@ -254,6 +254,27 @@ sunken background, the brand's 45 degree cut at the top right (12px), and a 1px 
 The focused panel's edge is the accent. Over a scene the space is transparent, so the scene shows
 between the cards. Panels do not resize by hand yet, so there is no handle in the space.
 
+## Lead and worker panels (decided 2026-10-31)
+
+A role changes how the panel looks, not only its tag, and looks the same in the grid and on the canvas.
+
+- **Lead.** The header is a plate tinted with the accent (10%), with a 35% accent line under it. The
+  accent fills the card's cut corner as a small solid triangle. After the title comes the team strip:
+  the number of workers in mono accent, then one button per worker with its state mark (working
+  triangle, done circle, failed square, waiting dashed circle) and its title. Clicking or pressing
+  Enter on a worker focuses it. Screen readers hear "Team: 2 workers, 1 working, 1 done". On the
+  canvas the lead's card is one size up (96px wider, 72px taller), grown around its centre so the fan
+  of workers to its right stays balanced.
+- **Worker.** The header is quieter: page tone instead of the surface tone, title at weight 500, then
+  "of <lead>" in muted ink and its task title. The lead's task is the first item in its transcript,
+  labelled "From Lead <name>". Its final reply goes back to the lead as the result.
+- Both: the role tag (Lead plate in accent, Worker outlined) comes first and is announced as
+  "Role: lead" or "Role: worker". The panel's title is the main label and the folder follows it in
+  muted ink. Compact canvas headers keep the role, title, "of" line and team strip. No coloured side
+  borders, no shadows, no pills.
+- Step marks: tools without their own shape (MCP, agents) wear a diamond. They used to wear a cross,
+  which read as a failed step.
+
 ## Landing visuals (decided 2026-10-29)
 
 - Colour, "Noite" (chosen 2026-10-29 from three options): the site is dark by default, background

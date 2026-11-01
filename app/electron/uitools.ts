@@ -48,6 +48,8 @@ export type UiDeps = {
     workers: () => WorkerInfo[]
     /** the same checks as a typed message (secrets, budget, rate); throws with a reason */
     send: (worker: string, task: string) => Promise<void>
+    /** makes `lead` a lead and each panel its worker (no task yet); the window shows the marks and fans them on the canvas */
+    team?: (lead: string, workers: { id: string; title: string }[]) => void
     /** records the worker's task and draws the edge */
     adopt: (worker: string, title: string, task: string) => void
     /** waits until each worker is done or blocked; results as they stand when the time is up */
@@ -77,8 +79,8 @@ export function uiTools(d: UiDeps) {
     ),
     tool(
       'ui_open_panels',
-      `Open new Claude panels, one per folder, when the person asks for panels ("open a canvas with 3 panels in X, Y, Z"): do this instead of explaining how. Up to ${MAX_OPEN} at once. Each starts a new Claude session that costs tokens, so the window shows the person one sheet listing them, and nothing opens until they press Allow. Folders must exist (relative paths are from this panel's folder). Optional layout (for example canvas) is applied after they open. Returns the new panel ids. Subject to the spawn limit per hour.`,
-      { panels: z.array(panelSpecSchema), layout: layoutSchema.optional() },
+      `Open new Claude panels, one per folder, when the person asks for panels ("open a canvas with 3 panels in X, Y, Z"): do this instead of explaining how. Up to ${MAX_OPEN} at once. Each starts a new Claude session that costs tokens, so the window shows the person one sheet listing them, and nothing opens until they press Allow. Folders must exist (relative paths are from this panel's folder). Optional layout (for example canvas) is applied after they open. Give each panel a title: it is the panel's name in its header. For "an orchestrator (lead) with N workers", pass lead: "self" (this panel leads; do not open a panel for the lead) or the id of an open panel, and open only the workers: each is linked to the lead (mode waits), marked Lead/Worker, and on the canvas fanned to the lead's right. Returns the new panel ids. Subject to the spawn limit per hour.`,
+      { panels: z.array(panelSpecSchema), layout: layoutSchema.optional(), lead: z.string().max(64).optional() },
       async (a) => {
         const c = checkOpen(a)
         if (!c.ok) return fail(c.error)
@@ -91,6 +93,12 @@ export function uiTools(d: UiDeps) {
         } catch (e) {
           return fail((e as Error).message)
         }
+        const lead = c.value.lead === 'self' ? d.me : c.value.lead
+        if (lead) {
+          if (!d.lead?.team) return fail('Lead and workers are not available here.')
+          if (!d.panels().some((p) => p.id === lead)) return fail(`No panel "${lead}" to lead. Use "self" or an id from ui_list_panels.`)
+          if (d.lead.workers().find((w) => w.id === lead)?.lead) return fail(`${lead} is a worker; a worker cannot be the lead.`)
+        }
         const left = d.spawnLeft()
         if (items.length > left) return fail(`Rate limit: this panel may start ${left} more panel${left === 1 ? '' : 's'} this hour and ${items.length} were asked for. Ask for fewer, or the person can raise stmLimits.spawnPerHour.`)
         if (!(await d.confirm(items))) return fail('The person did not allow opening the panels. Nothing was opened.')
@@ -100,9 +108,14 @@ export function uiTools(d: UiDeps) {
         } catch (e) {
           return fail(`Opened ${ids.length} of ${items.length}${ids.length ? ` (${ids.join(', ')})` : ''}; then: ${(e as Error).message}`)
         }
+        if (lead) {
+          for (const id of ids) d.link(lead, id, false)
+          d.lead!.team!(lead, ids.map((id, i) => ({ id, title: items[i]!.title?.trim() || `Worker ${i + 1}` })))
+        }
         if (c.value.layout) await d.cmd('layout', c.value.layout).catch(() => undefined)
-        d.log(`opened ${ids.join(', ')}`)
-        return text(`Opened ${ids.length} panel${ids.length === 1 ? '' : 's'}: ${ids.map((id, i) => `${id} (${items[i]!.folder})`).join(', ')}.${c.value.layout ? ` Layout: ${c.value.layout}.` : ''}`)
+        if (lead && c.value.layout === 'canvas') await d.cmd('arrange', 'fan').catch(() => undefined)
+        d.log(`opened ${ids.join(', ')}${lead ? ` as workers of ${lead}` : ''}`)
+        return text(`Opened ${ids.length} panel${ids.length === 1 ? '' : 's'}: ${ids.map((id, i) => `${id} "${items[i]!.title?.trim() || items[i]!.folder}" (${items[i]!.folder})`).join(', ')}.${lead ? ` ${lead === d.me ? 'This panel' : lead} is their lead, linked to each (waits).` : ''}${c.value.layout ? ` Layout: ${c.value.layout}.` : ''}`)
       },
     ),
     tool(
@@ -131,7 +144,7 @@ export function uiTools(d: UiDeps) {
     ),
     tool(
       'ui_arrange',
-      'Arrange the canvas cards now: fit (frame every card), row, column or grid. Switches the window to the canvas layout if it is not on it.',
+      'Arrange the canvas cards now: fit (frame every card), row, column, grid, or fan (each lead on the left, its workers fanned to its right). Switches the window to the canvas layout if it is not on it.',
       { mode: z.string().min(1).max(20) },
       async ({ mode }) => {
         const m = checkArrange(mode)
@@ -158,8 +171,8 @@ export function uiTools(d: UiDeps) {
     ),
     tool(
       'delegate',
-      'Lead panel only. Give one task to a worker panel: it opens a worker (the person confirms in a sheet first) or reuses an idle worker you own in that folder, links it to you, sends the task and returns the worker id. Use it when the person asks to split work, coordinate panels or orquestrar; then call collect. The task must be complete on its own: the worker has no memory of this chat. Default folder is yours. worktree true gives the worker its own branch so it never edits the same files as another worker. Subject to the spawn limit and the budget.',
-      { task: z.string().min(1).max(20000), folder: z.string().max(1000).optional(), persona: z.string().max(64).optional(), model: z.string().max(100).optional(), worktree: z.boolean().optional(), title: z.string().max(80).optional() },
+      'Lead panel only. Give one task to a worker panel: it opens a worker (the person confirms in a sheet first) or reuses an idle worker you own in that folder, links it to you, sends the task and returns the worker id. Use it when the person asks to split work, coordinate panels or orquestrar; then call collect. To give a task to a panel that is already open (for example one opened earlier without a lead), pass its id as panel: it becomes your worker (title, Worker mark, link) and the task shows in its transcript. Prefer delegate over message_panel for workers. The task must be complete on its own: the worker has no memory of this chat. Default folder is yours. worktree true gives the worker its own branch so it never edits the same files as another worker. Subject to the spawn limit and the budget.',
+      { task: z.string().min(1).max(20000), folder: z.string().max(1000).optional(), persona: z.string().max(64).optional(), model: z.string().max(100).optional(), worktree: z.boolean().optional(), title: z.string().max(80).optional(), panel: z.string().max(64).optional() },
       async (a) => {
         const L = d.lead
         if (!L) return fail('Delegation is not available here.')
@@ -170,7 +183,7 @@ export function uiTools(d: UiDeps) {
         } catch (e) {
           return fail((e as Error).message)
         }
-        const plan = planDelegation({ lead: d.me, leadFolder: me?.folder ?? '', folder, worktree: a.worktree, panels: L.workers(), leads: L.leads() })
+        const plan = planDelegation({ lead: d.me, leadFolder: me?.folder ?? '', folder, worktree: a.worktree, panels: L.workers(), leads: L.leads(), panel: a.panel?.trim() || undefined })
         if (plan.kind === 'refuse') return fail(plan.reason)
         const title = a.title?.trim() || taskTitle(a.task)
         try {

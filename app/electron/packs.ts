@@ -414,7 +414,8 @@ export function createPacks(d: PackDeps) {
       entries.push(entryOf(id, r, 'mine'))
     }
     const s = loadState()
-    return { entries, warnings: s.warnings, writable: s.writable }
+    // the folder of a global install, so the window can name it without guessing
+    return { entries, warnings: s.warnings, writable: s.writable, claudeDir: resolve(d.claudeDir()) }
   }
 
   function addFrom(dir: string, origin: Origin, source: PackSource, skipGit: boolean) {
@@ -680,7 +681,8 @@ export function createPacks(d: PackDeps) {
             case 'remove': drop(); rulesSha = null; break
             case 'keep': rulesSha = it.newBase; break
             case 'conflict': if (dec === 'theirs') { upsert(); rulesSha = next } else rulesSha = inst.rulesSha256 === null ? null : next; break
-            case 'ask': if (dec === 'recreate' && m.rules) { upsert(); rulesSha = next } else rulesSha = null; break
+            // left deleted: the old hash stays recorded, so a later update asks again instead of putting it back unasked
+            case 'ask': if (dec === 'recreate' && m.rules) { upsert(); rulesSha = next } else rulesSha = inst.rulesSha256; break
           }
           continue
         }
@@ -704,7 +706,8 @@ export function createPacks(d: PackDeps) {
             } else if (ours) record(nf!.sha)
             break
           }
-          case 'ask': if (dec === 'recreate' && nf) { put(nf); record(nf.sha) } break
+          // left deleted: the old hash stays recorded, so a later update asks again instead of putting it back unasked
+          case 'ask': if (dec === 'recreate' && nf) { put(nf); record(nf.sha) } else record(it.newBase); break
         }
       }
       // mcp servers stay on only when they are unchanged; a changed or new one starts off

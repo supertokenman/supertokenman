@@ -91,8 +91,11 @@ export type Bridge = {
     runs: () => Promise<import('../shared/runs').Run[]>
     begin: (sid: string, t: { id: string; name: string; prompt: string; gate?: boolean }, resume?: string) => Promise<void>
     gate: (run: string, ok: boolean) => Promise<void>
+    caps: () => Promise<import('./control/types').CapsInfo>
+    setCaps: (caps: import('./control/types').Caps) => Promise<import('./control/types').CapsInfo>
     onFire: (cb: (t: { id: string; name: string; persona: string; cwd: string; prompt: string; gate?: boolean }) => void) => () => void
   }
+  control: import('./control/types').ControlApi
   storage: {
     get: () => Promise<{ config: StorageConfig | null; hasKeys: boolean; providers: Record<string, { name: string; needs: string[]; hint: string; keysAt: string }> }>
     set: (config: Partial<StorageConfig>, keys?: { accessKeyId: string; secretAccessKey: string }) => Promise<{ config: StorageConfig; hasKeys: boolean }>
@@ -449,6 +452,8 @@ export type Bridge = {
     act: (id: string, act: 'stop' | 'rm') => Promise<boolean>
     onEvent: (fn: (ev: import('../shared/containers').Ev) => void) => () => void
   }
+  /** Whether slow/costly-turn notes are shown; pass new values to change them. Cost is on and duration off by default. */
+  anomalyNotes: (prefs?: { cost: boolean; duration: boolean }) => Promise<{ cost: boolean; duration: boolean }>
   anomalySeries: (sid: string) => Promise<{ key: string; samples: import('../shared/anomaly').Sample[]; bands: Record<'cost' | 'tokens' | 'seconds', { median: number; low: number; high: number }> }>
   pdfTools: {
     config: (url?: string) => Promise<{ url: string; hasKey: boolean; ops: { id: import('../electron/stirling').Op; name: string; many: boolean }[] }>
@@ -627,9 +632,18 @@ export type Bridge = {
   updateAsked: () => Promise<boolean>
   claudeUsageData: (on?: boolean) => Promise<boolean>
   updateRun: (force?: boolean) => Promise<string>
+  /** The Claude Code CLI the panels run (downloaded on first need in a packaged app). */
+  claudeCli: {
+    state: () => Promise<CliState>
+    retry: () => Promise<CliState>
+    cancel: () => Promise<void>
+    onState: (cb: (s: CliState) => void) => () => void
+  }
   onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => void) => () => void
   health: () => Promise<import('../electron/health').Part[]>
   sleepPanel: (sid: string) => Promise<boolean>
+  /** The person started typing in a panel that has no process yet: start it now, so it is up by the time they send */
+  warmPanel: (sid: string) => Promise<void>
   searchSymbols: (q: string) => Promise<import('../shared/symbols').Sym[]>
   predictions: (filter: string) => Promise<import('../electron/markets').Prediction[]>
   quotes: (symbols: string[]) => Promise<{ quotes: import('../electron/markets').Quote[]; errors: { symbol: string; error: string }[] }>
@@ -731,6 +745,7 @@ export type Bridge = {
   panelUsage: (sid: string) => Promise<{ usage: import('../shared/panelusage').Usage; cap: import('../shared/panelusage').Cap }>
   panelCap: (sid: string, cap: import('../shared/panelusage').Cap) => Promise<import('../shared/panelusage').Cap>
   countTokens: (text: string, model?: string) => Promise<{ tokens: number; exact: boolean }>
+  packs: import('./packs/api').PacksApi
   worktree: {
     stat: (sid: string) => Promise<{ files: number; added: number; removed: number; list: { path: string; added: number; removed: number }[] } | null>
     merge: (sid: string, message: string) => Promise<{ merged: boolean; why?: string }>
@@ -1125,4 +1140,11 @@ export type QueueView = { queue: import('../shared/panelqueue').PanelQueue; esti
 export type ChannelTeam = { id: string; name: string; lead: string; members: { id: string; handle: string; name: string }[] }
 export type ChannelPost = import('../shared/teamchannel').Post & { name: string }
 export type ChannelWake = { id: string; post: string; to: string; name: string; delivery: 'queued' | 'auto' | 'refused'; why?: string; open: boolean }
-export type LeadView = { leads: string[]; workers: Record<string, { lead: string; title: string; error: boolean; finished: boolean; cost: number }> }
+export type LeadView = { leads: string[]; workers: Record<string, { lead: string; title: string; error: boolean; finished: boolean; cost: number }>; titles?: Record<string, string> }
+
+export type CliState =
+  | { phase: 'idle' }
+  | { phase: 'ready'; path: string; source: 'bundled' | 'downloaded' | 'installed' | 'dev'; version: string }
+  | { phase: 'downloading'; host: string; version: string; got: number; total?: number }
+  | { phase: 'failed'; host: string; version: string; message: string }
+  | { phase: 'unsupported'; message: string }

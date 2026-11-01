@@ -657,6 +657,7 @@ contextBridge.exposeInMainWorld('stm', {
       return () => ipcRenderer.removeListener('ctr:event', h)
     },
   },
+  anomalyNotes: (prefs) => ipcRenderer.invoke('anomaly:notes', prefs),
   anomalySeries: (sid) => ipcRenderer.invoke('anomaly:series', sid),
   pdfTools: {
     config: (url) => ipcRenderer.invoke('pdf:config', url),
@@ -1211,6 +1212,16 @@ contextBridge.exposeInMainWorld('stm', {
     reveal: (path) => ipcRenderer.invoke('env:reveal', path),
   },
   account: (sid) => ipcRenderer.invoke('session:account', sid),
+  claudeCli: {
+    state: () => ipcRenderer.invoke('cli:state'),
+    retry: () => ipcRenderer.invoke('cli:retry'),
+    cancel: () => ipcRenderer.invoke('cli:cancel'),
+    onState: (cb) => {
+      const l = (_e, s) => cb(s)
+      ipcRenderer.on('cli:state', l)
+      return () => ipcRenderer.removeListener('cli:state', l)
+    },
+  },
   updateCheck: (auto) => ipcRenderer.invoke('update:check', Boolean(auto)),
   updateAuto: (on) => ipcRenderer.invoke('update:auto', on),
   updateAsked: () => ipcRenderer.invoke('update:asked'),
@@ -1223,6 +1234,7 @@ contextBridge.exposeInMainWorld('stm', {
   },
   health: () => ipcRenderer.invoke('health:get'),
   sleepPanel: (sid) => ipcRenderer.invoke('health:sleep-panel', sid),
+  warmPanel: (sid) => ipcRenderer.invoke('session:warm', sid),
   searchSymbols: (q) => ipcRenderer.invoke('markets:search', q),
   predictions: (filter) => ipcRenderer.invoke('markets:predictions', filter),
   quotes: (symbols) => ipcRenderer.invoke('markets:quotes', symbols),

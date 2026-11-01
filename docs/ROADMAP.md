@@ -293,9 +293,9 @@ by typecheck and unit tests; not yet run in the real app.
 
 Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or global. Spec: `spec-packs.md`.
 
-- [ ] Wave 1: manifest validation, path safety, install plan, three-way update, uninstall plan, eval comparison (app/shared, tested).
-- [ ] Wave 2: pack store, git fetch on click, IPC, per-project MCP injection, eval in two worktrees.
-- [ ] Wave 3: Packs catalog, review screen (files, servers, hosts, env, rules), eval view; NETWORK.md Packs section.
+- [x] Wave 1: manifest validation, path safety, install plan, three-way update, uninstall plan, eval comparison (app/shared, tested).
+- [x] Wave 2: pack store, git fetch on click, IPC, per-project MCP injection, eval in two worktrees.
+- [x] Wave 3: Packs catalog (Built-in, Mine, Shipped skills; Add folder, Add from git), review before install and before update (files, servers, hosts, vault names, rules, conflicts with a diff), per-project server switches, eval side by side; NETWORK.md row. Opened from Catalog > Packs. Checked by typecheck, unit tests and screenshots of the built app on Linux; not run on a Mac.
 
 ## Panel queue, failover with notice, team channel
 
@@ -316,11 +316,13 @@ Installable bundles of skills, MCP servers and CLAUDE.md rules, per project or g
 
 ## Control (spec: `spec-control.md`)
 
-- [ ] Policy gate with readable rules (global and per project), deny before allow, never loosening an ask without an explicit allow.
-- [ ] Daily append-only audit log with redacted arguments, decisions, cost and per-turn file receipts; viewer with filters.
-- [ ] Routine caps: 15-minute minimum, 20 enabled, auto-disable after 10 failures.
-- [ ] Live plan from TodoWrite on panel and canvas, with per-run agent and fan-out caps.
-- [ ] Checkpoints per turn in private git refs, restore to turn N with a forked resume; breakpoints before a tool or after the plan.
+- [x] Policy gate with readable rules (global and per project), deny before allow, never loosening an ask without an explicit allow.
+- [x] Daily append-only audit log with redacted arguments, decisions, cost and per-turn file receipts; viewer with filters.
+- [x] Routine caps: 15-minute minimum, 20 enabled, auto-disable after 10 failures.
+- [x] Live plan from TodoWrite on panel and canvas, with per-run agent and fan-out caps.
+- [x] Checkpoints per turn in private git refs, restore to turn N with a forked resume; breakpoints before a tool or after the plan.
+
+Status: done. Waves 1 and 2 (PR 114) are the engine; wave 3 adds Settings > Control (rules editor with broad-allow warnings and a test box, routine limits), the audit view, the plan strip and canvas badge, checkpoint and breakpoint cards, and the caps line in Triggers. Open: breakpoints have no getter, so the card remembers its list in the window and an empty window can show a list that differs from the app until the next change.
 
 ## Planned: background panels, precise state and wait, SSH machines
 
