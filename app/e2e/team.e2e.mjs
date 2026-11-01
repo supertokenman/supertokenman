@@ -5,7 +5,7 @@
 // Set UITOOLS_SHOT to a path to keep a screenshot of the canvas.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readdirSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _electron as electron } from 'playwright'
@@ -13,14 +13,19 @@ import { fakeAnthropic } from './fake-anthropic.mjs'
 
 const appDir = new URL('..', import.meta.url).pathname
 const api = await fakeAnthropic()
-const root = mkdtempSync(join(tmpdir(), 'stm-ui-e2e-'))
-const home = join(root, 'home'), ud = join(root, 'ud'), envDir = join(root, 'panel-env')
-const dirs = ['acme', 'api', 'web', 'docs'].map((d) => join(root, d))
-for (const d of [home, ud, envDir, ...dirs]) mkdirSync(d, { recursive: true })
-const env = { ...process.env, HOME: home, STM_USER_DATA: ud, STM_TEST_SECRETS: '1', STM_TEST_PANEL_ENV: envDir, ANTHROPIC_BASE_URL: api.url, ANTHROPIC_API_KEY: 'sk-e2e', CLAUDE_CONFIG_DIR: join(home, '.claude') }
-for (const k of Object.keys(env)) if (k.startsWith('CLAUDE_CODE_') || k.startsWith('CCR_') || k === 'CLAUDE_SESSION_INGRESS_TOKEN_FILE' || k.startsWith('STM_PANEL')) delete env[k]
+// every test gets its own profile, panel-env and folders, so a test never sees another's leftovers
+function profile() {
+  const root = mkdtempSync(join(tmpdir(), 'stm-ui-e2e-'))
+  const home = join(root, 'home'), ud = join(root, 'ud'), envDir = join(root, 'panel-env')
+  const dirs = ['acme', 'api', 'web', 'docs'].map((d) => join(root, d))
+  for (const d of [home, ud, envDir, ...dirs]) mkdirSync(d, { recursive: true })
+  const env = { ...process.env, HOME: home, STM_USER_DATA: ud, STM_TEST_SECRETS: '1', STM_TEST_PANEL_ENV: envDir, ANTHROPIC_BASE_URL: api.url, ANTHROPIC_API_KEY: 'sk-e2e', CLAUDE_CONFIG_DIR: join(home, '.claude') }
+  for (const k of Object.keys(env)) if (k.startsWith('CLAUDE_CODE_') || k.startsWith('CCR_') || k === 'CLAUDE_SESSION_INGRESS_TOKEN_FILE' || k.startsWith('STM_PANEL')) delete env[k]
+  return { root, envDir, dirs, env }
+}
 
 test('ui_open_panels with lead self: titles, roles, links and a fan', { timeout: 300_000 }, async () => {
+  const { root, envDir, dirs, env } = profile()
   const app = await electron.launch({ args: ['--no-sandbox', appDir, `--cwd=${dirs[0]}`], env })
   try {
     let win = null
@@ -67,10 +72,12 @@ test('ui_open_panels with lead self: titles, roles, links and a fan', { timeout:
     if (process.env.TEAM_SHOT) await win.screenshot({ path: process.env.TEAM_SHOT })
   } finally {
     await app.close()
+    rmSync(root, { recursive: true, force: true })
   }
 })
 
 test('a lead messages two panels opened without links: tasks show, turns run, replies come back, the team appears', { timeout: 300_000 }, async () => {
+  const { root, envDir, dirs, env } = profile()
   const app = await electron.launch({ args: ['--no-sandbox', appDir, `--cwd=${dirs[0]}`], env })
   try {
     let win = null
@@ -120,6 +127,7 @@ test('a lead messages two panels opened without links: tasks show, turns run, re
     }
   } finally {
     await app.close()
+    rmSync(root, { recursive: true, force: true })
   }
 })
 
