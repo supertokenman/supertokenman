@@ -92,6 +92,7 @@ const RunCi = lazy(() => import('./RunCi').then((x) => ({ default: x.RunCi })))
 const ImageXray = lazy(() => import('./ImageXray').then((x) => ({ default: x.ImageXray })))
 const ComposeStacks = lazy(() => import('./ComposeStacks').then((x) => ({ default: x.ComposeStacks })))
 const ResumeBanner = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.ResumeBanner })))
+const CliSetup = lazy(() => import('./CliSetup').then((x) => ({ default: x.CliSetup })))
 const UpdateConfirm = lazy(() => import('./RuntimeBanners').then((x) => ({ default: x.UpdateConfirm })))
 const DiagCheck = lazy(() => import('./DiagCheck').then((x) => ({ default: x.DiagCheck })))
 const Reflect = lazy(() => import('./Reflect').then((x) => ({ default: x.Reflect })))
@@ -898,6 +899,9 @@ export function App() {
   // a team file to review (File menu or stm team import); panels are made only when the person confirms in the sheet
   useEffect(() => window.stm.teamBundle.onReview(setTeamIn), [])
   useEffect(() => window.stm.away.onShow(setAwayCard), [])
+  // the Claude Code download on first launch: a sheet only while it runs or after it failed
+  const [cliSetup, setCliSetup] = useState<import('./bridge').CliState | null>(null)
+  useEffect(() => window.stm.claudeCli?.onState((s) => setCliSetup(s.phase === 'downloading' || s.phase === 'failed' ? s : null)), [])
   // pointer, wheel and key input tell the main process the person is here (at most every 10 s)
   useEffect(() => {
     let last = 0
@@ -1486,6 +1490,7 @@ export function App() {
           <span className="sep" />
           {money(total)}
         </span>
+        {cliSetup && <Suspense fallback={null}><CliSetup s={cliSetup} /></Suspense>}
         {gate > 0 && (
           <Suspense fallback={null}>
             <UpdateConfirm

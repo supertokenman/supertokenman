@@ -30,6 +30,12 @@ const allowed = [
   /^process (openshell|officecli) --version$/,
   /^process (sw_vers|system_profiler|ioreg|pmset|which|sh -c command -v) /,
 ]
+// a packaged app with no Claude Code yet downloads the pinned one when the first panel opens: that exact
+// tarball URL from the build's manifest, nothing else on registry.npmjs.org (docs/NETWORK.md)
+const pinned = existsSync(join(here, '..', 'dist-electron', 'cli-manifest.json'))
+  ? Object.values(JSON.parse(readFileSync(join(here, '..', 'dist-electron', 'cli-manifest.json'), 'utf8')).platforms).map((e) => e.url)
+  : []
+for (const url of pinned) allowed.push(new RegExp(`^(net|window) ${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
 // video transcripts are off by default and must start nothing on their own: the user's yt-dlp, whisper.cpp
 // and ffmpeg are never allowed here, even if another pattern grows to match them (docs/NETWORK.md)
 const never = /^process \S*(yt-dlp|whisper-cli|whisper-cpp|ffmpeg)(\s|$)/

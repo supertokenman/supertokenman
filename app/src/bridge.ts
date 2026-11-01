@@ -632,6 +632,13 @@ export type Bridge = {
   updateAsked: () => Promise<boolean>
   claudeUsageData: (on?: boolean) => Promise<boolean>
   updateRun: (force?: boolean) => Promise<string>
+  /** The Claude Code CLI the panels run (downloaded on first need in a packaged app). */
+  claudeCli: {
+    state: () => Promise<CliState>
+    retry: () => Promise<CliState>
+    cancel: () => Promise<void>
+    onState: (cb: (s: CliState) => void) => () => void
+  }
   onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => void) => () => void
   health: () => Promise<import('../electron/health').Part[]>
   sleepPanel: (sid: string) => Promise<boolean>
@@ -1132,3 +1139,10 @@ export type ChannelTeam = { id: string; name: string; lead: string; members: { i
 export type ChannelPost = import('../shared/teamchannel').Post & { name: string }
 export type ChannelWake = { id: string; post: string; to: string; name: string; delivery: 'queued' | 'auto' | 'refused'; why?: string; open: boolean }
 export type LeadView = { leads: string[]; workers: Record<string, { lead: string; title: string; error: boolean; finished: boolean; cost: number }>; titles?: Record<string, string> }
+
+export type CliState =
+  | { phase: 'idle' }
+  | { phase: 'ready'; path: string; source: 'bundled' | 'downloaded' | 'installed' | 'dev'; version: string }
+  | { phase: 'downloading'; host: string; version: string; got: number; total?: number }
+  | { phase: 'failed'; host: string; version: string; message: string }
+  | { phase: 'unsupported'; message: string }
