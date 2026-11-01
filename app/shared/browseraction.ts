@@ -5,7 +5,7 @@
 
 export const BROWSER_TOOLS = [
   'open', 'steps', 'takeover', 'read', 'elements', 'click', 'type', 'select', 'scroll', 'screenshot',
-  'wait', 'back', 'forward', 'tab_new', 'tab_switch', 'tab_close', 'done',
+  'wait', 'back', 'forward', 'tab_new', 'tab_switch', 'tab_close', 'upload', 'done',
 ] as const
 export type BrowserTool = (typeof BROWSER_TOOLS)[number]
 
@@ -60,6 +60,7 @@ export type BrowserAction =
   | { tool: 'tab_new'; url?: string }
   | { tool: 'tab_switch'; tab: number }
   | { tool: 'tab_close'; tab: number }
+  | { tool: 'upload'; tab: number; revision: number; index: number; path?: string }
   | { tool: 'done'; summary: string }
 
 export type Checked<T> = { ok: true; value: T } | { ok: false; error: string }
@@ -251,6 +252,15 @@ export function validateAction(tool: unknown, input: unknown, ctx: ActionContext
       const e = bad(['tab']); if (e) return e
       const tab = checkTab(input.tab, ctx)
       return tab === undefined ? fail(TAB_ERR) : { ok: true, value: { tool: t, tab } }
+    }
+    case 'upload': {
+      const e = bad(['tab', 'revision', 'index', 'path']); if (e) return e
+      const tab = checkTab(input.tab, ctx)
+      if (tab === undefined) return fail(TAB_ERR)
+      const path = input.path === undefined ? undefined : textIn(input.path, 1, 1024)
+      if (input.path !== undefined && (path === undefined || path.includes('\0'))) return fail('path must be 1 to 1024 characters')
+      const ref = checkIndex(input.revision, input.index, ctx)
+      return ref.ok ? { ok: true, value: { tool: 'upload', tab, ...ref.value, ...(path === undefined ? {} : { path }) } } : ref
     }
     case 'done': {
       const e = bad(['summary']); if (e) return e

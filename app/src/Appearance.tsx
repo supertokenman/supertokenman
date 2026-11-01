@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { TranscriptToggle } from './Transcript'
 const ControlSettings = lazy(() => import('./control/ControlSettings'))
 import { cliLabel, useCliState } from './CliSetup'
+const AgentBrowserSettings = lazy(() => import('./abrowser/Settings').then((x) => ({ default: x.AgentBrowserSettings })))
 const RuntimeSettings = lazy(() => import('./settings/Runtime').then((x) => ({ default: x.RuntimeSettings })))
 const DictationSettings = lazy(() => import('./DictationSettings').then((x) => ({ default: x.DictationSettings })))
 import { IconClose } from './icons'
@@ -229,6 +230,7 @@ export function Appearance(props: { current: string; onPick: (id: string) => voi
             <Suspense fallback={null}>
               <RuntimeSettings />
               <ControlSettings />
+              <AgentBrowserSettings />
             </Suspense>
             <TranscriptToggle />
             <Suspense fallback={null}>

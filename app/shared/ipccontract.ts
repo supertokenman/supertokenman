@@ -132,7 +132,14 @@ export const CONTRACT: Record<string, z.ZodTuple | z.ZodType<unknown[]>> = {
   'abrowser:take': z.tuple([z.object({ panel: sid }).strict()]),
   'abrowser:release': z.tuple([z.object({ panel: sid }).strict()]),
   'abrowser:answer': z.tuple([z.object({ id: z.string().min(1).max(64), answer: z.enum(['once', 'always', 'deny']) }).strict()]),
-  'abrowser:profile': z.tuple([z.object({ panel: sid, scope: z.enum(['panel', 'project']) }).strict()]),
+  'abrowser:profile': z.tuple([z.object({ panel: sid, scope: z.string().regex(/^(panel|project|profile:[\w-]{1,64})$/) }).strict()]),
+  'abrowser:profiles': z.tuple([z.object({ panel: opt(sid) }).strict()]),
+  'abrowser:profile-edit': z.tuple([z.object({ op: z.enum(['create', 'rename', 'delete', 'default']), id: opt(z.string().max(64)), name: opt(z.string().max(200)), panel: opt(sid) }).strict()]),
+  'abrowser:settings': z.tuple([opt(z.object({ screenshots: opt(z.boolean()), limits: opt(z.object({ steps: opt(z.number().finite()), wallMs: opt(z.number().finite()), screenshots: opt(z.number().finite()), newHosts: opt(z.number().finite()) }).strict()) }).strict())]),
+  'abrowser:nav': z.tuple([z.object({ panel: sid, op: z.enum(['go', 'back', 'forward', 'reload', 'stop']), url: opt(z.string().max(2048)) }).strict()]),
+  'abrowser:tab': z.tuple([z.object({ panel: sid, op: z.enum(['switch', 'close', 'new']), id: opt(z.number().int().min(1).max(1_000_000)) }).strict()]),
+  'abrowser:get': z.tuple([z.object({ panel: sid }).strict()]),
+  'abrowser:clear': z.tuple([z.object({ panel: sid }).strict()]),
 }
 
 /** Null when the arguments fit, else what is wrong, for the error the window sees. */

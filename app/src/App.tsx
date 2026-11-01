@@ -1,3 +1,4 @@
+import { AgentBrowserMount } from './abrowser/Mount'
 import { SandboxButton } from './Sandbox'
 
 import { effortsOf, MODEL_LIST, type Effort } from '../shared/models'
@@ -2053,6 +2054,7 @@ export function App() {
         )}
       </div>
       )}
+      <AgentBrowserMount focus={p.focus} panels={p.order} names={Object.fromEntries(p.order.map((id) => [id, lead.titles?.[id] ?? (p.byId[id]?.cwd ?? '').split('/').filter(Boolean).at(-1) ?? 'Panel']))} />
       {waMounted && <Suspense fallback={null}><WebAppsDrawer open={wa} app={waApp} onApp={setWaApp} width={waWidth} onResize={setWaWidth} onUnread={setWaUnread} onClose={() => setWa(false)} /></Suspense>}
       </div>
     </div>

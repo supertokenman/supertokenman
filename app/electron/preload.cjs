@@ -1042,6 +1042,13 @@ contextBridge.exposeInMainWorld('stm', {
     release: (panel) => ipcRenderer.invoke('abrowser:release', { panel }),
     answer: (id, answer) => ipcRenderer.invoke('abrowser:answer', { id, answer }),
     profile: (panel, scope) => ipcRenderer.invoke('abrowser:profile', { panel, scope }),
+    profiles: (panel) => ipcRenderer.invoke('abrowser:profiles', { panel }),
+    editProfile: (a) => ipcRenderer.invoke('abrowser:profile-edit', a),
+    settings: (a) => ipcRenderer.invoke('abrowser:settings', a),
+    nav: (panel, op, url) => ipcRenderer.invoke('abrowser:nav', { panel, op, url }),
+    tab: (panel, op, id) => ipcRenderer.invoke('abrowser:tab', { panel, op, id }),
+    state: (panel) => ipcRenderer.invoke('abrowser:get', { panel }),
+    clear: (panel) => ipcRenderer.invoke('abrowser:clear', { panel }),
     onState: (fn) => {
       const l = (_e, r) => fn(r)
       ipcRenderer.on('abrowser:state', l)
