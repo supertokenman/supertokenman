@@ -70,6 +70,8 @@ import { HEADROOM_PORT, HEADROOM_URL, headroomBin, headroomDir, headroomHealthy,
 import { setEndpointResolver, askLocal, chatLocal, emptyStats, OLLAMA, loadedModels, localModels, OLLAMA_PATHS, ollamaVersion, pullModel, smallTasks, SUGGESTED, type ChatMsg, type SmallStats } from './small.js'
 import { rereads } from './reread.js'
 import { UI_TOOLS, uiTools, type UiDeps } from './uitools.js'
+import { BROWSER_MCP_TOOLS } from './agentbrowser/tools.js'
+import { createAgentBrowser, type AgentBrowser } from './agentbrowser/index.js'
 import { APP_GUIDE, MANUAL_TOOL, manualServer, MEMORY_TOOLS, memoryServer } from './guide.js'
 import { briefFor, decisionsOf, saveStopped, STOPPED_PROMPT, transcriptOf } from './brief.js'
 import { draftConstitution, parseTasks } from '../shared/spec.js'
@@ -2381,6 +2383,8 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
   for (const c of settings().custom ?? [])
     if (c.remote) servers[c.id] = { type: 'stdio', command: 'npx', args: ['-y', 'mcp-remote@0.15.2', c.remote] }
     else if (c.npm) servers[c.id] = { type: 'stdio', command: 'npx', args: ['-y', c.npm] }
+  // the agent browser is the one gated path to the web: while it is on, the ungated Playwright MCP is not offered
+  if (abrowser().enabled()) delete servers.playwright
   // a Playwright browser drives this panel's own profile, never the person's browser
   for (const v of Object.values(servers)) if (v.type === 'stdio' && Array.isArray(v.args)) v.args = withProfile(v.args, profileDir(app.getPath('userData'), sid))
   // reading files is offered only to a model big enough to be trusted with it
@@ -2456,7 +2460,7 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     effort: (['low', 'medium', 'high', 'xhigh', 'max'] as const).find((e) => e === opts.effort),
     query: boxed ? (args) => query({ ...args, options: { ...args.options, spawnClaudeCodeProcess: spawnInSandbox(boxed, cwd) } }) : query,
     persona: persona ? personaPrompt(persona) : undefined,
-    mcpServers: inProcess({ ...packs().mcpFor(cwd), ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(uiDeps(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
+    mcpServers: inProcess({ ...packs().mcpFor(cwd), ...routeLogins(servers, shimDir(), authDir()), [SERVER]: hub.server(sid), stm: manualServer(uiDeps(sid), abrowser().tools(sid)), code: CB.codeServer({ cwd: () => cwd, onReceipt: (r) => codeReceipt(sid, r) }), ...(officeFound?.ok ? { office: CB.officeServer({ cwd: () => cwd, onBuilt: (b) => officeBuiltBy(sid, b), bin: process.env.STM_OFFICECLI || undefined, fake: Boolean(process.env.STM_OFFICECLI) }) } : {}), ...(vaultDir() ? { mem: memoryServer(vaultDir(), projectName(home), nearFor(projectName(home))) } : {}), ...(settings().headroom && headroomLive && headroomBin() ? { headroom: { type: 'stdio' as const, command: headroomBin()!, args: ['mcp', 'serve', '--proxy-url', HEADROOM_URL], env: { HEADROOM_BEACON: 'off', HEADROOM_TELEMETRY: 'off' } } } : {}), ...(indexed ? { symbols: symbolsServer(cwd) } : {}), ...(settings().smallModel ? { 'local-model': localServer({ model: () => settings().smallModel, cwd, done: localDone(sid), read: readOk, timeoutMs: 60_000 }) } : {}) }),
     // Claude's Bash sees only the credentials marked for commands
     // through Headroom's compressing proxy when it is on and answering; straight to Anthropic otherwise
     env: { ...claudeTraffic(process.env), ...vault.commandEnv(), STM_PANEL: sid, ...(boxed || remote ? {} : panelEnv(sid)), ...(settings().headroom && headroomLive ? { ANTHROPIC_BASE_URL: HEADROOM_URL } : {}) },
@@ -2465,7 +2469,7 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     // tools a panel here does not need stay out of every turn, unless the person wants them all
     // a read-only persona has no editing tools at all; one that edits freely is not asked before an edit
     disallowedTools: [...(settings().fullTools ? [] : LEAN_OFF), ...(persona?.access === 'read' ? ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'] : []), ...blockedFor(persona)],
-    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, TOOLS[2]!, TOOLS[3]!, MANUAL_TOOL, ...UI_TOOLS, ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
+    allowedTools: [...(persona?.access === 'edit' ? ['Edit', 'MultiEdit', 'Write'] : []), TOOLS[0]!, TOOLS[2]!, TOOLS[3]!, MANUAL_TOOL, ...UI_TOOLS, ...(abrowser().enabled() ? BROWSER_MCP_TOOLS : []), ...(vaultDir() ? MEMORY_TOOLS : []), ...(settings().headroom && headroomLive ? ['mcp__headroom__headroom_retrieve'] : []), ...readOnly, ...(local ? [DRAFT_TOOL, ...(readOk ? [READ_TOOL] : [])] : []), ...(indexed ? SYMBOL_READS : [])],
     resume: opts.resume,
     ...(remote ? { spawn: remoteSpawn(remote.host, remote.dir) } : {}),
     resumeAt: opts.resume ? opts.resumeAt : undefined,
@@ -2759,9 +2763,11 @@ async function clearPanelBrowser(sid: string) {
   await electronSession.fromPartition(panelPartition(sid)).clearStorageData().catch(() => undefined)
   await electronSession.fromPartition(panelPartition(sid)).clearCache().catch(() => undefined)
   rmSync(profileDir(app.getPath('userData'), sid), { recursive: true, force: true })
+  await abrowserSvc?.clear(sid).catch(() => undefined)
 }
 ipcMain.handle('browse:clear', (_e, sid: string) => clearPanelBrowser(String(sid)))
 ipcMain.handle('session:close', (_e, sid: string) => {
+  abrowserSvc?.closePanel(sid)
   void noteStopped(sid)
   const rem = remoteOf.get(sid)
   if (rem) for (const f of forwards.get(sid) ?? []) ms.closeTunnel(rem.host, f.local)
@@ -7757,6 +7763,39 @@ function uiDeps(me: string): UiDeps {
 // end-to-end tests only: the ui tools of a panel, called as its Claude would
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmHub = hub
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmUiTools = (sid: string) => uiTools(uiDeps(sid))
+// Agent browser (spec-agent-browser.md, wave 2): the panel's Claude drives a page in Electron's own Chromium.
+// Off by default; while off there is no view, no tool and no request. The logic is in electron/agentbrowser/.
+let abrowserSvc: AgentBrowser | null = null
+const abPreview = new Set<string>()
+const abrowser = (): AgentBrowser =>
+  (abrowserSvc ??= createAgentBrowser({
+    file: join(app.getPath('userData'), 'agentbrowser.json'),
+    win: () => win,
+    rules: (sid) => policyStore().rules(abRoot(sid)),
+    ctx: (sid) => ({ project: abRoot(sid), home: homedir(), cwd: panelDir(sid) || abRoot(sid) }),
+    root: (sid) => abRoot(sid),
+    previewPanel: (sid) => abPreview.has(sid),
+    writeRule: (sid, text) => {
+      const file = PolicyStore.projectPath(abRoot(sid))
+      const old = existsSync(file) ? readFileSync(file, 'utf8') : ''
+      mkdirSync(dirname(file), { recursive: true })
+      writeFileSync(`${file}.tmp`, `${old}${old && !old.endsWith('\n') ? '\n' : ''}${text}\n`)
+      renameSync(`${file}.tmp`, file)
+    },
+    audit: (sid, r) => auditPanel(sid, r),
+    cacheRules: () => webConfig().cache,
+    push: (channel, payload) => toWin(channel, payload),
+    log: (m) => logs().info('stm:browser', m),
+  }))
+const abRoot = (sid: string) => mainCheckout(ctlOf.get(sid)?.root || panelDir(sid) || homedir())
+ipcMain.handle('abrowser:enabled', (_e, on?: boolean) => (typeof on === 'boolean' ? abrowser().setEnabled(on) : abrowserSvc?.enabled() ?? false))
+ipcMain.handle('abrowser:bounds', (_e, a: { panel: string; rect: { x: number; y: number; width: number; height: number } | null }) => abrowserSvc?.bounds(a.panel, a.rect))
+ipcMain.handle('abrowser:take', (_e, a: { panel: string }) => abrowserSvc?.take(a.panel))
+ipcMain.handle('abrowser:release', (_e, a: { panel: string }) => abrowserSvc?.release(a.panel))
+ipcMain.handle('abrowser:answer', (_e, a: { id: string; answer: 'once' | 'always' | 'deny' }) => abrowserSvc?.answer(a.id, a.answer) ?? false)
+ipcMain.handle('abrowser:profile', (_e, a: { panel: string; scope: 'panel' | 'project' }) => abrowser().profile(a.panel, a.scope))
+// end-to-end tests only: the browser tools of a panel as its Claude would call them, and the person's answers
+if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmBrowser = { svc: abrowser, preview: (sid: string) => abPreview.add(sid) }
 // end-to-end tests only: an event as if the panel's session had emitted it (a failed turn, for the failover card)
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmEmit = (sid: string, e: unknown) => send(sid, e)
 const room = { members: [] as RM.Member[], ask: '', spoken: [] as string[] }
