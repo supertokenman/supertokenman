@@ -176,10 +176,10 @@ Counts: wave 1: 5, wave 2: 5, wave 3: 3.
 
 ## Open questions
 
-- Profile default: per panel (safer) or per project (fewer sign-ins)?
-- Should the Playwright MCP integration be hidden when the agent browser is on, to keep one gated path?
-- Is an `ask` for each new host too noisy for research tasks; allow a per-task host list confirmed once?
-- Screenshots to the model by default, or only on request (cost versus accuracy)?
-- Named profiles shared by several panels (as nightly OpenBot), or only panel and project scope?
-- Should `browser_read` share the reader's cache and learned schemas in `web/reader.ts`?
-- Taint scope (shared with spec-pilot): per turn or per session after the first page read?
+- Decided: default profile per project (fewer sign-ins).
+- Decided: hide the Playwright MCP integration while the agent browser is on, so there is one gated path.
+- Decided: ask once per new host, with an "always" option (the answer writes the host rule).
+- Decided: screenshots to the model are off by default; only when text is not enough.
+- Decided: named profiles may be shared by several panels, but only when the person creates them.
+- Decided: `browser_read` shares the web reader's cache (`web/reader.ts`).
+- Decided: taint marks the whole session, not the turn.

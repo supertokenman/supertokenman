@@ -1,0 +1,18 @@
+{
+  "url": "https://shop.example.com/checkout",
+  "nodes": [
+    { "id": 101, "parent": null, "tag": "body", "box": { "x": 0, "y": 0, "w": 1280, "h": 900 } },
+    { "id": 102, "parent": 101, "tag": "form", "box": { "x": 0, "y": 0, "w": 600, "h": 900 } },
+    { "id": 103, "parent": 102, "tag": "select", "name": "Country", "value": "Brazil", "box": { "x": 40, "y": 60, "w": 240, "h": 32 }, "topAt": 103 },
+    { "id": 104, "parent": 102, "tag": "input", "inputType": "text", "name": "Postal code", "value": "01310-100", "box": { "x": 40, "y": 110, "w": 240, "h": 32 }, "topAt": 104 },
+    { "id": 105, "parent": 102, "tag": "input", "inputType": "checkbox", "name": "Save address", "box": { "x": 40, "y": 160, "w": 16, "h": 16 }, "topAt": 105 },
+    { "id": 106, "parent": 102, "tag": "input", "inputType": "radio", "name": "Standard shipping", "box": { "x": 40, "y": 200, "w": 16, "h": 16 }, "topAt": 106 },
+    { "id": 107, "parent": 102, "tag": "input", "inputType": "radio", "name": "Express shipping", "box": { "x": 40, "y": 230, "w": 16, "h": 16 }, "topAt": 107 },
+    { "id": 108, "parent": 102, "tag": "textarea", "name": "Delivery note", "value": "", "box": { "x": 40, "y": 260, "w": 300, "h": 80 }, "topAt": 108 },
+    { "id": 109, "parent": 102, "tag": "label", "name": "Terms", "box": { "x": 40, "y": 360, "w": 200, "h": 20 }, "topAt": 109 },
+    { "id": 110, "parent": 102, "tag": "button", "name": "Place order", "box": { "x": 40, "y": 400, "w": 160, "h": 44 }, "topAt": 110 },
+    { "id": 111, "parent": 102, "tag": "input", "inputType": "text", "name": "Card number", "value": "card-value-fake", "secret": true, "box": { "x": 40, "y": 460, "w": 240, "h": 32 }, "topAt": 111 },
+    { "id": 112, "parent": 101, "tag": "div", "name": "Tooltip", "box": { "x": 300, "y": 60, "w": 200, "h": 40 }, "topAt": 112 },
+    { "id": 113, "parent": 101, "tag": "button", "name": "Help", "box": { "x": 320, "y": 70, "w": 40, "h": 20 }, "topAt": 112 }
+  ]
+}
