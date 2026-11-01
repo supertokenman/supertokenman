@@ -7,6 +7,8 @@ A smaller download and much less memory with several panels open.
   size. On first launch the app fetches the exact version it was built with from the npm registry,
   checks its checksum before using it, and shows the progress. If you already have that same
   version installed, it uses yours. Settings shows which one is in use.
+- Fixed: Allow and Deny on a permission card did nothing since 0.1.16. The answer, which can carry an
+  edited command or a note, was refused by the app's own check; it now goes through.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
