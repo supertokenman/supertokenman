@@ -268,6 +268,7 @@ export function Panel(props: {
 }) {
   const { sid, s, money, dispatch } = props
   const [draft, setDraft] = useState('')
+  const warmed = useRef(false)
   const [atts, setAtts] = useState<Attachment[]>([])
   // context the browser picked (an element, the console, failed requests): a chip here, the full text on send
   // the Workbench library and the Documents tags, for /name and @tag
@@ -1067,7 +1068,11 @@ export function Panel(props: {
             rows={1}
             value={draft}
             placeholder={s.busy ? 'Queue a follow-up, or Cmd+Enter to run a command' : 'Ask Claude, or type a command and press Cmd+Enter'}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value)
+              // typing is intent: a panel with no process yet starts it now, so it is up when the message goes
+              if (!warmed.current && e.target.value) (warmed.current = true, void window.stm.warmPanel?.(sid)?.catch(() => undefined))
+            }}
             onPaste={(e) => {
               const files = Array.from(e.clipboardData.files)
               if (!files.length) return

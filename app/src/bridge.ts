@@ -635,6 +635,8 @@ export type Bridge = {
   onUpdateProgress: (cb: (m: { state: 'busy' | 'down'; step: string; pct?: number; tail?: string }) => void) => () => void
   health: () => Promise<import('../electron/health').Part[]>
   sleepPanel: (sid: string) => Promise<boolean>
+  /** The person started typing in a panel that has no process yet: start it now, so it is up by the time they send */
+  warmPanel: (sid: string) => Promise<void>
   searchSymbols: (q: string) => Promise<import('../shared/symbols').Sym[]>
   predictions: (filter: string) => Promise<import('../electron/markets').Prediction[]>
   quotes: (symbols: string[]) => Promise<{ quotes: import('../electron/markets').Quote[]; errors: { symbol: string; error: string }[] }>

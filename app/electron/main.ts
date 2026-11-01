@@ -2554,7 +2554,8 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     return v.ok ? s.ask(text, from) : Promise.reject(new Error(`Held by the budget: ${v.reason}`))
   }
   hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked, lastSign: () => lastSign.get(sid) ?? 0 })
-  s.start()
+  // no process until the first message (or a call that needs one): an open panel costs no Claude Code process
+  s.hold()
   // a resumed panel gets its saved plan back
   const savedPlan = opts.resume ? loadPlan(opts.resume) : null
   if (savedPlan) (plans.set(sid, savedPlan), send(sid, { kind: 'plan', plan: savedPlan }))
@@ -5141,6 +5142,7 @@ ipcMain.handle('health:get', async () => {
   const claude = Health.claudeByFolder([...sessions.entries()].map(([sid, s]) => ({ sid, cwd: s.cwd })), kids, cwds)
   return Health.group(metrics, owners, claude)
 })
+ipcMain.handle('session:warm', (_e, sid: string) => void sessions.get(String(sid))?.warm())
 ipcMain.handle('health:sleep-panel', (_e, sid: string) => sessions.get(sid)?.sleep() ?? false)
 
 // updates: the installed app remembers the checkout it was built from; new commits there are an update
@@ -7393,7 +7395,7 @@ async function applySwitch(sid: string, fb: FO.Fallback, f: FK.Failure, auto: bo
     const c = settings().customEndpoint
     if (!c?.on || !QP.validCustom(c.url)) return 'The custom endpoint is off. Turn it on in the model menu settings.'
     // another endpoint restarts the process with a resume of the same session; without a session id nothing could be kept
-    if (!s.sessionId) return 'This panel has no session to resume on the custom endpoint, so the conversation would be lost. Not switched.'
+    if (!s.sessionId && !s.unstarted) return 'This panel has no session to resume on the custom endpoint, so the conversation would be lost. Not switched.'
     const cur = sourceOf.get(sid) ?? { src: 'setup' as QP.Source, base: s.env ?? process.env }
     if (cur.src !== 'custom') {
       if (!confirm) return 'Confirm the switch to the custom endpoint first.'
