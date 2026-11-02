@@ -17,4 +17,9 @@ describe('panels', () => {
     // a late event for a closed panel changes nothing
     expect(reducePanels(p, { kind: 'event', sid: 's1', action: { kind: 'delta', text: 'x' } })).toBe(p)
   })
+
+  it('ignores an open for a panel that is already there', () => {
+    const p = reducePanels(noPanels, { kind: 'open', sid: 's1', cwd: '/api', model: '' })
+    expect(reducePanels(p, { kind: 'open', sid: 's1', cwd: '/api', model: '' })).toBe(p)
+  })
 })

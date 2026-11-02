@@ -42,6 +42,25 @@ jobs:
           npm ci
           npm run build
 
+  e2e:
+    # the real app under xvfb with a fake model API: every file in app/e2e, one at a time, each test on its own profile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Build and run
+        working-directory: app
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgtk-3-0 libnss3 libgbm1 libasound2t64 >/dev/null
+          npm ci
+          npm run build
+          xvfb-run -a node --test --test-concurrency=1 e2e/*.e2e.mjs
+
   audit:
     runs-on: ubuntu-latest
     steps:
