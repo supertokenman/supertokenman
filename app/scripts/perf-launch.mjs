@@ -3,24 +3,29 @@
 // paint, composer), and wall clock from spawn to window and to a usable composer. The same measure as
 // perf-mac.mjs takes on the release, for a before and after on any machine. Needs a display.
 //
-//   xvfb-run -a node scripts/perf-launch.mjs [--runs 5] [--app <packaged binary>] [--max-composer-ms N]
+//   xvfb-run -a node scripts/perf-launch.mjs [--runs 5] [--app <packaged binary>] [--cli <claude binary>] [--max-composer-ms N]
+//
+// --cli puts that Claude Code binary in each fresh profile as if the first-run download had finished
+// (a packaged build otherwise downloads the pinned CLI on every fresh profile). The manifest is read from
+// dist-electron, so build the app from the same tree.
 //
 // --max-composer-ms fails when the median launch to a usable composer is above N (the CI guard: loose,
 // a shared runner is slow, it catches a launch that waits on something new, not a few percent).
 import { spawn } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { chromium } from 'playwright'
 import { mockServer } from './proof-mock-api.mjs'
-import { median } from './perf-lib.mjs'
+import { median, provisionCli } from './perf-lib.mjs'
 
 const argv = process.argv.slice(2)
 const runs = Number(argv[argv.indexOf('--runs') + 1] || 5)
 // --app <binary>: a packaged build (electron-builder --linux dir: release/linux-unpacked/<name>)
 const maxComposer = argv.includes('--max-composer-ms') ? Number(argv[argv.indexOf('--max-composer-ms') + 1]) : undefined
 const packaged = argv.includes('--app') ? argv[argv.indexOf('--app') + 1] : undefined
+const cliBin = argv.includes('--cli') ? argv[argv.indexOf('--cli') + 1] : undefined
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const electron = createRequire(import.meta.url)('electron')
 const mock = mockServer(() => undefined)
@@ -32,6 +37,7 @@ for (let n = 0; n < runs; n++) {
   mkdirSync(project)
   writeFileSync(join(project, 'README.md'), '# p\n')
   const env = { ...process.env, STM_PERF: '1', HOME: join(root, 'home'), STM_USER_DATA: join(root, 'ud'), STM_TEST_SECRETS: '1', ANTHROPIC_BASE_URL: `http://127.0.0.1:${mock.address().port}`, ANTHROPIC_API_KEY: 'proof-mock-key', CLAUDE_CONFIG_DIR: join(root, 'claude') }
+  if (cliBin) provisionCli(env.STM_USER_DATA, { binary: cliBin, key: `${process.platform}-${process.arch}`, manifest: JSON.parse(readFileSync(new URL('../dist-electron/cli-manifest.json', import.meta.url), 'utf8')) })
   for (const k of Object.keys(env)) if (k.startsWith('CLAUDE_CODE_') || k.startsWith('CCR_')) delete env[k]
   const port = 9500 + n
   const t0 = performance.now()

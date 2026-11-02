@@ -34,10 +34,13 @@ mkdirSync(project, { recursive: true })
 writeFileSync(join(project, 'README.md'), '# perf\n')
 
 let port = 9400
+let firstCli
 /** One launch with a fresh profile; resolves when the window can be driven. */
 async function launch(n) {
   const home = join(out, `run-${n}`)
   mkdirSync(join(home, 'profile'), { recursive: true })
+  // every launch after the first-run one finds Claude Code already downloaded, as a person does every day
+  if (firstCli) L.provisionCli(join(home, 'profile'), { dir: firstCli })
   const env = { ...process.env, STM_USER_DATA: join(home, 'profile'), CLAUDE_CONFIG_DIR: join(home, 'claude'), ANTHROPIC_BASE_URL: apiUrl, ANTHROPIC_API_KEY: 'proof-mock-key', NO_PROXY: '127.0.0.1,localhost' }
   const p = ++port
   const t0 = performance.now()
@@ -99,12 +102,30 @@ async function idle(l, seconds = 30) {
 // leaves that section out instead of reading a change of method as a change of speed (perf-lib compare)
 const COLD = 2
 const RUNS = 7
-const results = { launch: { method: 2, runs: RUNS, coldRuns: COLD }, idle: {}, typing: { method: 2 }, size: {} }
+const results = { firstRun: {}, launch: { method: 3, runs: RUNS, coldRuns: COLD }, idle: {}, typing: { method: 2 }, size: {} }
 
 // ---- launch: the first launches of a just-installed signed app on a fresh runner are much slower
 // (0.1.8 to 0.1.11: runs 1 and 2 at 4.6 to 6.6 s, later runs at 1.2 to 2.3 s), so a median of five that
 // includes them lands on whichever run the warm-up ended at. The cold ones are recorded on their own,
 // never dropped; the median and its spread are of the RUNS after them.
+// ---- first run: a fresh profile with no Claude Code yet, so the app downloads the pinned CLI. Measured
+// on its own (window, composer, and Claude Code ready); its download is then given to every later launch.
+{
+  const l = await launch(0)
+  const t0 = performance.now() - (l.composerMs ?? 0)
+  let cliReadyMs
+  while (cliReadyMs === undefined && performance.now() - t0 < 300_000) {
+    const phase = await l.win.evaluate(() => window.stm.claudeCli?.state().then((s) => s.phase)).catch(() => undefined)
+    if (phase === 'ready') cliReadyMs = performance.now() - t0
+    else if (phase === 'failed' || phase === 'unsupported') break
+    else await sleep(250)
+  }
+  results.firstRun = { windowMs: l.windowMs, composerMs: l.composerMs, cliReadyMs }
+  say(`first run: window ${Math.round(l.windowMs)} ms, composer ${Math.round(l.composerMs)} ms, Claude Code ready ${cliReadyMs === undefined ? 'never' : Math.round(cliReadyMs) + ' ms'}`)
+  await quit(l)
+  const dir = join(out, 'run-0', 'profile', 'claude-cli')
+  if (cliReadyMs !== undefined && existsSync(dir)) firstCli = dir
+}
 const w = [], c = [], cw = [], cc = []
 for (let i = 1; i <= COLD + RUNS; i++) {
   const l = await launch(i)

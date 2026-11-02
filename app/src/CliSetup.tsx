@@ -32,8 +32,9 @@ export function CliSetup({ s }: { s: CliState }) {
   if (hidden || (s.phase !== 'downloading' && s.phase !== 'failed')) return null
   const pct = s.phase === 'downloading' && s.total ? Math.round((s.got / s.total) * 100) : undefined
   return (
-    <div className="overlay">
-      <div className="sheet cli-setup" role="dialog" aria-label="Setting up Claude Code">
+    // a card in the corner, never over the window: panels open and take typing while this runs
+    <div className="cli-setup-dock">
+      <div className="sheet cli-setup" role="status" aria-label="Setting up Claude Code">
         <header className="sheet-head"><div className="sheet-title">Setting up Claude Code</div></header>
         <div className="sheet-body">
           <p>Panels run Claude Code {s.version}, the exact build this version of SuperTokenMan was tested with. It is downloaded once from <b>{s.host}</b> and checked against the checksum pinned in the app.</p>
@@ -41,12 +42,14 @@ export function CliSetup({ s }: { s: CliState }) {
             <>
               <div className="cli-bar" role="progressbar" aria-valuenow={pct}><span style={{ width: `${pct ?? 5}%` }} /></div>
               <p className="faint">{mb(s.got)}{s.total ? ` of ${mb(s.total)}` : ''}</p>
-              <button className="small" onClick={() => void window.stm.claudeCli.cancel()}>Cancel</button>
+              <p className="faint">Panels are ready to type in; a message sent now goes when this finishes.</p>
+              <button className="small" onClick={() => void window.stm.claudeCli.cancel()}>Cancel</button>{' '}
+              <button className="ghost small" onClick={() => setHidden(true)}>Hide</button>
             </>
           )}
           {s.phase === 'failed' && (
             <>
-              <p role="alert">Could not download Claude Code: {s.message} Panels open once it is set up.</p>
+              <p role="alert">Could not download Claude Code: {s.message} Panels keep your messages until it is set up.</p>
               <button className="small" onClick={() => void window.stm.claudeCli.retry()}>Retry</button>{' '}
               <button className="ghost small" onClick={() => setHidden(true)}>Later</button>
             </>

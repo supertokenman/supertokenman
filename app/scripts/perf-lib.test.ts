@@ -97,3 +97,20 @@ function full() {
   const idle = { layoutsPerS: 0, recalcsPerS: 0, cpu: 0.5, rssMb: 400 }
   return { launch: { runs: 5, windowMs: 500, composerMs: 900 }, idle: { one: idle, four: { ...idle, rssMb: 700 }, perPanelMb: 100 }, typing: { longestFrameMs: 20, framesOver16: 2, longestInputMs: 24 }, size: { distKb: 3000, startupGzipKb: 600, appMb: 400, dmgMb: 150 } }
 }
+
+describe('provisionCli', () => {
+  it('lays a binary out the way the first-run download does, or links a finished download in', async () => {
+    const { mkdtempSync, writeFileSync, readFileSync, readlinkSync, existsSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const root = mkdtempSync(join(tmpdir(), 'perf-cli-'))
+    const bin = join(root, 'claude')
+    writeFileSync(bin, 'x'.repeat(10))
+    const manifest = { cli: '2.1.0', platforms: { 'linux-x64': { name: 'n', version: '0.3.0', integrity: 'sha512-a' } } }
+    L.provisionCli(join(root, 'ud'), { binary: bin, key: 'linux-x64', manifest })
+    expect(readlinkSync(join(root, 'ud', 'claude-cli', '2.1.0', 'claude'))).toBe(bin)
+    expect(JSON.parse(readFileSync(join(root, 'ud', 'claude-cli', '2.1.0', 'pinned.json'), 'utf8'))).toMatchObject({ name: 'n', integrity: 'sha512-a', size: 10 })
+    L.provisionCli(join(root, 'ud2'), { dir: join(root, 'ud', 'claude-cli') })
+    expect(existsSync(join(root, 'ud2', 'claude-cli', '2.1.0', 'pinned.json'))).toBe(true)
+  })
+})

@@ -4646,7 +4646,11 @@ html[data-blurred] .panel-bar.compact .sm-mark.busy::after { animation: none; op
 .rt-banner-text { flex: 1; min-width: 200px; }
 .rt-confirm { box-shadow: none; border-left: 3px solid var(--accent); }
 .rt-actions { display: flex; gap: 8px; justify-content: flex-end; }
-.sheet.cli-setup { width: min(480px, calc(100vw - 48px)); }
+.cli-setup-dock { position: fixed; right: 16px; bottom: 16px; z-index: 50; pointer-events: none; }
+.cli-setup-dock > .sheet { pointer-events: auto; box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.25)); }
+.sheet.cli-setup { width: min(420px, calc(100vw - 32px)); }
+.composer-setup { margin: 0 12px 6px; padding: 6px 10px; border-radius: 8px; font-size: 12px; color: var(--muted, inherit); background: rgba(var(--overlay-rgb), 0.06); }
+.composer-setup.failed { color: var(--danger, inherit); }
 .cli-bar { height: 6px; border-radius: 3px; background: rgba(var(--overlay-rgb), 0.12); overflow: hidden; margin: 12px 0 6px; }
 .cli-bar > span { display: block; height: 100%; background: var(--accent); transition: width 200ms var(--ease); }
 

@@ -10,7 +10,7 @@ import { crashReporter, app, BrowserWindow, Menu, nativeImage, Tray, globalShort
 import { appendFileSync, closeSync, copyFileSync, cpSync, existsSync, renameSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, symlinkSync, unlinkSync, watch, writeFileSync } from 'node:fs'
 import { listSessions, query as sdkQuery } from '@anthropic-ai/claude-agent-sdk'
 import { claudeBinary, installedClaude, mergePath, shellPathAsync } from './packaged.js'
-import { ClaudeCli, parseVersion, platformKey, type CliManifest } from './claudecli.js'
+import { ClaudeCli, deferredQuery, parseVersion, platformKey, type CliManifest } from './claudecli.js'
 import { homedir } from 'node:os'
 import { findRepos, repoRoots } from './repos.js'
 import { createServer as netServer } from 'node:net'
@@ -347,12 +347,16 @@ const claudeCli = new ClaudeCli({
   fetch: (url, init) => net.fetch(url, init),
   onState: (s) => toWin('cli:state', s),
 })
+// a panel never waits for the CLI to open: its process starts when the first message goes, and while
+// Claude Code is still being set up that message waits here (deferredQuery) and runs once it is ready
 const query: typeof sdkQuery = (args) => {
   if (!app.isPackaged) return sdkQuery(args)
+  const run = (exe: string) => sdkQuery({ ...args, options: { ...args.options, pathToClaudeCodeExecutable: exe } })
   const exe = claudeCli.path
-  if (!exe) throw new Error('Setting up Claude Code. The panel starts when it is ready.')
-  return sdkQuery({ ...args, options: { ...args.options, pathToClaudeCodeExecutable: exe } })
+  return exe ? run(exe) : deferredQuery(pathReady.then(() => claudeCli.ensure()).then(run))
 }
+// the download starts at launch, in the background: by the time the first message is typed it is often done
+if (app.isPackaged) void app.whenReady().then(() => pathReady).then(() => claudeCli.ensure()).catch(() => undefined)
 ipcMain.handle('cli:state', async () => (app.isPackaged ? await pathReady.then(() => claudeCli.peek()) : { phase: 'ready', path: '', source: 'dev', version: '' }))
 ipcMain.handle('cli:retry', () => claudeCli.retry().then(() => claudeCli.state, () => claudeCli.state))
 ipcMain.handle('cli:cancel', () => claudeCli.cancel())
@@ -2344,8 +2348,6 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
   perfMark('panel asked')
   await pathReady
   await officeReady
-  // first launch, or a release that pins a new Claude Code: the panel waits for the download
-  if (app.isPackaged) await claudeCli.ensure()
   perfMark('panel path and office checked')
   const sid = `s${++nextId}`
   // a panel on another machine: its folder (or a fresh worktree) there, and an empty stand-in folder here
