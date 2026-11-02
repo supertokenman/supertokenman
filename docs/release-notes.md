@@ -1,14 +1,14 @@
-A smaller download and much less memory with several panels open.
+Fixes from 0.1.26, a clearer tray, and an optional browser for the panel agent.
 
-- A panel's Claude Code process now starts when you first use the panel, not when it opens. With
-  four idle panels the app used about half the memory in our tests. The first message in a new
-  panel takes about a second longer; the process starts as soon as you begin typing.
-- The Claude Code program is no longer inside the app download, which makes the app about half the
-  size. On first launch the app fetches the exact version it was built with from the npm registry,
-  checks its checksum before using it, and shows the progress. If you already have that same
-  version installed, it uses yours. Settings shows which one is in use.
-- Fixed: Allow and Deny on a permission card did nothing since 0.1.16. The answer, which can carry an
-  edited command or a note, was refused by the app's own check; it now goes through.
+- Fixed: the message box in a new panel was not usable until Claude Code finished setting up. You
+  can type at once again; the message is sent as soon as it is ready.
+- Fixed: a lead panel's messages to its workers now show in the worker panels, and fail within
+  seconds with a clear error instead of hanging.
+- Fixed: a panel could appear twice when the app started.
+- The tray is easier to read, and costs are shown in US dollars by default. You can change the
+  currency in Settings.
+- New, off by default: a browser pane the panel agent can drive, with a project's own profile.
+  It asks before visiting each new site, and you can take over at any time. Turn it on in Settings.
 
 SuperTokenMan for macOS (Apple silicon and Intel), signed with a Developer ID and notarized by Apple.
 Check the download:
