@@ -1045,6 +1045,8 @@ const outletChain = new Map<string, Promise<void>>()
 const loopPaused = new Set<string>()
 /** when each panel last emitted anything but an incoming message: proof its turn started */
 const lastSign = new Map<string, number>()
+/** the events that prove a turn runs: a held panel's start ('ready'), a CI poll or a note is not one */
+const WORK_SIGNS = new Set(['delta', 'assistant', 'permission', 'edit', 'turn', 'error', 'held', 'loop', 'gate', 'gated'])
 function send(sid: string, e: unknown) {
   const pending = outletChain.get(sid)
   const k = (e as { kind?: string }).kind
@@ -1067,7 +1069,7 @@ function send(sid: string, e: unknown) {
 }
 function sendNow(sid: string, e: unknown) {
   const ev = e as { kind?: string; isError?: boolean; text?: string; durationMs?: number }
-  if (ev.kind !== 'peer') lastSign.set(sid, Date.now())
+  if (WORK_SIGNS.has(ev.kind ?? '')) lastSign.set(sid, Date.now())
   phoneTrack(sid, e as never)
   traceEvent(sid, e as never)
   clockEvent(sid, e as never)
@@ -2531,8 +2533,12 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
       if (!iso || tool !== 'Bash' || typeof input.command !== 'string' || ISO.isWrapped(iso.name, input.command)) return input
       return { ...input, command: ISO.wrap(iso.name, iso.cwd, input.command) }
     },
-    decide: (tool: string, input: Record<string, unknown>) =>
-      policyGate(tool, input, baseDecide(tool, input) as Existing, { store: policyStore(), root: remote ? undefined : home, ctx: { project: home, home: homedir(), cwd }, control: ctlState.control, unattended: scopeOf.has(sid) }),
+    decide: (tool: string, input: Record<string, unknown>) => {
+      const g = policyGate(tool, input, baseDecide(tool, input) as Existing, { store: policyStore(), root: remote ? undefined : home, ctx: { project: home, home: homedir(), cwd }, control: ctlState.control, unattended: scopeOf.has(sid) })
+      // a lead messaging its own linked worker: the same hand-off delegate makes without a card. A card per call held the
+      // lead's tool (no task in the worker, no clock running) until the person found it among the lead's steps
+      return g.action === 'ask' && g.by !== 'rule' && !g.bp && leadMessagesOwn(sid, tool, input) ? { ...g, action: 'allow' as const, by: 'app' as const } : g
+    },
     panelId: sid,
     onRunStart: () => ctlState.control.runStart(),
     onDecision: (e) => auditPanel(sid, { tool: e.tool, args: summarizeCall(e.tool, e.input), decision: e.bp && e.action === 'ask' ? 'pause' : e.action, by: e.by, ...(e.rule ? { rule: e.rule } : {}) }),
@@ -2588,7 +2594,7 @@ const newSession = async (opts: { cwd?: string; remote?: { host: string; dir: st
     if (v.ok) tracePrompt(sid, text, `Asked by ${from}`)
     return v.ok ? s.ask(text, from) : Promise.reject(new Error(`Held by the budget: ${v.reason}`))
   }
-  hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked, lastSign: () => lastSign.get(sid) ?? 0 })
+  hub.add(sid, { label: persona ? `${persona.name} (${name})` : taken ? `${name} ${taken + 1}` : name, cwd, busy: () => s.busy, ask: askChecked, lastSign: () => lastSign.get(sid) ?? 0, asking: () => s.asking })
   // no process until the first message (or a call that needs one): an open panel costs no Claude Code process
   s.hold()
   // a resumed panel gets its saved plan back
@@ -7221,6 +7227,22 @@ hub.onMessage = (from, to) => {
   saveLinks(PB.addLink(links(), from, to))
   workerTask.set(to, { lead: from, title: uiTitles.get(to) ?? panelName(to), at: Date.now(), files: new Set(), cost: 0 })
   pushLead()
+}
+/** message_panel from a lead to a panel it leads (its worker, or one linked to it that leads nobody) */
+function leadMessagesOwn(sid: string, tool: string, input: Record<string, unknown>) {
+  if (tool !== TOOLS[1] || !leadSet.has(sid)) return false
+  const to = typeof input.panel === 'string' ? input.panel : ''
+  if (!to || to === sid || leadSet.has(to) || !sessions.has(to)) return false
+  const t = workerTask.get(to)
+  if (t) return t.lead === sid
+  return links().some((l) => (l.a === sid && l.b === to) || (l.a === to && l.b === sid))
+}
+// while a lead waits on messages, its spinner names each target's state
+hub.onWait = (from, items) => {
+  if (sessions.has(from)) send(from, { kind: 'waiting', items })
+}
+hub.onFail = (from, to, why) => {
+  if (sessions.has(from)) send(from, { kind: 'note', tone: 'error', text: `Message to ${panelName(to)} (${to}) failed: ${why}` })
 }
 function leadForget(sid: string) {
   if (!leadSet.delete(sid) && !workerTask.delete(sid)) return

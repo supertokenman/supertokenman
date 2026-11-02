@@ -131,4 +131,68 @@ test('a lead messages two panels opened without links: tasks show, turns run, re
   }
 })
 
+test('the owner run: a lead with two linked, never-started workers calls message_panel to all three from its own turn; one never starts', { timeout: 300_000 }, async () => {
+  const app = await electron.launch({ args: ['--no-sandbox', appDir, `--cwd=${dirs[0]}`], env })
+  try {
+    let win = null
+    for (let i = 0; i < 120 && !win; i++) {
+      win = app.windows().find((w) => /(\/dist\/|stmui:\/\/app\/)index\.html/.test(w.url())) ?? null
+      if (!win) await new Promise((r) => setTimeout(r, 500))
+    }
+    assert.ok(win, 'app window')
+    await win.waitForSelector('.composer textarea', { timeout: 60_000 })
+    for (let i = 0; i < 3 && (await win.$('.tour-steps')); i++) (await win.keyboard.press('Escape'), await win.waitForTimeout(400))
+    for (let i = 0; i < 60 && !readdirSync(envDir).length; i++) await win.waitForTimeout(500)
+    const me = readdirSync(envDir).map((f) => f.replace(/\.json$/, '')).sort()[0]
+    const call = (name, args) => app.evaluate(async (_e, [sid, name, args]) => {
+      const t = globalThis.__stmUiTools(sid).find((x) => x.name === name)
+      const r = await t.handler(args, {})
+      return { text: r.content[0].text, isError: Boolean(r.isError) }
+    }, [me, name, args])
+    await win.addStyleTag({ content: '.splash{display:none!important}' })
+    await win.evaluate(() => document.documentElement.removeAttribute('data-blurred'))
+    const p = call('ui_open_panels', { panels: [{ folder: dirs[1], title: 'Worker 1' }, { folder: dirs[2], title: 'Worker 2' }, { folder: dirs[3], title: 'Worker 3' }], lead: 'self', layout: 'canvas' })
+    await win.getByRole('button', { name: 'Allow' }).click({ timeout: 20_000 })
+    const r = await p
+    assert.equal(r.isError, false, r.text)
+    const ids = [...r.text.matchAll(/\b(s\d+)\b/g)].map((m) => m[1]).filter((x, i, a) => x !== me && a.indexOf(x) === i)
+    assert.equal(ids.length, 3, r.text)
+    await win.waitForFunction(() => document.querySelectorAll('.role-mark.worker').length === 3)
+    await win.getByRole('button', { name: 'Not now' }).click({ timeout: 2000 }).catch(() => undefined)
+    // the third never starts its turn: its process starts (and says it is ready) but the API never answers it
+    await app.evaluate(() => (globalThis.__stmHub.startMs = 8000))
+    const calls = ids.map((id, i) => ({ name: 'mcp__panels__message_panel', input: { panel: id, message: i < 2 ? `Projeto: task ${i + 1}, say done.` : 'Projeto: task 3 E2E_HANG' } }))
+    const lead = win.locator('.role-mark.lead').first().locator('xpath=ancestor::*[.//textarea][1]')
+    await lead.locator('.composer textarea').fill(`Split the work. E2E_TOOLS ${JSON.stringify([[{ name: 'ToolSearch', input: { query: 'select:mcp__panels__message_panel,mcp__panels__list_panels' } }], calls])} E2E_END`)
+    await lead.locator('.composer textarea').press('Enter')
+    // to its own linked workers the lead needs no card per message, like delegate
+    const t0 = Date.now()
+    for (const i of [0, 1]) {
+      const card = win.locator('.cv-card').filter({ has: win.locator('.panel-title', { hasText: `Worker ${i + 1}` }) })
+      await card.getByText(`task ${i + 1}, say done`).first().waitFor({ timeout: 8000 })
+    }
+    console.log('tasks visible after', Date.now() - t0, 'ms')
+    // the spinner names each target's state while the lead waits
+    await lead.locator('.lead-wait').first().waitFor({ timeout: 8000 })
+    let spin = ''
+    for (let k = 0; k < 40 && !new RegExp(`${ids[2]}: `).test(spin); k++) (spin = await lead.locator('.lead-wait').first().innerText().catch(() => spin)), await win.waitForTimeout(150)
+    console.log('spinner', spin)
+    assert.match(spin, new RegExp(`${ids[2]}: (not started|working)`))
+    for (const i of [0, 1]) {
+      const card = win.locator('.cv-card').filter({ has: win.locator('.panel-title', { hasText: `Worker ${i + 1}` }) })
+      await card.getByText('E2E reply: the panel works.').first().waitFor({ timeout: 60_000 })
+    }
+    // the ghost fails fast with a visible error in the lead, then the lead's turn ends
+    await win.locator('.cv-card').filter({ has: win.locator('.panel-title', { hasText: 'Worker 3' }) }).getByText('task 3').first().waitFor({ timeout: 8000 })
+    await lead.getByText(/did not start the task/).first().waitFor({ timeout: 30_000 })
+    await lead.getByText('E2E reply: the panel works.').first().waitFor({ timeout: 60_000 })
+    console.log('lead done after', Date.now() - t0, 'ms')
+  } catch (e) {
+    if (process.env.TEAM_FAIL_SHOT) await app.windows()[0]?.screenshot({ path: process.env.TEAM_FAIL_SHOT }).catch(() => undefined)
+    throw e
+  } finally {
+    await app.close()
+  }
+})
+
 test.after(() => api.close?.())

@@ -6,13 +6,15 @@ import { z } from 'zod'
 
 /** What the hub needs of a panel's session. */
 /** lastSign: when the panel last showed a sign of work (any event but the message itself); a message with none in START_MS fails. */
-export type Peer = { label: string; cwd: string; busy: () => boolean; ask: (text: string, from: string) => Promise<string>; lastSign?: () => number }
+export type Peer = { label: string; cwd: string; busy: () => boolean; ask: (text: string, from: string) => Promise<string>; lastSign?: () => number; asking?: () => boolean }
 
 export const SERVER = 'panels'
 export const TOOLS = [`mcp__${SERVER}__list_panels`, `mcp__${SERVER}__message_panel`, `mcp__${SERVER}__panel_state`, `mcp__${SERVER}__panel_wait`]
 type ExtraTools = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>
 const TIMEOUT_MS = 15 * 60 * 1000
 export const START_MS = 90 * 1000
+
+export type WaitItem = { panel: string; name: string; state: string }
 
 export class CycleError extends Error {
   constructor(from: string, to: string) {
@@ -29,6 +31,45 @@ export class Hub {
   /** called before a message goes out, e.g. to make the target the sender's worker when the sender is a lead */
   onMessage?: (from: string, to: string, text: string) => void
   startMs = START_MS
+  /** a sender's messages in flight and how far each target got, on every change and every few seconds; [] when none is left */
+  onWait?: (from: string, items: WaitItem[]) => void
+  /** a message_panel call that failed, so the sender's panel shows why and not only its agent */
+  onFail?: (from: string, to: string, error: string) => void
+  private flights = new Map<string, Map<string, { sent: number; end?: 'done' | 'failed' }>>()
+  private ticker?: ReturnType<typeof setInterval>
+
+  /** How far a message to `to` got: not started, needs approval, working, done or failed. */
+  private stateOf(to: string, f: { sent: number; end?: 'done' | 'failed' }): string {
+    if (f.end) return f.end
+    const p = this.peers.get(to)
+    if (!p) return 'closed'
+    if (p.asking?.()) return 'needs approval'
+    return p.lastSign && p.lastSign() < f.sent ? 'not started' : 'working'
+  }
+  private report(from: string) {
+    const m = this.flights.get(from)
+    const live = m && ![...m.values()].every((f) => f.end)
+    const items = live ? [...m].map(([panel, f]) => ({ panel, name: this.peers.get(panel)?.label ?? panel, state: this.stateOf(panel, f) })) : []
+    if (m && !live) this.flights.delete(from)
+    try {
+      this.onWait?.(from, items)
+    } catch {
+      // the spinner is a view; the message goes on without it
+    }
+    if (!this.flights.size && this.ticker) (clearInterval(this.ticker), (this.ticker = undefined))
+  }
+  private track(from: string, to: string) {
+    const m = this.flights.get(from) ?? new Map<string, { sent: number; end?: 'done' | 'failed' }>()
+    m.set(to, { sent: Date.now() })
+    this.flights.set(from, m)
+    this.ticker ??= setInterval(() => [...this.flights.keys()].forEach((f) => this.report(f)), 2000)
+    this.report(from)
+  }
+  private land(from: string, to: string, ok: boolean) {
+    const f = this.flights.get(from)?.get(to)
+    if (f) f.end = ok ? 'done' : 'failed'
+    this.report(from)
+  }
 
   add(sid: string, peer: Peer) {
     this.peers.set(sid, peer)
@@ -82,18 +123,26 @@ export class Hub {
       const sender = this.peers.get(from)?.label ?? from
       this.onMessage?.(from, to, text)
       const sent = Date.now()
-      return await Promise.race([
-        target.ask(text, sender),
-        new Promise<string>((_, reject) => (timer = setTimeout(() => reject(new Error(`Panel "${to}" did not answer within 15 minutes.`)), TIMEOUT_MS))),
-        // a panel that never starts the turn (no sign at all) fails fast instead of holding the sender for 15 minutes
-        new Promise<string>((_, reject) => {
-          if (!target.lastSign) return
-          watch = setInterval(() => {
-            if (target.lastSign!() >= sent) return clearInterval(watch)
-            if (Date.now() - sent >= this.startMs) reject(new Error(`Panel "${to}" did not start the task in ${Math.round(this.startMs / 1000)} seconds. Look at that panel: it may be waiting for a sign-in, an approval or a model. Nothing else was sent.`))
-          }, Math.min(5000, this.startMs / 3))
-        }),
-      ])
+      this.track(from, to)
+      let ok = false
+      try {
+        const reply = await Promise.race([
+          target.ask(text, sender),
+          new Promise<string>((_, reject) => (timer = setTimeout(() => reject(new Error(`Panel "${to}" did not answer within 15 minutes.`)), TIMEOUT_MS))),
+          // a panel that never starts the turn (no sign at all) fails fast instead of holding the sender for 15 minutes
+          new Promise<string>((_, reject) => {
+            if (!target.lastSign) return
+            watch = setInterval(() => {
+              if (target.lastSign!() >= sent) return clearInterval(watch)
+              if (Date.now() - sent >= this.startMs) reject(new Error(`Panel "${to}" did not start the task in ${Math.round(this.startMs / 1000)} seconds. Look at that panel: it may be waiting for a sign-in, an approval or a model. Nothing else was sent.`))
+            }, Math.min(5000, this.startMs / 3))
+          }),
+        ])
+        ok = true
+        return reply
+      } finally {
+        this.land(from, to, ok)
+      }
     } finally {
       clearTimeout(timer)
       clearInterval(watch)
@@ -117,7 +166,9 @@ export class Hub {
             try {
               return text(await this.message(from, panel, message))
             } catch (err) {
-              return { ...text(err instanceof Error ? err.message : String(err)), isError: true }
+              const why = err instanceof Error ? err.message : String(err)
+              this.onFail?.(from, panel, why)
+              return { ...text(why), isError: true }
             }
           },
         ),
