@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { IconClose } from './icons'
 
 export type UiItem = { folder: string; title?: string; persona?: string; model?: string }
 
@@ -10,25 +9,25 @@ export function UiConfirm(props: { from: string; items: UiItem[]; onAnswer: (all
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [props.onAnswer])
+  const n = props.items.length
+  const home = (f: string) => f.replace(/^\/Users\/[^/]+/, '~').replace(/^\/home\/[^/]+/, '~')
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && props.onAnswer(false)}>
-      <div className="sheet ports" role="dialog" aria-label="Allow panels">
-        <header className="sheet-head">
-          <div className="sheet-title">{props.from} asks to open {props.items.length === 1 ? 'a panel' : `${props.items.length} panels`}</div>
-          <span className="spacer-flex" />
-          <button className="icon" aria-label="Deny" onClick={() => props.onAnswer(false)}><IconClose /></button>
-        </header>
-        <div className="sheet-body">
-          <p className="faint">Each panel starts a new Claude session, which uses tokens. Nothing opens until you press Allow.</p>
-          <ul>
-            {props.items.map((it, i) => (
-              <li key={i}>
-                <strong>{it.title ?? it.folder.split('/').filter(Boolean).slice(-1)[0] ?? it.folder}</strong> <span className="faint">{it.title ? `${it.folder} ` : ''}{it.persona ? `persona ${it.persona} ` : ''}{it.model ?? ''}</span>
-              </li>
-            ))}
-          </ul>
-          <button className="primary" autoFocus onClick={() => props.onAnswer(true)}>Allow</button>{' '}
+      <div className="ask-card" role="dialog" aria-label="Allow panels" aria-describedby="ask-note">
+        <div className="ask-from">From panel {props.from}</div>
+        <h2 id="ask-title" className="ask-title">Open {n === 1 ? 'a new panel' : `${n} new panels`}?</h2>
+        <ol className="ask-list">
+          {props.items.map((it, i) => (
+            <li key={i}>
+              <span className="ask-name">{it.title ?? it.folder.split('/').filter(Boolean).slice(-1)[0] ?? it.folder}</span>
+              <span className="ask-meta">{home(it.folder)}{it.persona ? ` · ${it.persona}` : ''}{it.model ? ` · ${it.model}` : ''}</span>
+            </li>
+          ))}
+        </ol>
+        <p id="ask-note" className="ask-note">Each panel is a new Claude session and uses tokens.</p>
+        <div className="ask-actions">
           <button className="ghost" onClick={() => props.onAnswer(false)}>Deny</button>
+          <button className="primary" autoFocus onClick={() => props.onAnswer(true)}>Allow</button>
         </div>
       </div>
     </div>
