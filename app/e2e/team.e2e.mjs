@@ -132,6 +132,7 @@ test('a lead messages two panels opened without links: tasks show, turns run, re
 })
 
 test('the owner run: a lead with two linked, never-started workers calls message_panel to all three from its own turn; one never starts', { timeout: 300_000 }, async () => {
+  const { root, envDir, dirs, env } = profile()
   const app = await electron.launch({ args: ['--no-sandbox', appDir, `--cwd=${dirs[0]}`], env })
   try {
     let win = null
@@ -192,6 +193,7 @@ test('the owner run: a lead with two linked, never-started workers calls message
     throw e
   } finally {
     await app.close()
+    rmSync(root, { recursive: true, force: true })
   }
 })
 
