@@ -283,6 +283,13 @@ export class Views {
     this.timer = null
   }
 
+  /** Wipes a named profile's storage (the profile was deleted). */
+  async clearPartition(partition: string) {
+    const ses = session.fromPartition(partition)
+    await ses.clearStorageData()
+    await ses.clearCache()
+  }
+
   /** Wipes the cookies and storage of the panel's partition (browse:clear for the agent's browser). */
   async clear(panel: string) {
     this.closePanel(panel)

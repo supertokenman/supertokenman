@@ -7775,6 +7775,12 @@ const abrowser = (): AgentBrowser =>
     ctx: (sid) => ({ project: abRoot(sid), home: homedir(), cwd: panelDir(sid) || abRoot(sid) }),
     root: (sid) => abRoot(sid),
     previewPanel: (sid) => abPreview.has(sid),
+    pickFile: async (sid) => {
+      if (process.env.STM_TEST_PANEL_ENV && process.env.STM_TEST_PICK) return process.env.STM_TEST_PICK
+      if (!win) return null
+      const r = await dialog.showOpenDialog(win, { title: 'Choose a file to upload', defaultPath: abRoot(sid), properties: ['openFile'] })
+      return r.canceled ? null : (r.filePaths[0] ?? null)
+    },
     writeRule: (sid, text) => {
       const file = PolicyStore.projectPath(abRoot(sid))
       const old = existsSync(file) ? readFileSync(file, 'utf8') : ''
@@ -7793,7 +7799,21 @@ ipcMain.handle('abrowser:bounds', (_e, a: { panel: string; rect: { x: number; y:
 ipcMain.handle('abrowser:take', (_e, a: { panel: string }) => abrowserSvc?.take(a.panel))
 ipcMain.handle('abrowser:release', (_e, a: { panel: string }) => abrowserSvc?.release(a.panel))
 ipcMain.handle('abrowser:answer', (_e, a: { id: string; answer: 'once' | 'always' | 'deny' }) => abrowserSvc?.answer(a.id, a.answer) ?? false)
-ipcMain.handle('abrowser:profile', (_e, a: { panel: string; scope: 'panel' | 'project' }) => abrowser().profile(a.panel, a.scope))
+ipcMain.handle('abrowser:profile', (_e, a: { panel: string; scope: string }) => abrowser().profile(a.panel, a.scope))
+ipcMain.handle('abrowser:profiles', (_e, a: { panel?: string }) => abrowser().profiles(a.panel))
+ipcMain.handle('abrowser:profile-edit', (_e, a: { op: 'create' | 'rename' | 'delete' | 'default'; id?: string; name?: string; panel?: string }) => {
+  const b = abrowser()
+  if (a.op === 'create') return b.createProfile(a.name)
+  if (a.op === 'rename') return b.renameProfile(a.id ?? '', a.name)
+  if (a.op === 'delete') return b.deleteProfile(a.id ?? '')
+  return a.panel ? b.setDefault(a.panel, a.id ?? null) : { ok: false, error: 'No panel.' }
+})
+ipcMain.handle('abrowser:settings', (_e, a: { screenshots?: boolean; limits?: { steps?: number; wallMs?: number; screenshots?: number; newHosts?: number } } | undefined) => (a ? abrowser().setSettings(a) : abrowser().settings()))
+ipcMain.handle('abrowser:nav', (_e, a: { panel: string; op: 'go' | 'back' | 'forward' | 'reload' | 'stop'; url?: string }) => abrowser().nav(a.panel, a.op, a.url))
+ipcMain.handle('abrowser:tab', (_e, a: { panel: string; op: 'switch' | 'close' | 'new'; id?: number }) => abrowser().tab(a.panel, a.op, a.id))
+ipcMain.handle('abrowser:get', (_e, a: { panel: string }) => (abrowserSvc?.enabled() ? abrowserSvc.state(a.panel) : null))
+ipcMain.handle('abrowser:snap', (_e, a: { panel: string }) => abrowserSvc?.snap(a.panel) ?? null)
+ipcMain.handle('abrowser:clear', (_e, a: { panel: string }) => abrowserSvc?.clear(a.panel).then(() => true))
 // end-to-end tests only: the browser tools of a panel as its Claude would call them, and the person's answers
 if (process.env.STM_TEST_PANEL_ENV) (globalThis as Record<string, unknown>).__stmBrowser = { svc: abrowser, preview: (sid: string) => abPreview.add(sid) }
 // end-to-end tests only: an event as if the panel's session had emitted it (a failed turn, for the failover card)

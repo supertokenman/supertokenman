@@ -260,7 +260,7 @@ export type PanelAction =
 export function reducePanels(p: Panels, a: PanelAction, now = Date.now()): Panels {
   switch (a.kind) {
     case 'open':
-      // the same panel opened twice (the launch folder and the runtime re-attach) is one panel
+      // the window opens a panel from two places at start (the launch folder and the re-attach of running panels); the same sid twice is one panel
       if (p.byId[a.sid]) return p
       return { order: [...p.order, a.sid], byId: { ...p.byId, [a.sid]: { ...initial, cwd: a.cwd, model: a.model, persona: a.persona, sandbox: a.sandbox, remote: a.remote, worktree: a.worktree } }, focus: a.sid }
     case 'close': {

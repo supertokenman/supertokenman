@@ -12,7 +12,7 @@ import { admit, admitByRule, gateNavigation, newSession, type Answer, type Sessi
 import type { Ctx, ScopedRule } from '../../shared/policygate.js'
 
 export type CardKind = 'host' | 'download' | 'upload'
-export type Card = { id: string; panel: string; kind: CardKind; detail: { host?: string; name?: string; size?: number; always: boolean } }
+export type Card = { id: string; panel: string; kind: CardKind; detail: { host?: string; name?: string; size?: number; always: boolean; /** upload: the agent named no file, the person picks one */ pick?: boolean } }
 
 export type GuardDeps = {
   now: () => number
@@ -140,6 +140,16 @@ export class Guard {
     const card = await this.card(panel, 'download', { host: info.host, name: info.name, size: info.size, always: false })
     const ok = card === 'once' || card === 'always'
     this.audit(panel, 'mcp__stm__browser_download', info, ok ? 'approved' : 'refused', 'person')
+    return ok
+  }
+
+  /** An upload: only an answer from the person lets a file go to a page. `once` is the only yes. */
+  async upload(panel: string, info: { name: string; size: number; host: string; pick: boolean }): Promise<boolean> {
+    const row = { host: info.host, ...(info.pick ? {} : { name: info.name, size: info.size }) }
+    this.audit(panel, 'mcp__stm__browser_upload', row, 'ask', 'app')
+    const card = await this.card(panel, 'upload', { host: info.host, ...(info.pick ? { pick: true } : { name: info.name, size: info.size }), always: false })
+    const ok = card === 'once' || card === 'always'
+    this.audit(panel, 'mcp__stm__browser_upload', row, ok ? 'approved' : 'refused', 'person')
     return ok
   }
 }

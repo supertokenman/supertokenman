@@ -230,6 +230,18 @@ Needs a decision first:
 Left out: a server with Postgres (Rakazo), against local-first; API keys kept in a plain config file
 (OpenMausBot), where our vault already does better.
 
+## Agent browser (spec-agent-browser.md)
+
+1. Done: pure logic in shared/ (element index, page Markdown, action validation, host policy, budget,
+   challenge classifier) and the main process: views, CDP driver, gate, audit, the browser_* tools.
+2. Done: the person's side: the browser pane beside the panel (tabs, address, back and forward, who is
+   driving, take over and give back), the ask-once-per-host card with Always, download and upload cards,
+   the secret handoff, the element highlight, named profiles shared by panels with a default per project,
+   the upload tool, the setting (off by default) and per-task limits. The challenge detector needs a known
+   challenge frame or widget, or a short interstitial; a page that only mentions a captcha is not stopped.
+3. Not done: pane width by dragging, recording, a batched script tool beyond browser_steps, panel
+   screenshots of a secret-free page for the person, DevTools re-attach messages in the pane.
+
 ## Planned for a later release
 
 - Brief a post: summary and the best prompt from any link or screenshot.

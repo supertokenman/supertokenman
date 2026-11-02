@@ -43,6 +43,7 @@ const SHAPES: Record<BrowserTool, { about: string; shape: z.ZodRawShape; read?: 
   tab_new: { about: 'Open a new tab, optionally at an address (at most 3 tabs per panel).', shape: { url: z.string().optional() } },
   tab_switch: { about: 'Make a tab the active one.', shape: { tab: z.number().int() } },
   tab_close: { about: 'Close a tab.', shape: { tab: z.number().int() } },
+  upload: { about: 'Offer a file to a file input [n]. The person is always asked first. Give a path inside the project, or leave path out and the person picks the file. The file is not sent until the page form is submitted.', shape: { tab: z.number().int(), revision: rev, index: idx, path: z.string().optional() } },
   done: { about: 'End the browsing task with a short summary for the person; the next browser call starts a new task with a fresh budget.', shape: { summary: z.string() } },
 }
 
