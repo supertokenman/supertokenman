@@ -2,12 +2,11 @@
 // it asks the running app for a snapshot over the local socket once a second (the socket answers one
 // request at a time, there is no event stream) and never reaches the network. Raw ANSI, no dependency.
 
-/** The currency to show: BRL on a machine set to Brazil (as the window does), else USD. */
+/** The currency to show: US dollars (what the API bills in), or BRL only when asked: --currency BRL or STM_CURRENCY=BRL. */
 export function currencyOf(env = process.env, flag) {
   const pick = String(flag ?? env.STM_CURRENCY ?? '').toUpperCase()
   if (pick === 'BRL' || pick === 'USD') return pick
-  const lang = env.LC_ALL || env.LC_MONETARY || env.LANG || ''
-  return /[-_]BR\b/i.test(lang) ? 'BRL' : 'USD'
+  return 'USD'
 }
 
 /** The fixed rate the app ships with (src/rates.ts); STM_USD_BRL overrides it. */

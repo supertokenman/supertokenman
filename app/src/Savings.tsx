@@ -1,4 +1,5 @@
 import { SplitFlap } from './SplitFlap'
+import { RateNote } from './RateNote'
 import { displayCurrency, symbolOf } from './currency'
 import type { Stage } from '../shared/compact'
 import { useEffect, useState } from 'react'
@@ -225,6 +226,7 @@ export function SavingsSheet(props: { onClose: () => void; usdToBrl: number }) {
             </div>
           ) : (
             <>
+              <RateNote />
               <div className="sv-hero">
                 <div>
                   <div className="sv-big"><SplitFlap value={money(s.savedUsd)} /></div>

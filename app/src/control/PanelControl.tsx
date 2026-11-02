@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { TrayRow } from '../PanelMore'
 import './control.css'
 import { IconClose } from '../icons'
 import { Switch } from '../ui'
@@ -41,8 +42,12 @@ export default function PanelControl(props: { sid: string; cwd: string; busy: bo
   )
   return (
     <>
+      <TrayRow note="Go back to the files as they were after an earlier turn.">
       <button className="ghost small" data-tip="Go back to the files as they were at the end of an earlier turn" onClick={() => setWhich('checkpoints')}>Checkpoints</button>
+      </TrayRow>
+      <TrayRow note="Ask you before a tool runs.">
       <button className="ghost small" data-tip="Hold the next call of a tool, or the first step after the plan, for your approval" onClick={() => setWhich('breakpoints')}>Breakpoints{bp.length ? ` (${bp.length})` : ''}</button>
+      </TrayRow>
       {which === 'checkpoints' && <Checkpoints sid={props.sid} cwd={props.cwd} busy={props.busy} bump={count} onClose={() => setWhich(null)} />}
       {which === 'breakpoints' && <Breakpoints list={bp} onChange={apply} onClose={() => setWhich(null)} />}
     </>

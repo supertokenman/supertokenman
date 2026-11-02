@@ -5,7 +5,7 @@ import { promptDialog } from './ui/dialog'
 
 /** The panels this one is linked to (through stm spawn or stm link), small in the panel header. A click
  * offers the link's "auto" switch: off by default, messages from the other panel wait in the composer. */
-export function LinksChip(props: { sid: string }) {
+export function LinksChip(props: { sid: string; onCount?: (n: boolean) => void }) {
   const [links, setLinks] = useState<PanelLinkView[]>([])
   useEffect(() => {
     let live = true
@@ -13,6 +13,7 @@ export function LinksChip(props: { sid: string }) {
     const off = window.stm.panelBus.onLinks((v) => setLinks(v[props.sid] ?? []))
     return () => ((live = false), off())
   }, [props.sid])
+  useEffect(() => props.onCount?.(links.length > 0), [links.length, props.onCount])
   if (!links.length) return null
   const menu = (e: React.MouseEvent) =>
     openContextMenu(
@@ -33,8 +34,8 @@ export function LinksChip(props: { sid: string }) {
       ]),
     )
   return (
-    <button className="persona-chip links-chip" onClick={menu} data-tip={`Linked to ${links.map((l) => `${l.name}${l.auto ? ' (auto)' : ''}: ${spend(l)} today`).join(', ')}. Click for auto-send and a daily cap per link.`}>
-      linked: {links.map((l) => l.name).join(', ')}
+    <button className="ghost small links-chip" onClick={menu} data-tip={`Linked to ${links.map((l) => `${l.name}${l.auto ? ' (auto)' : ''}: ${spend(l)} today`).join(', ')}. Click for auto-send and a daily cap per link.`}>
+      Linked panels: {links.map((l) => l.name).join(', ')}
     </button>
   )
 }

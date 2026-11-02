@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { RateNote } from './RateNote'
 import { displayCurrency, symbolOf } from './currency'
 import { IconClose } from './icons'
 import { Chart } from './Chart'
@@ -62,6 +63,7 @@ export function BudgetSheet(props: { onClose: () => void; usdToBrl: number; pane
           </button>
         </header>
         <div className="bg-body">
+          <RateNote />
           <section className="bg-limits">
             <div className="sp-label">Limits ({symbolOf(displayCurrency())}, empty means none)</div>
             {FIELDS.map((f) => (
